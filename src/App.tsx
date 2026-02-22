@@ -4,6 +4,8 @@ import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
 import Plans from './pages/Plans'
 import Landing from './pages/Landing'
+import OnboardingPayout from './pages/OnboardingPayout'
+import OnboardingReviewPage from './components/OnboardingReview'
 
 function App() {
   return (
@@ -12,6 +14,8 @@ function App() {
       <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
       <Route path="/subscriptions" element={<Layout><Subscriptions /></Layout>} />
       <Route path="/plans" element={<Layout><Plans /></Layout>} />
+      <Route path="/onboarding/payout" element={<OnboardingPayout />} />
+      <Route path="/onboarding/review" element={<OnboardingReviewPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
