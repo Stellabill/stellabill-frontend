@@ -139,7 +139,7 @@ export default function BillingTypeSection({
         <label
           htmlFor="trial-period"
           style={{
-            color: "#94a3b8",
+            color: "#fff",
             fontSize: "0.825rem",
             fontWeight: 500,
             display: "block",
