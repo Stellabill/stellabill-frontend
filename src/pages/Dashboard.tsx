@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import RevenueChart from '../components/RevenueChart'
 
 export default function Dashboard() {
   return (

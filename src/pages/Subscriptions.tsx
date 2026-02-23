@@ -172,7 +172,6 @@ export default function Subscriptions() {
 
   if (selectedSub) {
     // Mock usage data - replace with actual API data
-    const isUsageBased = true; // Show usage for all plans
     const usageData = {
       billingPeriod: 'Mar 1 — Mar 31',
       usage: '32450 API calls',

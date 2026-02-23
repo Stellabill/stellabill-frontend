@@ -16,7 +16,6 @@ const QUICK_SELECT_OPTIONS = [
 export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
   const [amount, setAmount] = useState<string>("0.00");
   const [selectedQs, setSelectedQs] = useState<string | null>(null);
-  const [, setIsFocused] = useState(false);
 
   const currentBalance = 30;
   const planPrice = 10;

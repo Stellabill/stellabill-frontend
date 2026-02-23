@@ -1,4 +1,3 @@
-import React from "react";
 import { Activity, ChevronRight, Pause, XCircle } from "lucide-react";
 
 interface SubscriptionActionsProps {
@@ -22,9 +21,17 @@ function SubscriptionActions({
     }
   };
 
-  const handlePauseClick = (): void => {};
+  const handlePauseClick = (): void => {
+    if (onPauseSubscription) {
+      onPauseSubscription();
+    }
+  };
 
-  const handleCancelClick = (): void => {};
+  const handleCancelClick = (): void => {
+    if (onCancelSubscription) {
+      onCancelSubscription();
+    }
+  };
 
   return (
     <>

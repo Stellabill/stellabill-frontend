@@ -2,10 +2,7 @@ import PricingCard from '@/components/PricingCard'
 import LandingNavbar from '../components/LandingNavbar'
 import { useEffect, useState } from 'react'
 import Hero from '../components/Landing/Hero'
-import FlowDiagram from '../components/Landing/FlowDiagram'
-import TechBadges from "../components/landing/TechBadges";
-import SubscriptionActions from "@/components/SubscriptionActions";
-import PricingCards from '../components/PricingCards'
+import TechBadges from "../components/landing/TechBadges"
 import CTACards from '../components/CTACards'
 
 export default function Landing() {
