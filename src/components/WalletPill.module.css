@@ -1,0 +1,49 @@
+.pillContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: rgba(13, 235, 213, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 40px;
+}
+
+.pill:hover, .pillOpen {
+  background: rgba(13, 235, 213, 0.1);
+  border-color: rgba(13, 235, 213, 0.3);
+  box-shadow: 0 0 15px rgba(13, 235, 213, 0.1);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  background-color: #0debd5;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(13, 235, 213, 0.6);
+}
+
+.addressText {
+  font-family: 'JetBrains Mono', monospace;
+  opacity: 0.9;
+}
+
+.chevron {
+  transition: transform 0.2s ease;
+  opacity: 0.6;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+  opacity: 1;
+}
