@@ -16,7 +16,6 @@ interface Plan {
   status: PlanStatus
 }
 
-// Mock data - replace with API call
 const mockPlans: Plan[] = [
   { id: '1', name: 'Pro Plan', price: 25, currency: 'USDC', interval: 'Monthly', usageBased: false, subscriptions: 12, status: 'Active' },
   { id: '2', name: 'Basic Plan', price: 10, currency: 'USDC', interval: 'Monthly', usageBased: false, subscriptions: 24, status: 'Active' },
@@ -48,52 +47,79 @@ export default function Plans() {
       const matchesInterval = intervalFilter === 'All' || plan.interval === intervalFilter
       return matchesSearch && matchesStatus && matchesInterval
     })
-
-    // Sort
     result.sort((a, b) => {
       let comparison = 0
-      if (sortField === 'name') {
-        comparison = a.name.localeCompare(b.name)
-      } else if (sortField === 'price') {
-        comparison = a.price - b.price
-      } else if (sortField === 'subscriptions') {
-        comparison = a.subscriptions - b.subscriptions
-      }
+      if (sortField === 'name') comparison = a.name.localeCompare(b.name)
+      else if (sortField === 'price') comparison = a.price - b.price
+      else if (sortField === 'subscriptions') comparison = a.subscriptions - b.subscriptions
       return sortDirection === 'asc' ? comparison : -comparison
     })
-
     return result
   }, [plans, searchQuery, statusFilter, intervalFilter, sortField, sortDirection])
 
   const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDirection('asc')
-    }
+    if (sortField === field) setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    else { setSortField(field); setSortDirection('asc') }
   }
 
-  const handleEdit = (planId: string) => {
-    console.log('Edit plan:', planId)
-    // Navigate to edit page or open modal
-  }
+  const handleEdit = (planId: string) => console.log('Edit plan:', planId)
 
   const handleDelete = (planId: string) => {
-    if (deleteConfirm === planId) {
-      console.log('Delete plan:', planId)
-      // Call API to delete
-      setDeleteConfirm(null)
-    } else {
-      setDeleteConfirm(planId)
-    }
+    if (deleteConfirm === planId) { console.log('Delete plan:', planId); setDeleteConfirm(null) }
+    else setDeleteConfirm(planId)
   }
 
   return (
     <div style={{ padding: '1.5rem 2rem', background: '#0a0a0a', minHeight: '100vh' }}>
+
+      {/* ===== PAGE HEADER - Issue #51 ===== */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        marginBottom: '1.5rem',
+      }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#e2e8f0' }}>
+            Plans
+          </h1>
+          <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: '#64748b' }}>
+            Manage your billing plans
+          </p>
+        </div>
+        
+          <a
+          href="/plans/new"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            padding: '0.6rem 1.25rem',
+            borderRadius: '8px',
+            background: 'linear-gradient(135deg, #38bdf8 0%, #20b2aa 60%, #0d9488 100%)',
+            color: '#fff',
+            fontWeight: 500,
+            fontSize: '0.875rem',
+            textDecoration: 'none',
+            boxShadow: '0 0 18px rgba(32,178,170,0.35)',
+            flexShrink: 0,
+          }}
+          aria-label="Create a new billing plan"
+        >
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, background: 'rgba(255,255,255,0.2)', borderRadius: 4 }}>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M5 1v8M1 5h8" stroke="#fff" strokeWidth="1.75" strokeLinecap="round"/>
+            </svg>
+          </span>
+          Create plan
+        </a>
+      </div>
+      {/* ===== END PAGE HEADER ===== */}
+
       {/* Search and Filters */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        {/* Search */}
         <div style={{ flex: '1', minWidth: '300px', position: 'relative' }}>
           <svg style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: '#64748b' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -103,62 +129,16 @@ export default function Plans() {
             placeholder="Search plans…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem 0.75rem 2.5rem',
-              background: '#1a1a1a',
-              border: '1px solid #2a2a2a',
-              borderRadius: '8px',
-              color: '#e2e8f0',
-              fontSize: '0.875rem',
-              outline: 'none'
-            }}
+            style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.5rem', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e2e8f0', fontSize: '0.875rem', outline: 'none' }}
           />
         </div>
-
-        {/* Filters */}
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as PlanStatus | 'All')}
-            style={{
-              padding: '0.75rem 2.5rem 0.75rem 2.5rem',
-              background: '#1a1a1a',
-              border: '1px solid #2a2a2a',
-              borderRadius: '8px',
-              color: '#e2e8f0',
-              fontSize: '0.875rem',
-              cursor: 'pointer',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z'/%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'left 0.75rem center',
-              backgroundSize: '16px',
-              appearance: 'none'
-            }}
-          >
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as PlanStatus | 'All')} style={{ padding: '0.75rem 2.5rem 0.75rem 2.5rem', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e2e8f0', fontSize: '0.875rem', cursor: 'pointer', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'left 0.75rem center', backgroundSize: '16px', appearance: 'none' }}>
             <option value="All">All Status</option>
             <option value="Active">Active</option>
             <option value="Archived">Archived</option>
           </select>
-
-          <select
-            value={intervalFilter}
-            onChange={(e) => setIntervalFilter(e.target.value as PlanInterval | 'All')}
-            style={{
-              padding: '0.75rem 2.5rem 0.75rem 2.5rem',
-              background: '#1a1a1a',
-              border: '1px solid #2a2a2a',
-              borderRadius: '8px',
-              color: '#e2e8f0',
-              fontSize: '0.875rem',
-              cursor: 'pointer',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z'/%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'left 0.75rem center',
-              backgroundSize: '16px',
-              appearance: 'none'
-            }}
-          >
+          <select value={intervalFilter} onChange={(e) => setIntervalFilter(e.target.value as PlanInterval | 'All')} style={{ padding: '0.75rem 2.5rem 0.75rem 2.5rem', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e2e8f0', fontSize: '0.875rem', cursor: 'pointer', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'left 0.75rem center', backgroundSize: '16px', appearance: 'none' }}>
             <option value="All">All Intervals</option>
             <option value="Monthly">Monthly</option>
             <option value="Yearly">Yearly</option>
@@ -178,76 +158,16 @@ export default function Plans() {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #2a2a2a' }}>
-                  <th 
-                    onClick={() => handleSort('name')}
-                    style={{ 
-                      padding: '1rem', 
-                      textAlign: 'left', 
-                      color: '#64748b', 
-                      fontSize: '0.75rem', 
-                      fontWeight: 500, 
-                      textTransform: 'uppercase', 
-                      letterSpacing: '0.05em',
-                      cursor: 'pointer',
-                      userSelect: 'none'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      Plan name
-                      {sortField === 'name' && (
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style={{ transform: sortDirection === 'desc' ? 'rotate(180deg)' : 'none' }}>
-                          <path d="M6 3L9 7H3L6 3Z" />
-                        </svg>
-                      )}
-                    </div>
+                  <th onClick={() => handleSort('name')} style={{ padding: '1rem', textAlign: 'left', color: '#64748b', fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', userSelect: 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Plan name {sortField === 'name' && <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style={{ transform: sortDirection === 'desc' ? 'rotate(180deg)' : 'none' }}><path d="M6 3L9 7H3L6 3Z" /></svg>}</div>
                   </th>
-                  <th 
-                    onClick={() => handleSort('price')}
-                    style={{ 
-                      padding: '1rem', 
-                      textAlign: 'left', 
-                      color: '#64748b', 
-                      fontSize: '0.75rem', 
-                      fontWeight: 500, 
-                      textTransform: 'uppercase', 
-                      letterSpacing: '0.05em',
-                      cursor: 'pointer',
-                      userSelect: 'none'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      Price
-                      {sortField === 'price' && (
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style={{ transform: sortDirection === 'desc' ? 'rotate(180deg)' : 'none' }}>
-                          <path d="M6 3L9 7H3L6 3Z" />
-                        </svg>
-                      )}
-                    </div>
+                  <th onClick={() => handleSort('price')} style={{ padding: '1rem', textAlign: 'left', color: '#64748b', fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', userSelect: 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Price {sortField === 'price' && <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style={{ transform: sortDirection === 'desc' ? 'rotate(180deg)' : 'none' }}><path d="M6 3L9 7H3L6 3Z" /></svg>}</div>
                   </th>
                   <th style={{ padding: '1rem', textAlign: 'left', color: '#64748b', fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Interval</th>
                   <th style={{ padding: '1rem', textAlign: 'left', color: '#64748b', fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Usage-based</th>
-                  <th 
-                    onClick={() => handleSort('subscriptions')}
-                    style={{ 
-                      padding: '1rem', 
-                      textAlign: 'left', 
-                      color: '#64748b', 
-                      fontSize: '0.75rem', 
-                      fontWeight: 500, 
-                      textTransform: 'uppercase', 
-                      letterSpacing: '0.05em',
-                      cursor: 'pointer',
-                      userSelect: 'none'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      Subscriptions
-                      {sortField === 'subscriptions' && (
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style={{ transform: sortDirection === 'desc' ? 'rotate(180deg)' : 'none' }}>
-                          <path d="M6 3L9 7H3L6 3Z" />
-                        </svg>
-                      )}
-                    </div>
+                  <th onClick={() => handleSort('subscriptions')} style={{ padding: '1rem', textAlign: 'left', color: '#64748b', fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', userSelect: 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Subscriptions {sortField === 'subscriptions' && <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style={{ transform: sortDirection === 'desc' ? 'rotate(180deg)' : 'none' }}><path d="M6 3L9 7H3L6 3Z" /></svg>}</div>
                   </th>
                   <th style={{ padding: '1rem', textAlign: 'left', color: '#64748b', fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
                   <th style={{ padding: '1rem', textAlign: 'right', color: '#64748b', fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</th>
@@ -257,112 +177,31 @@ export default function Plans() {
                 {filteredPlans.map((plan) => (
                   <tr key={plan.id} style={{ borderBottom: '1px solid #2a2a2a' }}>
                     <td style={{ padding: '1rem', color: '#e2e8f0', fontWeight: 600 }}>{plan.name}</td>
-                    <td style={{ padding: '1rem', color: '#e2e8f0' }}>
-                      {plan.price} {plan.currency}/{plan.interval === 'Monthly' ? 'mo' : 'yr'}
-                    </td>
+                    <td style={{ padding: '1rem', color: '#e2e8f0' }}>{plan.price} {plan.currency}/{plan.interval === 'Monthly' ? 'mo' : 'yr'}</td>
                     <td style={{ padding: '1rem', color: '#94a3b8' }}>{plan.interval}</td>
-                    <td style={{ padding: '1rem', color: plan.usageBased ? '#3b82f6' : '#94a3b8', fontWeight: plan.usageBased ? 500 : 400 }}>
-                      {plan.usageBased ? 'Yes' : 'No'}
-                    </td>
+                    <td style={{ padding: '1rem', color: plan.usageBased ? '#3b82f6' : '#94a3b8', fontWeight: plan.usageBased ? 500 : 400 }}>{plan.usageBased ? 'Yes' : 'No'}</td>
                     <td style={{ padding: '1rem', color: '#e2e8f0' }}>{plan.subscriptions}</td>
                     <td style={{ padding: '1rem' }}>
                       {plan.status === 'Active' ? (
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.375rem',
-                          padding: '0.25rem 0.75rem',
-                          background: '#10b98120',
-                          color: '#10b981',
-                          borderRadius: '9999px',
-                          fontSize: '0.75rem',
-                          fontWeight: 500
-                        }}>
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5" />
-                            <path d="M3.5 6L5.5 8L8.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.75rem', background: '#10b98120', color: '#10b981', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 500 }}>
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5" /><path d="M3.5 6L5.5 8L8.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                           Active
                         </span>
                       ) : (
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.375rem',
-                          padding: '0.25rem 0.75rem',
-                          background: '#64748b20',
-                          color: '#94a3b8',
-                          borderRadius: '9999px',
-                          fontSize: '0.75rem',
-                          fontWeight: 500
-                        }}>
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                          </svg>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.75rem', background: '#64748b20', color: '#94a3b8', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 500 }}>
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
                           Archived
                         </span>
                       )}
                     </td>
                     <td style={{ padding: '1rem' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                        <button
-                          onClick={() => handleEdit(plan.id)}
-                          style={{
-                            padding: '0.5rem',
-                            background: 'transparent',
-                            border: 'none',
-                            color: '#94a3b8',
-                            cursor: 'pointer',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#2a2a2a'
-                            e.currentTarget.style.color = '#e2e8f0'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent'
-                            e.currentTarget.style.color = '#94a3b8'
-                          }}
-                          aria-label="Edit plan"
-                        >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
+                        <button onClick={() => handleEdit(plan.id)} style={{ padding: '0.5rem', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', borderRadius: '6px', display: 'flex', alignItems: 'center', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#2a2a2a'; e.currentTarget.style.color = '#e2e8f0' }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94a3b8' }} aria-label="Edit plan">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
                         {plan.status === 'Active' && (
-                          <button
-                            onClick={() => handleDelete(plan.id)}
-                            style={{
-                              padding: '0.5rem',
-                              background: deleteConfirm === plan.id ? '#dc262620' : 'transparent',
-                              border: deleteConfirm === plan.id ? '1px solid #dc2626' : 'none',
-                              color: deleteConfirm === plan.id ? '#dc2626' : '#94a3b8',
-                              cursor: 'pointer',
-                              borderRadius: '6px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (deleteConfirm !== plan.id) {
-                                e.currentTarget.style.background = '#2a2a2a'
-                                e.currentTarget.style.color = '#e2e8f0'
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (deleteConfirm !== plan.id) {
-                                e.currentTarget.style.background = 'transparent'
-                                e.currentTarget.style.color = '#94a3b8'
-                              }
-                            }}
-                            aria-label={deleteConfirm === plan.id ? 'Click again to confirm deletion' : 'Delete plan'}
-                          >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
+                          <button onClick={() => handleDelete(plan.id)} style={{ padding: '0.5rem', background: deleteConfirm === plan.id ? '#dc262620' : 'transparent', border: deleteConfirm === plan.id ? '1px solid #dc2626' : 'none', color: deleteConfirm === plan.id ? '#dc2626' : '#94a3b8', cursor: 'pointer', borderRadius: '6px', display: 'flex', alignItems: 'center', transition: 'all 0.2s' }} onMouseEnter={(e) => { if (deleteConfirm !== plan.id) { e.currentTarget.style.background = '#2a2a2a'; e.currentTarget.style.color = '#e2e8f0' } }} onMouseLeave={(e) => { if (deleteConfirm !== plan.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94a3b8' } }} aria-label={deleteConfirm === plan.id ? 'Click again to confirm deletion' : 'Delete plan'}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
                         )}
                       </div>
@@ -373,126 +212,39 @@ export default function Plans() {
             </table>
           </div>
         ) : (
-          /* Mobile Card View */
           <div style={{ padding: '1rem' }}>
             {filteredPlans.map((plan) => (
-              <div key={plan.id} style={{ 
-                background: '#0a0a0a', 
-                border: '1px solid #2a2a2a', 
-                borderRadius: '8px', 
-                padding: '1rem',
-                marginBottom: '1rem'
-              }}>
+              <div key={plan.id} style={{ background: '#0a0a0a', border: '1px solid #2a2a2a', borderRadius: '8px', padding: '1rem', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.75rem' }}>
                   <div>
                     <div style={{ color: '#e2e8f0', fontWeight: 600, fontSize: '1rem', marginBottom: '0.25rem' }}>{plan.name}</div>
-                    <div style={{ color: '#e2e8f0', fontSize: '0.875rem' }}>
-                      {plan.price} {plan.currency}/{plan.interval === 'Monthly' ? 'mo' : 'yr'}
-                    </div>
+                    <div style={{ color: '#e2e8f0', fontSize: '0.875rem' }}>{plan.price} {plan.currency}/{plan.interval === 'Monthly' ? 'mo' : 'yr'}</div>
                   </div>
                   {plan.status === 'Active' ? (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.375rem',
-                      padding: '0.25rem 0.75rem',
-                      background: '#10b98120',
-                      color: '#10b981',
-                      borderRadius: '9999px',
-                      fontSize: '0.75rem',
-                      fontWeight: 500
-                    }}>
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5" />
-                        <path d="M3.5 6L5.5 8L8.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.75rem', background: '#10b98120', color: '#10b981', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 500 }}>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5" /><path d="M3.5 6L5.5 8L8.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       Active
                     </span>
                   ) : (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.375rem',
-                      padding: '0.25rem 0.75rem',
-                      background: '#64748b20',
-                      color: '#94a3b8',
-                      borderRadius: '9999px',
-                      fontSize: '0.75rem',
-                      fontWeight: 500
-                    }}>
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                      </svg>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.75rem', background: '#64748b20', color: '#94a3b8', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 500 }}>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
                       Archived
                     </span>
                   )}
                 </div>
-                
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <div>
-                    <div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Interval</div>
-                    <div style={{ color: '#94a3b8', fontSize: '0.875rem' }}>{plan.interval}</div>
-                  </div>
-                  <div>
-                    <div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Usage-based</div>
-                    <div style={{ color: plan.usageBased ? '#3b82f6' : '#94a3b8', fontSize: '0.875rem', fontWeight: plan.usageBased ? 500 : 400 }}>
-                      {plan.usageBased ? 'Yes' : 'No'}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Subscriptions</div>
-                    <div style={{ color: '#e2e8f0', fontSize: '0.875rem' }}>{plan.subscriptions}</div>
-                  </div>
+                  <div><div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Interval</div><div style={{ color: '#94a3b8', fontSize: '0.875rem' }}>{plan.interval}</div></div>
+                  <div><div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Usage-based</div><div style={{ color: plan.usageBased ? '#3b82f6' : '#94a3b8', fontSize: '0.875rem', fontWeight: plan.usageBased ? 500 : 400 }}>{plan.usageBased ? 'Yes' : 'No'}</div></div>
+                  <div><div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Subscriptions</div><div style={{ color: '#e2e8f0', fontSize: '0.875rem' }}>{plan.subscriptions}</div></div>
                 </div>
-
                 <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid #2a2a2a' }}>
-                  <button
-                    onClick={() => handleEdit(plan.id)}
-                    style={{
-                      flex: 1,
-                      padding: '0.625rem',
-                      background: '#2a2a2a',
-                      border: 'none',
-                      color: '#e2e8f0',
-                      cursor: 'pointer',
-                      borderRadius: '6px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      fontSize: '0.875rem',
-                      fontWeight: 500
-                    }}
-                    aria-label="Edit plan"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
+                  <button onClick={() => handleEdit(plan.id)} style={{ flex: 1, padding: '0.625rem', background: '#2a2a2a', border: 'none', color: '#e2e8f0', cursor: 'pointer', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }} aria-label="Edit plan">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     Edit
                   </button>
                   {plan.status === 'Active' && (
-                    <button
-                      onClick={() => handleDelete(plan.id)}
-                      style={{
-                        flex: 1,
-                        padding: '0.625rem',
-                        background: deleteConfirm === plan.id ? '#dc262620' : '#2a2a2a',
-                        border: deleteConfirm === plan.id ? '1px solid #dc2626' : 'none',
-                        color: deleteConfirm === plan.id ? '#dc2626' : '#e2e8f0',
-                        cursor: 'pointer',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        fontSize: '0.875rem',
-                        fontWeight: 500
-                      }}
-                      aria-label={deleteConfirm === plan.id ? 'Click again to confirm deletion' : 'Delete plan'}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                    <button onClick={() => handleDelete(plan.id)} style={{ flex: 1, padding: '0.625rem', background: deleteConfirm === plan.id ? '#dc262620' : '#2a2a2a', border: deleteConfirm === plan.id ? '1px solid #dc2626' : 'none', color: deleteConfirm === plan.id ? '#dc2626' : '#e2e8f0', cursor: 'pointer', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }} aria-label={deleteConfirm === plan.id ? 'Click again to confirm deletion' : 'Delete plan'}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                       {deleteConfirm === plan.id ? 'Confirm' : 'Delete'}
                     </button>
                   )}
@@ -501,7 +253,6 @@ export default function Plans() {
             ))}
           </div>
         )}
-
         {filteredPlans.length === 0 && (
           <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
             No plans found matching your filters.
