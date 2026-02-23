@@ -281,3 +281,229 @@ export default function PricingCard({
     </div>
   )
 }
+import { MouseEvent as ReactMouseEvent } from 'react'
+
+interface PricingCardProps {
+  title: string
+  subtitle: string
+  price: string
+  priceSuffix: string
+  features: string[]
+  buttonLabel: string
+  href?: string
+  onClick?: () => void
+  isPopular?: boolean
+}
+
+const CheckIcon = () => (
+  <svg 
+    width="20" 
+    height="20" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="#22d3ee" 
+    strokeWidth="3" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    style={{ flexShrink: 0 }}
+  >
+    <path d="M20 6L9 17l-5-5" />
+  </svg>
+)
+
+const ArrowIcon = () => (
+  <svg 
+    width="18" 
+    height="18" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2.5" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    style={{ flexShrink: 0 }}
+  >
+    <path d="M5 12h14M12 5l7 7-7 7" />
+  </svg>
+)
+
+export default function PricingCard({
+  title,
+  subtitle,
+  price,
+  priceSuffix,
+  features,
+  buttonLabel,
+  href,
+  onClick,
+  isPopular = false,
+}: PricingCardProps) {
+  const cardStyle = {
+    background: isPopular ? 'rgba(20, 20, 20, 0.8)' : 'rgba(20, 20, 20, 0.6)',
+    borderRadius: '24px',
+    padding: '2.5rem 2rem',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '2rem',
+    border: isPopular 
+      ? '2px solid rgba(34, 211, 238, 0.5)' 
+      : '1px solid rgba(255, 255, 255, 0.08)',
+    boxShadow: isPopular
+      ? '0 0 40px rgba(34, 211, 238, 0.3), 0 0 80px rgba(34, 211, 238, 0.15), 0 8px 32px rgba(0, 0, 0, 0.6)'
+      : '0 4px 24px rgba(0, 0, 0, 0.4)',
+    position: 'relative' as const,
+    height: '100%',
+    transition: 'all 0.3s ease',
+  }
+
+  const buttonStyle = {
+    background: isPopular ? 'linear-gradient(135deg, #22d3ee 0%, #14b8a6 100%)' : '#ffffff',
+    color: isPopular ? '#000000' : '#000000',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '1rem 2rem',
+    fontSize: '1rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.75rem',
+    textDecoration: 'none',
+    transition: 'all 0.2s ease',
+    width: '100%',
+    boxShadow: isPopular 
+      ? '0 0 20px rgba(34, 211, 238, 0.4)' 
+      : '0 2px 8px rgba(0, 0, 0, 0.2)',
+  }
+
+  const handleClick = (e: ReactMouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
+    if (onClick) {
+      e.preventDefault()
+      onClick()
+    }
+  }
+
+  const buttonContent = (
+    <>
+      <span>{buttonLabel}</span>
+      <ArrowIcon />
+    </>
+  )
+
+  return (
+    <div style={{ position: 'relative' }}>
+      {isPopular && (
+        <div style={{
+          position: 'absolute',
+          top: '-16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'linear-gradient(135deg, #22d3ee 0%, #14b8a6 100%)',
+          color: '#000000',
+          padding: '0.5rem 1.5rem',
+          borderRadius: '20px',
+          fontSize: '0.875rem',
+          fontWeight: 700,
+          boxShadow: '0 0 20px rgba(34, 211, 238, 0.5)',
+          zIndex: 1,
+          whiteSpace: 'nowrap',
+        }}>
+          Most popular
+        </div>
+      )}
+      
+      <div style={cardStyle}>
+        <div>
+          <h3 style={{
+            color: '#ffffff',
+            fontSize: '1.75rem',
+            fontWeight: 700,
+            margin: '0 0 0.5rem 0',
+            letterSpacing: '-0.02em',
+          }}>
+            {title}
+          </h3>
+          <p style={{
+            color: '#94a3b8',
+            fontSize: '0.9375rem',
+            margin: 0,
+            lineHeight: 1.5,
+          }}>
+            {subtitle}
+          </p>
+        </div>
+
+        <div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+            <span style={{
+              color: '#ffffff',
+              fontSize: price === 'Custom' ? '2.5rem' : '3.5rem',
+              fontWeight: 700,
+              letterSpacing: '-0.03em',
+            }}>
+              {price}
+            </span>
+            <span style={{
+              color: '#64748b',
+              fontSize: '1.125rem',
+              fontWeight: 400,
+            }}>
+              {priceSuffix}
+            </span>
+          </div>
+          {price === 'Custom' && (
+            <p style={{
+              color: '#64748b',
+              fontSize: '0.9375rem',
+              margin: '0.5rem 0 0 0',
+            }}>
+              contact sales
+            </p>
+          )}
+        </div>
+
+        <ul style={{
+          listStyle: 'none',
+          padding: 0,
+          margin: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+          flex: 1,
+        }}>
+          {features.map((feature, index) => (
+            <li key={index} style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.75rem',
+              color: '#e2e8f0',
+              fontSize: '0.9375rem',
+              lineHeight: 1.6,
+            }}>
+              <CheckIcon />
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+
+        {href ? (
+          <a 
+            href={href} 
+            style={buttonStyle}
+            onClick={handleClick}
+          >
+            {buttonContent}
+          </a>
+        ) : (
+          <button 
+            style={buttonStyle}
+            onClick={handleClick}
+          >
+            {buttonContent}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}

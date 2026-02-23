@@ -5,6 +5,7 @@ import Hero from '../components/Landing/Hero'
 import FlowDiagram from '../components/Landing/FlowDiagram'
 import TechBadges from "../components/landing/TechBadges";
 import SubscriptionActions from "@/components/SubscriptionActions";
+import PricingCards from '../components/PricingCards'
 
 export default function Landing() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
@@ -40,6 +41,9 @@ export default function Landing() {
 
         {/* Technology Badges */}
         <TechBadges />
+
+        {/* Pricing Cards */}
+        <PricingCards />
 
         {/* Sections for anchor links */}
         <div
