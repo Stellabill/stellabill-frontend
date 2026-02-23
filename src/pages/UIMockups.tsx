@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import WalletConnectModal from '../components/WalletConnectModal';
+import TopUpModal from '../components/TopUpModal';
 import { ToastContainer, ToastOptions } from '../components/TransactionToast';
 
 export default function UIMockups() {
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
     const [walletModalState, setWalletModalState] = useState<'list' | 'connecting' | 'failed'>('list');
     const [toasts, setToasts] = useState<ToastOptions[]>([]);
+    const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
 
     const openWalletModal = (state: 'list' | 'connecting' | 'failed') => {
         setWalletModalState(state);
@@ -54,9 +56,24 @@ export default function UIMockups() {
                 </div>
             </section>
 
-            <section style={{ padding: '2rem', background: '#fff', borderRadius: 12, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+            <section style={{ marginBottom: '3rem', padding: '2rem', background: '#fff', borderRadius: 12, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
                 <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
-                    Transaction Feedback 
+                    Top Up Modal (Issue #66)
+                </h2>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <button
+                        onClick={() => setIsTopUpModalOpen(true)}
+                        style={{ ...btnStyle, background: '#0d9488' }}
+                    >
+                        Open Top Up Modal
+                    </button>
+                </div>
+            </section>
+
+            <section style={{ padding: '2rem', background: '#fff', borderRadius: 12, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+
+                <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+                    Transaction Feedback
                 </h2>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     <button
@@ -104,6 +121,11 @@ export default function UIMockups() {
                 isOpen={isWalletModalOpen}
                 onClose={() => setIsWalletModalOpen(false)}
                 initialState={walletModalState}
+            />
+
+            <TopUpModal
+                isOpen={isTopUpModalOpen}
+                onClose={() => setIsTopUpModalOpen(false)}
             />
 
             {/* Renders fixed toast notifications container */}
