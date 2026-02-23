@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import LandingNavbar from './LandingNavbar'
 
 const nav = [
@@ -8,14 +8,8 @@ const nav = [
   { path: '/ui-kit', label: 'UI Kit (Mockups)' },
 ]
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout() {
   const location = useLocation()
-
-  const isLandingPage = location.pathname === '/'
-
-  if (isLandingPage) {
-    return <main>{children}</main>
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#0a0a0a' }}>
@@ -50,8 +44,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
         </aside>
-        <main style={{ flex: 1, overflow: 'auto' }}>
-          {children}
+
+        <main style={{ flex: 1, padding: '2rem', overflow: 'auto' }}>
+          <Outlet />
         </main>
       </div>
     </div>

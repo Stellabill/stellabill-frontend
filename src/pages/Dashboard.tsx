@@ -74,6 +74,7 @@ export default function Dashboard() {
         <Card title="MRR" value="—" />
         <Card title="Pending Charges" value="—" />
       </div>
+      <RevenueChart />
     </div>
   )
 }
