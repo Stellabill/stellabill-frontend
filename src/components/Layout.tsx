@@ -11,6 +11,12 @@ const nav = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
 
+  const isLandingPage = location.pathname === '/'
+
+  if (isLandingPage) {
+    return <main>{children}</main>
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#0a0a0a' }}>
       <LandingNavbar />

@@ -1,3 +1,5 @@
+import { Subscription } from '@/types/subscription'
+
 const API_BASE = '/api'
 
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
@@ -13,8 +15,8 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const subscriptions = {
-  list: () => api<{ subscriptions: unknown[] }>('/subscriptions'),
-  get: (id: string) => api<unknown>(`/subscriptions/${id}`),
+  list: () => api<{ subscriptions: Subscription[] }>('/subscriptions'),
+  get: (id: string) => api<Subscription>(`/subscriptions/${id}`),
 }
 
 export const plans = {
