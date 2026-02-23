@@ -1,0 +1,234 @@
+.payout-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.payout-step {
+  width: 704px;
+  height: 478px;
+  border-radius: 24px;
+  border: 1px solid #FFFFFF33;
+  background: linear-gradient(135deg, rgba(0, 184, 219, 0.05) 0%, rgba(0, 187, 167, 0.05) 100%), #000000;
+  box-shadow: 0px 20px 80px 0px #00000080;
+  padding: 41px;
+  box-sizing: border-box;
+}
+
+.payout-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Header */
+.payout-title {
+  width: 450px;
+  height: 32px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 32px;
+  letter-spacing: 0.07px;
+  color: #FFFFFF;
+  margin: 0;
+}
+
+.payout-subtitle {
+  font-size: 0.875rem;
+  color: #8a8f96;
+  margin: 0;
+  margin-top: -0.5rem;
+}
+
+/* Field */
+.payout-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.payout-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #c8ccd2;
+}
+
+.payout-input {
+  background: #111111;
+  border: 1px solid #262626;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: #f8fafc;
+  font-size: 0.875rem;
+  font-family: monospace;
+  width: 100%;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+}
+
+.payout-input::placeholder {
+  color: #404040;
+  font-family: monospace;
+}
+
+.payout-input:focus {
+  border-color: #00c8d7;
+  box-shadow: 0 0 0 3px rgba(0, 200, 215, 0.12);
+}
+
+.payout-input--error {
+  border-color: #ef4444;
+}
+
+.payout-input--error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.payout-helper {
+  font-size: 0.8125rem;
+  color: #606468;
+  margin: 0;
+}
+
+.payout-error {
+  font-size: 0.8125rem;
+  color: #f87171;
+  margin: 0;
+}
+
+/* Important box */
+.payout-important-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  background: rgba(0, 200, 215, 0.07);
+  border: 1px solid rgba(0, 200, 215, 0.22);
+  border-radius: 10px;
+  padding: 1rem 1.125rem;
+}
+
+.payout-info-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid #00c8d7;
+  border-radius: 50%;
+  color: #00c8d7;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-style: italic;
+  font-family: Georgia, serif;
+  margin-top: 1px;
+}
+
+.payout-important-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.payout-important-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #00c8d7;
+}
+
+.payout-important-body {
+  font-size: 0.8125rem;
+  color: #00c8d7;
+  line-height: 1.5;
+}
+
+/* Actions */
+.payout-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.payout-btn-back {
+  flex: 1;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  color: #d0d4d8;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  font-family: inherit;
+}
+
+.payout-btn-back:hover,
+.payout-btn-back:focus-visible {
+  background: #222222;
+  border-color: #333333;
+  outline: none;
+}
+
+.payout-btn-back:focus-visible {
+  box-shadow: 0 0 0 3px rgba(0, 200, 215, 0.2);
+}
+
+.payout-btn-next {
+  flex: 1;
+  background: #00c8d7;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+}
+
+.payout-btn-next:hover,
+.payout-btn-next:focus-visible {
+  background: #00b5c2;
+  box-shadow: 0 4px 16px rgba(0, 200, 215, 0.3);
+  outline: none;
+}
+
+.payout-btn-next:focus-visible {
+  box-shadow: 0 0 0 3px rgba(0, 200, 215, 0.35);
+}
+
+/* Footer — outside the card */
+.payout-footer {
+  width: 704px;
+  height: 20px;
+  text-align: center;
+  line-height: 20px;
+  font-size: 0.8125rem;
+  color: #606468;
+  margin-top: 16px;
+}
+
+.payout-footer-link {
+  color: #00c8d7;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.payout-footer-link:hover {
+  color: #33d4e1;
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .payout-actions {
+    flex-direction: column-reverse;
+  }
+}
