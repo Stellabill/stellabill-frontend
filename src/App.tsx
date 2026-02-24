@@ -4,6 +4,8 @@ import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
 import SubscriptionDetail from './pages/SubscriptionDetail'
 import Plans from './pages/Plans'
+import CreatePlan from './pages/CreatePlan'
+import UIMockups from './pages/UIMockups'
 import Landing from './pages/Landing'
 import OnboardingPayout from './pages/OnboardingPayout'
 import OnboardingReviewPage from './components/OnboardingReview'
@@ -21,6 +23,8 @@ function App() {
       <Route path="/onboarding-success" element={<OnboardingSuccess />} />
 
       <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
+      <Route path="/plans" element={<Layout><Plans /></Layout>} />
+      <Route path="/plans/create" element={<Layout><CreatePlan /></Layout>} />
       <Route path="/subscriptions" element={<Layout><Subscriptions /></Layout>} />
       <Route path="/subscriptions/:id" element={<Layout><SubscriptionDetail /></Layout>} />
       <Route path="/subscriptions/:id/usage" element={<Layout><UsageBilling /></Layout>} />

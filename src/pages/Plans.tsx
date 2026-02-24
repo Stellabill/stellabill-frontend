@@ -184,7 +184,7 @@ export default function Plans() {
           </p>
         </div>
         <button
-          onClick={() => navigate("/plans/new")}
+          onClick={() => navigate("/plans/create")}
           style={{
             display: "inline-flex",
             alignItems: "center",

@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import PricingSection, { validatePricing, type PricingSectionValue } from '../components/PricingSection'
 import BillingTypeSection from "../components/create-plan/BillingTypeSection";
 
 export default function CreatePlan() {
   const navigate = useNavigate();
   const [usageEnabled, setUsageEnabled] = useState(false);
   const [trialDays, setTrialDays] = useState("");
+  const [pricing, setPricing] = useState<PricingSectionValue>({ price: '', interval: '' })
+  const [errors, setErrors] = useState<{ priceError?: string; intervalError?: string }>({})
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,6 +29,15 @@ export default function CreatePlan() {
           trialDays={trialDays}
           onTrialDaysChange={setTrialDays}
         />
+        
+        <div style={{ marginBottom: '1.5rem' }}>
+          <PricingSection
+            value={pricing}
+            onChange={setPricing}
+            priceError={errors.priceError}
+            intervalError={errors.intervalError}
+          />
+        </div>
 
         {/* Actions */}
         <div
