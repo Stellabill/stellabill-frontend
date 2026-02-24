@@ -1,0 +1,233 @@
+.diagramSection {
+  position: relative;
+  padding: 6rem 2rem;
+  background-color: #020b0d;
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.diagramContainer {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  aspect-ratio: 3;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Background SVG with rings - now at container level */
+.ringsSvg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  pointer-events: none;
+  animation: pulseRings 6s ease-in-out infinite;
+}
+
+/* Removed old .backgroundSvg - no longer needed */
+
+/* Individual nodes positioned absolutely */
+.node {
+  position: absolute;
+  width: 180px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.node:nth-child(2) {
+  left: 5%;
+}
+
+.node:nth-child(3) {
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.node:nth-child(4) {
+  right: 5%;
+  left: auto;
+  transform: translateY(-50%);
+}
+
+/* Vault node styling */
+.nodeVault {
+  width: 200px;
+  height: 200px;
+}
+
+@keyframes pulseRings {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Box styling for all nodes */
+.nodeBox {
+  position: relative;
+  z-index: 2;
+  width: 160px;
+  height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(2, 11, 13, 0.8);
+  border: 2px solid rgba(13, 235, 213, 0.4);
+  border-radius: 12px;
+  box-shadow: 
+    0 0 20px rgba(13, 235, 213, 0.2),
+    inset 0 0 20px rgba(13, 235, 213, 0.05);
+  transition: all 0.3s ease;
+}
+
+/* Vault box styling */
+.nodeVault .nodeBox {
+  width: 140px;
+  height: 80px;
+  background: rgba(2, 11, 13, 0.9);
+  border: 2px solid rgba(0, 211, 242, 0.5);
+  box-shadow: 
+    0 0 30px rgba(13, 235, 213, 0.3),
+    0 0 60px rgba(0, 211, 242, 0.1),
+    inset 0 0 30px rgba(13, 235, 213, 0.08);
+}
+
+.nodeBox:hover {
+  border-color: rgba(13, 235, 213, 0.7);
+  box-shadow: 
+    0 0 30px rgba(13, 235, 213, 0.4),
+    inset 0 0 30px rgba(13, 235, 213, 0.1);
+}
+
+.nodeLabel {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.nodeTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.nodeVault .nodeTitle {
+  font-size: 1.3rem;
+}
+
+/* Accessibility caption */
+.caption {
+  text-align: center;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .diagramContainer {
+    flex-direction: column;
+    min-height: auto;
+    aspect-ratio: auto;
+    padding: 2rem 0;
+  }
+
+  .node {
+    position: relative;
+    top: auto;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    margin: 1.5rem 0;
+  }
+
+  .nodeVault {
+    order: 2;
+  }
+
+  .node:nth-child(2) {
+    order: 1;
+  }
+
+  .node:nth-child(4) {
+    order: 3;
+  }
+
+  .ringsSvg {
+    display: none;
+  }
+
+  .diagramSection {
+    padding: 4rem 1rem;
+  }
+
+  .nodeLabel {
+    font-size: 0.65rem;
+  }
+
+  .nodeTitle {
+    font-size: 1.25rem;
+  }
+
+  .nodeVault .nodeTitle {
+    font-size: 1.15rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .diagramSection {
+    padding: 3rem 1rem;
+  }
+
+  .nodeBox {
+    width: 140px;
+    height: 90px;
+    padding: 1rem;
+  }
+
+  .nodeVault .nodeBox {
+    width: 130px;
+    height: 75px;
+  }
+
+  .nodeLabel {
+    font-size: 0.6rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .nodeTitle {
+    font-size: 1.1rem;
+  }
+
+  .nodeVault .nodeTitle {
+    font-size: 1rem;
+  }
+
+  .caption {
+    font-size: 0.75rem;
+    margin-top: 1.5rem;
+  }
+}

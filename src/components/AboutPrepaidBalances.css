@@ -1,0 +1,59 @@
+/* Universal Parent Section */
+.about-prepaid-section {
+  background-color: #000000; /* Black universal parent */
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+
+/* Main container: Dark background with a Teal-tinted border */
+.prepaid-card {
+    padding: 10px;
+  background-color: #0d1117;
+  /* This color matches the teal/cyan border in your image */
+  border: 1px solid #4fd1c5;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  max-width: 800px;
+  margin: 20px auto;
+  /* Optional: adds a very subtle teal outer glow to match the 'glow' in the image */
+  box-shadow: 0 0 15px rgba(79, 209, 197, 0.05);
+}
+
+/* Icon box: Dark teal background with a brighter teal border */
+.prepaid-icon-container {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  background-color: rgba(22, 44, 44, 0.8);
+  border: 1px solid #4fd1c5; /* Brighter teal border for the icon */
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prepaid-icon {
+  color: #4fd1c5; /* Match the teal color in the icon requirements */
+}
+
+.prepaid-title {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 16px;
+  margin: 0 0 4px 0;
+}
+
+.prepaid-body {
+  color: #9ca3af;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}

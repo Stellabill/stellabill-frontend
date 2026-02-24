@@ -9,17 +9,17 @@ import Landing from './pages/Landing'
 import UIMockups from './pages/UIMockups'
 import UsageBilling from './pages/UsageBilling'
 import OnboardingSuccess from './pages/OnboardingSuccess'
-<<<<<<< detail-section
 import CreatePlan from './pages/CreatePlan'
-=======
+import AboutPrepaidBalances from './components/AboutPrepaidBalances'
 import CreatePlan from "./pages/CreatePlan";
 import Pricing from "./pages/Pricing";
->>>>>>> main
+
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+         <Route path="/about-prepaid-balances" element={<AboutPrepaidBalances />} />
       <Route path="/onboarding-success" element={<OnboardingSuccess />} />
       <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
       <Route path="/subscriptions" element={<Layout><Subscriptions /></Layout>} />
