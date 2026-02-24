@@ -3,8 +3,9 @@ import LandingNavbar from '../components/LandingNavbar'
 import { useEffect, useState } from 'react'
 import Hero from '../components/Landing/Hero'
 import FlowDiagram from '../components/Landing/FlowDiagram'
-import TechBadges from "../components/landing/TechBadges";
+import TechBadges from "../components/Landing/TechBadges";
 import SubscriptionActions from "@/components/SubscriptionActions";
+import QuoteCallout from "../components/Landing/QuoteCallout";
 
 export default function Landing() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
@@ -36,7 +37,7 @@ export default function Landing() {
 
       <main>
         <Hero />
-        <TechBadges />
+        <QuoteCallout />
 
         {/* Technology Badges */}
         <TechBadges />
