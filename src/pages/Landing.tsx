@@ -6,6 +6,7 @@ import FlowDiagram from '../components/Landing/FlowDiagram'
 import TechBadges from "../components/landing/TechBadges";
 import SubscriptionActions from "@/components/SubscriptionActions";
 import KeyMetrics from '@/components/Landing/KeyMetrics'
+import FAQ from "../components/Landing/FAQ";
 
 export default function Landing() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
@@ -133,6 +134,8 @@ export default function Landing() {
             />
           </div>
         </section>
+
+          <FAQ />
 
           <section id="docs" style={{ padding: "6rem 0", minHeight: "400px" }}>
             <h2
