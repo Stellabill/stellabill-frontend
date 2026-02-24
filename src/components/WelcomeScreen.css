@@ -1,0 +1,82 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+.welcome {
+    background-color: #000000;
+    padding: 20px 24px;
+    width: 100%;
+    position: fixed;
+    left: 50%;
+    top: 80px;
+    transform: translateX(-50%);
+    max-width: 520px;
+    .box {
+        text-align: center;
+        margin-bottom: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        h1 {
+            color: #fff;
+            font-size: 36px;
+            letter-spacing: 0.37px;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 5px;
+        }
+        p {
+            font-size: 18px;
+            font-weight: 400;
+            color: #90a1b9;
+        }
+    }
+    .steps {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 30px;
+        justify-content: center;
+        span {
+            border-top: 2px solid #ffffff33;
+            width: 100%;
+            display: block;
+        }
+        div {
+            font-size: 1rem;
+            color: #62748e;
+            border: 2px solid #ffffff33;
+            min-width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: grid;
+            position: relative;
+            place-content: center;
+            &::after {
+                content: "Business";
+                position: absolute;
+                bottom: -30px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+        }
+        .num-1 {
+            border-color: #00b8db;
+            color: #00b8db;
+            &::after {
+                color: #fff;
+            }
+        }
+        .num-2 {
+            &::after {
+                content: "Payout";
+            }
+        }
+        .num-3 {
+            &::after {
+                content: "Review";
+            }
+        }
+    }
+}
