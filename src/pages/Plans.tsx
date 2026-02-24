@@ -75,7 +75,9 @@ export default function Plans() {
   const [plans] = useState<Plan[]>(mockPlans);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<PlanStatus | "All">("All");
-  const [intervalFilter, setIntervalFilter] = useState<PlanInterval | "All">("All");
+  const [intervalFilter, setIntervalFilter] = useState<PlanInterval | "All">(
+    "All",
+  );
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -112,7 +114,14 @@ export default function Plans() {
     });
 
     return result;
-  }, [plans, searchQuery, statusFilter, intervalFilter, sortField, sortDirection]);
+  }, [
+    plans,
+    searchQuery,
+    statusFilter,
+    intervalFilter,
+    sortField,
+    sortDirection,
+  ]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -125,11 +134,13 @@ export default function Plans() {
 
   const handleEdit = (planId: string) => {
     console.log("Edit plan:", planId);
+    // Navigate to edit page or open modal
   };
 
   const handleDelete = (planId: string) => {
     if (deleteConfirm === planId) {
       console.log("Delete plan:", planId);
+      // Call API to delete
       setDeleteConfirm(null);
     } else {
       setDeleteConfirm(planId);
@@ -144,7 +155,7 @@ export default function Plans() {
         minHeight: "100vh",
       }}
     >
-      {/* ===== PAGE HEADER - Issue #51 ===== */}
+      {/* Page header */}
       <div
         style={{
           display: "flex",
@@ -167,7 +178,7 @@ export default function Plans() {
             Plans
           </h1>
           <p style={{ color: "#64748b", fontSize: "0.875rem", margin: 0 }}>
-            Manage your billing plans
+            Manage your billing plans.
           </p>
         </div>
         <button
@@ -177,19 +188,17 @@ export default function Plans() {
             alignItems: "center",
             gap: "0.45rem",
             padding: "0.65rem 1.25rem",
-            background: "linear-gradient(135deg, #38bdf8 0%, #20b2aa 60%, #0d9488 100%)",
+            background: "linear-gradient(135deg, #38bcd4 0%, #4dd8e1 100%)",
             border: "none",
             borderRadius: "8px",
             color: "#fff",
             fontSize: "0.875rem",
             fontWeight: 600,
             cursor: "pointer",
-            boxShadow: "0 0 18px rgba(32,178,170,0.35)",
             transition: "opacity 0.2s",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.88")}
           onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-          aria-label="Create a new billing plan"
         >
           <svg
             width="16"
@@ -208,7 +217,6 @@ export default function Plans() {
           Create plan
         </button>
       </div>
-      {/* ===== END PAGE HEADER ===== */}
 
       {/* Search and Filters */}
       <div
@@ -695,7 +703,8 @@ export default function Plans() {
                             }}
                             onMouseLeave={(e) => {
                               if (deleteConfirm !== plan.id) {
-                                e.currentTarget.style.background = "transparent";
+                                e.currentTarget.style.background =
+                                  "transparent";
                                 e.currentTarget.style.color = "#94a3b8";
                               }
                             }}

@@ -1,0 +1,238 @@
+.subscriptions-page {
+    background: #000000;
+    padding: 80px 32px;
+    color: #FFFFFF;
+    font-family: 'Inter', sans-serif;
+    box-sizing: border-box;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 32px;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: #90A1B9;
+    font-size: 16px;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.breadcrumb-item:hover {
+    color: #FFFFFF;
+}
+
+.breadcrumb-current {
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.breadcrumb-separator {
+    color: #90A1B9;
+}
+
+.breadcrumb-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Header Section */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 40px;
+    gap: 24px;
+}
+
+.header-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.header-title {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 48px;
+    margin: 0;
+    letter-spacing: 0.35px;
+}
+
+.header-subtitle {
+    font-size: 20px;
+    color: #90A1B9;
+    font-weight: 400;
+    line-height: 28px;
+    margin: 0;
+    letter-spacing: -0.45px;
+}
+
+.browse-plans-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(90deg, #00B8DB 0%, #00BBA7 100%);
+    box-shadow: 0px 0px 40px rgba(6, 182, 212, 0.3);
+    border-radius: 8px;
+    color: #000000;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: transform 0.2s, opacity 0.2s;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.browse-plans-btn:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+}
+
+.btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+.subscriptions-container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  color: #ffffff;
+  background-color: #000000;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+/* Breadcrumb Styles */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.breadcrumb a {
+  color: #94a3b8;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.breadcrumb a:hover {
+  color: #ffffff;
+}
+
+.breadcrumb-separator {
+  color: #64748b;
+}
+
+.breadcrumb-current {
+  color: #f1f5f9;
+}
+
+
+/* Header & Breadcrumb */
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+}
+
+.page-title-section h1 {
+  margin: 0.5rem 0;
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.page-description {
+  color: #94a3b8;
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+.browse-plans-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(90deg, #00B8DB 0%, #00BBA7 100%);
+  color: #000;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.browse-plans-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+/* Filter Tabs */
+.filter-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+}
+
+.filter-tab {
+    padding: 10px 24px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: #90A1B9;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: capitalize;
+}
+
+.filter-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
+}
+
+.filter-tab.active {
+    background: linear-gradient(90deg, #00B8DB 0%, #00BBA7 100%);
+    box-shadow: 0px 0px 30px rgba(6, 182, 212, 0.3);
+    color: #000000;
+    border: none;
+}
+
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .header-title {
+        font-size: 32px;
+        line-height: normal;
+    }
+
+    .header-subtitle {
+        font-size: 16px;
+    }
+}

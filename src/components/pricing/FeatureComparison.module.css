@@ -1,0 +1,253 @@
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Mobile-First: Base styles for xs screens (< 640px) */
+.title {
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+  text-align: center;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  background-color: transparent;
+}
+
+.table {
+  width: 750px;
+  min-width: 750px;
+  border-collapse: collapse;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+.headerRow {
+  height: 72.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: transparent;
+}
+
+.featureHeader,
+.columnHeader {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.75rem;
+  background-color: transparent;
+}
+
+.columnHeader {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.featureHeader {
+  color: #90a1b9;
+  width: 40%;
+}
+
+.columnHeader.proColumn {
+  background: linear-gradient(90deg, #00b8db1a, #00bba71a);
+}
+
+.featureCell {
+  padding: 0.5rem 0.75rem;
+  color: #cad5e2;
+  font-size: 0.75rem;
+  text-align: left;
+  background-color: transparent;
+}
+
+.dataCell {
+  padding: 0.5rem 0.75rem;
+  text-align: center;
+  background-color: transparent;
+}
+
+.dataCell.proColumn {
+  background: linear-gradient(90deg, #00b8db0d, #00bba70d);
+}
+
+.dataCell:last-child,
+.columnHeader:last-child {
+  border-right: none;
+}
+
+.row {
+  height: 65px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 0.2s ease;
+}
+
+.row:hover {
+  background-color: transparent;
+}
+
+.row.withDivider {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.checkmarkCell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.checkmark {
+  color: #00d3f2;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.dashCell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.dash {
+  color: #45556c;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.textValue {
+  color: #cad5e2;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Progressive Enhancement */
+
+/* sm breakpoint (640px to 767px) - Small Device */
+@media (min-width: 640px) {
+  .title {
+    font-size: 1.375rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .table {
+    width: 825px;
+    min-width: 825px;
+  }
+
+  .featureHeader,
+  .columnHeader,
+  .featureCell,
+  .dataCell {
+    padding: 0.65rem 0.875rem;
+    font-size: 0.8125rem;
+  }
+
+  .columnHeader {
+    font-size: 0.8rem;
+  }
+
+  .checkmark,
+  .dash {
+    font-size: 0.95rem;
+  }
+
+  .textValue {
+    font-size: 0.75rem;
+  }
+}
+
+/* md breakpoint (768px to 1023px) - Tablet */
+@media (min-width: 768px) {
+  .title {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .table {
+    width: 900px;
+    min-width: 900px;
+  }
+
+  .featureHeader,
+  .columnHeader,
+  .featureCell,
+  .dataCell {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .checkmark,
+  .dash {
+    font-size: 1rem;
+  }
+
+  .textValue {
+    font-size: 0.8rem;
+  }
+}
+
+/* lg breakpoint (1024px and up) - Desktop */
+@media (min-width: 1024px) {
+  .title {
+    font-size: 36px;
+    margin-bottom: 2rem;
+  }
+
+  .tableWrapper {
+    overflow-x: visible;
+    width: 1014px;
+  }
+
+  .table {
+    width: 1014px;
+    min-width: 1014px;
+  }
+
+  .featureHeader,
+  .columnHeader,
+  .featureCell,
+  .dataCell {
+    padding: 1rem 1.5rem;
+    font-size: 0.95rem;
+  }
+
+  .columnHeader {
+    font-size: 0.95rem;
+  }
+
+  .checkmark,
+  .dash {
+    font-size: 1.25rem;
+  }
+
+  .textValue {
+    font-size: 0.9rem;
+  }
+}

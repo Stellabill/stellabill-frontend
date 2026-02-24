@@ -1,0 +1,147 @@
+.revenue-chart-container {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.revenue-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.revenue-chart-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.time-range-selector {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.time-range-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #2a2a2a;
+  color: #9ca3af;
+}
+
+.time-range-btn:hover {
+  background: #333333;
+}
+
+.time-range-btn.active {
+  background: #60a5fa;
+  color: #1f2937;
+}
+
+.time-range-btn:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.chart-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.line-chart {
+  width: 100%;
+  height: auto;
+  min-width: 600px;
+}
+
+.grid-line {
+  stroke: #2a2a2a;
+  stroke-width: 1;
+}
+
+.axis-label {
+  fill: #9ca3af;
+  font-size: 12px;
+}
+
+.revenue-line {
+  stroke: #60a5fa;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.data-point {
+  fill: #60a5fa;
+  stroke: #1a1a1a;
+  stroke-width: 2;
+  cursor: pointer;
+  transition: r 0.2s ease;
+}
+
+.data-point:hover,
+.data-point:focus {
+  r: 6;
+  outline: none;
+}
+
+.tooltip-bg {
+  fill: #2a2a2a;
+  stroke: #60a5fa;
+  stroke-width: 1;
+}
+
+.tooltip-text {
+  fill: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tooltip-date {
+  fill: #9ca3af;
+  font-size: 11px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .revenue-chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .time-range-selector {
+    width: 100%;
+  }
+  
+  .time-range-btn {
+    flex: 1;
+  }
+  
+  .line-chart {
+    min-width: 500px;
+  }
+}
+
+@media (max-width: 480px) {
+  .revenue-chart-container {
+    padding: 1rem;
+  }
+  
+  .revenue-chart-title {
+    font-size: 1.125rem;
+  }
+  
+  .time-range-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+}
