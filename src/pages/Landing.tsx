@@ -5,6 +5,7 @@ import Hero from '../components/Landing/Hero'
 import FlowDiagram from '../components/Landing/FlowDiagram'
 import TechBadges from "../components/landing/TechBadges";
 import SubscriptionActions from "@/components/SubscriptionActions";
+import KeyMetrics from '@/components/Landing/KeyMetrics'
 
 export default function Landing() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
@@ -37,7 +38,7 @@ export default function Landing() {
       <main>
         <Hero />
         <TechBadges />
-
+        <KeyMetrics />
         {/* Technology Badges */}
         <TechBadges />
 

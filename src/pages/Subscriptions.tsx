@@ -1,6 +1,7 @@
 import { useState, useMemo, MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import PauseSubscriptionModal from '../components/PauseSubscriptionModal';
+import CancelSubscriptionModal from '../components/CancelSubscriptionModal';
 import { subscriptions } from '../api/client';
 import { Subscription } from '@/types/subscription';
 import UsageThisPeriod from '../components/UsageThisPeriod';
@@ -102,13 +103,15 @@ export default function Subscriptions() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Modals State
+  const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
   const handleViewFullUsage = () => {
     console.log('Navigate to full usage page');
     // TODO: Navigate to full usage page or expand section
   };
-  // Pause Modal State
-  const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
-  const [isActionLoading, setIsActionLoading] = useState(false);
 
   const filteredData = useMemo(() => {
     if (activeFilter === 'All') return data;
@@ -143,6 +146,23 @@ export default function Subscriptions() {
     }
   };
 
+  const handleCancelConfirm = async () => {
+    if (!selectedId) return;
+    setIsActionLoading(true);
+    try {
+      await subscriptions.cancel(selectedId);
+      setData(prev => prev.map(sub =>
+        sub.id === selectedId ? { ...sub, status: 'Cancelled' as const } : sub
+      ));
+      setIsCancelModalOpen(false);
+    } catch (err) {
+      console.error('Failed to cancel:', err);
+      setIsCancelModalOpen(false);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
   const handleResume = async (id: string) => {
     setData(prev => prev.map(sub =>
       sub.id === id ? { ...sub, status: 'Active' as const } : sub
@@ -165,6 +185,13 @@ export default function Subscriptions() {
             <path d="M10 8v8M14 8v8" />
           </svg>
         );
+      case 'Cancelled':
+        return (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        );
       default:
         return null;
     }
@@ -172,7 +199,6 @@ export default function Subscriptions() {
 
   if (selectedSub) {
     // Mock usage data - replace with actual API data
-    const isUsageBased = true; // Show usage for all plans
     const usageData = {
       billingPeriod: 'Mar 1 — Mar 31',
       usage: '32450 API calls',
@@ -260,8 +286,6 @@ export default function Subscriptions() {
                         fontSize: '14px',
                         transition: '0.2s'
                       }}
-                      onMouseOver={(e: MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = '#222')}
-                      onMouseOut={(e: MouseEvent<HTMLButtonElement>) => (e.currentTarget.style.background = '#1a1a1a')}
                     >
                       Pause subscription
                     </button>
@@ -284,18 +308,23 @@ export default function Subscriptions() {
                       Resume subscription
                     </button>
                   )}
-                  <button style={{
-                    background: 'transparent',
-                    color: '#666',
-                    border: '1px solid #222',
-                    padding: '10px',
-                    borderRadius: '10px',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    fontSize: '13px'
-                  }}>
-                    Cancel billing
-                  </button>
+                  {selectedSub.status !== 'Cancelled' && (
+                    <button
+                      onClick={() => setIsCancelModalOpen(true)}
+                      style={{
+                        background: 'transparent',
+                        color: '#666',
+                        border: '1px solid #222',
+                        padding: '10px',
+                        borderRadius: '10px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontSize: '13px'
+                      }}
+                    >
+                      Cancel billing
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -311,6 +340,21 @@ export default function Subscriptions() {
             onViewFullUsage={handleViewFullUsage}
           />
         </div>
+
+        <PauseSubscriptionModal
+          isOpen={isPauseModalOpen}
+          onClose={() => setIsPauseModalOpen(false)}
+          onConfirm={handlePauseConfirm}
+          isLoading={isActionLoading}
+        />
+        <CancelSubscriptionModal
+          isOpen={isCancelModalOpen}
+          onClose={() => setIsCancelModalOpen(false)}
+          onConfirm={handleCancelConfirm}
+          isLoading={isActionLoading}
+          balance={selectedSub?.prepaidBalance?.replace(' USDC', '') || '0'}
+          endDate={selectedSub?.nextCharge || 'N/A'}
+        />
       </div>
     );
   }
@@ -451,6 +495,14 @@ export default function Subscriptions() {
         onClose={() => setIsPauseModalOpen(false)}
         onConfirm={handlePauseConfirm}
         isLoading={isActionLoading}
+      />
+      <CancelSubscriptionModal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        onConfirm={handleCancelConfirm}
+        isLoading={isActionLoading}
+        balance={selectedSub?.prepaidBalance?.replace(' USDC', '') || '0'}
+        endDate={selectedSub?.nextCharge || 'N/A'}
       />
     </div>
   );
