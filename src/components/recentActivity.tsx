@@ -99,9 +99,9 @@ const SkeletonItem = () => (
     <div style={{ height: "1rem", width: "4rem", borderRadius: "0.25rem", background: "rgba(255,255,255,0.08)", flexShrink: 0, marginTop: "0.125rem" }} />
   </li>
 );
-//  { id: "1", type: "new_subscription",      details: "Plan Pro — Customer GABC...XYZ9",      timestamp: "2 minutes ago",  amount: "10 USDC" },
+type ActivityType = keyof typeof TYPE_CONFIG;
 
-const ActivityItem = ({ type, details, timestamp, amount, isNew }: {type: TYPE_CONFIG, details :string, timestamp:string, isNew: boolean, amount: string}) => {
+const ActivityItem = ({ type, details, timestamp, amount }: {type: ActivityType, details: string, timestamp: string, amount: string}) => {
   const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.charge_succeeded;
   const showPlus = type === "new_subscription";
   const amountColor = showPlus ? "#05DF72" : "#FFFFFF";
@@ -209,12 +209,25 @@ const ActivityItem = ({ type, details, timestamp, amount, isNew }: {type: TYPE_C
   );
 };
 
+interface RecentActivityProps {
+  items?: Array<{
+    id: string;
+    type: ActivityType;
+    details: string;
+    timestamp: string;
+    amount: string;
+  }> | null;
+  onViewAll?: () => void;
+  maxVisible?: number;
+  title?: string;
+}
+
 export const RecentActivity = ({
   items = null,
   onViewAll,
   maxVisible = 8,
   title = "Recent activity",
-}) => {
+}: RecentActivityProps) => {
   const isLoading = items === null;
   const visible = isLoading ? [] : items.slice(0, maxVisible);
   const skeletonCount = 5;

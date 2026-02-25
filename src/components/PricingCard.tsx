@@ -1,5 +1,3 @@
-import { ArrowRightIcon } from "lucide-react"
-
 interface Feature {
   text: string
 }
@@ -18,6 +16,21 @@ interface PricingCardProps {
   isPopularLabel?: string
   useGradientButton?: boolean
 }
+
+const ArrowRightIcon = () => (
+  <svg 
+    width="16" 
+    height="16" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2.5" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+  >
+    <path d="M5 12h14M12 5l7 7-7 7" />
+  </svg>
+)
 
 export default function PricingCard({
   title,
@@ -260,22 +273,11 @@ export default function PricingCard({
             gap: '0.75rem',
             ...(useGradientButton && {
               boxShadow: '0 0 20px rgba(34, 211, 238, 0.3)',
-              '&:hover': {
-                boxShadow: '0 0 30px rgba(34, 211, 238, 0.5)',
-              },
-            }),
-            ...(!useGradientButton && {
-              '&:hover': {
-                borderColor: '#22d3ee',
-                boxShadow: '0 0 10px rgba(34, 211, 238, 0.2)',
-              },
             }),
           }}
         >
           {buttonText}
-          {buttonArrow && (
-            <ArrowRightIcon size={16} color="#000000" style={{ marginLeft: '0.25rem' }} />
-          )}
+          {buttonArrow && <ArrowRightIcon />}
         </button>
       </div>
     </div>

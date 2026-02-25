@@ -2,11 +2,12 @@ import PricingCard from '@/components/PricingCard'
 import LandingNavbar from '../components/LandingNavbar'
 import { useEffect, useState } from 'react'
 import Hero from '../components/Landing/Hero'
+import TechBadges from "../components/landing/TechBadges"
+import CTACards from '../components/CTACards'
 import FlowDiagram from '../components/Landing/FlowDiagram'
-import TechBadges from "../components/landing/TechBadges";
+import TechBadges from "../components/Landing/TechBadges";
 import SubscriptionActions from "@/components/SubscriptionActions";
-import KeyMetrics from '@/components/Landing/KeyMetrics'
-import FAQ from "../components/Landing/FAQ";
+import QuoteCallout from "../components/Landing/QuoteCallout";
 
 export default function Landing() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
@@ -38,10 +39,13 @@ export default function Landing() {
 
       <main>
         <Hero />
-        <TechBadges />
-        <KeyMetrics />
+        <QuoteCallout />
+
         {/* Technology Badges */}
         <TechBadges />
+
+        {/* CTA Cards */}
+        <CTACards />
 
         {/* Sections for anchor links */}
         <div

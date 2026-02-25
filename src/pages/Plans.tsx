@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 
 type PlanStatus = "Active" | "Archived";
 type PlanInterval = "Monthly" | "Yearly";
@@ -17,7 +17,6 @@ interface Plan {
   status: PlanStatus;
 }
 
-// Mock data - replace with API call
 const mockPlans: Plan[] = [
   {
     id: "1",
@@ -102,7 +101,6 @@ export default function Plans() {
       return matchesSearch && matchesStatus && matchesInterval;
     });
 
-    // Sort
     result.sort((a, b) => {
       let comparison = 0;
       if (sortField === "name") {
@@ -150,6 +148,11 @@ export default function Plans() {
   };
 
   return (
+    <div style={{ padding: '1.5rem 2rem', background: '#0a0a0a', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h1 style={{ color: '#fff', fontSize: '1.875rem', fontWeight: 700, margin: 0 }}>Plans</h1>
+        <Link 
+          to="/plans/create"
     <div
       style={{
         padding: "1.5rem 2rem",
@@ -186,40 +189,25 @@ export default function Plans() {
         <button
           onClick={() => navigate("/plans/create")}
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "0.45rem",
-            padding: "0.65rem 1.25rem",
-            background: "linear-gradient(135deg, #38bcd4 0%, #4dd8e1 100%)",
-            border: "none",
-            borderRadius: "8px",
-            color: "#fff",
-            fontSize: "0.875rem",
+            background: '#00d4aa',
+            color: '#000',
+            padding: '0.625rem 1.25rem',
+            borderRadius: '8px',
             fontWeight: 600,
-            cursor: "pointer",
-            transition: "opacity 0.2s",
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            boxShadow: '0 4px 12px rgba(0, 212, 170, 0.2)'
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.88")}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
           Create plan
-        </button>
+        </Link>
       </div>
-
       {/* Search and Filters */}
       <div
         style={{
@@ -999,17 +987,14 @@ export default function Plans() {
             }
           </div >
         )}
-
-        {
-          filteredPlans.length === 0 && (
-            <div
-              style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}
-            >
-              No plans found matching your filters.
-            </div>
-          )
-        }
-      </div >
-    </div >
+        {filteredPlans.length === 0 && (
+          <div
+            style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}
+          >
+            No plans found matching your filters.
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

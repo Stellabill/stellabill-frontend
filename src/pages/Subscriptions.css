@@ -104,10 +104,11 @@
 }
 
 .btn-icon {
-  .    display: flex;
-  .    align-items: center;
-  .    justify-content: center;
-  }
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .subscriptions-container {
   width: 100%;
   max-width: none;
