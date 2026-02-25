@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.2.6",
+    "@stellar/freighter-api": "^6.0.1",
     "lucide-react": "^0.575.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
