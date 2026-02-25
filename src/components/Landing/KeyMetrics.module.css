@@ -1,0 +1,166 @@
+.section {
+  padding: 4rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+}
+
+.headlineContainer {
+  width: 100%;
+  max-width: 800px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 3rem 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+
+.headlineText {
+  color: #FFFFFF;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.highlightWrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.underline {
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: #00BBA7;
+  border-radius: 2px;
+}
+
+.metricsGrid {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.card {
+  flex: 1;
+  max-width: 320px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 184, 219, 0.3);
+}
+
+.metricValue {
+  font-size: 3.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.gradientUptime {
+  background-image: linear-gradient(135deg, #00B8DB 0%, #0092B8 100%);
+}
+
+.gradientSettlement {
+  background-image: linear-gradient(135deg, #009689 0%, #00BBA7 100%);
+}
+
+.gradientFee {
+  background-image: linear-gradient(135deg, #00BBA7 0%, #00B8DB 100%);
+}
+
+
+.metricLabel {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.1em;
+  margin: 0;
+}
+
+.trustedSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  width: 100%;
+}
+
+.trustedHeading {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.15em;
+  margin: 0;
+}
+
+.partnerGrid {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4rem;
+  flex-wrap: wrap;
+}
+
+.partnerName {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #94a3b8;
+  transition: color 0.2s ease;
+  cursor: default;
+}
+
+.partnerName:hover {
+  color: #ffffff;
+}
+
+
+@media (max-width: 768px) {
+  .section {
+    padding: 3rem 1.5rem;
+    gap: 3rem;
+  }
+  
+  .metricsGrid {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .card {
+    width: 100%;
+    max-width: none;
+  }
+  
+  .partnerGrid {
+    gap: 2rem;
+  }
+  
+  .partnerName {
+    font-size: 1.25rem;
+  }
+}

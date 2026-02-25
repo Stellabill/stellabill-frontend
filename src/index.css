@@ -1,9 +1,11 @@
+@import "tailwindcss";
+
 * {
   box-sizing: border-box;
 }
 
 :root {
-  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   color: #f5f8ff;
   background: #00060f;

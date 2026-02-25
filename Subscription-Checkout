@@ -1,0 +1,12 @@
+https://www.figma.com/design/vJofUR8jpyUNuFX1AdRVaD/Stellabill?node-id=0-1&t=BLrQ29dSg6gmrj4L-1
+
+Implements the complete subscription checkout and create-subscription flow, including:
+
+• Step 1 — Plan summary (plan details, pricing per interval, first charge, total deposit, Continue/Cancel)
+• Step 2 — Deposit amount selection with editable field, balance display, and minimum interval guidance
+• Step 3 — Wallet approval state with pending and instructional messaging (no wallet UI designed)
+• Step 4 — Success state with subscription details, next charge date, and navigation to “My Subscriptions”
+
+Includes all required error states (insufficient balance, wallet rejection, network error) and clear back/cancel behavior.
+
+Flow designed for desktop and mobile with accessibility and UX clarity considered.

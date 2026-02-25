@@ -1,0 +1,58 @@
+ .section {
+   padding: 3rem 1.5rem;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   background: transparent;
+ }
+ 
+ .pill {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   max-width: 1100px;
+   width: 100%;
+   padding: 1.25rem 2rem;
+   border-radius: 9999px;
+   background: #0a0f11;
+   border: 1px solid rgba(255, 255, 255, 0.08);
+   box-shadow:
+     0 0 0 2px rgba(34, 211, 238, 0.06),
+     0 10px 40px rgba(34, 211, 238, 0.12),
+     inset 0 1px 0 rgba(255, 255, 255, 0.06);
+ }
+ 
+ .quote {
+   margin: 0;
+   text-align: center;
+   color: #e6f1f4;
+   font-weight: 800;
+   letter-spacing: -0.015em;
+   line-height: 1.25;
+   font-size: clamp(1.125rem, 3.2vw, 2rem);
+   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+ }
+ 
+ .billing {
+   position: relative;
+   color: #ffffff;
+   text-decoration: none;
+ }
+ 
+ .billing::after {
+   content: "";
+   position: absolute;
+   left: 0;
+   right: 0;
+   height: 2px;
+   bottom: -0.2em;
+   background: #22d3ee;
+   border-radius: 2px;
+ }
+ 
+ @media (max-width: 640px) {
+   .pill {
+     padding: 1rem 1.25rem;
+   }
+ }
+*** End Patch```} />

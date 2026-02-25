@@ -1,0 +1,260 @@
+.usage-billing-page {
+    color: #FFFFFF;
+    background: #000000;
+    min-height: 100vh;
+    padding: 80px 20px;
+    box-sizing: border-box;
+}
+
+.breadcrumb {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0px;
+    gap: 8px;
+    margin-bottom: 32px;
+}
+
+.breadcrumb a,
+.breadcrumb span {
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.150391px;
+}
+
+.breadcrumb a {
+    color: #90A1B9;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    color: #FFFFFF;
+}
+
+.breadcrumb .separator {
+    color: #45556C;
+}
+
+.breadcrumb .current {
+    color: #FFFFFF;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0px;
+    gap: 12px;
+    margin-bottom: 32px;
+}
+
+.header h1 {
+     
+    font-style: normal;
+    font-weight: 700;
+    font-size: 36px;
+    line-height: 40px;
+    letter-spacing: 0.369141px;
+    color: #FFFFFF;
+    margin: 0;
+}
+
+.header p {
+     
+    font-style: normal;
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 28px;
+    letter-spacing: -0.439453px;
+    color: #90A1B9;
+    margin: 0;
+}
+
+/* Main Card */
+.main-card {
+    box-sizing: border-box;
+    width: 100%;
+    background: #000000;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0px 20px 80px rgba(0, 0, 0, 0.5);
+    border-radius: 24px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 32px;
+}
+
+.main-card-inner {
+    padding: 33px;
+    background: linear-gradient(135deg, rgba(0, 184, 219, 0.05) 0%, rgba(0, 187, 167, 0.05) 100%);
+    border-radius: 24px;
+}
+
+.period-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0px;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.period-header h2 {
+     
+    font-style: normal;
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 28px;
+    letter-spacing: -0.449219px;
+    color: #FFFFFF;
+    margin: 0;
+}
+
+.period-icon {
+    color: #00D3F2;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.metric-card {
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 21px;
+}
+
+.metric-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0px;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.icon-wrapper-usage {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 184, 219, 0.1);
+    border: 1px solid rgba(0, 184, 219, 0.2);
+    border-radius: 14px;
+    color: #00D3F2;
+}
+
+.icon-wrapper-amount {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 187, 167, 0.1);
+    border: 1px solid rgba(0, 187, 167, 0.2);
+    border-radius: 14px;
+    color: #00D5BE;
+}
+
+.metric-header span {
+     
+    font-style: normal;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.150391px;
+    color: #90A1B9;
+}
+
+.metric-value {
+     
+    font-style: normal;
+    font-weight: 700;
+    font-size: 30px;
+    line-height: 36px;
+    letter-spacing: 0.395508px;
+    color: #FFFFFF;
+    margin: 4px 0;
+}
+
+.metric-unit {
+     
+    font-style: normal;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.150391px;
+    color: #90A1B9;
+}
+
+/* Info Box */
+.info-box {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 17px;
+    background: rgba(0, 184, 219, 0.05);
+    border: 1px solid rgba(0, 184, 219, 0.2);
+    border-radius: 16px;
+    gap: 12px;
+}
+
+.info-box p {
+     
+    font-style: normal;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.150391px;
+    color: #53EAFD;
+    margin: 0;
+}
+
+.info-icon {
+    color: #00D3F2;
+    flex-shrink: 0;
+}
+
+/* Calculation Link */
+.calc-link-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0px;
+    gap: 5px;
+    margin-top: 24px;
+}
+
+.calc-link {
+     
+    font-style: normal;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.150391px;
+    color: #00D3F3;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+
+@media (max-width: 640px) {
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+}
