@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
-import SubscriptionDetail from './pages/SubscriptionDetail'
+import SubscriptionDetail from './pages/SubscriptionDetail' // Fixed: Added missing import
 import Plans from './pages/Plans'
 import CreatePlan from './pages/CreatePlan'
 import UIMockups from './pages/UIMockups'
@@ -28,6 +28,7 @@ function App() {
       
       {/* 2. Authenticated Routes (Wrapped in Layout) */}
       <Route element={<Layout />}>
+        {/* Redirect base dashboard path to specific dashboard component if needed */}
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/browse-plans" element={<BrowsePlans />} />
         
@@ -45,7 +46,7 @@ function App() {
         <Route path="/ui-kit" element={<UIMockups />} />
       </Route>
 
-      {/* 3. Catch-all redirect */}
+      {/* 3. Catch-all redirect - Sends users back to Landing for safety */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

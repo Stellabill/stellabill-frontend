@@ -1,5 +1,3 @@
-import { TrendingUp, ExternalLink } from 'lucide-react'
-
 interface UsageThisPeriodProps {
   billingPeriod?: string | null
   usage?: string | null
@@ -32,7 +30,10 @@ export default function UsageThisPeriod({
         gap: '0.75rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <TrendingUp size={18} style={{ color: '#64748b' }} />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 17l6-6 4 4 8-8" />
+            <path d="M14 7h7v7" />
+          </svg>
           <h2 style={{
             margin: 0,
             fontSize: '1.125rem',
@@ -61,7 +62,11 @@ export default function UsageThisPeriod({
             aria-label="View full usage details"
           >
             View full usage
-            <ExternalLink size={14} />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <path d="M15 3h6v6" />
+              <path d="M10 14L21 3" />
+            </svg>
           </button>
         )}
       </div>
