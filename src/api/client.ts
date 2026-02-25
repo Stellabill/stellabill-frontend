@@ -24,6 +24,13 @@ export const subscriptions = {
       setTimeout(() => resolve({ success: true }), 800);
     });
   },
+  cancel: (id: string) => {
+    // Simulating API call for development/demonstration
+    return new Promise((resolve) => {
+      console.log(`Simulating cancel for subscription: ${id}`);
+      setTimeout(() => resolve({ success: true }), 1000);
+    });
+  },
 }
 
 export const plans = {

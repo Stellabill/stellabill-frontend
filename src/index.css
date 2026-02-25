@@ -2,14 +2,10 @@
 
 * {
   box-sizing: border-box;
-  
 }
 
 :root {
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   color: #1a1a2e;
   background: #f5f5f7;

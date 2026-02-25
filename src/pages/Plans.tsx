@@ -155,6 +155,41 @@ export default function Plans() {
         <h1 style={{ color: '#fff', fontSize: '1.875rem', fontWeight: 700, margin: 0 }}>Plans</h1>
         <Link 
           to="/plans/create"
+    <div
+      style={{
+        padding: "1.5rem 2rem",
+        background: "#0a0a0a",
+        minHeight: "100vh",
+      }}
+    >
+      {/* Page header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "1.5rem",
+          flexWrap: "wrap",
+          gap: "1rem",
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              color: "#fff",
+              fontSize: "1.4rem",
+              fontWeight: 700,
+              margin: "0 0 0.2rem 0",
+            }}
+          >
+            Plans
+          </h1>
+          <p style={{ color: "#64748b", fontSize: "0.875rem", margin: 0 }}>
+            Manage your billing plans.
+          </p>
+        </div>
+        <button
+          onClick={() => navigate("/plans/create")}
           style={{
             background: '#00d4aa',
             color: '#000',
@@ -950,18 +985,21 @@ export default function Plans() {
                   )}
                 </div>
               </div>
-            ))}
-          </div>
+            ))
+            }
+          </div >
         )}
 
-        {filteredPlans.length === 0 && (
-          <div
-            style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}
-          >
-            No plans found matching your filters.
-          </div>
-        )}
-      </div>
-    </div>
+        {
+          filteredPlans.length === 0 && (
+            <div
+              style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}
+            >
+              No plans found matching your filters.
+            </div>
+          )
+        }
+      </div >
+    </div >
   );
 }

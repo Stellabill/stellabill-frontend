@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import StepIndicator from "./StepIndicator";
 
 export default function OnboardingReview() {
   // ✅ Dummy Data Inside Component
@@ -7,7 +8,7 @@ export default function OnboardingReview() {
   const payoutAddress = "GDU4D7BPCGQKXJHGFHSKXMN30L50DR";
 
   const onBack = () => {
-    alert("Going back to payout step");
+    window.location.href = '/onboarding/payout';
   };
 
   const onComplete = async () => {
@@ -41,12 +42,8 @@ export default function OnboardingReview() {
 
   return (
     <div style={styles.wrapper}>
-      {/* Step Labels */}
-      <div style={styles.steps}>
-        <span style={styles.stepInactive}>Business</span>
-        <span style={styles.stepInactive}>Payout</span>
-        <span style={styles.stepActive}>Review</span>
-      </div>
+      {/* Step Indicator */}
+      <StepIndicator currentStep={3} completedSteps={[1, 2]} />
 
       {/* Card */}
       <div style={styles.card}>
