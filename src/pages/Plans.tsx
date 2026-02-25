@@ -17,7 +17,6 @@ interface Plan {
   status: PlanStatus;
 }
 
-// Mock data - replace with API call
 const mockPlans: Plan[] = [
   {
     id: "1",
@@ -102,7 +101,6 @@ export default function Plans() {
       return matchesSearch && matchesStatus && matchesInterval;
     });
 
-    // Sort
     result.sort((a, b) => {
       let comparison = 0;
       if (sortField === "name") {
@@ -999,17 +997,14 @@ export default function Plans() {
             }
           </div >
         )}
-
-        {
-          filteredPlans.length === 0 && (
-            <div
-              style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}
-            >
-              No plans found matching your filters.
-            </div>
-          )
-        }
-      </div >
-    </div >
+        {filteredPlans.length === 0 && (
+          <div
+            style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}
+          >
+            No plans found matching your filters.
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
