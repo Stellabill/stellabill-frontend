@@ -184,7 +184,7 @@ export default function Plans() {
           </p>
         </div>
         <button
-          onClick={() => navigate("/plans/new")}
+          onClick={() => navigate("/plans/create")}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -995,18 +995,21 @@ export default function Plans() {
                   )}
                 </div>
               </div>
-            ))}
-          </div>
+            ))
+            }
+          </div >
         )}
 
-        {filteredPlans.length === 0 && (
-          <div
-            style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}
-          >
-            No plans found matching your filters.
-          </div>
-        )}
-      </div>
-    </div>
+        {
+          filteredPlans.length === 0 && (
+            <div
+              style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}
+            >
+              No plans found matching your filters.
+            </div>
+          )
+        }
+      </div >
+    </div >
   );
 }

@@ -106,9 +106,6 @@ export function TransactionToast({ toast, onClose }: TransactionToastProps) {
     );
 }
 
-// Global Toast Container Context might be set up in a real app
-// For the mockup, we will render a ToastContainer wrapper component
-
 interface ToastContainerProps {
     toasts: ToastOptions[];
     removeToast: (id: string) => void;
