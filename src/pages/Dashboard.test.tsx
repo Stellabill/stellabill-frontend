@@ -1,5 +1,5 @@
-import { render, screen, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, waitFor, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Dashboard from './Dashboard';
 
@@ -36,7 +36,7 @@ describe('Dashboard Page', () => {
   });
 
   it('renders dashboard content after loading', async () => {
-    render(
+    const { getByText, getByTestId } = render(
       <MemoryRouter>
         <Dashboard />
       </MemoryRouter>
@@ -48,29 +48,29 @@ describe('Dashboard Page', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Dashboard Overview')).toBeInTheDocument();
+      expect(getByText('Dashboard Overview')).toBeInTheDocument();
     });
 
     // Check for KPIs
-    expect(screen.getByText('Active Subscriptions')).toBeInTheDocument();
-    expect(screen.getByText('MRR')).toBeInTheDocument();
-    expect(screen.getByText('Failed Charges')).toBeInTheDocument();
-    expect(screen.getByText('Upcoming Renewals')).toBeInTheDocument();
+    expect(getByText('Active Subscriptions')).toBeInTheDocument();
+    expect(getByText('MRR')).toBeInTheDocument();
+    expect(getByText('Failed Charges')).toBeInTheDocument();
+    expect(getByText('Upcoming Renewals')).toBeInTheDocument();
 
     // Check for mock data
-    expect(screen.getByText('1,284')).toBeInTheDocument();
-    expect(screen.getByText('$42,500')).toBeInTheDocument();
+    expect(getByText('1,284')).toBeInTheDocument();
+    expect(getByText('$42,500')).toBeInTheDocument();
 
     // Check for Activity List
-    expect(screen.getByText('Recent Activity')).toBeInTheDocument();
-    expect(screen.getByText('Payment succeeded from John Doe')).toBeInTheDocument();
+    expect(getByText('Recent Activity')).toBeInTheDocument();
+    expect(getByText('Payment succeeded from John Doe')).toBeInTheDocument();
 
     // Check for Chart
-    expect(screen.getByTestId('revenue-chart')).toBeInTheDocument();
+    expect(getByTestId('revenue-chart')).toBeInTheDocument();
   });
 
   it('renders action buttons with correct links', async () => {
-    render(
+    const { getByText } = render(
       <MemoryRouter>
         <Dashboard />
       </MemoryRouter>
@@ -81,8 +81,8 @@ describe('Dashboard Page', () => {
     });
 
     await waitFor(() => {
-      const viewPlansBtn = screen.getByText('View Plans').closest('a');
-      const createPlanBtn = screen.getByText('Create Plan').closest('a');
+      const viewPlansBtn = getByText('View Plans').closest('a');
+      const createPlanBtn = getByText('Create Plan').closest('a');
       
       expect(viewPlansBtn).toHaveAttribute('href', '/plans');
       expect(createPlanBtn).toHaveAttribute('href', '/plans?create=true');

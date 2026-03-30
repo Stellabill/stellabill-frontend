@@ -14,6 +14,7 @@ import UsageBilling from './pages/UsageBilling'
 import OnboardingSuccess from './pages/OnboardingSuccess'
 import AboutPrepaidBalances from './components/AboutPrepaidBalances'
 import Pricing from "./pages/Pricing"
+import BrandPack from "./pages/BrandPack"
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
         
         {/* Development/UI Kit */}
         <Route path="/ui-kit" element={<UIMockups />} />
+        <Route path="/brand" element={<BrandPack />} />
       </Route>
 
       {/* 3. Catch-all redirect - Sends users back to Landing for safety */}
