@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import ActivityList, { ActivityType } from './ActivityList';
 
@@ -23,16 +23,16 @@ describe('ActivityList', () => {
   ];
 
   it('renders activities correctly', () => {
-    render(<ActivityList activities={mockActivities} />);
-    expect(screen.getByText('Payment succeeded from John Doe')).toBeInTheDocument();
-    expect(screen.getByText('$29.00')).toBeInTheDocument();
-    expect(screen.getByText('Payment failed for Sarah Smith')).toBeInTheDocument();
-    expect(screen.getByText('$49.00')).toBeInTheDocument();
+    const { getByText } = render(<ActivityList activities={mockActivities} />);
+    expect(getByText('Payment succeeded from John Doe')).toBeInTheDocument();
+    expect(getByText('$29.00')).toBeInTheDocument();
+    expect(getByText('Payment failed for Sarah Smith')).toBeInTheDocument();
+    expect(getByText('$49.00')).toBeInTheDocument();
   });
 
   it('renders empty state when no activities are provided', () => {
-    render(<ActivityList activities={[]} />);
-    expect(screen.getByText('No activity yet')).toBeInTheDocument();
+    const { getByText } = render(<ActivityList activities={[]} />);
+    expect(getByText('No activity yet')).toBeInTheDocument();
   });
 
   it('renders loading state correctly', () => {
@@ -41,8 +41,8 @@ describe('ActivityList', () => {
   });
 
   it('renders activity statuses correctly', () => {
-    render(<ActivityList activities={mockActivities} />);
-    expect(screen.getByText('success')).toBeInTheDocument();
-    expect(screen.getByText('failed')).toBeInTheDocument();
+    const { getByText } = render(<ActivityList activities={mockActivities} />);
+    expect(getByText('success')).toBeInTheDocument();
+    expect(getByText('failed')).toBeInTheDocument();
   });
 });
