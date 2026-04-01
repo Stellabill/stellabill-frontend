@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import WalletPill from './WalletPill'
 import WalletConnectModal from './WalletConnectModal'
 import { Link } from "react-router-dom";
+import Logo from './Branding/Logo';
 
 export default function LandingNavbar() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -78,43 +79,9 @@ export default function LandingNavbar() {
           aria-label="Main navigation"
         >
           {/* Left - Branding */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                background: "linear-gradient(135deg, #22d3ee 0%, #14b8a6 100%)",
-                borderRadius: "8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow:
-                  "0 0 20px rgba(34, 211, 238, 0.4), 0 0 40px rgba(34, 211, 238, 0.2)",
-                position: "relative",
-              }}
-            >
-              <span
-                style={{
-                  color: "#ffffff",
-                  fontSize: "1.5rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.02em",
-                }}
-              >
-                S
-              </span>
-            </div>
-            <span
-              style={{
-                color: "#ffffff",
-                fontSize: "1.25rem",
-                fontWeight: 700,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Stellabill
-            </span>
-          </div>
+          <Link to="/" style={{ textDecoration: 'none' }}>
+            <Logo size="md" />
+          </Link>
 
           {/* Center - Navigation Links (Desktop) */}
           <div
