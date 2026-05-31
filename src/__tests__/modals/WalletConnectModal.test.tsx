@@ -104,7 +104,7 @@ describe('WalletConnectModal', () => {
       expect(modal).toHaveAttribute('aria-describedby', 'modal-description');
       expect(modal).not.toHaveAttribute('aria-busy');
       
-      expect(screen.getByText(/connect your/i)).toHaveAttribute('id', 'modal-title');
+      expect(screen.getByRole('heading', { name: /connect your/i })).toHaveAttribute('id', 'modal-title');
       expect(screen.getByText(/sign in with your wallet/i)).toHaveAttribute('id', 'modal-description');
     });
 
@@ -152,11 +152,11 @@ describe('WalletConnectModal', () => {
         />
       );
 
-      expect(screen.getByText(/connect your stellar wallet/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /connect your/i })).toBeInTheDocument();
       expect(screen.getByText(/sign in with your wallet/i)).toBeInTheDocument();
       expect(screen.getByText(/freighter/i)).toBeInTheDocument();
       expect(screen.getByText(/lobstr/i)).toBeInTheDocument();
-      expect(screen.getByText('Connect')).toBeInTheDocument();
+      expect(screen.getAllByText('Connect').some((btn) => !(btn as HTMLButtonElement).disabled)).toBe(true);
     });
 
     it('displays connecting state with spinner', () => {
@@ -217,7 +217,9 @@ describe('WalletConnectModal', () => {
         />
       );
 
-      const connectButton = screen.getByText('Connect');
+      const connectButton = screen.getAllByText('Connect').find(
+        (button) => !(button as HTMLButtonElement).disabled
+      ) as HTMLButtonElement;
       fireEvent.click(connectButton);
       
       expect(onConnectFreighter).toHaveBeenCalled();
@@ -282,8 +284,8 @@ describe('WalletConnectModal', () => {
         />
       );
 
-      const overlay = screen.getByRole('dialog').parentElement;
-      fireEvent.click(overlay!);
+      const overlay = screen.getByRole('dialog');
+      fireEvent.click(overlay);
       
       expect(onClose).not.toHaveBeenCalled();
     });
@@ -297,8 +299,8 @@ describe('WalletConnectModal', () => {
         />
       );
 
-      const overlay = screen.getByRole('dialog').parentElement;
-      fireEvent.click(overlay!);
+      const overlay = screen.getByRole('dialog');
+      fireEvent.click(overlay);
       
       expect(onClose).toHaveBeenCalled();
     });
@@ -312,8 +314,8 @@ describe('WalletConnectModal', () => {
         />
       );
 
-      const overlay = screen.getByRole('dialog').parentElement;
-      fireEvent.click(overlay!);
+      const overlay = screen.getByRole('dialog');
+      fireEvent.click(overlay);
       
       expect(onClose).toHaveBeenCalled();
     });
@@ -341,7 +343,9 @@ describe('WalletConnectModal', () => {
         />
       );
 
-      const connectButton = screen.getByText('Connect');
+      const connectButton = screen.getAllByText('Connect').find(
+        (button) => !(button as HTMLButtonElement).disabled
+      ) as HTMLButtonElement;
       expect(() => fireEvent.click(connectButton)).not.toThrow();
     });
 

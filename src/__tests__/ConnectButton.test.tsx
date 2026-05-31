@@ -2,6 +2,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConnectButton, { ConnectionState } from '../components/ConnectButton';
 
+const getModalConnectButton = () =>
+  screen
+    .getAllByText('Connect')
+    .find((button) => !(button as HTMLButtonElement).disabled) as HTMLButtonElement;
+
 describe('ConnectButton', () => {
   const onConnect = vi.fn();
   const onDisconnect = vi.fn();
@@ -37,7 +42,7 @@ describe('ConnectButton', () => {
     const button = screen.getByRole('button', { name: /connect wallet/i });
     fireEvent.click(button);
     
-    const connectButton = screen.getByText('Connect');
+    const connectButton = getModalConnectButton();
     fireEvent.click(connectButton);
     
     await waitFor(() => {
@@ -54,7 +59,7 @@ describe('ConnectButton', () => {
     const button = screen.getByRole('button', { name: /connect wallet/i });
     fireEvent.click(button);
     
-    const connectButton = screen.getByText('Connect');
+    const connectButton = getModalConnectButton();
     fireEvent.click(connectButton);
     
     await waitFor(() => {
@@ -76,7 +81,7 @@ describe('ConnectButton', () => {
     const button = screen.getByRole('button', { name: /connect wallet/i });
     fireEvent.click(button);
     
-    const connectButton = screen.getByText('Connect');
+    const connectButton = getModalConnectButton();
     fireEvent.click(connectButton);
     
     await waitFor(() => {
@@ -95,7 +100,7 @@ describe('ConnectButton', () => {
     const button = screen.getByRole('button', { name: /connect wallet/i });
     fireEvent.click(button);
     
-    const connectButton = screen.getByText('Connect');
+    const connectButton = getModalConnectButton();
     fireEvent.click(connectButton);
     
     await waitFor(() => {
@@ -120,7 +125,7 @@ describe('ConnectButton', () => {
     const button = screen.getByRole('button', { name: /connect wallet/i });
     fireEvent.click(button);
     
-    const connectButton = screen.getByText('Connect');
+    const connectButton = getModalConnectButton();
     fireEvent.click(connectButton);
     
     await waitFor(() => {
@@ -159,7 +164,7 @@ describe('ConnectButton', () => {
     const button = screen.getByRole('button', { name: /connect wallet/i });
     fireEvent.click(button);
     
-    const connectButton = screen.getByText('Connect');
+    const connectButton = getModalConnectButton();
     fireEvent.click(connectButton);
     
     await waitFor(() => {
@@ -174,7 +179,7 @@ describe('ConnectButton', () => {
     const button = screen.getByRole('button', { name: /connect wallet/i });
     fireEvent.click(button);
     
-    const connectButton = screen.getByText('Connect');
+    const connectButton = getModalConnectButton();
     fireEvent.click(connectButton);
     
     await waitFor(() => {
@@ -196,12 +201,12 @@ describe('ConnectButton Edge Cases', () => {
     
     // First attempt
     fireEvent.click(button);
-    const connectButton1 = screen.getByText('Connect');
+    const connectButton1 = getModalConnectButton();
     fireEvent.click(connectButton1);
     
     // Second attempt while first is still connecting
     fireEvent.click(button);
-    const connectButton2 = screen.getByText('Connect');
+    const connectButton2 = getModalConnectButton();
     fireEvent.click(connectButton2);
     
     await waitFor(() => {
@@ -215,7 +220,7 @@ describe('ConnectButton Edge Cases', () => {
     const button = screen.getByRole('button', { name: /connect wallet/i });
     fireEvent.click(button);
     
-    const connectButton = screen.getByText('Connect');
+    const connectButton = getModalConnectButton();
     fireEvent.click(connectButton);
     
     // Close modal while connecting
@@ -241,7 +246,7 @@ describe('ConnectButton Edge Cases', () => {
     const button = screen.getByRole('button', { name: /connect wallet/i });
     fireEvent.click(button);
     
-    const connectButton = screen.getByText('Connect');
+    const connectButton = getModalConnectButton();
     fireEvent.click(connectButton);
     
     await waitFor(() => {

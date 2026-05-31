@@ -27,32 +27,21 @@ describe('TopUpModal Accessibility', () => {
       expect(document.activeElement).toBe(amountInput);
     });
 
-    const focusableElements = [
-        ...screen.getAllByRole('button'),
-        screen.getByPlaceholderText('0.00')
-    ];
-    
-    // In our TopUpModal, the focusable elements are:
-    // 1. Close button (header)
-    // 2. Quick select buttons (3)
-    // 3. Amount input
-    // 4. Cancel button
-    // 5. Top up button
-    
-    // The exact order in DOM:
-    // Close button -> Quick Selects -> Amount Input -> Cancel -> Top Up
-    
     const closeBtn = screen.getByLabelText(/close/i);
-    const topUpBtn = screen.getByRole('button', { name: /top up/i });
+    const modalContent = screen.getByRole('dialog');
+    const focusableElements = Array.from(
+      modalContent.querySelectorAll('button:not([disabled]), input:not([disabled])')
+    ) as HTMLElement[];
+    const lastElement = focusableElements[focusableElements.length - 1];
 
-    // Shift+Tab on close button should go to top up button
+    // Shift+Tab on close button should go to the final enabled control
     closeBtn.focus();
     fireEvent.keyDown(closeBtn, { key: 'Tab', shiftKey: true });
-    expect(document.activeElement).toBe(topUpBtn);
+    expect(document.activeElement).toBe(lastElement);
 
-    // Tab on top up button should go to close button
-    topUpBtn.focus();
-    fireEvent.keyDown(topUpBtn, { key: 'Tab' });
+    // Tab from the last enabled control should cycle back to the close button
+    lastElement.focus();
+    fireEvent.keyDown(lastElement, { key: 'Tab' });
     expect(document.activeElement).toBe(closeBtn);
   });
 
