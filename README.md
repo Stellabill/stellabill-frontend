@@ -101,7 +101,7 @@ cd stellabill-frontend
 ### 2. Install dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 Use the lockfile as-is so installs are reproducible.
@@ -116,7 +116,7 @@ The app uses a proxy to `/api`; no env vars are required for the frontend alone.
 ### 4. Run the development server
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 - App: **http://localhost:5173**
@@ -125,13 +125,13 @@ npm run dev
 ### 5. Build for production
 
 ```bash
-npm run build
+pnpm build
 ```
 
 Output is in `dist/`. Serve with any static host or run:
 
 ```bash
-npm run preview
+pnpm preview
 ```
 
 to preview the production build locally.
@@ -139,7 +139,7 @@ to preview the production build locally.
 ### 6. Lint
 
 ```bash
-npm run lint
+pnpm lint
 ```
 
 Fix auto-fixable issues; fix the rest manually so CI stays green.
@@ -150,11 +150,11 @@ Fix auto-fixable issues; fix the rest manually so CI stays green.
 
 | Command           | Description                                |
 |------------------|--------------------------------------------|
-| `npm run dev`    | Start Vite dev server (port 5173)         |
-| `npm run build`  | TypeScript check + Vite production build   |
-| `npm run preview`| Serve `dist/` locally                      |
-| `npm run lint`   | Run ESLint                                 |
-| `npm run test`   | Run unit and component tests with Vitest   |
+| `pnpm dev`       | Start Vite dev server (port 5173)         |
+| `pnpm build`     | TypeScript check + Vite production build   |
+| `pnpm preview`   | Serve `dist/` locally                      |
+| `pnpm lint`      | Run ESLint                                 |
+| `pnpm test`      | Run unit and component tests with Vitest   |
 
 ---
 
