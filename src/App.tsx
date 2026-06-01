@@ -8,6 +8,7 @@ import CreatePlan from './pages/CreatePlan'
 import UIMockups from './pages/UIMockups'
 import Landing from './pages/Landing'
 import BrowsePlans from './pages/BrowsePlans'
+import OnboardingBusiness from './pages/OnboardingBusiness'
 import OnboardingPayout from './pages/OnboardingPayout'
 import OnboardingReviewPage from './components/OnboardingReview'
 import UsageBilling from './pages/UsageBilling'
@@ -26,9 +27,11 @@ function App() {
         path="/about-prepaid-balances"
         element={<AboutPrepaidBalances />}
       />
-      <Route path="/onboarding-success" element={<OnboardingSuccess />} />
+      <Route path="/onboarding" element={<Navigate to="/onboarding/business" replace />} />
+      <Route path="/onboarding/business" element={<OnboardingBusiness />} />
       <Route path="/onboarding/payout" element={<OnboardingPayout />} />
       <Route path="/onboarding/review" element={<OnboardingReviewPage />} />
+      <Route path="/onboarding-success" element={<OnboardingSuccess />} />
 
       {/* 2. Authenticated Routes (Wrapped in Layout) */}
       <Route element={<Layout />}>

@@ -1,0 +1,241 @@
+.onboarding-shell {
+  min-height: 100vh;
+  background: #050814;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.onboarding-shell-container {
+  width: min(100%, 960px);
+  margin: 0 auto;
+  padding: 48px 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.onboarding-shell-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  width: 100%;
+}
+
+.onboarding-shell-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: #22d3ee;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.onboarding-shell-heading {
+  font-size: clamp(2rem, 2.2vw, 2.8rem);
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.05;
+  max-width: 760px;
+}
+
+.onboarding-shell-copy {
+  color: #94a3b8;
+  line-height: 1.75;
+  max-width: 720px;
+  margin: 0;
+}
+
+.onboarding-card {
+  width: 100%;
+  max-width: 720px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.95)), #0b1121;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 32px;
+  padding: 36px;
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.35);
+}
+
+.onboarding-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.onboarding-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.onboarding-input {
+  width: 100%;
+  min-height: 50px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid #334155;
+  background: #111827;
+  color: #f8fafc;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.onboarding-input:focus {
+  border-color: #22d3ee;
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.12);
+}
+
+.onboarding-input::placeholder {
+  color: #64748b;
+}
+
+.onboarding-input--error {
+  border-color: #fb7185;
+}
+
+.onboarding-helper {
+  font-size: 0.88rem;
+  color: #94a3af;
+  margin: 0;
+}
+
+.onboarding-error {
+  font-size: 0.88rem;
+  color: #f87171;
+  margin: 0;
+}
+
+.onboarding-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.onboarding-btn {
+  min-height: 52px;
+  padding: 0 22px;
+  border-radius: 16px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.onboarding-btn:hover,
+.onboarding-btn:focus-visible {
+  transform: translateY(-1px);
+}
+
+.onboarding-btn-primary {
+  background: linear-gradient(90deg, #22d3ee 0%, #14b8a6 100%);
+  color: #000;
+}
+
+.onboarding-btn-secondary {
+  background: #111827;
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.onboarding-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.onboarding-link {
+  color: #38bdf8;
+  text-decoration: none;
+}
+
+.onboarding-link:hover,
+.onboarding-link:focus-visible {
+  color: #22d3ee;
+}
+
+.onboarding-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.onboarding-checkbox-label {
+  color: #cbd5e1;
+  line-height: 1.7;
+}
+
+.onboarding-readonly {
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 16px;
+  background: #0f172a;
+  padding: 16px;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  word-break: break-word;
+}
+
+.onboarding-note {
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  background: rgba(34, 211, 238, 0.08);
+  border-radius: 16px;
+  padding: 18px 20px;
+  color: #d1fae5;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+
+.onboarding-note strong {
+  color: #22d3ee;
+}
+
+.onboarding-readonly-label {
+  font-size: 0.88rem;
+  color: #94a3af;
+  margin-bottom: 6px;
+}
+
+.onboarding-shell-footer {
+  padding: 24px 20px 32px;
+  text-align: center;
+  color: #94a3af;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 740px) {
+  .onboarding-shell-container {
+    padding: 32px 16px 0;
+  }
+
+  .onboarding-card {
+    padding: 28px;
+  }
+}
+
+@media (max-width: 520px) {
+  .onboarding-shell-heading {
+    font-size: 2rem;
+  }
+
+  .onboarding-actions {
+    flex-direction: column;
+  }
+
+  .onboarding-btn {
+    width: 100%;
+  }
+}
