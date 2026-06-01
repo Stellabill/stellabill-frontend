@@ -258,3 +258,117 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ── Usage vs limit progress ─────────────────────────────────────────────── */
+
+.usage-progress-section {
+    margin-bottom: 24px;
+}
+
+.usage-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.usage-progress-label {
+    font-size: 14px;
+    color: #90A1B9;
+}
+
+.usage-progress-counts {
+    font-size: 12px;
+    color: #64748B;
+    font-variant-numeric: tabular-nums;
+}
+
+.usage-progress-track {
+    width: 100%;
+    height: 8px;
+    background: #1E293B;
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.usage-progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 400ms ease;
+}
+
+.usage-progress-warning {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #f59e0b;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 48px 24px;
+    gap: 16px;
+}
+
+.empty-icon {
+    color: #334155;
+}
+
+.empty-state h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 14px;
+    color: #90A1B9;
+    line-height: 1.6;
+    max-width: 360px;
+}
+
+.empty-back-link {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 10px 20px;
+    background: #1E293B;
+    color: #FFFFFF;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 150ms ease;
+}
+
+.empty-back-link:hover {
+    background: #2D3F55;
+}
+
+/* ── Loading skeleton ────────────────────────────────────────────────────── */
+
+.skeleton {
+    background: linear-gradient(90deg, #1a1a2e 25%, #2d2d44 50%, #1a1a2e 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 6px;
+}
+
+@keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-breadcrumb  { height: 16px; width: 220px; margin-bottom: 32px; }
+.skeleton-heading     { height: 32px; width: 200px; margin-bottom: 8px; }
+.skeleton-subheading  { height: 16px; width: 280px; margin-bottom: 32px; }
+.skeleton-period-header { height: 24px; width: 320px; margin-bottom: 24px; }
+.skeleton-metric-card { height: 120px; border-radius: 12px; }
+.skeleton-progress    { height: 8px; margin-top: 24px; border-radius: 9999px; }
