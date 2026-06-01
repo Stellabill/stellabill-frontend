@@ -58,6 +58,22 @@ describe('CTACard — rendering', () => {
     rerender(<CTACard {...baseProps} href="/x" variant="secondary" />)
     expect(container.querySelector('.cta-card')).toHaveAttribute('data-variant', 'secondary')
   })
+
+  it('renders correctly without an icon when no icon is provided', () => {
+    const propsWithoutIcon = { ...baseProps, icon: undefined }
+    const { container } = render(<CTACard {...propsWithoutIcon} />)
+    expect(container.querySelector('.cta-icon-circle')).toBeNull()
+  })
+
+  it('renders an optional button leading icon when buttonLeadingIcon is provided', () => {
+    render(<CTACard {...baseProps} buttonLeadingIcon={<span data-testid="leading-btn-icon">⚡</span>} />)
+    expect(screen.getByTestId('leading-btn-icon')).toBeInTheDocument()
+  })
+
+  it('renders an optional button trailing icon when buttonTrailingIcon is provided', () => {
+    render(<CTACard {...baseProps} buttonTrailingIcon={<span data-testid="trailing-btn-icon">➜</span>} />)
+    expect(screen.getByTestId('trailing-btn-icon')).toBeInTheDocument()
+  })
 })
 
 describe('CTACard — interaction', () => {
