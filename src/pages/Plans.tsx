@@ -1,7 +1,7 @@
 export default function Plans() {
 	return (
 		<div>
-			<h1 style={{ margin: "0 0 1rem", fontSize: "1.5rem" }}>Plans</h1>
+			<h1 style={{ margin: "0 0 1rem" }}>Plans</h1>
 			<p style={{ color: "#64748b", marginBottom: "1.5rem" }}>
 				Define billing plans and pricing. Sync with the backend and on-chain
 				contract configuration.

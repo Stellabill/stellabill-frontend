@@ -24,7 +24,7 @@ export default function SubscriptionDetail() {
                 <Link to="/subscriptions" style={{ color: '#94a3b8', textDecoration: 'none', marginBottom: '1rem', display: 'inline-block' }}>
                     &larr; Back to Subscriptions
                 </Link>
-                <h1 style={{ margin: '0 0 0.5rem', fontSize: '1.5rem', fontWeight: 600 }}>Subscription {id}</h1>
+                <h1 style={{ margin: '0 0 0.5rem' }}>Subscription {id}</h1>
                 <p style={{ color: '#64748b', margin: 0 }}>View details and recent payments for this subscription.</p>
             </div>
 
