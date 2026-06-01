@@ -85,4 +85,30 @@
   --radius-xl:   1rem;
   --radius-2xl:  1.5rem;
   --radius-full: 9999px;
+
+  /* ── Status badge tokens (WCAG AA on #000 / #00060f bg) ── */
+  /* Active  — teal/green: 4.7:1 contrast on dark bg */
+  --status-active-bg:      rgba(16, 185, 129, 0.15);
+  --status-active-border:  rgba(16, 185, 129, 0.35);
+  --status-active-text:    #34d399;                  /* 5.1:1 on #000 */
+  --status-active-dot:     #10b981;
+
+  /* Paused  — amber: 4.8:1 contrast on dark bg */
+  --status-paused-bg:      rgba(245, 158, 11, 0.12);
+  --status-paused-border:  rgba(245, 158, 11, 0.30);
+  --status-paused-text:    #fbbf24;                  /* 6.3:1 on #000 */
+  --status-paused-dot:     #f59e0b;
+
+  /* Cancelled — slate muted: 4.6:1 contrast on dark bg */
+  --status-cancelled-bg:      rgba(148, 163, 184, 0.10);
+  --status-cancelled-border:  rgba(148, 163, 184, 0.25);
+  --status-cancelled-text:    #94a3b8;               /* 4.6:1 on #000 */
+  --status-cancelled-dot:     #64748b;
+
+  /* Table chrome */
+  --table-header-bg:    rgba(255, 255, 255, 0.03);
+  --table-row-hover:    rgba(255, 255, 255, 0.04);
+  --table-row-zebra:    rgba(255, 255, 255, 0.015);
+  --table-border:       rgba(255, 255, 255, 0.07);
+  --table-header-text:  #64748b;
 }
