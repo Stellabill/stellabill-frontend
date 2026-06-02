@@ -110,4 +110,42 @@
   flex-wrap: wrap;
   gap: var(--space-4);
   align-items: center;
+/* Responsive sidebar drawer */
+@media (max-width: 767px) {
+  .sb-sidebar {
+    width: 220px;
+    background: #1a1a2e;
+    color: #fff;
+    padding: 1.5rem 0;
+    position: fixed;
+    height: 100vh;
+    top: 0;
+    left: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    z-index: 1000;
+  }
+  .sb-sidebar.open {
+    transform: translateX(0);
+  }
+  .sb-sidebar-toggle {
+    display: block;
+  }
+  .sb-overlay {
+    display: block;
+  }
+}
+@media (min-width: 768px) {
+  .sb-sidebar-toggle {
+    display: none;
+  }
+  .sb-sidebar {
+    position: static !important;
+    transform: none !important;
+    width: 220px;
+  }
+  .sb-overlay {
+    display: none;
+  }
+}
 }
