@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import WalletConnectModal from './WalletConnectModal';
 import WalletDropdown from './WalletDropdown';
 import styles from './ConnectButton.module.css';
@@ -8,14 +8,22 @@ export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'err
 interface ConnectButtonProps {
   onConnect?: (address: string) => void;
   onDisconnect?: () => void;
+  connectDelayMs?: number;
+  randomFn?: () => number;
 }
 
-const ConnectButton: React.FC<ConnectButtonProps> = ({ onConnect, onDisconnect }) => {
+const ConnectButton: React.FC<ConnectButtonProps> = ({
+  onConnect,
+  onDisconnect,
+  connectDelayMs = 1500,
+  randomFn = Math.random,
+}) => {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const activeConnectionId = useRef(0);
 
   const handleConnectClick = () => {
     setConnectionState('disconnected');
@@ -23,16 +31,26 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({ onConnect, onDisconnect }
     setIsModalOpen(true);
   };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+
+    if (connectionState === 'connecting') {
+      activeConnectionId.current += 1;
+      setConnectionState('disconnected');
+      setErrorMessage('');
+    }
+  };
+
   const handleConnectFreighter = async () => {
+    const connectionId = ++activeConnectionId.current;
     setConnectionState('connecting');
     setErrorMessage('');
-    
+
     try {
-      // Simulate wallet connection process
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulate random success/failure for demo
-      if (Math.random() > 0.2) {
+      await new Promise((resolve) => setTimeout(resolve, connectDelayMs));
+      if (connectionId !== activeConnectionId.current) return;
+
+      if (randomFn() > 0.2) {
         const mockAddress = 'GB3K4Y5QYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQ';
         setWalletAddress(mockAddress);
         setConnectionState('connected');
@@ -42,12 +60,14 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({ onConnect, onDisconnect }
         throw new Error('Connection rejected by user');
       }
     } catch (error) {
+      if (connectionId !== activeConnectionId.current) return;
       setConnectionState('error');
       setErrorMessage(error instanceof Error ? error.message : 'Connection failed');
     }
   };
 
   const handleDisconnect = () => {
+    activeConnectionId.current += 1;
     setConnectionState('disconnected');
     setWalletAddress('');
     setIsDropdownOpen(false);
@@ -85,8 +105,14 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({ onConnect, onDisconnect }
         className={`${styles.connectButton} ${styles[getButtonState()]}`}
         onClick={connectionState === 'connected' ? () => setIsDropdownOpen(!isDropdownOpen) : handleConnectClick}
         disabled={connectionState === 'connecting'}
-        aria-label={connectionState === 'connected' ? `Wallet connected: ${walletAddress}` : 'Connect wallet'}
-        aria-busy={connectionState === 'connecting'}
+        aria-label={
+          connectionState === 'connected'
+            ? `Wallet connected: ${walletAddress}`
+            : connectionState === 'connecting'
+            ? 'Connecting...'
+            : 'Connect wallet'
+        }
+        aria-busy={connectionState === 'connecting' ? true : undefined}
       >
         {connectionState === 'connecting' && (
           <span className={styles.spinner} aria-hidden="true" />
@@ -96,7 +122,7 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({ onConnect, onDisconnect }
 
       <WalletConnectModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
         onConnectFreighter={handleConnectFreighter}
         connectionState={connectionState}
         errorMessage={errorMessage}

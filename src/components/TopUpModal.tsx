@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useModalFocus } from "@/hooks/useModalFocus";
 import "./TopUpModal.css";
 
 interface TopUpModalProps {
@@ -21,11 +22,14 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
   const [step, setStep] = useState<TopUpStep>("select");
   const [error, setError] = useState<string | null>(null);
 
+  const modalRef = useRef<HTMLDivElement>(null);
   const amountInputRef = useRef<HTMLInputElement>(null);
 
   const currentBalance = 30;
   const planPrice = 10;
   const walletBalance = 150;
+
+  useModalFocus(modalRef, { isOpen, onClose, initialFocusRef: amountInputRef });
 
   useEffect(() => {
     if (!isOpen) {
@@ -33,22 +37,8 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
       setSelectedQs(null);
       setStep("select");
       setError(null);
-      return;
     }
-
-    amountInputRef.current?.focus();
   }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
 
   const handleQuickSelect = (id: string, val: number) => {
     setSelectedQs(id);
@@ -116,6 +106,7 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
       onClick={(event) => event.target === event.currentTarget && onClose()}
     >
       <div
+        ref={modalRef}
         className="topup-modal-content"
         role="dialog"
         aria-modal="true"

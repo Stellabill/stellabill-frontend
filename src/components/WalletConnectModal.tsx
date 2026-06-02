@@ -44,7 +44,7 @@ export default function WalletConnectModal({
       aria-modal="true"
       aria-labelledby="modal-title"
       aria-describedby={connectionState === 'disconnected' ? 'modal-description' : undefined}
-      aria-busy={connectionState === 'connecting'}
+      aria-busy={connectionState === 'connecting' ? true : undefined}
     >
       <div className="wallet-modal-content" ref={modalRef}>
         {/* Stellar Icon Header */}

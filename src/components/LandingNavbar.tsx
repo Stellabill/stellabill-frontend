@@ -3,6 +3,7 @@ import WalletPill from './WalletPill'
 import WalletConnectModal from './WalletConnectModal'
 import { Link } from "react-router-dom";
 import Logo from './Branding/Logo';
+import NotificationsCenter from './NotificationsCenter';
 
 export default function LandingNavbar() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -139,7 +140,7 @@ export default function LandingNavbar() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "1.5rem",
+              gap: "1rem",
             }}
             className="desktop-actions"
           >
@@ -172,6 +173,8 @@ export default function LandingNavbar() {
             >
               Subscribe with USDC
             </button>
+
+            <NotificationsCenter />
 
             {isConnected ? (
               <WalletPill 
@@ -314,6 +317,10 @@ export default function LandingNavbar() {
                 }}
               />
 
+              <div style={{ alignSelf: "flex-start" }}>
+                <NotificationsCenter />
+              </div>
+
               <button
                 onClick={() => {
                   handleSubscribe();
@@ -393,6 +400,7 @@ export default function LandingNavbar() {
         isOpen={isWalletModalOpen}
         onClose={() => setIsWalletModalOpen(false)}
         onConnectFreighter={handleFreighterConnect}
+        connectionState="disconnected"
       />
     </>
   );

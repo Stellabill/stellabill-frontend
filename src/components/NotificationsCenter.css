@@ -1,0 +1,314 @@
+.notifications-center {
+  position: relative;
+}
+
+.notifications-trigger,
+.notifications-icon-button,
+.notifications-mark-read {
+  font: inherit;
+}
+
+.notifications-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: #e2e8f0;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.notifications-trigger:hover,
+.notifications-trigger[aria-expanded='true'] {
+  color: #ffffff;
+  background: rgba(20, 184, 166, 0.14);
+  border-color: rgba(34, 211, 238, 0.7);
+}
+
+.notifications-trigger:focus-visible,
+.notifications-icon-button:focus-visible,
+.notifications-mark-read:focus-visible,
+.notifications-action:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 3px;
+}
+
+.notifications-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: #dc2626;
+  border: 2px solid #0a0a0a;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.notifications-panel {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  right: 0;
+  width: min(420px, calc(100vw - 2rem));
+  max-height: min(680px, calc(100vh - 6rem));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #e2e8f0;
+  background: #0d121f;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  z-index: 1200;
+}
+
+.notifications-panel-header,
+.notifications-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.notifications-panel-header {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.notifications-kicker {
+  margin: 0 0 0.25rem;
+  color: #2dd4bf;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.notifications-panel h2,
+.notifications-panel h3,
+.notifications-panel p {
+  margin: 0;
+}
+
+.notifications-panel h2 {
+  color: #ffffff;
+  font-size: 1.125rem;
+  line-height: 1.25;
+}
+
+.notifications-icon-button {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.notifications-icon-button:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.notifications-toolbar {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.notifications-mark-read {
+  min-height: 36px;
+  color: #67e8f9;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.notifications-mark-read:disabled {
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.notifications-list {
+  margin: 0;
+  padding: 0.5rem;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.notifications-item {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border-radius: 10px;
+}
+
+.notifications-item + .notifications-item {
+  margin-top: 0.25rem;
+}
+
+.notifications-item[data-read='false'] {
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.notifications-item[data-read='true'] {
+  opacity: 0.78;
+}
+
+.notifications-type-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+}
+
+.notifications-item-info .notifications-type-icon {
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.14);
+}
+
+.notifications-item-warning .notifications-type-icon {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.16);
+}
+
+.notifications-item-error .notifications-type-icon {
+  color: #fca5a5;
+  background: rgba(220, 38, 38, 0.2);
+}
+
+.notifications-item-content {
+  min-width: 0;
+}
+
+.notifications-item-meta,
+.notifications-item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.notifications-item h3 {
+  margin-top: 0.25rem;
+  color: #ffffff;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+
+.notifications-item p {
+  margin-top: 0.35rem;
+  color: #cbd5e1;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.notifications-item-footer {
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.notifications-item-footer span,
+.notifications-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.notifications-action {
+  min-height: 32px;
+  color: #67e8f9;
+  border-radius: 8px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.notifications-action:hover {
+  color: #ffffff;
+}
+
+.notifications-unread-dot {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  margin-right: 0.45rem;
+  background: #22d3ee;
+  border-radius: 999px;
+}
+
+.notifications-empty {
+  padding: 2rem 1.25rem;
+  color: #cbd5e1;
+  text-align: center;
+}
+
+.notifications-empty svg {
+  color: #2dd4bf;
+  margin-bottom: 0.75rem;
+}
+
+.notifications-empty h3 {
+  color: #ffffff;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.notifications-empty p {
+  max-width: 280px;
+  margin: 0.4rem auto 0;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.notifications-empty-compact {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+.notifications-live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 768px) {
+  .notifications-panel {
+    position: fixed;
+    top: 84px;
+    right: 1rem;
+    left: 1rem;
+    width: auto;
+    max-height: calc(100vh - 7rem);
+  }
+}
