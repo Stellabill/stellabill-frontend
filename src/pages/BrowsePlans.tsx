@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { plans as plansAPI, ApiError } from "../api/client";
 import WalletConnectModal from "../components/WalletConnectModal";
 import ErrorState from "../components/ErrorState";
+import SortBySelect from "../components/SortBySelect";
 
 type PlanInterval = "Monthly" | "Yearly";
 // ... (previous types and icons)
@@ -144,6 +145,15 @@ const mockPlans: Plan[] = [
 			"Personal fitness coaching with custom workout plans, nutrition tracking, and weekly check-ins.",
 		icon: "fitness",
 	},
+];
+
+const SORT_OPTIONS = [
+	{ value: "name-asc", label: "Name (A–Z)" },
+	{ value: "name-desc", label: "Name (Z–A)" },
+	{ value: "price-asc", label: "Price (low to high)" },
+	{ value: "price-desc", label: "Price (high to low)" },
+	{ value: "merchant-asc", label: "Merchant (A–Z)" },
+	{ value: "merchant-desc", label: "Merchant (Z–A)" },
 ];
 
 function getBillingIntervalCopy(interval: PlanInterval) {
@@ -377,13 +387,10 @@ export default function BrowsePlans() {
 		return result;
 	}, [plans, searchQuery, intervalFilter, sortField, sortDirection]);
 
-	const handleSort = (field: SortField) => {
-		if (sortField === field) {
-			setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-		} else {
-			setSortField(field);
-			setSortDirection("asc");
-		}
+	const handleSortChange = (value: string) => {
+		const separatorIndex = value.lastIndexOf("-");
+		setSortField(value.slice(0, separatorIndex) as SortField);
+		setSortDirection(value.slice(separatorIndex + 1) as SortDirection);
 	};
 
 	const handleSubscribe = (plan: Plan) => {
@@ -504,53 +511,20 @@ export default function BrowsePlans() {
 					</select>
 
 					<div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-						<span style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+						<span
+							id="browse-sort-label"
+							style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
 							Sort by:
 						</span>
-						<button
-							onClick={() => handleSort("name")}
-							style={{
-								padding: "0.5rem 1rem",
-								background: sortField === "name" ? "#2a2a2a" : "transparent",
-								border: "1px solid #2a2a2a",
-								borderRadius: 6,
-								color: sortField === "name" ? "#22d3ee" : "#94a3b8",
-								fontSize: "0.875rem",
-								cursor: "pointer",
-							}}>
-							Name{" "}
-							{sortField === "name" && (sortDirection === "asc" ? "↑" : "↓")}
-						</button>
-						<button
-							onClick={() => handleSort("price")}
-							style={{
-								padding: "0.5rem 1rem",
-								background: sortField === "price" ? "#2a2a2a" : "transparent",
-								border: "1px solid #2a2a2a",
-								borderRadius: 6,
-								color: sortField === "price" ? "#22d3ee" : "#94a3b8",
-								fontSize: "0.875rem",
-								cursor: "pointer",
-							}}>
-							Price{" "}
-							{sortField === "price" && (sortDirection === "asc" ? "↑" : "↓")}
-						</button>
-						<button
-							onClick={() => handleSort("merchant")}
-							style={{
-								padding: "0.5rem 1rem",
-								background:
-									sortField === "merchant" ? "#2a2a2a" : "transparent",
-								border: "1px solid #2a2a2a",
-								borderRadius: 6,
-								color: sortField === "merchant" ? "#22d3ee" : "#94a3b8",
-								fontSize: "0.875rem",
-								cursor: "pointer",
-							}}>
-							Merchant{" "}
-							{sortField === "merchant" &&
-								(sortDirection === "asc" ? "↑" : "↓")}
-						</button>
+						<div style={{ minWidth: 210 }}>
+							<SortBySelect
+								value={`${sortField}-${sortDirection}`}
+								onValueChange={handleSortChange}
+								options={SORT_OPTIONS}
+								labelId="browse-sort-label"
+								ariaLabel="Sort plans"
+							/>
+						</div>
 					</div>
 				</div>
 
