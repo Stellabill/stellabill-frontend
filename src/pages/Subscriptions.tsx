@@ -361,6 +361,17 @@ export default function Subscriptions() {
 		}
 	};
 
+	const handleOfferSelected = (offerId: string) => {
+		if (offerId === "pause") {
+			setIsCancelModalOpen(false);
+			setIsPauseModalOpen(true);
+		} else {
+			// Handle other offers (downgrade, discount)
+			// For now, we just close the modal as per minimal implementation requirements
+			setIsCancelModalOpen(false);
+		}
+	};
+
 	const handleResume = async (id: string) => {
 		setData((prev) =>
 			prev.map((sub) =>
@@ -533,6 +544,7 @@ export default function Subscriptions() {
 					isOpen={isCancelModalOpen}
 					onClose={() => setIsCancelModalOpen(false)}
 					onConfirm={handleCancelConfirm}
+					onOfferSelected={handleOfferSelected}
 					isLoading={isActionLoading}
 					balance={selectedSub.prepaidBalance.replace(" USDC", "") || "0"}
 					endDate={selectedSub.nextCharge || "N/A"}
