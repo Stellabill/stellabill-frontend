@@ -37,3 +37,6 @@ coverage/
 # Cache
 .cache/
 .parcel-cache/
+
+*storybook.log
+storybook-static
