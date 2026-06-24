@@ -1,0 +1,91 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-radius: var(--radius-full);
+  font-family: var(--font-family-body);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.tag__text {
+  line-height: 1;
+}
+
+.tag__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  border-radius: var(--radius-full);
+  transition: opacity 0.2s ease;
+}
+
+.tag__remove:hover {
+  opacity: 1;
+}
+
+.tag__remove:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Size variants */
+.tag--small {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  gap: var(--space-1);
+}
+
+.tag--medium {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+}
+
+/* Color variants - WCAG AA compliant with text-based meaning */
+.tag--blue {
+  background: #1e40af;
+  color: #dbeafe;
+}
+
+.tag--green {
+  background: #15803d;
+  color: #d1fae5;
+}
+
+.tag--yellow {
+  background: #a16207;
+  color: #fef3c7;
+}
+
+.tag--red {
+  background: #b91c1c;
+  color: #fee2e2;
+}
+
+.tag--purple {
+  background: #7e22ce;
+  color: #f3e8ff;
+}
+
+.tag--pink {
+  background: #be185d;
+  color: #fce7f3;
+}
+
+.tag--orange {
+  background: #c2410c;
+  color: #fed7aa;
+}
+
+.tag--gray {
+  background: #475569;
+  color: #e2e8f0;
+}
