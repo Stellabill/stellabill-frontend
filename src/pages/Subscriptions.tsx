@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import PauseSubscriptionModal from "../components/PauseSubscriptionModal";
 import CancelSubscriptionModal from "../components/CancelSubscriptionModal";
@@ -171,6 +172,7 @@ function SkeletonCards() {
 
 /* ─── Empty State ────────────────────────────────────────────── */
 function EmptyState({ filter }: { filter: string }) {
+	const { t } = useTranslation();
 	const isFiltered = filter !== "All";
 	return (
 		<div className="subs-empty" role="status" aria-live="polite">
@@ -178,17 +180,17 @@ function EmptyState({ filter }: { filter: string }) {
 				<IconEmptySubscriptions />
 			</div>
 			<h2 className="subs-empty__title" id="empty-state-heading">
-				{isFiltered ? `No ${filter} subscriptions` : "No subscriptions yet"}
+				{isFiltered ? t('subscriptions.empty.noFiltered', { filter: filter }) : t('subscriptions.empty.noSubscriptions')}
 			</h2>
 			<p className="subs-empty__body" aria-labelledby="empty-state-heading">
 				{isFiltered
-					? `You don't have any ${filter.toLowerCase()} subscriptions. Try a different filter or browse available plans.`
-					: "You haven't subscribed to any plans yet. Browse available plans to get started with Stellabill."}
+					? t('subscriptions.empty.noFilteredDesc', { filter: filter.toLowerCase() })
+					: t('subscriptions.empty.noSubscriptionsDesc')}
 			</p>
 			{!isFiltered && (
 				<Link to="/plans" className="subs-empty__cta" id="empty-browse-plans-btn">
 					<IconPlus />
-					Browse plans
+					{t('subscriptions.browsePlans')}
 				</Link>
 			)}
 		</div>
@@ -261,6 +263,7 @@ const INITIAL_DATA: SubscriptionWithIcon[] = [
 
 /* ─── Main component ─────────────────────────────────────────── */
 export default function Subscriptions() {
+	const { t } = useTranslation();
 	const [data, setData] = useState<SubscriptionWithIcon[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<ApiError | null>(null);
@@ -552,17 +555,18 @@ export default function Subscriptions() {
 				</Link>
 				<span className="breadcrumb-separator" aria-hidden="true">/</span>
 				<span className="breadcrumb-current" aria-current="page">My subscriptions</span>
+				<span className="breadcrumb-current" aria-current="page">{t('subscriptions.pageTitle')}</span>
 			</nav>
 
 			{/* Header */}
 			<div className="header-row">
 				<div className="page-title-section">
-					<h1>My subscriptions</h1>
-					<p className="page-description">Manage your active and past subscriptions</p>
+					<h1>{t('subscriptions.pageTitle')}</h1>
+					<p className="page-description">{t('subscriptions.pageDescription')}</p>
 				</div>
 				<button className="browse-plans-btn" id="browse-plans-btn">
 					<IconPlus />
-					Browse plans
+					{t('subscriptions.browsePlans')}
 				</button>
 			</div>
 
@@ -576,7 +580,7 @@ export default function Subscriptions() {
 						onClick={() => setActiveFilter(tab)}
 						aria-pressed={activeFilter === tab}
 						aria-label={`Show ${tab} subscriptions (${stats[tab]})`}>
-						{tab} <span>({stats[tab]})</span>
+						{t(`subscriptions.tabs.${tab.toLowerCase()}`)} <span>({stats[tab]})</span>
 					</button>
 				))}
 			</div>
@@ -590,17 +594,17 @@ export default function Subscriptions() {
 					<div className="subs-table-wrapper" role="region" aria-label="Subscriptions list">
 						<table
 							className="subs-table"
-							aria-label="My subscriptions"
+							aria-label={t('subscriptions.pageTitle')}
 							data-testid="subscriptions-table">
 							<thead>
 								<tr>
-									<th scope="col">Plan</th>
-									<th scope="col">Status</th>
-									<th scope="col">Price</th>
-									<th scope="col">Next Charge</th>
-									<th scope="col">Prepaid Balance</th>
+									<th scope="col">{t('subscriptions.table.plan')}</th>
+									<th scope="col">{t('subscriptions.table.status')}</th>
+									<th scope="col">{t('subscriptions.table.price')}</th>
+									<th scope="col">{t('subscriptions.table.nextCharge')}</th>
+									<th scope="col">{t('subscriptions.table.prepaidBalance')}</th>
 									<th scope="col">
-										<span className="visually-hidden">Actions</span>
+										<span className="visually-hidden">{t('subscriptions.table.actions')}</span>
 									</th>
 								</tr>
 							</thead>
@@ -671,7 +675,7 @@ export default function Subscriptions() {
 														setSelectedId(sub.id);
 													}}
 													aria-label={`Manage ${sub.planName}`}>
-													Manage
+													{t('subscriptions.table.manage')}
 												</button>
 											</div>
 										</td>
@@ -712,19 +716,19 @@ export default function Subscriptions() {
 
 								<div className="subs-card__meta">
 									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">Prepaid</span>
+										<span className="subs-card__meta-label">{t('subscriptions.table.prepaid')}</span>
 										<span className="subs-card__meta-value">{sub.prepaidBalance}</span>
 									</div>
 									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">Coverage</span>
+										<span className="subs-card__meta-label">{t('subscriptions.table.coverage')}</span>
 										<span className="subs-card__meta-value">{sub.coverage}</span>
 									</div>
 									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">Next charge</span>
+										<span className="subs-card__meta-label">{t('subscriptions.table.nextCharge')}</span>
 										<span className="subs-card__meta-value">{sub.nextCharge}</span>
 									</div>
 									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">Last payment</span>
+										<span className="subs-card__meta-label">{t('subscriptions.table.lastPayment')}</span>
 										<span className="subs-card__meta-value">{sub.lastPayment}</span>
 									</div>
 								</div>
@@ -744,7 +748,7 @@ export default function Subscriptions() {
 											setSelectedId(sub.id);
 										}}
 										aria-label={`Manage ${sub.planName}`}>
-										Manage
+										{t('subscriptions.table.manage')}
 									</button>
 								</div>
 							</article>
