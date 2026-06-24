@@ -153,6 +153,7 @@ export default function KPITile({
           </div>
           {delta !== undefined && (
             <div
+              role="status"
               className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-semibold ${trendConfig[direction].bg} ${trendConfig[direction].color}`}
               aria-label={`${trendConfig[direction].sign}${formatDelta(delta)} percent ${deltaLabel}`}
             >
@@ -186,7 +187,10 @@ export default function KPITile({
             <p className="text-xs text-slate-500">{deltaLabel}</p>
           )}
           {targetValue !== undefined && (
-            <p className="text-xs text-slate-400 flex items-center gap-1">
+            <p
+              className="text-xs text-slate-400 flex items-center gap-1"
+              aria-label={`${targetLabel}: ${targetValue}`}
+            >
               <Target size={12} aria-hidden="true" />
               <span>
                 {targetLabel}: {targetValue}

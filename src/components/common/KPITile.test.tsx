@@ -169,4 +169,120 @@ describe("KPITile", () => {
     );
     expect(getByText("Goal: 100%")).toBeInTheDocument();
   });
+
+  it("handles negative goal progress with negative value", () => {
+    const { getByText } = render(
+      <KPITile title="Budget" value="-$1,000" target={5000} />,
+    );
+    expect(getByText("Goal: 5000")).toBeInTheDocument();
+  });
+
+  it("handles goal exceeded scenario", () => {
+    const { getByText } = render(
+      <KPITile title="Sales" value="$12,000" target={10000} />,
+    );
+    expect(getByText("Goal: 10000")).toBeInTheDocument();
+    expect(getByText("$12,000")).toBeInTheDocument();
+  });
+
+  it("rounds delta to one decimal place", () => {
+    const { getByText } = render(
+      <KPITile title="Test" value="100" delta={12.345} />,
+    );
+    expect(getByText("+12.3%")).toBeInTheDocument();
+  });
+
+  it("has accessible delta badge with aria-label", () => {
+    const { getByLabelText } = render(
+      <KPITile title="Revenue" value="$5,000" delta={12.5} />,
+    );
+    const badge = getByLabelText("+12.5 percent vs previous period");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute("role", "status");
+  });
+
+  it("hides decorative icons from screen readers", () => {
+    const { container } = render(
+      <KPITile title="Revenue" value="$5,000" delta={12.5} />,
+    );
+    const trendIcon = container.querySelector('[aria-hidden="true"]');
+    expect(trendIcon).toBeInTheDocument();
+  });
+
+  it("renders all five tile variants", () => {
+    // Value-only
+    const { container: c1 } = render(<KPITile title="Users" value="1,000" />);
+    expect(c1.querySelector("h3")).toHaveTextContent("Users");
+
+    // Value + delta
+    const { container: c2 } = render(
+      <KPITile title="Revenue" value="$5,000" delta={12.5} />,
+    );
+    expect(c2.querySelector('[aria-label*="percent"]')).toBeInTheDocument();
+
+    // Value + sparkline
+    const { container: c3 } = render(
+      <KPITile title="Traffic" value="5,000" sparklineData={[10, 20, 30]} />,
+    );
+    expect(c3.querySelector('svg[role="img"]')).toBeInTheDocument();
+
+    // Value + target
+    const { getByText: g4 } = render(
+      <KPITile title="Sales" value="$8,000" target={10000} />,
+    );
+    expect(g4("Goal: 10000")).toBeInTheDocument();
+
+    // Full KPI
+    const { container: c5 } = render(
+      <KPITile
+        title="Revenue"
+        value="$5,000"
+        delta={12.5}
+        sparklineData={[10, 20, 30]}
+        target={10000}
+      />,
+    );
+    expect(c5.querySelector('svg[role="img"]')).toBeInTheDocument();
+    expect(c5.querySelector('[aria-label*="percent"]')).toBeInTheDocument();
+    expect(c5.querySelector('[aria-label*="Goal"]')).toBeInTheDocument();
+  });
+
+  it("supports custom delta direction for zero delta", () => {
+    const { getByText } = render(
+      <KPITile
+        title="Balance"
+        value="$0"
+        delta={0}
+        deltaDirection="positive"
+      />,
+    );
+    expect(getByText("+0%")).toBeInTheDocument();
+  });
+
+  it("renders sparkline with correct aspect ratio", () => {
+    const { container } = render(
+      <KPITile
+        title="Traffic"
+        value="5,000"
+        sparklineData={[10, 20, 15, 25, 30, 28, 35]}
+      />,
+    );
+    const svg = container.querySelector("svg");
+    expect(svg).toHaveAttribute("width", "240");
+    expect(svg).toHaveAttribute("height", "48");
+  });
+
+  it("applies responsive classes for narrow layouts", () => {
+    const { container } = render(
+      <KPITile
+        title="Test"
+        value="100"
+        delta={10}
+        sparklineData={[10, 20, 30]}
+        target={1000}
+      />,
+    );
+    const flexWrap = container.querySelector(".flex-wrap");
+    expect(flexWrap).toBeInTheDocument();
+  });
 });
