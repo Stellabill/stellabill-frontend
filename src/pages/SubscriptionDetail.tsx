@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import RecentPayments from '../components/RecentPayments';
 import UsageThisPeriod from '../components/UsageThisPeriod';
+import PlanStatusTimeline from '../components/PlanStatusTimeline';
 
 export default function SubscriptionDetail() {
     const { id } = useParams();
@@ -41,6 +42,8 @@ export default function SubscriptionDetail() {
             )}
 
             <RecentPayments subscriptionId={id} />
+
+            <PlanStatusTimeline subscriptionId={id} />
         </div>
     );
 }
