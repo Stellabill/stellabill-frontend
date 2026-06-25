@@ -1,54 +1,60 @@
+@import '../styles/tokens.css';
+
 .revenue-chart-container {
-  background: #1a1a1a;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  margin-top: var(--space-6);
+  box-shadow: var(--shadow-sm);
 }
 
 .revenue-chart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-6);
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .revenue-chart-title {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #ffffff;
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
 }
 
 .time-range-selector {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .time-range-btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   cursor: pointer;
   transition: all 0.2s ease;
-  background: #2a2a2a;
-  color: #9ca3af;
+  background: var(--color-surface-control);
+  color: var(--color-text-muted);
 }
 
 .time-range-btn:hover {
-  background: #333333;
+  background: var(--color-surface-control-hover);
+  color: var(--color-text-primary);
 }
 
 .time-range-btn.active {
-  background: #60a5fa;
-  color: #1f2937;
+  background: var(--color-brand-gradient);
+  color: var(--color-brand-on);
+  border-color: transparent;
 }
 
 .time-range-btn:focus-visible {
-  outline: 2px solid #60a5fa;
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 
@@ -64,25 +70,25 @@
 }
 
 .grid-line {
-  stroke: #2a2a2a;
+  stroke: var(--chart-grid);
   stroke-width: 1;
 }
 
 .axis-label {
-  fill: #9ca3af;
+  fill: var(--color-text-muted);
   font-size: 12px;
 }
 
 .revenue-line {
-  stroke: #60a5fa;
+  stroke: var(--chart-line);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .data-point {
-  fill: #60a5fa;
-  stroke: #1a1a1a;
+  fill: var(--chart-line);
+  stroke: var(--chart-point-stroke);
   stroke-width: 2;
   cursor: pointer;
   transition: r 0.2s ease;
@@ -95,19 +101,19 @@
 }
 
 .tooltip-bg {
-  fill: #2a2a2a;
-  stroke: #60a5fa;
+  fill: var(--chart-tooltip-bg);
+  stroke: var(--chart-line);
   stroke-width: 1;
 }
 
 .tooltip-text {
-  fill: #ffffff;
+  fill: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
 }
 
 .tooltip-date {
-  fill: #9ca3af;
+  fill: var(--color-text-muted);
   font-size: 11px;
 }
 
@@ -133,15 +139,15 @@
 
 @media (max-width: 480px) {
   .revenue-chart-container {
-    padding: 1rem;
+    padding: var(--space-4);
   }
   
   .revenue-chart-title {
-    font-size: 1.125rem;
+    font-size: var(--text-lg);
   }
   
   .time-range-btn {
     padding: 0.4rem 0.75rem;
-    font-size: 0.8125rem;
+    font-size: var(--text-xs);
   }
 }

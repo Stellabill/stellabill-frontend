@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import PauseSubscriptionModal from "../components/PauseSubscriptionModal";
 import CancelSubscriptionModal from "../components/CancelSubscriptionModal";
@@ -6,6 +7,8 @@ import { subscriptions, ApiError } from "../api/client";
 import { Subscription } from "@/types/subscription";
 import UsageThisPeriod from "../components/UsageThisPeriod";
 import ErrorState from "../components/ErrorState";
+import Tag from "../components/Tag";
+import AddTagPopover, { TagOption } from "../components/AddTagPopover";
 import "./Subscriptions.css";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -13,6 +16,7 @@ interface SubscriptionWithIcon extends Omit<Subscription, "icon"> {
 	icon: React.ReactNode;
 	prepaidBalance: string;
 	coverage: string;
+	tags?: TagOption[];
 }
 
 type StatusType = "Active" | "Paused" | "Cancelled";
@@ -171,6 +175,7 @@ function SkeletonCards() {
 
 /* ─── Empty State ────────────────────────────────────────────── */
 function EmptyState({ filter }: { filter: string }) {
+	const { t } = useTranslation();
 	const isFiltered = filter !== "All";
 	return (
 		<div className="subs-empty" role="status" aria-live="polite">
@@ -178,17 +183,17 @@ function EmptyState({ filter }: { filter: string }) {
 				<IconEmptySubscriptions />
 			</div>
 			<h2 className="subs-empty__title" id="empty-state-heading">
-				{isFiltered ? `No ${filter} subscriptions` : "No subscriptions yet"}
+				{isFiltered ? t('subscriptions.empty.noFiltered', { filter: filter }) : t('subscriptions.empty.noSubscriptions')}
 			</h2>
 			<p className="subs-empty__body" aria-labelledby="empty-state-heading">
 				{isFiltered
-					? `You don't have any ${filter.toLowerCase()} subscriptions. Try a different filter or browse available plans.`
-					: "You haven't subscribed to any plans yet. Browse available plans to get started with Stellabill."}
+					? t('subscriptions.empty.noFilteredDesc', { filter: filter.toLowerCase() })
+					: t('subscriptions.empty.noSubscriptionsDesc')}
 			</p>
 			{!isFiltered && (
 				<Link to="/plans" className="subs-empty__cta" id="empty-browse-plans-btn">
 					<IconPlus />
-					Browse plans
+					{t('subscriptions.browsePlans')}
 				</Link>
 			)}
 		</div>
@@ -261,6 +266,7 @@ const INITIAL_DATA: SubscriptionWithIcon[] = [
 
 /* ─── Main component ─────────────────────────────────────────── */
 export default function Subscriptions() {
+	const { t } = useTranslation();
 	const [data, setData] = useState<SubscriptionWithIcon[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<ApiError | null>(null);
@@ -271,29 +277,23 @@ export default function Subscriptions() {
 	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 	const [isActionLoading, setIsActionLoading] = useState(false);
 
-	const fetchSubscriptions = useCallback(async () => {
+	const fetchSubscriptions = useCallback(() => {
 		setLoading(true);
 		setError(null);
-		try {
-			await new Promise<void>((resolve, reject) => {
-				setTimeout(() => {
-					if (window.location.search.includes("simulate_error")) {
-						const err: ApiError = new Error("Failed to load subscriptions");
-						err.status = 500;
-						err.technicalDetails =
-							"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
-						reject(err);
-					} else {
-						resolve();
-					}
-				}, 1000);
-			});
-			setData(INITIAL_DATA);
+
+		window.setTimeout(() => {
+			if (window.location.search.includes("simulate_error")) {
+				const err: ApiError = new Error("Failed to load subscriptions");
+				err.status = 500;
+				err.technicalDetails =
+					"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
+				setError(err);
+			} else {
+				setData(INITIAL_DATA);
+			}
+
 			setLoading(false);
-		} catch (err: any) {
-			setError(err);
-			setLoading(false);
-		}
+		}, 1000);
 	}, []);
 
 	useEffect(() => {
@@ -358,6 +358,17 @@ export default function Subscriptions() {
 			setIsCancelModalOpen(false);
 		} finally {
 			setIsActionLoading(false);
+		}
+	};
+
+	const handleOfferSelected = (offerId: string) => {
+		if (offerId === "pause") {
+			setIsCancelModalOpen(false);
+			setIsPauseModalOpen(true);
+		} else {
+			// Handle other offers (downgrade, discount)
+			// For now, we just close the modal as per minimal implementation requirements
+			setIsCancelModalOpen(false);
 		}
 	};
 
@@ -450,6 +461,37 @@ export default function Subscriptions() {
 									<StatusBadge status={selectedSub.status as StatusType} />
 									<span className="sub-id-small">ID: {selectedSub.id}</span>
 								</div>
+								{/* Tags row */}
+								{selectedSub.tags && selectedSub.tags.length > 0 && (
+									<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+										{selectedSub.tags.map((tag) => (
+											<Tag
+												key={tag.id}
+												label={tag.label}
+												color={tag.color}
+												size="small"
+												removable
+												onRemove={() => handleRemoveTag(selectedSub.id, tag.id)}
+											/>
+										))}
+										<AddTagPopover
+											availableTags={availableTags}
+											selectedTags={selectedSub.tags}
+											onAddTag={(tag) => handleAddTag(selectedSub.id, tag)}
+											onCreateTag={handleCreateTag}
+										/>
+									</div>
+								)}
+								{(!selectedSub.tags || selectedSub.tags.length === 0) && (
+									<div style={{ marginTop: '0.75rem' }}>
+										<AddTagPopover
+											availableTags={availableTags}
+											selectedTags={[]}
+											onAddTag={(tag) => handleAddTag(selectedSub.id, tag)}
+											onCreateTag={handleCreateTag}
+										/>
+									</div>
+								)}
 							</div>
 						</div>
 						<div className="detail-price-section">
@@ -533,6 +575,7 @@ export default function Subscriptions() {
 					isOpen={isCancelModalOpen}
 					onClose={() => setIsCancelModalOpen(false)}
 					onConfirm={handleCancelConfirm}
+					onOfferSelected={handleOfferSelected}
 					isLoading={isActionLoading}
 					balance={selectedSub.prepaidBalance.replace(" USDC", "") || "0"}
 					endDate={selectedSub.nextCharge || "N/A"}
@@ -552,17 +595,18 @@ export default function Subscriptions() {
 				</Link>
 				<span className="breadcrumb-separator" aria-hidden="true">/</span>
 				<span className="breadcrumb-current" aria-current="page">My subscriptions</span>
+				<span className="breadcrumb-current" aria-current="page">{t('subscriptions.pageTitle')}</span>
 			</nav>
 
 			{/* Header */}
 			<div className="header-row">
 				<div className="page-title-section">
-					<h1>My subscriptions</h1>
-					<p className="page-description">Manage your active and past subscriptions</p>
+					<h1>{t('subscriptions.pageTitle')}</h1>
+					<p className="page-description">{t('subscriptions.pageDescription')}</p>
 				</div>
 				<button className="browse-plans-btn" id="browse-plans-btn">
 					<IconPlus />
-					Browse plans
+					{t('subscriptions.browsePlans')}
 				</button>
 			</div>
 
@@ -576,7 +620,7 @@ export default function Subscriptions() {
 						onClick={() => setActiveFilter(tab)}
 						aria-pressed={activeFilter === tab}
 						aria-label={`Show ${tab} subscriptions (${stats[tab]})`}>
-						{tab} <span>({stats[tab]})</span>
+						{t(`subscriptions.tabs.${tab.toLowerCase()}`)} <span>({stats[tab]})</span>
 					</button>
 				))}
 			</div>
@@ -590,17 +634,17 @@ export default function Subscriptions() {
 					<div className="subs-table-wrapper" role="region" aria-label="Subscriptions list">
 						<table
 							className="subs-table"
-							aria-label="My subscriptions"
+							aria-label={t('subscriptions.pageTitle')}
 							data-testid="subscriptions-table">
 							<thead>
 								<tr>
-									<th scope="col">Plan</th>
-									<th scope="col">Status</th>
-									<th scope="col">Price</th>
-									<th scope="col">Next Charge</th>
-									<th scope="col">Prepaid Balance</th>
+									<th scope="col">{t('subscriptions.table.plan')}</th>
+									<th scope="col">{t('subscriptions.table.status')}</th>
+									<th scope="col">{t('subscriptions.table.price')}</th>
+									<th scope="col">{t('subscriptions.table.nextCharge')}</th>
+									<th scope="col">{t('subscriptions.table.prepaidBalance')}</th>
 									<th scope="col">
-										<span className="visually-hidden">Actions</span>
+										<span className="visually-hidden">{t('subscriptions.table.actions')}</span>
 									</th>
 								</tr>
 							</thead>
@@ -644,6 +688,25 @@ export default function Subscriptions() {
 											</span>
 										</td>
 
+										{/* Tags */}
+										<td>
+											<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+												{sub.tags?.slice(0, 2).map((tag) => (
+													<Tag
+														key={tag.id}
+														label={tag.label}
+														color={tag.color}
+														size="small"
+													/>
+												))}
+												{sub.tags && sub.tags.length > 2 && (
+													<span style={{ fontSize: 'var(--text-xs)', color: '#64748b' }}>
+														+{sub.tags.length - 2}
+													</span>
+												)}
+											</div>
+										</td>
+
 										{/* Next charge */}
 										<td>
 											<span className="subs-table__meta-cell">
@@ -671,7 +734,7 @@ export default function Subscriptions() {
 														setSelectedId(sub.id);
 													}}
 													aria-label={`Manage ${sub.planName}`}>
-													Manage
+													{t('subscriptions.table.manage')}
 												</button>
 											</div>
 										</td>
@@ -705,6 +768,24 @@ export default function Subscriptions() {
 										<div>
 											<div className="subs-card__name">{sub.planName}</div>
 											<div className="subs-card__merchant">{sub.merchantName}</div>
+											{/* Tags for mobile */}
+											{sub.tags && sub.tags.length > 0 && (
+												<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+													{sub.tags.slice(0, 2).map((tag) => (
+														<Tag
+															key={tag.id}
+															label={tag.label}
+															color={tag.color}
+															size="small"
+														/>
+													))}
+													{sub.tags.length > 2 && (
+														<span style={{ fontSize: 'var(--text-xs)', color: '#64748b', alignSelf: 'center' }}>
+															+{sub.tags.length - 2}
+														</span>
+													)}
+												</div>
+											)}
 										</div>
 									</div>
 									<StatusBadge status={sub.status as StatusType} />
@@ -712,19 +793,19 @@ export default function Subscriptions() {
 
 								<div className="subs-card__meta">
 									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">Prepaid</span>
+										<span className="subs-card__meta-label">{t('subscriptions.table.prepaid')}</span>
 										<span className="subs-card__meta-value">{sub.prepaidBalance}</span>
 									</div>
 									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">Coverage</span>
+										<span className="subs-card__meta-label">{t('subscriptions.table.coverage')}</span>
 										<span className="subs-card__meta-value">{sub.coverage}</span>
 									</div>
 									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">Next charge</span>
+										<span className="subs-card__meta-label">{t('subscriptions.table.nextCharge')}</span>
 										<span className="subs-card__meta-value">{sub.nextCharge}</span>
 									</div>
 									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">Last payment</span>
+										<span className="subs-card__meta-label">{t('subscriptions.table.lastPayment')}</span>
 										<span className="subs-card__meta-value">{sub.lastPayment}</span>
 									</div>
 								</div>
@@ -743,7 +824,7 @@ export default function Subscriptions() {
 											e.stopPropagation();
 											setSelectedId(sub.id);
 										}}
-										aria-label={`Manage ${sub.planName}`}>
+										aria-label={`Open ${sub.planName} from card`}>
 										Manage
 									</button>
 								</div>

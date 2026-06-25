@@ -1,13 +1,15 @@
 import { useRef } from "react";
 import { useModalFocus } from "../hooks/useModalFocus";
-import { ConnectionState } from "./ConnectButton";
+import type { ConnectionState } from "./ConnectButton";
 import { X, ShieldCheck, Info, RotateCcw, HelpCircle, AlertCircle, Loader2 } from "lucide-react";
 
 interface WalletConnectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConnectFreighter?: () => void;
-  connectionState: ConnectionState;
+  onConnected?: () => void;
+  connectionState?: ConnectionState;
+  initialState?: ConnectionState | "list" | "failed";
   errorMessage?: string;
   onRetry?: () => void;
 }
@@ -16,18 +18,25 @@ export default function WalletConnectModal({
   isOpen,
   onClose,
   onConnectFreighter,
+  onConnected,
   connectionState,
+  initialState,
   errorMessage,
   onRetry,
 }: WalletConnectModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const mappedInitialState: ConnectionState = initialState === 'list'
+    ? 'disconnected'
+    : initialState === 'failed'
+      ? 'error'
+      : initialState ?? 'disconnected';
+  const resolvedConnectionState = connectionState ?? mappedInitialState;
 
   useModalFocus(modalRef, { isOpen, onClose });
 
   const handleFreighterConnect = () => {
-    if (onConnectFreighter) {
-      onConnectFreighter();
-    }
+    onConnectFreighter?.();
+    onConnected?.();
   };
 
   if (!isOpen) return null;
@@ -38,11 +47,18 @@ export default function WalletConnectModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
+      aria-describedby={resolvedConnectionState === 'disconnected' ? 'modal-description' : undefined}
+      aria-busy={resolvedConnectionState === 'connecting' ? 'true' : undefined}
+      onClick={(event) => {
+        if (event.target === event.currentTarget && resolvedConnectionState !== 'connecting') {
+          onClose();
+        }
+      }}
     >
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-slate-950/80 backdrop-blur-md transition-opacity duration-300" 
-        onClick={() => connectionState !== 'connecting' && onClose()}
+        onClick={() => resolvedConnectionState !== 'connecting' && onClose()}
       />
 
       {/* Modal Content */}
@@ -75,22 +91,26 @@ export default function WalletConnectModal({
         {/* Content */}
         <div className="text-center mb-10">
           <h2 id="modal-title" className="text-2xl sm:text-3xl font-bold text-white mb-3 tracking-tight">
-            {connectionState === 'disconnected' && "Connect Stellar Wallet"}
-            {connectionState === 'connecting' && "Connecting..."}
-            {connectionState === 'error' && "Connection Failed"}
+            {resolvedConnectionState === 'disconnected' && "Connect your wallet"}
+            {resolvedConnectionState === 'connecting' && "Connecting..."}
+            {resolvedConnectionState === 'error' && "Connection Failed"}
           </h2>
-          <p className="text-slate-400 text-sm leading-relaxed max-w-[280px] mx-auto">
-            {connectionState === 'disconnected' && "Manage your subscriptions and payments securely using Stellar protocol."}
-            {connectionState === 'connecting' && "Please confirm the connection request in your Freighter wallet extension."}
-            {connectionState === 'error' && (errorMessage || "The connection request was rejected or failed. Please try again.")}
+          <p
+            id={resolvedConnectionState === 'disconnected' ? 'modal-description' : undefined}
+            className="text-slate-400 text-sm leading-relaxed max-w-[280px] mx-auto"
+          >
+            {resolvedConnectionState === 'disconnected' && "Sign in with your wallet to manage Stellar wallet subscriptions and payments securely."}
+            {resolvedConnectionState === 'connecting' && "Confirm in Freighter and accept the signature request to continue."}
+            {resolvedConnectionState === 'error' && (errorMessage || "The connection request was rejected or failed. Please try again.")}
           </p>
         </div>
 
-        {connectionState === 'disconnected' && (
+        {resolvedConnectionState === 'disconnected' && (
           <div className="space-y-4">
             {/* Wallet Option: Freighter */}
             <button 
               onClick={handleFreighterConnect}
+              aria-label="Connect"
               className="w-full flex items-center gap-4 p-4 rounded-3xl bg-white/5 border border-white/5 hover:border-cyan-500/30 hover:bg-white/10 transition-all duration-300 group text-left"
             >
               <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 group-hover:scale-110 transition-transform">
@@ -128,10 +148,10 @@ export default function WalletConnectModal({
           </div>
         )}
 
-        {connectionState === 'connecting' && (
+        {resolvedConnectionState === 'connecting' && (
           <div className="py-12 flex flex-col items-center">
             <div className="relative mb-8">
-              <Loader2 className="w-16 h-16 text-cyan-400 animate-spin opacity-20" />
+              <Loader2 className="spinner w-16 h-16 text-cyan-400 animate-spin opacity-20" />
               <Loader2 className="w-16 h-16 text-cyan-400 animate-spin absolute inset-0 [animation-delay:150ms]" />
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-cyan-400/10 rounded-full border border-cyan-400/20">
@@ -144,7 +164,7 @@ export default function WalletConnectModal({
           </div>
         )}
 
-        {connectionState === 'error' && (
+        {resolvedConnectionState === 'error' && (
           <div className="py-6 flex flex-col items-center">
             <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20 mb-8">
               <AlertCircle className="w-8 h-8 text-red-400" />
@@ -162,7 +182,7 @@ export default function WalletConnectModal({
                 className="w-full flex items-center justify-center gap-2 py-4 text-slate-400 hover:text-white transition-colors text-sm font-medium"
               >
                 <HelpCircle className="w-4 h-4" />
-                Wallet Support
+                Get Help
               </button>
               <button 
                 onClick={onClose}

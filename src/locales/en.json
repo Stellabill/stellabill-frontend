@@ -1,0 +1,65 @@
+{
+  "dashboard": {
+    "title": "Dashboard Overview",
+    "subtitle": "Monitor your subscription performance and growth metrics.",
+    "viewPlans": "View Plans",
+    "createPlan": "Create Plan",
+    "kpis": {
+      "activeSubscriptions": "Active Subscriptions",
+      "activeSubscriptionsHelp": "Total number of currently active paid subscriptions.",
+      "mrr": "MRR",
+      "mrrHelp": "Monthly Recurring Revenue across all active subscriptions.",
+      "failedCharges": "Failed Charges",
+      "failedChargesHelp": "Number of charges that failed in the last 30 days.",
+      "upcomingRenewals": "Upcoming Renewals",
+      "upcomingRenewalsHelp": "Subscriptions set to renew in the next 7 days."
+    },
+    "revenueGrowth": "Revenue Growth",
+    "viewDetailedReport": "View Detailed Report",
+    "recentActivity": "Recent Activity",
+    "markAllAsRead": "Mark all as read",
+    "seeAllActivity": "See all activity",
+    "unavailable": "Dashboard Unavailable",
+    "simulateError": "The metrics service is currently unavailable. [Error Code: MET-500]"
+  },
+  "subscriptions": {
+    "pageTitle": "My subscriptions",
+    "pageDescription": "Manage your active and past subscriptions",
+    "browsePlans": "Browse plans",
+    "tabs": {
+      "all": "All",
+      "active": "Active",
+      "paused": "Paused",
+      "cancelled": "Cancelled"
+    },
+    "table": {
+      "plan": "Plan",
+      "status": "Status",
+      "price": "Price",
+      "nextCharge": "Next Charge",
+      "prepaidBalance": "Prepaid Balance",
+      "actions": "Actions",
+      "manage": "Manage",
+      "prepaid": "Prepaid",
+      "coverage": "Coverage",
+      "lastPayment": "Last payment"
+    },
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "cancelled": "Cancelled"
+    },
+    "empty": {
+      "noFiltered": "No {filter} subscriptions",
+      "noFilteredDesc": "You don't have any {filter} subscriptions. Try a different filter or browse available plans.",
+      "noSubscriptions": "No subscriptions yet",
+      "noSubscriptionsDesc": "You haven't subscribed to any plans yet. Browse available plans to get started with Stellabill."
+    },
+    "pluralTest": "{count, plural, =0 {No active subscriptions} one {1 active subscription} other {{count} active subscriptions}}"
+  },
+  "aria": {
+    "loadingSubscriptions": "Loading subscriptions",
+    "filterByStatus": "Filter subscriptions by status",
+    "subscriptionsList": "Subscriptions list"
+  }
+}

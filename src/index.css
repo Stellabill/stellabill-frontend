@@ -2,6 +2,7 @@
 @import './styles/tokens.css';
 @import './styles/typography.css';
 @import './styles/layout.css';
+@import './styles/theme.css';
 
 * {
   box-sizing: border-box;
@@ -10,18 +11,31 @@
 :root {
   font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.5;
-  color: #f5f8ff;
-  background: #00060f;
+  color: var(--color-text-primary);
+  background: var(--color-surface-canvas);
 }
 
 body {
   margin: 0;
-  background: radial-gradient(140% 80% at 50% -10%, #001e2e 0%, #00070f 38%, #000308 72%, #000205 100%);
-  color: #f5f8ff;
+  background: var(--app-background);
+  color: var(--color-text-primary);
 }
 
 #root {
   min-height: 100vh;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  color-scheme: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .blank-page {
