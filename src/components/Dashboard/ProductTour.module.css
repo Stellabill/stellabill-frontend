@@ -1,0 +1,144 @@
+.spotlightOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(10, 15, 22, 0.7);
+  z-index: 1000;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.spotlightOverlay.reducedMotion {
+  transition: none;
+}
+
+.spotlightPath {
+  transition: d 0.3s ease;
+}
+
+.spotlightPath.reducedMotion {
+  transition: none;
+}
+
+.tooltipCard {
+  position: fixed;
+  z-index: 1001;
+  background-color: #1e293b;
+  color: #f1f5f9;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: var(--space-5);
+  width: 320px;
+  max-width: 90vw;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.tooltipCard.reducedMotion {
+  transition: none;
+}
+
+.tooltipHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.tooltipTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.skipButton {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.skipButton:hover {
+  color: #ffffff;
+}
+
+.tooltipBody {
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: #cbd5e1;
+  margin-bottom: var(--space-5);
+}
+
+.tooltipFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progressIndicator {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.navigation {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.button {
+  padding: var(--space-2) var(--space-4);
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-size: var(--text-sm);
+}
+
+.buttonPrimary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.buttonSecondary {
+  background-color: #334155;
+  color: #f1f5f9;
+}
+
+.completionCard {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 1002;
+  background-color: #10b981;
+  color: #ffffff;
+  padding: var(--space-4) var(--space-5);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.completionTitle {
+  font-weight: 600;
+}
+
+.completionMessage {
+  font-size: var(--text-sm);
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: white;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  opacity: 1;
+}
