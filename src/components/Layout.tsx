@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import LandingNavbar from "./LandingNavbar";
 import CommandPalette, { CommandItem } from "./CommandPalette";
+import KeyboardShortcutsOverlay from "./KeyboardShortcutsOverlay";
 import "../styles/sidebar.css";
 
 const RECENT_COMMANDS_KEY = "sb:recent-commands";
@@ -94,6 +95,10 @@ const devNav = [
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
+  const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
@@ -138,6 +143,36 @@ export default function Layout() {
       return next;
     });
   };
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Cmd+K / Ctrl+K: Open command palette
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault();
+        setIsPaletteOpen(true);
+        return;
+      }
+
+      // ?: Show keyboard shortcuts overlay
+      // Only trigger if not in an input, textarea, or contentEditable element
+      if (event.key === '?' || event.key === '/') {
+        const target = event.target as HTMLElement;
+        const isInputField =
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable;
+
+        if (!isInputField && event.key === '?') {
+          event.preventDefault();
+          setIsShortcutsOverlayOpen(true);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="app-layout">
@@ -221,6 +256,11 @@ export default function Layout() {
         onClose={() => setIsPaletteOpen(false)}
         items={paletteItems}
         onSelect={handleCommandSelect}
+      />
+
+      <KeyboardShortcutsOverlay
+        isOpen={isShortcutsOverlayOpen}
+        onClose={() => setIsShortcutsOverlayOpen(false)}
       />
     </div>
   );
