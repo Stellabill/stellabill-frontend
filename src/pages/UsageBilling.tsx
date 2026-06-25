@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { PastPeriods } from '../components/past-periods/past-periods';
 import './UsageBilling.css';
+import InvoiceList from "../components/InvoiceList";
 
 interface UsageData {
     planName: string;
@@ -101,6 +102,36 @@ export default function UsageBilling() {
     const progressColor = usagePct >= 90 ? '#ef4444' : usagePct >= 70 ? '#f59e0b' : '#6366f1';
     const usageCountFmt = usageCount.toLocaleString();
     const usageLimitFmt = usageLimit.toLocaleString();
+
+    const invoicesData: {
+        id: string;
+        date: string;
+        status: "paid" | "pending" | "failed";
+        total: string;
+        currency: string;
+    }[] = [
+    {
+        id: "INV-00123456789",
+        date: "Mar 31, 2026",
+        status: "paid",
+        total: "16.23",
+        currency: "USDC",
+    },
+    {
+        id: "INV-00123456790",
+        date: "Feb 28, 2026",
+        status: "pending",
+        total: "12.10",
+        currency: "USDC",
+    },
+    {
+        id: "INV-00123456791",
+        date: "Jan 31, 2026",
+        status: "failed",
+        total: "8.50",
+        currency: "USDC",
+    },
+    ];
 
     return (
         <div className="usage-billing-page">
@@ -219,6 +250,8 @@ export default function UsageBilling() {
                     </div>
                 </div>
             </div>
+
+            <InvoiceList invoices={invoicesData} />
 
             <PastPeriods />
         </div>
