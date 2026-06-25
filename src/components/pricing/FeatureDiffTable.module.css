@@ -1,0 +1,81 @@
+.tableWrapper {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.featureHeader, .planHeader, .changeHeader {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  background-color: #f8fafc;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.changeHeader {
+  text-align: center;
+}
+
+.row {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.featureCell, .dataCell {
+  padding: var(--space-3) var(--space-4);
+  vertical-align: middle;
+}
+
+.dataCell {
+  text-align: center;
+}
+
+.indicatorCell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: var(--text-lg);
+}
+
+.diffCell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.added {
+  color: #16a34a; /* Green 600 */
+}
+
+.removed {
+  color: #dc2626; /* Red 600 */
+}
+
+.changed {
+  color: #ca8a04; /* Yellow 600 */
+}
+
+.same {
+  color: #9ca3af; /* Gray 400 */
+}

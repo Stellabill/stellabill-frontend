@@ -72,6 +72,8 @@ export default function SubscriptionDetail() {
             )}
 
             <RecentPayments subscriptionId={id} />
+
+            <PlanStatusTimeline subscriptionId={id} />
         </div>
     );
 }
