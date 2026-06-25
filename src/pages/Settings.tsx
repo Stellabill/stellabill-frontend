@@ -1,10 +1,42 @@
 import { useState } from 'react'
-import { Settings, Users, CreditCard, Key, Shield, AlertTriangle } from 'lucide-react'
+import { Settings, Users, CreditCard, Key, Shield, AlertTriangle, Tags } from 'lucide-react'
 import OrganizationSettings from '../components/settings/OrganizationSettings'
 import BillingSettings from '../components/settings/BillingSettings'
 import ApiKeysSettings from '../components/settings/ApiKeysSettings'
+import ManageTagsSettings, { TagData } from '../components/settings/ManageTagsSettings'
+import { TagProps } from '../components/Tag'
 
-type SettingsTab = 'organization' | 'billing' | 'api-keys'
+type SettingsTab = 'organization' | 'billing' | 'api-keys' | 'tags'
+
+// Wrapper component for ManageTagsSettings with state
+function ManageTagsWrapper() {
+  const [tags, setTags] = useState<TagData[]>([
+    { id: '1', label: 'Enterprise', color: 'blue', usageCount: 5 },
+    { id: '2', label: 'Popular', color: 'green', usageCount: 12 },
+    { id: '3', label: 'Beta', color: 'yellow', usageCount: 3 },
+  ]);
+
+  const handleRenameTag = (id: string, newLabel: string) => {
+    setTags(prev => prev.map(t => t.id === id ? { ...t, label: newLabel } : t));
+  };
+
+  const handleDeleteTag = (id: string) => {
+    setTags(prev => prev.filter(t => t.id !== id));
+  };
+
+  const handleChangeColor = (id: string, newColor: TagProps['color']) => {
+    setTags(prev => prev.map(t => t.id === id ? { ...t, color: newColor } : t));
+  };
+
+  return (
+    <ManageTagsSettings
+      tags={tags}
+      onRenameTag={handleRenameTag}
+      onDeleteTag={handleDeleteTag}
+      onChangeColor={handleChangeColor}
+    />
+  );
+}
 
 interface SettingsSection {
   id: SettingsTab
@@ -35,6 +67,13 @@ const settingsSections: SettingsSection[] = [
     icon: Key,
     description: 'Manage API keys, tokens, and security settings',
     component: ApiKeysSettings,
+  },
+  {
+    id: 'tags',
+    label: 'Tags',
+    icon: Tags,
+    description: 'Create and manage tags for organizing plans and subscriptions',
+    component: ManageTagsWrapper,
   },
 ]
 
