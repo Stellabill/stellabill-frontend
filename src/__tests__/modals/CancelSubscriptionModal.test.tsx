@@ -26,10 +26,10 @@ describe('CancelSubscriptionModal Accessibility', () => {
     const modal = screen.getByRole('dialog');
     expect(modal).toBeInTheDocument();
 
-    // Wait for initial focus (Keep subscription button)
+    // Wait for initial focus (First offer action button)
     await waitFor(() => {
-      const keepBtn = screen.getByRole('button', { name: /keep subscription/i });
-      expect(document.activeElement).toBe(keepBtn);
+      const pauseBtn = screen.getByRole('button', { name: /pause instead: pause subscription/i });
+      expect(document.activeElement).toBe(pauseBtn);
     });
 
     const focusableElements = screen.getAllByRole('button');
@@ -78,7 +78,7 @@ describe('CancelSubscriptionModal Accessibility', () => {
     expect(modal).toHaveAttribute('aria-labelledby', 'cancel-modal-title');
     expect(modal).toHaveAttribute('aria-describedby', 'cancel-modal-description');
     
-    expect(screen.getByText(/cancel subscription\?/i)).toHaveAttribute('id', 'cancel-modal-title');
-    expect(screen.getByText(/you will no longer be charged/i)).toHaveAttribute('id', 'cancel-modal-description');
+    expect(screen.getByText(/before you go/i)).toHaveAttribute('id', 'cancel-modal-title');
+    expect(screen.getByText(/we'd love to keep you/i)).toHaveAttribute('id', 'cancel-modal-description');
   });
 });

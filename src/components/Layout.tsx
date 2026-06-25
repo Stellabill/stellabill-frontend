@@ -1,6 +1,21 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import LandingNavbar from "./LandingNavbar";
+import CommandPalette, { CommandItem } from "./CommandPalette";
 import "../styles/sidebar.css";
+
+const RECENT_COMMANDS_KEY = "sb:recent-commands";
+const RECENT_COMMANDS_LIMIT = 5;
+
+function readRecentCommands(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_COMMANDS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 const mainNav = [
   {
@@ -79,23 +94,81 @@ const devNav = [
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
 
-  // Update mobile flag on resize
+  const handleTimeout = () => {
+    // For demo purposes, we'll just refresh the page
+    window.location.href = '/';
+  };
+
+  const {
+    isWarningOpen,
+    remainingSeconds,
+    handleStaySignedIn,
+    handleLogout
+  } = useSessionTimeout({
+    onTimeout: handleTimeout
+  });
+
+  // Global mod+k opener for the command palette.
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setIsPaletteOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-
-  // Close drawer when navigating
-  useEffect(() => {
-    setIsDrawerOpen(false);
-  }, [location]);
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
+
+  // Catalog of every page and action the palette can surface.
+  const catalog = useMemo<CommandItem[]>(() => {
+    const pages: CommandItem[] = [
+      { id: "page-dashboard", label: "Dashboard", group: "Pages", keywords: "home overview", perform: () => navigate("/dashboard") },
+      { id: "page-subscriptions", label: "Subscriptions", group: "Pages", keywords: "subscribers customers", perform: () => navigate("/subscriptions") },
+      { id: "page-plans", label: "Plans", group: "Pages", keywords: "pricing billing", perform: () => navigate("/plans") },
+      { id: "page-browse-plans", label: "Browse Plans", group: "Pages", keywords: "catalog explore", perform: () => navigate("/browse-plans") },
+      { id: "page-settings", label: "Settings", group: "Pages", keywords: "preferences account", perform: () => navigate("/settings") },
+      { id: "page-ui-kit", label: "UI Kit", group: "Pages", keywords: "components developer", perform: () => navigate("/ui-kit") },
+      { id: "page-brand", label: "Brand", group: "Pages", keywords: "design tokens", perform: () => navigate("/brand") },
+    ];
+    const actions: CommandItem[] = [
+      { id: "action-create-plan", label: "Create plan", group: "Actions", hint: "Start a new billing plan", keywords: "add new plan", perform: () => navigate("/plans/create") },
+      { id: "action-refund", label: "Issue refund", group: "Actions", hint: "Refund a subscription payment", keywords: "money back return reverse", perform: () => navigate("/subscriptions") },
+      { id: "action-pause", label: "Pause subscription", group: "Actions", hint: "Temporarily stop billing", keywords: "hold suspend freeze", perform: () => navigate("/subscriptions") },
+    ];
+    return [...pages, ...actions];
+  }, [navigate]);
+
+  // Surface recently chosen commands as their own group.
+  const paletteItems = useMemo<CommandItem[]>(() => {
+    const recent = recentIds
+      .map((id) => catalog.find((item) => item.id === id))
+      .filter((item): item is CommandItem => Boolean(item))
+      .map((item) => ({ ...item, id: `recent-${item.id}`, group: "Recent" as const }));
+    return [...catalog, ...recent];
+  }, [catalog, recentIds]);
+
+  const handleCommandSelect = (item: CommandItem) => {
+    const baseId = item.id.replace(/^recent-/, "");
+    setRecentIds((prev) => {
+      const next = [baseId, ...prev.filter((id) => id !== baseId)].slice(0, RECENT_COMMANDS_LIMIT);
+      try {
+        localStorage.setItem(RECENT_COMMANDS_KEY, JSON.stringify(next));
+      } catch {
+        /* storage unavailable — keep recents in memory only */
+      }
+      return next;
+    });
+  };
 
   return (
     <div className="flex flex-col min-height-screen bg-slate-950 text-slate-200">
@@ -104,6 +177,31 @@ export default function Layout() {
       <div style={{ display: "flex", flex: 1 }}>
         <aside className="sb-sidebar" aria-label="Main navigation">
           <div className="sb-sidebar__brand">Stellarbill</div>
+
+          <button
+            type="button"
+            className="cmdk-trigger"
+            onClick={() => setIsPaletteOpen(true)}
+            aria-label="Open command palette"
+            aria-haspopup="dialog"
+            aria-keyshortcuts="Meta+K Control+K"
+          >
+            <svg
+              className="cmdk-trigger__icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span className="cmdk-trigger__label">Search…</span>
+            <kbd className="cmdk-trigger__kbd">⌘K</kbd>
+          </button>
 
           <nav className="sb-sidebar__nav" aria-label="Primary">
             <div className="sb-sidebar__group">
@@ -148,6 +246,13 @@ export default function Layout() {
           <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-cyan-500/5 blur-[120px] pointer-events-none -z-10" />
         </main>
       </div>
+
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        items={paletteItems}
+        onSelect={handleCommandSelect}
+      />
     </div>
   );
 }
