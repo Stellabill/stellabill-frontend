@@ -100,17 +100,19 @@ export default function Layout() {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
 
-  // Update mobile flag on resize
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const handleTimeout = () => {
+    // For demo purposes, we'll just refresh the page
+    window.location.href = '/';
+  };
 
-  // Close drawer when navigating
-  useEffect(() => {
-    setIsDrawerOpen(false);
-  }, [location]);
+  const {
+    isWarningOpen,
+    remainingSeconds,
+    handleStaySignedIn,
+    handleLogout
+  } = useSessionTimeout({
+    onTimeout: handleTimeout
+  });
 
   // Global mod+k opener for the command palette.
   useEffect(() => {
