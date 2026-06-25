@@ -271,29 +271,23 @@ export default function Subscriptions() {
 	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 	const [isActionLoading, setIsActionLoading] = useState(false);
 
-	const fetchSubscriptions = useCallback(async () => {
+	const fetchSubscriptions = useCallback(() => {
 		setLoading(true);
 		setError(null);
-		try {
-			await new Promise<void>((resolve, reject) => {
-				setTimeout(() => {
-					if (window.location.search.includes("simulate_error")) {
-						const err: ApiError = new Error("Failed to load subscriptions");
-						err.status = 500;
-						err.technicalDetails =
-							"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
-						reject(err);
-					} else {
-						resolve();
-					}
-				}, 1000);
-			});
-			setData(INITIAL_DATA);
+
+		window.setTimeout(() => {
+			if (window.location.search.includes("simulate_error")) {
+				const err: ApiError = new Error("Failed to load subscriptions");
+				err.status = 500;
+				err.technicalDetails =
+					"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
+				setError(err);
+			} else {
+				setData(INITIAL_DATA);
+			}
+
 			setLoading(false);
-		} catch (err: any) {
-			setError(err);
-			setLoading(false);
-		}
+		}, 1000);
 	}, []);
 
 	useEffect(() => {
@@ -743,7 +737,7 @@ export default function Subscriptions() {
 											e.stopPropagation();
 											setSelectedId(sub.id);
 										}}
-										aria-label={`Manage ${sub.planName}`}>
+										aria-label={`Open ${sub.planName} from card`}>
 										Manage
 									</button>
 								</div>

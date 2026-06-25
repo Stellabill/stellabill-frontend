@@ -31,7 +31,7 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClos
     >
       <div className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Connect Status</span>
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Connected wallet</span>
           <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 rounded-full border border-green-500/20">
              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
              <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider">Connected</span>
@@ -49,6 +49,7 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClos
             title="Copy address"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span className="sr-only">Copy address</span>
           </button>
         </div>
 
@@ -62,6 +63,18 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClos
                 <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-cyan-400" />
               </div>
               View in Explorer
+            </div>
+          </button>
+
+          <button
+            className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all group"
+            onClick={onClose}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-slate-800 rounded-lg group-hover:bg-cyan-500/10 transition-colors">
+                <CreditCard className="w-4 h-4 text-slate-400 group-hover:text-cyan-400" />
+              </div>
+              Switch wallet
             </div>
           </button>
 

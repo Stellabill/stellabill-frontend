@@ -16,37 +16,30 @@ import ActivityList, { ActivityType } from '../components/Dashboard/ActivityList
 import DashboardSkeleton from '../components/Dashboard/DashboardSkeleton';
 import ErrorState from '../components/ErrorState';
 import { ApiError } from '../api/client';
+import './Dashboard.css';
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(() => {
     setLoading(true);
     setError(null);
-    try {
-      // Simulate API call
-      await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          if (window.location.search.includes('simulate_error')) {
-            const err: ApiError = new Error('Failed to fetch dashboard metrics');
-            err.status = 500;
-            err.technicalDetails = 'The metrics service is currently unavailable. [Error Code: MET-500]';
-            reject(err);
-          } else if (window.location.search.includes('simulate_offline')) {
-            const err: ApiError = new Error('No internet connection');
-            err.isOffline = true;
-            reject(err);
-          } else {
-            resolve(true);
-          }
-        }, 1000);
-      });
+
+    window.setTimeout(() => {
+      if (window.location.search.includes('simulate_error')) {
+        const err: ApiError = new Error('Failed to fetch dashboard metrics');
+        err.status = 500;
+        err.technicalDetails = 'The metrics service is currently unavailable. [Error Code: MET-500]';
+        setError(err);
+      } else if (window.location.search.includes('simulate_offline')) {
+        const err: ApiError = new Error('No internet connection');
+        err.isOffline = true;
+        setError(err);
+      }
+
       setLoading(false);
-    } catch (err: any) {
-      setError(err);
-      setLoading(false);
-    }
+    }, 1000);
   }, []);
 
   useEffect(() => {
@@ -59,7 +52,7 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4">
+      <div className="dashboard-error-shell">
         <ErrorState 
           title="Dashboard Unavailable"
           message={error.message}
@@ -113,29 +106,29 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-50 p-4 md:p-8">
+    <div className="dashboard-page">
       {/* Header */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <header className="dashboard-header">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <LayoutGrid className="text-cyan-400" size={20} />
-            <h1 className="text-2xl font-bold tracking-tight">Dashboard Overview</h1>
+          <div className="dashboard-heading-row">
+            <LayoutGrid size={20} aria-hidden="true" />
+            <h1>Dashboard Overview</h1>
           </div>
-          <p className="text-slate-400 text-sm">
+          <p className="dashboard-description">
             Monitor your subscription performance and growth metrics.
           </p>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="dashboard-actions">
           <Link
             to="/plans"
-            className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-900/50 text-sm font-medium hover:bg-slate-800 transition-colors"
+            className="dashboard-action dashboard-action--secondary"
           >
             <ExternalLink size={16} />
             View Plans
           </Link>
           <Link
             to="/plans?create=true"
-            className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-linear-to-r from-cyan-500 to-emerald-500 text-slate-950 text-sm font-bold hover:opacity-90 transition-opacity"
+            className="dashboard-action dashboard-action--primary"
           >
             <Plus size={16} />
             Create Plan
@@ -144,7 +137,7 @@ export default function Dashboard() {
       </header>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="dashboard-kpi-grid">
         <DashboardCard
           title="Active Subscriptions"
           value="1,284"
@@ -179,30 +172,30 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="dashboard-main-grid">
         {/* Chart Section */}
-        <div className="lg:col-span-2 bg-[#0a0f16] border border-slate-800/50 rounded-2xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-semibold text-slate-200">Revenue Growth</h2>
-            <Link to="/reports" className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-medium">
+        <div className="dashboard-panel dashboard-panel--chart">
+          <div className="dashboard-panel__header">
+            <h2 className="dashboard-section-title">Revenue Growth</h2>
+            <Link to="/reports" className="dashboard-link">
               View Detailed Report <ArrowRight size={12} />
             </Link>
           </div>
-          <div className="h-[350px] w-full">
+          <div className="dashboard-chart-wrapper">
             <RevenueChart />
           </div>
         </div>
 
         {/* Activity Section */}
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-slate-200">Recent Activity</h2>
-            <button className="text-xs text-slate-400 hover:text-slate-300 font-medium">
+        <div className="dashboard-activity-column">
+          <div className="dashboard-activity-header">
+            <h2 className="dashboard-section-title">Recent Activity</h2>
+            <button className="dashboard-muted-button">
               Mark all as read
             </button>
           </div>
           <ActivityList activities={mockActivities} />
-          <button className="w-full py-3 text-sm font-medium text-slate-400 hover:text-slate-200 bg-slate-900/30 border border-slate-800/50 rounded-xl transition-colors">
+          <button className="dashboard-load-more">
             See all activity
           </button>
         </div>

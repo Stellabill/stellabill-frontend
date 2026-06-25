@@ -48,8 +48,8 @@ describe('Settings Page', () => {
     renderWithRouter(<Settings />)
     
     expect(screen.getByTestId('organization-settings')).toBeInTheDocument()
-    expect(screen.getByTestId('billing-settings')).not.toBeInTheDocument()
-    expect(screen.getByTestId('api-keys-settings')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('billing-settings')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('api-keys-settings')).not.toBeInTheDocument()
   })
 
   it('switches to billing settings when billing tab is clicked', async () => {
@@ -60,8 +60,8 @@ describe('Settings Page', () => {
     
     await waitFor(() => {
       expect(screen.getByTestId('billing-settings')).toBeInTheDocument()
-      expect(screen.getByTestId('organization-settings')).not.toBeInTheDocument()
-      expect(screen.getByTestId('api-keys-settings')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('organization-settings')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('api-keys-settings')).not.toBeInTheDocument()
     })
   })
 
@@ -73,8 +73,8 @@ describe('Settings Page', () => {
     
     await waitFor(() => {
       expect(screen.getByTestId('api-keys-settings')).toBeInTheDocument()
-      expect(screen.getByTestId('organization-settings')).not.toBeInTheDocument()
-      expect(screen.getByTestId('billing-settings')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('organization-settings')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('billing-settings')).not.toBeInTheDocument()
     })
   })
 

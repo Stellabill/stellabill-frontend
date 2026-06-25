@@ -79,29 +79,15 @@ const devNav = [
 
 export default function Layout() {
   const location = useLocation();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  // Update mobile flag on resize
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Close drawer when navigating
-  useEffect(() => {
-    setIsDrawerOpen(false);
-  }, [location]);
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
 
   return (
-    <div className="flex flex-col min-height-screen bg-slate-950 text-slate-200">
+    <div className="app-layout">
       {/* Top Navbar */}
       <LandingNavbar />
-      <div style={{ display: "flex", flex: 1 }}>
+      <div className="app-layout__shell">
         <aside className="sb-sidebar" aria-label="Main navigation">
           <div className="sb-sidebar__brand">Stellarbill</div>
 
@@ -139,13 +125,13 @@ export default function Layout() {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-slate-950 relative">
-          <div className="max-w-7xl mx-auto p-6 md:p-8 lg:p-10">
+        <main className="app-layout__main">
+          <div className="app-layout__content">
             <Outlet />
           </div>
-          
+
           {/* Subtle background glow */}
-          <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-cyan-500/5 blur-[120px] pointer-events-none -z-10" />
+          <div className="app-layout__glow" />
         </main>
       </div>
     </div>

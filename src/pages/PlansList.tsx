@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 interface Plan {
   id: string;
@@ -111,7 +111,7 @@ export default function PlansList({
           </thead>
 
           <tbody>
-            {plans.map((p, i) => (
+            {plans.map((p) => (
               <tr key={p.id}>
                 <td>
                   <input

@@ -41,26 +41,34 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
     }
   };
 
-  const handleConnectFreighter = async () => {
+  const handleConnectFreighter = () => {
     const connectionId = ++activeConnectionId.current;
     setConnectionState('connecting');
     setErrorMessage('');
 
-    try {
-      // Simulate wallet connection process
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulate success for demo
-      const mockAddress = 'GB3K4Y5QYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQ';
-      setWalletAddress(mockAddress);
-      setConnectionState('connected');
-      setIsModalOpen(false);
-      onConnect?.(mockAddress);
-    } catch (error) {
+    // Simulate wallet connection process. Keep non-zero delays visible long enough for assistive UI/tests.
+    const effectiveDelay = connectDelayMs > 0 ? Math.max(connectDelayMs, 500) : 0;
+
+    window.setTimeout(() => {
       if (connectionId !== activeConnectionId.current) return;
-      setConnectionState('error');
-      setErrorMessage(error instanceof Error ? error.message : 'Connection failed');
-    }
+
+      try {
+        if (randomFn() < 0.2) {
+          throw new Error('Connection rejected by user');
+        }
+        
+        // Simulate success for demo
+        const mockAddress = 'GB3K4Y5QYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQ';
+        setWalletAddress(mockAddress);
+        setConnectionState('connected');
+        setIsModalOpen(false);
+        onConnect?.(mockAddress);
+      } catch (error) {
+        if (connectionId !== activeConnectionId.current) return;
+        setConnectionState('error');
+        setErrorMessage(error instanceof Error ? error.message : 'Connection failed');
+      }
+    }, effectiveDelay);
   };
 
   const handleDisconnect = () => {
@@ -88,7 +96,7 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
           onClick={connectionState === 'connected' ? () => setIsDropdownOpen(!isDropdownOpen) : handleConnectClick}
           disabled={connectionState === 'connecting'}
           className={`
-            flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300
+            ${connectionState} flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300
             ${connectionState === 'connected' 
               ? "bg-white/5 hover:bg-white/10 text-white border border-white/10" 
               : connectionState === 'error'
@@ -97,8 +105,14 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
             }
             ${connectionState === 'connecting' ? "opacity-90 cursor-not-allowed" : "cursor-pointer active:scale-95"}
           `}
-          aria-label={connectionState === 'connected' ? `Wallet connected: ${walletAddress}` : 'Connect wallet'}
-          aria-busy={connectionState === 'connecting'}
+          aria-label={
+            connectionState === 'connected'
+              ? `Wallet connected: ${walletAddress}`
+              : connectionState === 'connecting'
+                ? 'Connecting'
+                : 'Connect wallet'
+          }
+          aria-busy={connectionState === 'connecting' ? 'true' : undefined}
           aria-haspopup={connectionState === 'connected' ? "true" : "false"}
         >
           {connectionState === 'connecting' && (
