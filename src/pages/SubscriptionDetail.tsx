@@ -1,13 +1,34 @@
 import { useParams, Link } from 'react-router-dom';
+import { useState } from 'react';
 import RecentPayments from '../components/RecentPayments';
 import UsageThisPeriod from '../components/UsageThisPeriod';
+import ResumeAffordance from '../components/ResumeAffordance';
 
 export default function SubscriptionDetail() {
     const { id } = useParams();
+    const [isPaused, setIsPaused] = useState(false);
+    const [pauseUntilDate, setPauseUntilDate] = useState<string | null>(null);
+    const [isResuming, setIsResuming] = useState(false);
 
     const handleViewFullUsage = () => {
         console.log('Navigate to full usage page');
         // TODO: Navigate to full usage page or expand section
+    };
+
+    const handleResume = async () => {
+        setIsResuming(true);
+        try {
+            // TODO: Call API to resume subscription
+            console.log('Resuming subscription', id);
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            setIsPaused(false);
+            setPauseUntilDate(null);
+        } catch (error) {
+            console.error('Failed to resume subscription:', error);
+        } finally {
+            setIsResuming(false);
+        }
     };
 
     // Mock data - replace with actual API data
@@ -28,6 +49,16 @@ export default function SubscriptionDetail() {
                 <p style={{ color: '#64748b', margin: 0 }}>View details and recent payments for this subscription.</p>
             </div>
 
+            {/* Resume Affordance - Show when paused */}
+            {isPaused && (
+                <ResumeAffordance
+                    isPaused={isPaused}
+                    pauseUntilDate={pauseUntilDate}
+                    onResumeClick={handleResume}
+                    isLoading={isResuming}
+                />
+            )}
+
             {/* Usage This Period Section - Only for usage-based subscriptions */}
             {isUsageBased && (
                 <div style={{ marginBottom: '2rem' }}>
@@ -41,6 +72,8 @@ export default function SubscriptionDetail() {
             )}
 
             <RecentPayments subscriptionId={id} />
+
+            <PlanStatusTimeline subscriptionId={id} />
         </div>
     );
 }

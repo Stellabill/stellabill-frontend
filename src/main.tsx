@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { initializeTheme } from "./hooks/useTheme";
 import "./index.css";
+import "./i18n/config";
 
 initializeTheme();
 

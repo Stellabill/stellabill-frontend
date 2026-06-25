@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { 
   Users, 
@@ -19,6 +20,7 @@ import { ApiError } from '../api/client';
 import './Dashboard.css';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
 
@@ -54,7 +56,7 @@ export default function Dashboard() {
     return (
       <div className="dashboard-error-shell">
         <ErrorState 
-          title="Dashboard Unavailable"
+          title={t('dashboard.unavailable')}
           message={error.message}
           technicalDetails={error.technicalDetails}
           onRetry={fetchDashboardData}
@@ -124,14 +126,14 @@ export default function Dashboard() {
             className="dashboard-action dashboard-action--secondary"
           >
             <ExternalLink size={16} />
-            View Plans
+            {t('dashboard.viewPlans')}
           </Link>
           <Link
             to="/plans?create=true"
             className="dashboard-action dashboard-action--primary"
           >
             <Plus size={16} />
-            Create Plan
+            {t('dashboard.createPlan')}
           </Link>
         </div>
       </header>
@@ -139,35 +141,35 @@ export default function Dashboard() {
       {/* KPI Grid */}
       <div className="dashboard-kpi-grid">
         <DashboardCard
-          title="Active Subscriptions"
+          title={t('dashboard.kpis.activeSubscriptions')}
           value="1,284"
           change={12.5}
           trend="up"
           icon={<Users size={20} />}
-          helpText="Total number of currently active paid subscriptions."
+          helpText={t('dashboard.kpis.activeSubscriptionsHelp')}
         />
         <DashboardCard
-          title="MRR"
+          title={t('dashboard.kpis.mrr')}
           value="$42,500"
           change={8.2}
           trend="up"
           icon={<TrendingUp size={20} />}
-          helpText="Monthly Recurring Revenue across all active subscriptions."
+          helpText={t('dashboard.kpis.mrrHelp')}
         />
         <DashboardCard
-          title="Failed Charges"
+          title={t('dashboard.kpis.failedCharges')}
           value="12"
           change={-4.1}
           trend="down"
           icon={<AlertCircle size={20} />}
-          helpText="Number of charges that failed in the last 30 days."
+          helpText={t('dashboard.kpis.failedChargesHelp')}
         />
         <DashboardCard
-          title="Upcoming Renewals"
+          title={t('dashboard.kpis.upcomingRenewals')}
           value="48"
           trend="neutral"
           icon={<Calendar size={20} />}
-          helpText="Subscriptions set to renew in the next 7 days."
+          helpText={t('dashboard.kpis.upcomingRenewalsHelp')}
         />
       </div>
 
