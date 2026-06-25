@@ -1,0 +1,34 @@
+/* SaveOfferStep.css */
+.save-offer-step {
+    display: flex;
+    flex-direction: column;
+}
+
+.offers-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.save-offer-actions {
+    display: flex;
+    justify-content: center;
+    padding-top: 8px;
+    border-top: 1px solid #1a1a1a;
+}
+
+.save-offer-actions .cancel-btn {
+    min-width: 240px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .offers-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .save-offer-actions .cancel-btn {
+        width: 100%;
+    }
+}
