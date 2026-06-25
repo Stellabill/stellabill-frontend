@@ -6,6 +6,8 @@ import { subscriptions, ApiError } from "../api/client";
 import { Subscription } from "@/types/subscription";
 import UsageThisPeriod from "../components/UsageThisPeriod";
 import ErrorState from "../components/ErrorState";
+import Tag from "../components/Tag";
+import AddTagPopover, { TagOption } from "../components/AddTagPopover";
 import "./Subscriptions.css";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -13,6 +15,7 @@ interface SubscriptionWithIcon extends Omit<Subscription, "icon"> {
 	icon: React.ReactNode;
 	prepaidBalance: string;
 	coverage: string;
+	tags?: TagOption[];
 }
 
 type StatusType = "Active" | "Paused" | "Cancelled";
@@ -271,6 +274,34 @@ export default function Subscriptions() {
 	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 	const [isActionLoading, setIsActionLoading] = useState(false);
 
+	// Tag management state
+	const [availableTags] = useState<TagOption[]>([
+		{ id: 't1', label: 'Premium', color: 'blue' },
+		{ id: 't2', label: 'Trial', color: 'yellow' },
+		{ id: 't3', label: 'VIP', color: 'purple' },
+	]);
+
+	const handleAddTag = (subId: string, tag: TagOption) => {
+		setData(prev => prev.map(sub => 
+			sub.id === subId 
+				? { ...sub, tags: [...(sub.tags || []), tag] }
+				: sub
+		));
+	};
+
+	const handleRemoveTag = (subId: string, tagId: string) => {
+		setData(prev => prev.map(sub =>
+			sub.id === subId
+				? { ...sub, tags: (sub.tags || []).filter(t => t.id !== tagId) }
+				: sub
+		));
+	};
+
+	const handleCreateTag = (label: string, color: TagOption['color']) => {
+		// In a real app, this would call an API
+		console.log('Create tag:', label, color);
+	};
+
 	const fetchSubscriptions = useCallback(async () => {
 		setLoading(true);
 		setError(null);
@@ -450,6 +481,37 @@ export default function Subscriptions() {
 									<StatusBadge status={selectedSub.status as StatusType} />
 									<span className="sub-id-small">ID: {selectedSub.id}</span>
 								</div>
+								{/* Tags row */}
+								{selectedSub.tags && selectedSub.tags.length > 0 && (
+									<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+										{selectedSub.tags.map((tag) => (
+											<Tag
+												key={tag.id}
+												label={tag.label}
+												color={tag.color}
+												size="small"
+												removable
+												onRemove={() => handleRemoveTag(selectedSub.id, tag.id)}
+											/>
+										))}
+										<AddTagPopover
+											availableTags={availableTags}
+											selectedTags={selectedSub.tags}
+											onAddTag={(tag) => handleAddTag(selectedSub.id, tag)}
+											onCreateTag={handleCreateTag}
+										/>
+									</div>
+								)}
+								{(!selectedSub.tags || selectedSub.tags.length === 0) && (
+									<div style={{ marginTop: '0.75rem' }}>
+										<AddTagPopover
+											availableTags={availableTags}
+											selectedTags={[]}
+											onAddTag={(tag) => handleAddTag(selectedSub.id, tag)}
+											onCreateTag={handleCreateTag}
+										/>
+									</div>
+								)}
 							</div>
 						</div>
 						<div className="detail-price-section">
@@ -597,6 +659,7 @@ export default function Subscriptions() {
 									<th scope="col">Plan</th>
 									<th scope="col">Status</th>
 									<th scope="col">Price</th>
+									<th scope="col">Tags</th>
 									<th scope="col">Next Charge</th>
 									<th scope="col">Prepaid Balance</th>
 									<th scope="col">
@@ -642,6 +705,25 @@ export default function Subscriptions() {
 												{sub.price} {sub.currency}
 												<span className="subs-table__price-interval">/ {sub.interval}</span>
 											</span>
+										</td>
+
+										{/* Tags */}
+										<td>
+											<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+												{sub.tags?.slice(0, 2).map((tag) => (
+													<Tag
+														key={tag.id}
+														label={tag.label}
+														color={tag.color}
+														size="small"
+													/>
+												))}
+												{sub.tags && sub.tags.length > 2 && (
+													<span style={{ fontSize: 'var(--text-xs)', color: '#64748b' }}>
+														+{sub.tags.length - 2}
+													</span>
+												)}
+											</div>
 										</td>
 
 										{/* Next charge */}
@@ -705,6 +787,24 @@ export default function Subscriptions() {
 										<div>
 											<div className="subs-card__name">{sub.planName}</div>
 											<div className="subs-card__merchant">{sub.merchantName}</div>
+											{/* Tags for mobile */}
+											{sub.tags && sub.tags.length > 0 && (
+												<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+													{sub.tags.slice(0, 2).map((tag) => (
+														<Tag
+															key={tag.id}
+															label={tag.label}
+															color={tag.color}
+															size="small"
+														/>
+													))}
+													{sub.tags.length > 2 && (
+														<span style={{ fontSize: 'var(--text-xs)', color: '#64748b', alignSelf: 'center' }}>
+															+{sub.tags.length - 2}
+														</span>
+													)}
+												</div>
+											)}
 										</div>
 									</div>
 									<StatusBadge status={sub.status as StatusType} />

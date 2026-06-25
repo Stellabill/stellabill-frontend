@@ -1,5 +1,8 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import LandingNavbar from "./LandingNavbar";
+import SessionTimeoutModal from "./SessionTimeoutModal";
+import { useSessionTimeout } from "../hooks/useSessionTimeout";
 import "../styles/sidebar.css";
 
 const mainNav = [
@@ -79,20 +82,20 @@ const devNav = [
 
 export default function Layout() {
   const location = useLocation();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  // Update mobile flag on resize
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const handleTimeout = () => {
+    // For demo purposes, we'll just refresh the page
+    window.location.href = '/';
+  };
 
-  // Close drawer when navigating
-  useEffect(() => {
-    setIsDrawerOpen(false);
-  }, [location]);
+  const {
+    isWarningOpen,
+    remainingSeconds,
+    handleStaySignedIn,
+    handleLogout
+  } = useSessionTimeout({
+    onTimeout: handleTimeout
+  });
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
@@ -148,6 +151,13 @@ export default function Layout() {
           <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-cyan-500/5 blur-[120px] pointer-events-none -z-10" />
         </main>
       </div>
+
+      <SessionTimeoutModal
+        isOpen={isWarningOpen}
+        remainingSeconds={remainingSeconds}
+        onStaySignedIn={handleStaySignedIn}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }

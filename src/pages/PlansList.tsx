@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import Tag from "../components/Tag";
+import AddTagPopover, { TagOption } from "../components/AddTagPopover";
 
 interface Plan {
   id: string;
@@ -8,6 +10,7 @@ interface Plan {
   currency: string;
   status: "active" | "draft" | "inactive";
   createdAt: Date;
+  tags?: TagOption[];
 }
 
 interface Props {
@@ -20,6 +23,10 @@ interface Props {
   onEditPlan: (id: string) => void;
   onDeletePlan: (id: string) => void;
   onDuplicatePlan: (id: string) => void;
+  availableTags?: TagOption[];
+  onAddTagToPlan?: (planId: string, tag: TagOption) => void;
+  onRemoveTagFromPlan?: (planId: string, tagId: string) => void;
+  onCreateTag?: (label: string, color: TagOption['color']) => void;
 }
 
 export default function PlansList({
@@ -32,8 +39,24 @@ export default function PlansList({
   onEditPlan,
   onDeletePlan,
   onDuplicatePlan,
+  availableTags = [],
+  onAddTagToPlan,
+  onRemoveTagFromPlan,
+  onCreateTag,
 }: Props) {
   const [search, setSearch] = useState("");
+
+  const handleAddTag = (planId: string, tag: TagOption) => {
+    onAddTagToPlan?.(planId, tag);
+  };
+
+  const handleRemoveTag = (planId: string, tagId: string) => {
+    onRemoveTagFromPlan?.(planId, tagId);
+  };
+
+  const handleCreateTag = (label: string, color: TagOption['color']) => {
+    onCreateTag?.(label, color);
+  };
 
   return (
     <div>
@@ -106,6 +129,7 @@ export default function PlansList({
               <th scope="col">Type</th>
               <th scope="col">Price</th>
               <th scope="col">Status</th>
+              <th scope="col">Tags</th>
               <th scope="col">Actions</th>
             </tr>
           </thead>
@@ -130,6 +154,29 @@ export default function PlansList({
                 {/* 🔥 FIX duplicate "active" */}
                 <td className={`badge-${p.status}`}>
                   <span>{p.status}</span>
+                </td>
+
+                <td>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {p.tags?.map((tag) => (
+                      <Tag
+                        key={tag.id}
+                        label={tag.label}
+                        color={tag.color}
+                        size="small"
+                        removable
+                        onRemove={() => handleRemoveTag(p.id, tag.id)}
+                      />
+                    ))}
+                    {onAddTagToPlan && onCreateTag && (
+                      <AddTagPopover
+                        availableTags={availableTags}
+                        selectedTags={p.tags || []}
+                        onAddTag={(tag) => handleAddTag(p.id, tag)}
+                        onCreateTag={handleCreateTag}
+                      />
+                    )}
+                  </div>
                 </td>
 
                 <td>
