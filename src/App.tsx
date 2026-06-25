@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Navigate, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
@@ -16,7 +16,7 @@ import OnboardingSuccess from './pages/OnboardingSuccess'
 import AboutPrepaidBalances from './components/AboutPrepaidBalances'
 import Pricing from "./pages/Pricing"
 import BrandPack from "./pages/BrandPack"
-import NotFound from "./pages/NotFound"
+import Settings from "./pages/Settings"
 
 function App() {
   return (
@@ -49,6 +49,7 @@ function App() {
         <Route path="/subscriptions" element={<Subscriptions />} />
         <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />
         <Route path="/subscriptions/:id/usage" element={<UsageBilling />} />
+        <Route path="/settings" element={<Settings />} />
         {/* Development/UI Kit */}
         <Route path="/ui-kit" element={<UIMockups />} />
         <Route path="/brand" element={<BrandPack />} />

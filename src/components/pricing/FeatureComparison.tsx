@@ -1,5 +1,5 @@
-import { FaCheck, FaMinus } from "react-icons/fa6";
 import styles from "./FeatureComparison.module.css";
+import FeatureCell from "./FeatureCell";
 
 interface Feature {
   name: string;
@@ -19,26 +19,6 @@ const features: Feature[] = [
   { name: "White-label options", free: false, pro: false, enterprise: true },
   { name: "Dedicated support", free: false, pro: false, enterprise: true },
 ];
-
-const FeatureCell = ({ value }: { value: string | boolean }) => {
-  if (typeof value === "boolean") {
-    if (value) {
-      return (
-        <div className={styles.checkmarkCell}>
-          <FaCheck className={styles.checkmark} />
-        </div>
-      );
-    } else {
-      return (
-        <div className={styles.dashCell}>
-          <FaMinus className={styles.dash} />
-        </div>
-      );
-    }
-  }
-
-  return <span className={styles.textValue}>{value}</span>;
-};
 
 export default function FeatureComparison() {
   return (

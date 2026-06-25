@@ -1,33 +1,35 @@
+import './DashboardSkeleton.css';
+
 export default function DashboardSkeleton() {
   return (
-    <div className="p-8 space-y-8 animate-pulse bg-[#020617] min-h-screen">
-      <div className="flex justify-between items-center mb-8">
-        <div className="space-y-3">
-          <div className="h-8 w-64 bg-slate-800 rounded-lg"></div>
-          <div className="h-4 w-48 bg-slate-800/60 rounded"></div>
+    <div className="dashboard-skeleton animate-pulse">
+      <div className="dashboard-skeleton__header">
+        <div className="dashboard-skeleton__stack">
+          <div className="dashboard-skeleton__line dashboard-skeleton__line--title" />
+          <div className="dashboard-skeleton__line dashboard-skeleton__line--subtitle" />
         </div>
-        <div className="flex gap-3">
-          <div className="h-10 w-32 bg-slate-800/80 rounded-xl"></div>
-          <div className="h-10 w-32 bg-slate-800 rounded-xl"></div>
+        <div className="dashboard-skeleton__actions">
+          <div className="dashboard-skeleton__button" />
+          <div className="dashboard-skeleton__button" />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="dashboard-skeleton__kpis">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-32 bg-[#0a0f16] border border-slate-800/50 rounded-2xl"></div>
+          <div key={i} className="dashboard-skeleton__card" />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="h-8 w-40 bg-slate-800 rounded-lg"></div>
-          <div className="h-[360px] bg-[#0a0f16] border border-slate-800/50 rounded-2xl"></div>
+      <div className="dashboard-skeleton__main">
+        <div className="dashboard-skeleton__chart-column dashboard-skeleton__stack">
+          <div className="dashboard-skeleton__line dashboard-skeleton__line--section" />
+          <div className="dashboard-skeleton__chart" />
         </div>
-        <div className="space-y-6">
-          <div className="h-8 w-40 bg-slate-800 rounded-lg"></div>
-          <div className="space-y-4">
+        <div className="dashboard-skeleton__side">
+          <div className="dashboard-skeleton__line dashboard-skeleton__line--section" />
+          <div className="dashboard-skeleton__list">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-20 bg-[#0a0f16] border border-slate-800/50 rounded-2xl"></div>
+              <div key={i} className="dashboard-skeleton__activity" />
             ))}
           </div>
         </div>

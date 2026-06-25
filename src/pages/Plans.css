@@ -1,0 +1,27 @@
+@import '../styles/tokens.css';
+
+.plans-page {
+  color: var(--color-text-primary);
+}
+
+.plans-page h1 {
+  margin: 0 0 var(--space-4);
+}
+
+.plans-page__description {
+  margin: 0 0 var(--space-6);
+  color: var(--color-text-muted);
+}
+
+.plans-page__empty-card {
+  padding: var(--space-6);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.plans-page__empty-card p {
+  margin: 0;
+  color: var(--color-text-muted);
+}

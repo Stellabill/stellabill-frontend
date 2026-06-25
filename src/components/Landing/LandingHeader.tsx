@@ -32,7 +32,7 @@ const LandingHeader: React.FC = () => {
                         onDisconnect={() => setIsConnected(false)} 
                     />
                 ) : (
-                    <ConnectButton onClick={() => setIsConnected(true)} />
+                    <ConnectButton onConnect={() => setIsConnected(true)} />
                 )}
             </div>
         </header>
