@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import RecentPayments from '../components/RecentPayments';
 import UsageThisPeriod from '../components/UsageThisPeriod';
+import PaymentFailedBanner from '../components/Dunning/PaymentFailedBanner';
 
 export default function SubscriptionDetail() {
     const { id } = useParams();
@@ -27,6 +28,21 @@ export default function SubscriptionDetail() {
                 <h1 style={{ margin: '0 0 0.5rem' }}>Subscription {id}</h1>
                 <p style={{ color: '#64748b', margin: 0 }}>View details and recent payments for this subscription.</p>
             </div>
+
+            {/* Dunning banner - shown when there are failed attempts for this subscription */}
+            <PaymentFailedBanner
+                subscriptionId={id}
+                failedAttempts={1}
+                retrySchedule={[
+                    { id: 'r1', when: 'Mar 24 — Attempted', status: 'past' },
+                    { id: 'r2', when: 'Mar 26 — Next retry', status: 'upcoming' },
+                    { id: 'r3', when: 'Mar 30 — Final retry', status: 'upcoming' },
+                ]}
+                onFixPayment={() => {
+                    // Ideally route to payment method flow
+                    console.log('Open fix payment flow for subscription', id);
+                }}
+            />
 
             {/* Usage This Period Section - Only for usage-based subscriptions */}
             {isUsageBased && (
