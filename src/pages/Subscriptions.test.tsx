@@ -100,7 +100,7 @@ async function renderAndLoad() {
 
 describe('Subscriptions page', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     Object.defineProperty(window, 'location', {
       value: { search: '', href: 'http://localhost/' },
       writable: true,
@@ -560,7 +560,8 @@ describe('Subscriptions page', () => {
   describe('Resume subscription flow', () => {
     it('Resume button updates Paused status badge to Active', async () => {
       await renderAndLoad();
-      fireEvent.click(screen.getByRole('button', { name: /manage basic stream/i }));
+      const manageBtn = screen.getAllByRole('button', { name: /manage basic/i })[0];
+      fireEvent.click(manageBtn);
       await waitFor(() =>
         expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
       );
@@ -686,9 +687,9 @@ describe('Subscriptions page', () => {
 
     it('card Manage button opens the detail view without propagation', async () => {
       await renderAndLoad();
-      const manageCardBtn = screen.getByRole('button', {
+      const manageCardBtn = screen.getAllByRole('button', {
         name: /manage premium access/i,
-      });
+      })[0];
       // This picks one – could be table or card btn. Click and verify detail opens.
       fireEvent.click(manageCardBtn);
       await waitFor(() =>

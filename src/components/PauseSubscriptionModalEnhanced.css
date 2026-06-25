@@ -1,0 +1,244 @@
+/* PauseSubscriptionModalEnhanced.css */
+
+.pause-modal-enhanced {
+  max-height: 95vh;
+  overflow-y: auto;
+  padding-bottom: 40px;
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 12px;
+  margin: 24px 0 20px;
+  border-bottom: 1px solid #1a1a1a;
+  justify-content: center;
+}
+
+.modal-tab {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  position: relative;
+  margin-bottom: -1px;
+}
+
+.modal-tab:hover {
+  color: #94a3b8;
+}
+
+.modal-tab.active {
+  color: #00ccff;
+  border-bottom-color: #00ccff;
+}
+
+.modal-tab:focus-visible {
+  outline: 2px solid #00ccff;
+  outline-offset: 4px;
+}
+
+.modal-tab-panel {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.preset-buttons-container {
+  margin: 24px 0;
+}
+
+.preset-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 12px 0;
+}
+
+.preset-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  padding: 10px 16px;
+  background-color: #121415;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.preset-btn:hover {
+  background-color: #1a1f22;
+  border-color: #333;
+  color: #fff;
+}
+
+.preset-btn.active {
+  background-color: #00ccff;
+  border-color: #00ccff;
+  color: #0d0d0d;
+}
+
+.preset-btn:focus-visible {
+  outline: 2px solid #00ccff;
+  outline-offset: 2px;
+}
+
+.preset-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.calendar-container {
+  margin: 24px 0;
+}
+
+.calendar-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.pause-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.pause-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pause-btn-cancel {
+  background-color: transparent;
+  color: #94a3b8;
+  border: 1px solid #1a1a1a;
+}
+
+.pause-btn-cancel:hover:not(:disabled) {
+  background-color: #1a1a1a;
+  color: #fff;
+}
+
+.pause-btn-cancel:focus-visible {
+  outline: 2px solid #00ccff;
+  outline-offset: 2px;
+}
+
+.pause-btn-confirm {
+  background-color: #00ccff;
+  color: #0d0d0d;
+  font-weight: 700;
+}
+
+.pause-btn-confirm:hover:not(:disabled) {
+  background-color: #00b8d4;
+}
+
+.pause-btn-confirm:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.pause-btn-confirm:disabled {
+  background-color: #064e5d;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.pause-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.modal-a11y-info {
+  margin-top: 20px;
+  padding: 12px;
+  background-color: rgba(0, 204, 255, 0.05);
+  border: 1px solid rgba(0, 204, 255, 0.2);
+  border-radius: 8px;
+}
+
+.a11y-info-text {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .pause-modal-enhanced {
+    max-height: 90vh;
+    padding-bottom: 30px;
+  }
+
+  .modal-tabs {
+    gap: 8px;
+    margin: 16px 0 16px;
+  }
+
+  .modal-tab {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .preset-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .preset-btn {
+    width: 100%;
+    padding: 10px;
+  }
+
+  .pause-actions {
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .pause-btn {
+    padding: 11px 16px;
+    font-size: 13px;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .modal-tab-panel,
+  .modal-tab {
+    animation: none;
+    transition: none;
+  }
+}

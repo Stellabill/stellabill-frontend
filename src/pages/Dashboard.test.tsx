@@ -1,4 +1,4 @@
-import { render, waitFor, act } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Dashboard from './Dashboard';
@@ -42,14 +42,12 @@ describe('Dashboard Page', () => {
       </MemoryRouter>
     );
 
-    // Speed up time to bypass loading
-    act(() => {
+    // Speed up time to bypass loading and await outstanding microtasks
+    await act(async () => {
       vi.advanceTimersByTime(1000);
     });
 
-    await waitFor(() => {
-      expect(getByText('Dashboard Overview')).toBeInTheDocument();
-    });
+    expect(getByText('Dashboard Overview')).toBeInTheDocument();
 
     // Check for KPIs
     expect(getByText('Active Subscriptions')).toBeInTheDocument();
@@ -76,16 +74,14 @@ describe('Dashboard Page', () => {
       </MemoryRouter>
     );
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(1000);
     });
 
-    await waitFor(() => {
-      const viewPlansBtn = getByText('View Plans').closest('a');
-      const createPlanBtn = getByText('Create Plan').closest('a');
-      
-      expect(viewPlansBtn).toHaveAttribute('href', '/plans');
-      expect(createPlanBtn).toHaveAttribute('href', '/plans?create=true');
-    });
+    const viewPlansBtn = getByText('View Plans').closest('a');
+    const createPlanBtn = getByText('Create Plan').closest('a');
+    
+    expect(viewPlansBtn).toHaveAttribute('href', '/plans');
+    expect(createPlanBtn).toHaveAttribute('href', '/plans?create=true');
   });
 });
