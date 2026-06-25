@@ -39,15 +39,15 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
       try {
         const body = await res.json();
         error.technicalDetails = body.details || JSON.stringify(body);
-      } catch (e) {
+      } catch {
         error.technicalDetails = 'No additional details provided by server.';
       }
       throw error;
     }
     
     return res.json() as Promise<T>
-  } catch (e: any) {
-    if (e.name === 'TypeError' && !navigator.onLine) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'TypeError' && !navigator.onLine) {
       const error: ApiError = new Error('Network request failed (offline)');
       error.isOffline = true;
       throw error;

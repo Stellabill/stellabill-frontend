@@ -1,0 +1,89 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  width: 100%;
+}
+
+.illustrationWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  
+  /* Light mode default custom properties */
+  --illustration-primary: #6366f1;
+  --illustration-secondary: #9ca3af;
+  --illustration-background: #f3f4f6;
+}
+
+/* Dark mode support using standard prefers-color-scheme and common .dark class */
+@media (prefers-color-scheme: dark) {
+  .illustrationWrapper {
+    --illustration-primary: #818cf8;
+    --illustration-secondary: #4b5563;
+    --illustration-background: #1f2937;
+  }
+}
+
+:global(.dark) .illustrationWrapper {
+  --illustration-primary: #818cf8;
+  --illustration-secondary: #4b5563;
+  --illustration-background: #1f2937;
+}
+
+/* Responsive handling: Show small icon by default, switch to large on tablet+ */
+.largeIllustration {
+  display: none;
+}
+
+.smallIcon {
+  display: block;
+  width: 48px;
+  height: 48px;
+  color: var(--illustration-secondary);
+}
+
+@media (min-width: 640px) {
+  .largeIllustration {
+    display: block;
+  }
+  .smallIcon {
+    display: none;
+  }
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 0.5rem;
+}
+
+.description {
+  font-size: 0.875rem;
+  color: #6b7280;
+  max-width: 24rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  .title {
+    color: #f9fafb;
+  }
+  .description {
+    color: #9ca3af;
+  }
+}
+
+:global(.dark) .title {
+  color: #f9fafb;
+}
+
+:global(.dark) .description {
+  color: #9ca3af;
+}

@@ -345,8 +345,8 @@ export default function BrowsePlans() {
 			const response = await plansAPI.list();
 			setPlans(response.plans as Plan[]);
 			setLoading(false);
-		} catch (err: any) {
-			setError(err);
+		} catch (err: unknown) {
+			setError(err as Error);
 			// Fallback to mock data on error so UI still shows something if desired, 
 			// but here we want to show the error state primarily.
 			setPlans(mockPlans);

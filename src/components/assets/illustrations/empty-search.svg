@@ -1,0 +1,8 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <circle cx="60" cy="60" r="50" fill="var(--illustration-background, #F3F4F6)" />
+  <!-- Magnifying glass -->
+  <circle cx="50" cy="50" r="20" stroke="var(--illustration-primary, #6366F1)" stroke-width="4" fill="none" />
+  <path d="M65 65L85 85" stroke="var(--illustration-primary, #6366F1)" stroke-width="4" stroke-linecap="round" />
+  <!-- Missing item cross -->
+  <path d="M45 45L55 55M55 45L45 55" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="3" stroke-linecap="round" />
+</svg>

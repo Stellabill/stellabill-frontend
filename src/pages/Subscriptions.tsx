@@ -290,8 +290,8 @@ export default function Subscriptions() {
 			});
 			setData(INITIAL_DATA);
 			setLoading(false);
-		} catch (err: any) {
-			setError(err);
+		} catch (err: unknown) {
+			setError(err as Error);
 			setLoading(false);
 		}
 	}, []);

@@ -1,0 +1,12 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <circle cx="60" cy="60" r="50" fill="var(--illustration-background, #F3F4F6)" />
+  <!-- Three columns for plans -->
+  <!-- Left column -->
+  <rect x="25" y="55" width="20" height="35" rx="2" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="4" />
+  <!-- Center column (highlighted) -->
+  <rect x="50" y="40" width="20" height="50" rx="2" stroke="var(--illustration-primary, #6366F1)" stroke-width="4" />
+  <!-- Right column -->
+  <rect x="75" y="60" width="20" height="30" rx="2" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="4" />
+  <!-- Star or badge on center -->
+  <circle cx="60" cy="30" r="6" fill="var(--illustration-primary, #6366F1)" />
+</svg>

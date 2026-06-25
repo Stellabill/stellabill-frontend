@@ -43,8 +43,8 @@ export default function Dashboard() {
         }, 1000);
       });
       setLoading(false);
-    } catch (err: any) {
-      setError(err);
+    } catch (err: unknown) {
+      setError(err as Error);
       setLoading(false);
     }
   }, []);

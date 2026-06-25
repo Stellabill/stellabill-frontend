@@ -9,8 +9,8 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
     ...actual,
-    Link: ({ children, to, className, id }: any) => (
-      <a href={to} className={className} id={id}>{children}</a>
+    Link: ({ children, to, className, id }: Record<string, unknown>) => (
+      <a href={to as string} className={className as string} id={id as string}>{children as React.ReactNode}</a>
     ),
   };
 });
@@ -29,7 +29,7 @@ vi.mock('../api/client', () => ({
 }));
 
 vi.mock('../components/PauseSubscriptionModal', () => ({
-  default: ({ isOpen, onClose, onConfirm, isLoading }: any) =>
+  default: ({ isOpen, onClose, onConfirm, isLoading }: Record<string, unknown>) =>
     isOpen ? (
       <div role="dialog" aria-label="Pause subscription">
         <button onClick={onClose}>Cancel</button>
@@ -41,7 +41,7 @@ vi.mock('../components/PauseSubscriptionModal', () => ({
 }));
 
 vi.mock('../components/CancelSubscriptionModal', () => ({
-  default: ({ isOpen, onClose, onConfirm, isLoading }: any) =>
+  default: ({ isOpen, onClose, onConfirm, isLoading }: Record<string, unknown>) =>
     isOpen ? (
       <div role="dialog" aria-label="Cancel subscription">
         <button onClick={onClose}>Keep subscription</button>
@@ -57,10 +57,10 @@ vi.mock('../components/UsageThisPeriod', () => ({
 }));
 
 vi.mock('../components/ErrorState', () => ({
-  default: ({ title, onRetry }: any) => (
+  default: ({ title, onRetry }: Record<string, unknown>) => (
     <div role="alert">
-      <p>{title}</p>
-      <button onClick={onRetry}>Retry</button>
+      <p>{title as string}</p>
+      <button onClick={onRetry as () => void}>Retry</button>
     </div>
   ),
 }));

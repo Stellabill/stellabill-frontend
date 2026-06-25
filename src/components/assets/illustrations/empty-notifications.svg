@@ -1,0 +1,10 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <circle cx="60" cy="60" r="50" fill="var(--illustration-background, #F3F4F6)" />
+  <!-- Bell -->
+  <path d="M45 45C45 36.7157 51.7157 30 60 30C68.2843 30 75 36.7157 75 45V65H85V75H35V65H45V45Z" stroke="var(--illustration-primary, #6366F1)" stroke-width="4" stroke-linejoin="round" fill="none" />
+  <!-- Clapper -->
+  <path d="M52 75V78C52 82.4183 55.5817 86 60 86C64.4183 86 68 82.4183 68 78V75" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  <!-- Zzz marks or silence -->
+  <path d="M80 35H90L80 45H90" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M30 45H40L30 55H40" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

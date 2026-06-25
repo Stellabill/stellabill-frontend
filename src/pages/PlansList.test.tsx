@@ -30,7 +30,7 @@ const mockPlans: Plan[] = [
 ];
 
 describe('PlansList Page', () => {
-  let mockCallbacks: any;
+  let mockCallbacks: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(() => {
     mockCallbacks = {
@@ -246,13 +246,13 @@ describe('PlansList Page', () => {
 
   describe('Filter Bar - Clear Filters Button', () => {
     it('should show clear filters button when filters active', () => {
-      render(<>{true && <button>Clear Filters</button>}</>);
+      render(<button>Clear Filters</button>);
 
       expect(screen.getByText('Clear Filters')).toBeInTheDocument();
     });
 
     it('should hide clear filters when no filters applied', () => {
-      render(<>{false && <button>Clear Filters</button>}</>);
+      render(<></>);
 
       expect(screen.queryByText('Clear Filters')).not.toBeInTheDocument();
     });

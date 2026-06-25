@@ -13,7 +13,8 @@ describe('Icon Component', () => {
 
   it('renders nothing and warns if icon is not found', () => {
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const { container } = render(<Icon name={"InvalidIcon" as any} />);
+    // @ts-expect-error Testing invalid icon name
+    const { container } = render(<Icon name={"InvalidIcon"} />);
     expect(container.firstChild).toBeNull();
     expect(consoleSpy).toHaveBeenCalledWith('Icon "InvalidIcon" not found in lucide-react');
     consoleSpy.mockRestore();

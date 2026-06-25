@@ -13,7 +13,7 @@ vi.mock('react-router-dom', async () => {
     const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
     return {
         ...actual,
-        Link: ({ children, to, className }: any) => <a href={to} className={className}>{children}</a>
+        Link: ({ children, to, className }: Record<string, unknown>) => <a href={to as string} className={className as string}>{children as React.ReactNode}</a>
     };
 });
 
