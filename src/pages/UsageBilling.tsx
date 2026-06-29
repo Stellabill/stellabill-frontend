@@ -1,7 +1,10 @@
 import { Link, useParams } from 'react-router-dom';
 import { PastPeriods } from '../components/past-periods/past-periods';
+import ReceiptPreview from '../components/past-periods/ReceiptPreview';
+import type { ReceiptData } from '../components/past-periods/ReceiptPreview';
 import './UsageBilling.css';
 import InvoiceList from "../components/InvoiceList";
+
 
 interface UsageData {
     planName: string;
@@ -133,8 +136,51 @@ export default function UsageBilling() {
     },
     ];
 
+    // Receipt preview (placeholder until historic selection wiring exists)
+    const receipt: ReceiptData | null = {
+        receiptId: "RCPT-001234567",
+        issueDate: "Mar 31, 2026",
+        merchantName: "Stellabill",
+        merchantBrand: "Stellabill Billing",
+        merchantAddress: "123 Nebula Avenue, Suite 100",
+        merchantEmail: "billing@stellabill.example",
+        merchantTaxId: "TAX-EXAMPLE-001",
+
+        clientName: planName,
+        clientAddress: "Client billing address",
+        clientEmail: "client@company.example",
+        clientTaxId: "CLIENT-TAX-EXAMPLE",
+
+        currency: currency,
+        lineItems: [
+            {
+                id: "li-1",
+                description: `API usage (${unit}) for ${billingPeriod}`,
+                quantity: usageCount,
+                unitPrice: { amount: 0.0005, currency },
+                lineTotal: { amount: 15.20, currency },
+            },
+            {
+                id: "li-2",
+                description: "Usage adjustment / rounding",
+                quantity: 1,
+                unitPrice: { amount: 1.03, currency },
+                lineTotal: { amount: 1.03, currency },
+            },
+        ],
+        subtotal: { amount: 16.23, currency },
+        taxes: [{ label: "Network / protocol fee", amount: { amount: 0, currency } }],
+        total: { amount: 16.23, currency },
+
+        paymentMethod: "Prepaid balance",
+        transactionKey: "TX-8F2A9C0D3E",
+        reference: `Billing period ${billingPeriod}`,
+        terms: "Non-refundable services rendered in full.",
+    };
+
     return (
         <div className="usage-billing-page">
+
             <nav className="breadcrumb" aria-label="Breadcrumb">
                 <Link to="/subscriptions">Subscriptions</Link>
                 <span className="separator">
@@ -253,7 +299,12 @@ export default function UsageBilling() {
 
             <InvoiceList invoices={invoicesData} />
 
+            <div style={{ marginTop: 24 }}>
+                <ReceiptPreview receipt={receipt} />
+            </div>
+
             <PastPeriods />
         </div>
     );
 }
+
