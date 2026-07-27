@@ -8,7 +8,7 @@ export default function CreatePlan() {
   const navigate = useNavigate()
   const [usageEnabled, setUsageEnabled] = useState(false)
   const [trialDays, setTrialDays] = useState('')
-  const [pricing, setPricing] = useState<PricingSectionValue>({ price: '', interval: '' })
+  const [pricing, setPricing] = useState<PricingSectionValue>({ price: '', interval: '', priceType: 'currency' })
   const [errors, setErrors] = useState<{ priceError?: string; intervalError?: string }>({})
 
   function handleSubmit(e: FormEvent) {
@@ -23,6 +23,7 @@ export default function CreatePlan() {
       usage_enabled: usageEnabled,
       trial_period_days: trialDays === '' ? 0 : Number(trialDays),
       price: Number(pricing.price),
+      price_type: pricing.priceType,
       interval: pricing.interval,
     }
     console.log('Create plan payload:', payload)
