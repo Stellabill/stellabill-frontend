@@ -197,6 +197,24 @@
   --chart-point-stroke: var(--color-surface-card);
   --chart-tooltip-bg: var(--color-surface-elevated);
 
+  /* Colorblind-safe chart series (Okabe–Ito–inspired); ≥3:1 non-text contrast on canvas */
+  --chart-series-1: #0072b2;
+  --chart-series-2: #e69f00;
+  --chart-series-3: #009e73;
+  --chart-series-4: #cc79a7;
+  --chart-series-5: #56b4e9;
+  --chart-series-6: #d55e00;
+  --chart-series-7: #332288;
+  --chart-series-8: #882255;
+  --chart-series-pattern-ink: rgba(0, 0, 0, 0.22);
+
+  --delta-positive-bg: rgba(16, 185, 129, 0.12);
+  --delta-positive-text: #047857;
+  --delta-negative-bg: rgba(244, 63, 94, 0.12);
+  --delta-negative-text: #be123c;
+  --delta-neutral-bg: rgba(100, 116, 139, 0.12);
+  --delta-neutral-text: #475569;
+
   /* Sidebar */
   --sidebar-bg: #ffffff;
   --sidebar-item-color: #475569;
@@ -295,6 +313,23 @@
     --chart-point-stroke: var(--color-surface-card);
     --chart-tooltip-bg: var(--color-surface-elevated);
 
+    --chart-series-1: #56b4e9;
+    --chart-series-2: #e69f00;
+    --chart-series-3: #009e73;
+    --chart-series-4: #cc79a7;
+    --chart-series-5: #0072b2;
+    --chart-series-6: #d55e00;
+    --chart-series-7: #aea9f0;
+    --chart-series-8: #ee99aa;
+    --chart-series-pattern-ink: rgba(255, 255, 255, 0.28);
+
+    --delta-positive-bg: rgba(52, 211, 153, 0.16);
+    --delta-positive-text: #6ee7b7;
+    --delta-negative-bg: rgba(251, 113, 133, 0.16);
+    --delta-negative-text: #fda4af;
+    --delta-neutral-bg: rgba(148, 163, 184, 0.16);
+    --delta-neutral-text: #94a3b8;
+
     --sidebar-bg: #0f172a;
     --sidebar-item-color: #94a3b8;
     --sidebar-item-color-hover: #e2e8f0;
@@ -391,6 +426,23 @@
   --chart-line: var(--color-brand-primary);
   --chart-point-stroke: var(--color-surface-card);
   --chart-tooltip-bg: var(--color-surface-elevated);
+
+  --chart-series-1: #56b4e9;
+  --chart-series-2: #e69f00;
+  --chart-series-3: #009e73;
+  --chart-series-4: #cc79a7;
+  --chart-series-5: #0072b2;
+  --chart-series-6: #d55e00;
+  --chart-series-7: #aea9f0;
+  --chart-series-8: #ee99aa;
+  --chart-series-pattern-ink: rgba(255, 255, 255, 0.28);
+
+  --delta-positive-bg: rgba(52, 211, 153, 0.16);
+  --delta-positive-text: #6ee7b7;
+  --delta-negative-bg: rgba(251, 113, 133, 0.16);
+  --delta-negative-text: #fda4af;
+  --delta-neutral-bg: rgba(148, 163, 184, 0.16);
+  --delta-neutral-text: #94a3b8;
 
   --sidebar-bg: #0f172a;
   --sidebar-item-color: #94a3b8;
