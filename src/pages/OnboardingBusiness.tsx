@@ -5,10 +5,10 @@ import BusinessStep from '../components/Onboarding/steps/BusinessStep';
 export default function OnboardingBusiness() {
   const navigate = useNavigate();
 
-  const handleNext = (data: { businessName: string; website: string; logo: File | null }) => {
+  const handleNext = (data: { businessName: string; website: string; logo: File | null; country: string }) => {
     sessionStorage.setItem(
       'onboardingBusiness',
-      JSON.stringify({ businessName: data.businessName, website: data.website })
+        JSON.stringify({ businessName: data.businessName, website: data.website, country: data.country })
     );
     navigate('/onboarding/payout');
   };
