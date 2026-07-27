@@ -97,6 +97,12 @@ export default function Subscriptions() {
 ✅ Loading and empty states
 ✅ Hover effects and transitions
 ✅ Accessible with ARIA labels and semantic HTML
+✅ Quick-view popover on hover/click with key facts
+✅ Smart edge-of-viewport positioning
+✅ Keyboard Space/Enter/Escape support
+✅ Reduced-motion fallback
+✅ RTL layout support
+✅ Popover arrow indicator with dynamic positioning
 
 ## Routing Setup
 
