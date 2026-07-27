@@ -282,21 +282,22 @@ export default function Subscriptions() {
 		setError(null);
 
 		window.setTimeout(() => {
-			if (window.location.search.includes("simulate_error")) {
-				const err: ApiError = new Error("Failed to load subscriptions");
-				err.status = 500;
-				err.technicalDetails =
-					"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
-				setError(err);
-			} else {
-				setData(INITIAL_DATA);
+			try {
+				if (window.location.search.includes("simulate_error")) {
+					const err: ApiError = new Error("Failed to load subscriptions");
+					err.status = 500;
+					err.technicalDetails =
+						"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
+					setError(err);
+				} else {
+					setData(INITIAL_DATA);
+				}
+			} catch (err: unknown) {
+				setError(err as Error);
+			} finally {
+				setLoading(false);
 			}
-
-			setLoading(false);
-		} catch (err: unknown) {
-			setError(err as Error);
-			setLoading(false);
-		}
+		}, 0);
 	}, []);
 
 	useEffect(() => {
