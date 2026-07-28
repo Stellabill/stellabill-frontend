@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, KeyboardEvent, MouseEvent } from 
 import { useModalFocus } from '../hooks/useModalFocus';
 import '../styles/command-palette.css';
 
-export type CommandGroup = 'Pages' | 'Actions' | 'Recent';
+export type CommandGroup = 'Pages' | 'Pinned' | 'Actions' | 'Recent';
 
 export interface CommandItem {
   /** Stable identifier, also used to track recent selections. */
@@ -28,6 +28,8 @@ interface CommandPaletteProps {
   items: CommandItem[];
   /** Fired with the chosen item before it closes — used to record "Recent". */
   onSelect?: (item: CommandItem) => void;
+  /** Called when a user toggles a pin on an item. */
+  onTogglePin?: (itemId: string) => void;
   /** Shows the slow-load state instead of results (e.g. async sources). */
   isLoading?: boolean;
   /** Placeholder for the search input. */
@@ -35,7 +37,7 @@ interface CommandPaletteProps {
 }
 
 /** Render order for result groups. */
-const GROUP_ORDER: CommandGroup[] = ['Pages', 'Actions', 'Recent'];
+const GROUP_ORDER: CommandGroup[] = ['Pages', 'Pinned', 'Actions', 'Recent'];
 
 const optionDomId = (id: string) => `cmdk-option-${id}`;
 const groupLabelId = (group: CommandGroup) => `cmdk-group-${group.toLowerCase()}`;
@@ -55,6 +57,7 @@ export default function CommandPalette({
   onClose,
   items,
   onSelect,
+  onTogglePin,
   isLoading = false,
   placeholder = 'Search pages and actions…',
 }: CommandPaletteProps) {
@@ -62,6 +65,7 @@ export default function CommandPalette({
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [announcement, setAnnouncement] = useState('');
 
   useModalFocus(containerRef, { isOpen, onClose, initialFocusRef: inputRef });
 
@@ -84,11 +88,30 @@ export default function CommandPalette({
     return GROUP_ORDER.map((name) => ({
       name,
       items: items.filter((item) => item.group === name && matches(item)),
-    })).filter((group) => group.items.length > 0);
+    })).filter((group) => group.items.length > 0 || (group.name === 'Recent' && !q));
   }, [items, query]);
 
   // Flattened, ordered list used for keyboard traversal and activedescendant.
   const visibleItems = useMemo(() => groups.flatMap((group) => group.items), [groups]);
+
+  // Track which group the active item belongs to for screen-reader announcements.
+  const activeGroupIndex = useMemo(() => {
+    const item = visibleItems[activeIndex];
+    if (!item) return -1;
+    return groups.findIndex((g) => g.items.some((i) => i.id === item.id));
+  }, [visibleItems, activeIndex, groups]);
+
+  const prevGroupRef = useRef(activeGroupIndex);
+
+  useEffect(() => {
+    if (activeGroupIndex !== prevGroupRef.current && activeGroupIndex >= 0) {
+      const groupName = groups[activeGroupIndex]?.name;
+      if (groupName) {
+        setAnnouncement(`${groupName} group`);
+      }
+    }
+    prevGroupRef.current = activeGroupIndex;
+  }, [activeGroupIndex, groups]);
 
   // Keep the active index within bounds whenever the result set changes.
   useEffect(() => {
@@ -197,9 +220,10 @@ export default function CommandPalette({
           </kbd>
         </div>
 
-        {/* Polite announcement of result count for screen-reader users. */}
-        <div className="cmdk-sr-only" role="status" aria-live="polite">
+        {/* Polite announcement for screen-reader users — result count and group jumps. */}
+        <div className="cmdk-sr-only" role="status" aria-live="polite" aria-atomic="true">
           {!isLoading && resultCountText}
+          {announcement && ` — ${announcement}`}
         </div>
 
         <div className="cmdk-results">
@@ -217,36 +241,83 @@ export default function CommandPalette({
             </div>
           ) : (
             <ul id={listboxId} role="listbox" aria-label="Search results" className="cmdk-list">
-              {groups.map((group) => (
-                <li key={group.name} role="group" aria-labelledby={groupLabelId(group.name)}>
-                  <p id={groupLabelId(group.name)} className="cmdk-group__label">
-                    {group.name}
-                  </p>
-                  <ul className="cmdk-group__items">
-                    {group.items.map((item) => {
-                      const index = visibleItems.indexOf(item);
-                      const isActive = index === activeIndex;
-                      return (
-                        <li
-                          key={item.id}
-                          id={optionDomId(item.id)}
-                          role="option"
-                          aria-selected={isActive}
-                          className={`cmdk-option${isActive ? ' cmdk-option--active' : ''}`}
-                          onMouseMove={() => setActiveIndex(index)}
-                          onClick={() => select(item)}
-                        >
-                          {item.icon && <span className="cmdk-option__icon">{item.icon}</span>}
-                          <span className="cmdk-option__body">
-                            <span className="cmdk-option__label">{item.label}</span>
-                            {item.hint && <span className="cmdk-option__hint">{item.hint}</span>}
-                          </span>
+              {groups.map((group, groupIndex) => {
+                const isFirstGroup = groupIndex === 0;
+                const isRecentsEmpty =
+                  group.name === 'Recent' && query === '' && group.items.length === 0;
+
+                return (
+                  <li
+                    key={group.name}
+                    role="group"
+                    aria-labelledby={groupLabelId(group.name)}
+                    className={`cmdk-group${isFirstGroup ? '' : ' cmdk-group--separator'}${group.name === 'Pinned' ? ' cmdk-group--pinned' : ''}`}
+                  >
+                    <p id={groupLabelId(group.name)} className="cmdk-group__label">
+                      {group.name}
+                    </p>
+                    <ul className="cmdk-group__items">
+                      {isRecentsEmpty ? (
+                        <li className="cmdk-empty" role="presentation">
+                          <p className="cmdk-empty__text">No recent actions yet.</p>
+                          <p className="cmdk-empty__hint">Select an action to see it here.</p>
                         </li>
-                      );
-                    })}
-                  </ul>
-                </li>
-              ))}
+                      ) : (
+                        group.items.map((item) => {
+                          const index = visibleItems.indexOf(item);
+                          const isActive = index === activeIndex;
+                          return (
+                            <li
+                              key={item.id}
+                              id={optionDomId(item.id)}
+                              role="option"
+                              aria-selected={isActive}
+                              className={`cmdk-option${isActive ? ' cmdk-option--active' : ''}`}
+                              onMouseMove={() => setActiveIndex(index)}
+                              onClick={() => select(item)}
+                            >
+                              {item.icon && (
+                                <span className="cmdk-option__icon">{item.icon}</span>
+                              )}
+                              <span className="cmdk-option__body">
+                                <span className="cmdk-option__label">{item.label}</span>
+                                {item.hint && (
+                                  <span className="cmdk-option__hint">{item.hint}</span>
+                                )}
+                              </span>
+                              <button
+                                type="button"
+                                className="cmdk-option__pin"
+                                aria-label={`${item.group === 'Pinned' ? 'Unpin' : 'Pin'} ${item.label}`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onTogglePin?.(item.id);
+                                }}
+                                tabIndex={0}
+                              >
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                  width="14"
+                                  height="14"
+                                >
+                                  <line x1="12" y1="17" x2="12" y2="22" />
+                                  <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.89A2 2 0 0 1 15 10.76V6h1a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.89A2 2 0 0 0 5 15.24z" />
+                                </svg>
+                              </button>
+                            </li>
+                          );
+                        })
+                      )}
+                    </ul>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
