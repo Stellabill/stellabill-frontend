@@ -112,33 +112,51 @@ export default function UsageBilling() {
     const usageCountFmt = usageCount.toLocaleString();
     const usageLimitFmt = usageLimit.toLocaleString();
 
-    const invoicesData: {
-        id: string;
-        date: string;
-        status: "paid" | "pending" | "failed";
-        total: string;
-        currency: string;
-    }[] = [
+    const invoicesData = [
     {
         id: "INV-00123456789",
         date: "Mar 31, 2026",
-        status: "paid",
+        status: "paid" as const,
         total: "16.23",
         currency: "USDC",
+        lineItems: [
+            { description: `API usage (${unit}) for ${billingPeriod}`, quantity: usageCount, unitPrice: "0.0005", lineTotal: "15.20" },
+            { description: "Usage adjustment / rounding", quantity: 1, unitPrice: "1.03", lineTotal: "1.03" },
+        ],
+        subtotal: "16.23",
+        taxes: [
+            { label: "Network / protocol fee", amount: "0.00" },
+        ],
     },
     {
         id: "INV-00123456790",
         date: "Feb 28, 2026",
-        status: "pending",
+        status: "pending" as const,
         total: "12.10",
         currency: "USDC",
+        lineItems: [
+            { description: `API usage (${unit}) for Feb 2026`, quantity: 22000, unitPrice: "0.0005", lineTotal: "11.00" },
+            { description: "Usage adjustment / rounding", quantity: 1, unitPrice: "1.10", lineTotal: "1.10" },
+        ],
+        subtotal: "12.10",
+        taxes: [
+            { label: "Network / protocol fee", amount: "0.00" },
+        ],
     },
     {
         id: "INV-00123456791",
         date: "Jan 31, 2026",
-        status: "failed",
+        status: "failed" as const,
         total: "8.50",
         currency: "USDC",
+        lineItems: [
+            { description: `API usage (${unit}) for Jan 2026`, quantity: 15000, unitPrice: "0.0005", lineTotal: "7.50" },
+            { description: "Usage adjustment / rounding", quantity: 1, unitPrice: "1.00", lineTotal: "1.00" },
+        ],
+        subtotal: "8.50",
+        taxes: [
+            { label: "Network / protocol fee", amount: "0.00" },
+        ],
     },
     ];
 
