@@ -16,6 +16,10 @@ vi.mock('../components/settings/ApiKeysSettings', () => ({
   default: () => <div data-testid="api-keys-settings">API Keys Settings Component</div>
 }))
 
+vi.mock('../components/settings/DensityPreview', () => ({
+  default: () => <div data-testid="density-preview">Density Preview Component</div>
+}))
+
 const renderWithRouter = (component: React.ReactElement) => {
   return render(
     <BrowserRouter>
@@ -36,12 +40,14 @@ describe('Settings Page', () => {
     expect(screen.getByText(/manage your organization, billing, and security preferences/i)).toBeInTheDocument()
   })
 
-  it('displays all three main sections in navigation', () => {
+  it('displays all sections in navigation', () => {
     renderWithRouter(<Settings />)
     
     expect(screen.getByRole('button', { name: /organization/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /billing/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /api keys/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /tags/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /appearance/i })).toBeInTheDocument()
   })
 
   it('shows organization settings by default', () => {
@@ -117,7 +123,7 @@ describe('Settings Page', () => {
     expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument()
     
     // Check for button roles
-    expect(screen.getAllByRole('button')).toHaveLength(3) // Three navigation tabs
+    expect(screen.getAllByRole('button')).toHaveLength(5) // Five navigation tabs
   })
 })
 
@@ -159,5 +165,17 @@ describe('Settings Navigation', () => {
     // Mouse leave
     fireEvent.mouseLeave(billingTab)
     expect(billingTab).toHaveStyle('background: transparent')
+  })
+
+  it('switches to appearance settings when appearance tab is clicked', async () => {
+    renderWithRouter(<Settings />)
+    
+    const appearanceTab = screen.getByRole('button', { name: /appearance/i })
+    fireEvent.click(appearanceTab)
+    
+    await waitFor(() => {
+      expect(screen.getByTestId('density-preview')).toBeInTheDocument()
+      expect(screen.queryByTestId('organization-settings')).not.toBeInTheDocument()
+    })
   })
 })
