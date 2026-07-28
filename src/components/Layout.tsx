@@ -4,6 +4,7 @@ import LandingNavbar from "./LandingNavbar";
 import CommandPalette, { CommandItem } from "./CommandPalette";
 import KeyboardShortcutsOverlay from "./KeyboardShortcutsOverlay";
 import KeyboardChordIndicator from "./KeyboardChordIndicator";
+import TourResumeCheckpoint from "./Dashboard/TourResumeCheckpoint";
 import "../styles/sidebar.css";
 
 const RECENT_COMMANDS_KEY = "sb:recent-commands";
@@ -307,6 +308,8 @@ export default function Layout() {
       />
       
       <KeyboardChordIndicator pendingKey={pendingChordKey} />
+
+      <TourResumeCheckpoint />
     </div>
   );
 }
