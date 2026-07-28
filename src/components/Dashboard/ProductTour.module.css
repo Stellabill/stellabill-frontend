@@ -142,3 +142,91 @@
 .closeButton:hover {
   opacity: 1;
 }
+
+.checkpointChip {
+  position: fixed;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: var(--space-2) var(--space-4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  font-size: var(--text-sm);
+  animation: checkpointSlideUp 0.3s ease;
+}
+
+@media (max-width: 640px) {
+  .checkpointChip {
+    bottom: env(safe-area-inset-bottom, var(--space-4));
+    left: var(--space-3);
+    right: var(--space-3);
+    transform: none;
+  }
+}
+
+@keyframes checkpointSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  @keyframes checkpointSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+.checkpointText {
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+
+.checkpointResume {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.checkpointResume:hover {
+  background-color: #2563eb;
+}
+
+.checkpointDismiss {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.checkpointDismiss:hover {
+  color: #f1f5f9;
+}

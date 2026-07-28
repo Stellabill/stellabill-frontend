@@ -1,0 +1,92 @@
+.phone-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.phone-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.phone-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.phone-split {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.phone-code-wrapper,
+.phone-number-wrapper {
+  display: flex;
+}
+
+.phone-select,
+.phone-input {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 14px;
+  border: 1px solid #334155;
+  background: #111827;
+  color: #f8fafc;
+  padding: 14px 16px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.phone-select {
+  cursor: pointer;
+}
+
+.phone-input:focus,
+.phone-select:focus {
+  border-color: #22d3ee;
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.12);
+}
+
+.phone-input::placeholder {
+  color: #64748b;
+}
+
+.phone-input-error {
+  border-color: #fb7185;
+}
+
+.phone-helper,
+.phone-error {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.phone-helper {
+  color: #94a3af;
+}
+
+.phone-error {
+  color: #f87171;
+}
+
+.phone-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 620px) {
+  .phone-split {
+    grid-template-columns: 1fr;
+  }
+}

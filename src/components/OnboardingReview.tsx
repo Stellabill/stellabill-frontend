@@ -71,6 +71,14 @@ export default function OnboardingReview() {
     return `${address.slice(0, 10)}...${address.slice(-8)}`;
   };
 
+  const getCountryName = (code: string) => {
+    try {
+      return new Intl.DisplayNames(undefined, { type: 'region' }).of(code) ?? code
+    } catch {
+      return code
+    }
+  }
+
   return (
     <OnboardingShell
       currentStep={3}

@@ -1,6 +1,29 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import NotificationsCenter, { BillingNotification } from './NotificationsCenter';
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, unknown>) => {
+      const count = typeof opts?.count === 'number' ? opts.count : 0;
+      const translations: Record<string, string> = {
+        'notifications.liveRegion': count === 0 ? 'All billing notifications are read' : count === 1 ? '1 unread billing notification' : `${count} unread billing notifications`,
+        'notifications.triggerLabel': count === 0 ? 'Open billing notifications' : count === 1 ? 'Open billing notifications, 1 unread' : `Open billing notifications, ${count} unread`,
+        'notifications.billingAlerts': 'Billing alerts',
+        'notifications.title': 'Notifications',
+        'notifications.toolbar': count === 0 ? 'No alerts' : count === 1 ? '1 unread' : `${count} unread`,
+        'notifications.toolbarAllRead': 'All caught up',
+        'notifications.markAllRead': 'Mark all read',
+        'notifications.emptyTitle': 'No billing alerts',
+        'notifications.emptyDescription': 'Failed charges, low balances, and plan changes will appear here.',
+        'notifications.allReadTitle': 'All caught up',
+        'notifications.allReadDescription': 'There are no unread billing events right now.',
+      };
+      return translations[key] || key;
+    },
+    i18n: { language: 'en' },
+  }),
+}));
 
 const manyNotifications: BillingNotification[] = Array.from({ length: 14 }, (_, index) => ({
   id: `notification-${index}`,

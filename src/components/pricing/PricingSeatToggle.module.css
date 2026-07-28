@@ -1,0 +1,199 @@
+/* ─── PricingSeatToggle ────────────────────────────────────────────────────── */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* ── Mode toggle ──────────────────────────────────────────────────────────── */
+
+.toggle {
+  display: inline-flex;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 5px;
+  gap: 4px;
+}
+
+.toggleBtn {
+  padding: 10px 28px;
+  border-radius: 999px;
+  border: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: #fff;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+  /* Min touch target */
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.toggleBtn:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}
+
+.toggleBtnActive {
+  background: linear-gradient(90deg, #22d3ee 0%, #34d399 100%);
+  color: #041015;
+  box-shadow: 0 4px 16px rgba(34, 211, 238, 0.25);
+}
+
+/* ── Seat stepper ─────────────────────────────────────────────────────────── */
+
+.stepperWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  /* Height-based transition for enter/exit */
+  max-height: 120px;
+  opacity: 1;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.stepperHidden {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stepperVisible {
+  max-height: 120px;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stepperWrapper {
+    transition: none;
+  }
+}
+
+.stepperLabel {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.stepBtn {
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  /* 44×44 touch target */
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.stepBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.stepBtn:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: -2px;
+}
+
+.stepBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.stepInput {
+  /* Remove browser spin arrows */
+  appearance: textfield;
+  -moz-appearance: textfield;
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  width: 72px;
+  height: 44px;
+  outline: none;
+  padding: 0;
+}
+
+.stepInput:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: -2px;
+}
+
+/* Remove spin buttons in WebKit */
+.stepInput::-webkit-inner-spin-button,
+.stepInput::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+/* ── Seat definition copy ─────────────────────────────────────────────────── */
+
+.seatDefinition {
+  font-size: 0.8125rem;
+  color: #64748b;
+  max-width: 480px;
+  text-align: center;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.seatDefinition strong {
+  color: #94a3b8;
+}
+
+/* ── Screen-reader only ───────────────────────────────────────────────────── */
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .toggleBtn {
+    padding: 10px 18px;
+    font-size: 0.875rem;
+  }
+
+  .stepInput {
+    width: 56px;
+  }
+}

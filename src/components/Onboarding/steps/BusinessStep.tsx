@@ -11,6 +11,7 @@ interface BusinessStepProps {
 export default function BusinessStep({ onNext }: BusinessStepProps) {
   const [businessName, setBusinessName] = useState('');
   const [website, setWebsite] = useState('');
+  const [country, setCountry] = useState('');
   const [logo, setLogo] = useState<File | null>(null);
   const [country, setCountry] = useState('');
   const [businessError, setBusinessError] = useState('');
@@ -121,6 +122,24 @@ export default function BusinessStep({ onNext }: BusinessStepProps) {
           />
         </div>
         <p className="onboarding-helper">Recommended: Square image, at least 200x200px</p>
+      </div>
+
+      <div className="onboarding-field">
+        <CountryRegionPicker
+          value={country}
+          onChange={(value) => {
+            setCountry(value)
+            if (countryError) setCountryError('')
+          }}
+          label="Country"
+          helperText="Search countries by name, ISO code, or region."
+          placeholder="Select a country"
+        />
+        {countryError && (
+          <p className="onboarding-error" role="alert">
+            {countryError}
+          </p>
+        )}
       </div>
 
       <div className="onboarding-field">
