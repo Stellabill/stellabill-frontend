@@ -1,0 +1,95 @@
+.pdf-thumbnail-navigator {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-surface, #ffffff);
+  border-right: 1px solid var(--border-color, #e5e7eb);
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.pdf-thumbnail-navigator-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.pdf-thumbnail-btn {
+  position: relative;
+  width: 80px;
+  height: 100px;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background-color: #f3f4f6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdf-thumbnail-btn:hover {
+  border-color: #9ca3af;
+}
+
+.pdf-thumbnail-btn[aria-current="true"] {
+  border-color: #2563eb;
+  background-color: #eff6ff;
+}
+
+.pdf-thumbnail-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.pdf-thumbnail-label {
+  font-size: 0.75rem;
+  color: #4b5563;
+  margin-top: 4px;
+}
+
+.pdf-thumbnail-page-number {
+  font-weight: bold;
+  font-size: 1rem;
+  color: #9ca3af;
+}
+
+.pdf-thumbnail-btn[aria-current="true"] .pdf-thumbnail-page-number {
+  color: #2563eb;
+}
+
+/* Mobile chip view below 720px */
+.pdf-mobile-chip-container {
+  display: none;
+}
+
+@media (max-width: 719px) {
+  .pdf-thumbnail-navigator {
+    display: none; /* Hide the rail on mobile */
+  }
+  
+  .pdf-mobile-chip-container {
+    display: flex;
+    justify-content: center;
+    padding: 12px;
+    position: sticky;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(4px);
+    border-top: 1px solid #e5e7eb;
+    z-index: 10;
+  }
+  
+  .pdf-mobile-chip {
+    background-color: #1f2937;
+    color: white;
+    padding: 6px 16px;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+}

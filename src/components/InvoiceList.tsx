@@ -1,3 +1,6 @@
+import React, { useState } from 'react';
+import InvoicePreviewModal from './InvoicePreviewModal';
+
 type Invoice = {
   id: string;
   date: string;
@@ -11,6 +14,8 @@ type Props = {
 };
 
 export default function InvoiceList({ invoices }: Props) {
+  const [previewId, setPreviewId] = useState<string | null>(null);
+
   return (
     <div>
       {/* ================= DESKTOP TABLE ================= */}
@@ -51,6 +56,13 @@ export default function InvoiceList({ invoices }: Props) {
                 </td>
 
                 <td className="p-3">
+                  <button
+                    className="text-blue-600 hover:underline mr-4"
+                    aria-label={`Preview invoice ${inv.id}`}
+                    onClick={() => setPreviewId(inv.id)}
+                  >
+                    Preview
+                  </button>
                   <button
                     className="text-blue-600 hover:underline"
                     aria-label={`Download invoice ${inv.id}`}
@@ -94,15 +106,30 @@ export default function InvoiceList({ invoices }: Props) {
               {inv.total} {inv.currency}
             </div>
 
-            <button
-              className="mt-3 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-              aria-label={`Download invoice ${inv.id}`}
-            >
-              Download
-            </button>
+            <div className="mt-3 flex gap-2">
+              <button
+                className="flex-1 bg-white border border-gray-300 text-gray-700 py-2 rounded hover:bg-gray-50"
+                aria-label={`Preview invoice ${inv.id}`}
+                onClick={() => setPreviewId(inv.id)}
+              >
+                Preview
+              </button>
+              <button
+                className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+                aria-label={`Download invoice ${inv.id}`}
+              >
+                Download
+              </button>
+            </div>
           </div>
         ))}
       </div>
+
+      <InvoicePreviewModal 
+        isOpen={!!previewId} 
+        onClose={() => setPreviewId(null)} 
+        invoiceId={previewId} 
+      />
     </div>
   );
 }
