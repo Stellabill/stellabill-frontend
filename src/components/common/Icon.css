@@ -1,0 +1,8 @@
+.stellabill-icon {
+    display: inline-block;
+}
+
+/* RTL Support */
+[dir="rtl"] .stellabill-icon[data-mirror="always"] {
+    transform: scaleX(-1);
+}
