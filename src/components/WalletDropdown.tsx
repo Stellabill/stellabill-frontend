@@ -6,9 +6,10 @@ interface WalletDropdownProps {
   address: string;
   onClose: () => void;
   onDisconnect: () => void;
+  onOpenHistory?: () => void;
 }
 
-const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClose, onDisconnect }) => {
+const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClose, onDisconnect, onOpenHistory }) => {
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -79,16 +80,18 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClos
           </button>
 
           <button 
-            className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all group opacity-50 cursor-not-allowed"
-            disabled
+            className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all group"
+            onClick={() => {
+              onClose();
+              if (onOpenHistory) onOpenHistory();
+            }}
           >
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-800 rounded-lg">
-                <CreditCard className="w-4 h-4 text-slate-400" />
+              <div className="p-2 bg-slate-800 rounded-lg group-hover:bg-cyan-500/10 transition-colors">
+                <CreditCard className="w-4 h-4 text-slate-400 group-hover:text-cyan-400" />
               </div>
               Wallet History
             </div>
-            <span className="text-[10px] font-bold text-slate-600">SOON</span>
           </button>
 
           <div className="h-px bg-white/5 my-2" />
