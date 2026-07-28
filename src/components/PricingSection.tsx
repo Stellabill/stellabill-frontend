@@ -1,5 +1,6 @@
 import { useState, useEffect, type CSSProperties } from 'react'
 import { PricingModeInput, type PricingMode } from './common/PricingModeInput'
+import AmountInput from './common/AmountInput'
 
 export type PlanInterval = 'Monthly' | 'Yearly'
 
@@ -7,6 +8,8 @@ export interface PricingSectionValue {
   price: string
   interval: '' | PlanInterval
   priceType: PricingMode
+  /** ISO 4217 currency code used when priceType === 'currency'. Defaults to 'USDC'. */
+  currency?: string
 }
 
 export interface PricingSectionProps {
@@ -91,22 +94,72 @@ export default function PricingSection({ value, onChange, priceError, intervalEr
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <PricingModeInput
-            label="Price"
-            id="pricing-price"
-            value={value.price}
-            mode={value.priceType}
-            error={priceError}
-            helperText={
-              value.priceType === 'percent'
-                ? value.price === '0'
-                  ? '0% keeps the plan price unchanged.'
-                  : 'Enter a discount percentage between 0% and 100%.'
-                : 'Enter a fixed amount in USDC. Use 0 for a free plan.'
-            }
-            onChange={handlePriceChange}
-            onModeChange={(priceType) => onChange({ ...value, priceType })}
-          />
+          {/* Mode toggle — always shown so users can switch between currency and percent */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+            <div
+              role="group"
+              aria-label="Price type"
+              style={{ display: 'inline-flex', borderRadius: '999px', border: '1px solid #2a2a2a', background: '#161b1d', overflow: 'hidden' }}
+            >
+              {(['currency', 'percent'] as PricingMode[]).map((option) => {
+                const isActive = value.priceType === option
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => onChange({ ...value, priceType: option })}
+                    style={{
+                      minWidth: '80px',
+                      padding: '0.4rem 0.75rem',
+                      border: 'none',
+                      background: isActive ? '#4dd8e1' : 'transparent',
+                      color: isActive ? '#041015' : '#e2e8f0',
+                      fontWeight: 600,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      outline: 'none',
+                    }}
+                  >
+                    {option === 'currency' ? 'Currency' : 'Percent'}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {value.priceType === 'currency' ? (
+            <AmountInput
+              id="pricing-price"
+              label="Price"
+              required
+              value={value.price === '' ? null : parseFloat(value.price)}
+              onChange={(num) =>
+                onChange({ ...value, price: num == null ? '' : String(num) })
+              }
+              currency={value.currency ?? 'USDC'}
+              onCurrencyChange={(code) => onChange({ ...value, currency: code })}
+              error={priceError}
+              helperText="Enter the plan price. Use 0 for a free plan."
+            />
+          ) : (
+            <PricingModeInput
+              label="Price"
+              id="pricing-price"
+              value={value.price}
+              mode={value.priceType}
+              error={priceError}
+              helperText={
+                value.priceType === 'percent'
+                  ? value.price === '0'
+                    ? '0% keeps the plan price unchanged.'
+                    : 'Enter a discount percentage between 0% and 100%.'
+                  : 'Enter a fixed amount in USDC. Use 0 for a free plan.'
+              }
+              onChange={handlePriceChange}
+              onModeChange={(priceType) => onChange({ ...value, priceType })}
+            />
+          )}
         </div>
         <div style={{ minWidth: 0 }}>
           <label htmlFor="pricing-interval" style={labelStyle}>
