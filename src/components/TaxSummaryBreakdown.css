@@ -1,0 +1,372 @@
+/* ==========================================================================
+   TaxSummaryBreakdown — Invoice Tax Breakdown Panel
+   Follows the dark theme design system (tokens.css, theme.css)
+   ========================================================================== */
+
+.tax-summary {
+  border-radius: var(--radius-2xl, 1.5rem);
+  border: 1px solid var(--color-border-subtle, rgba(148, 163, 184, 0.14));
+  background: var(--color-surface-card, #0a0f16);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tax-summary:hover {
+  border-color: var(--color-border-default, rgba(148, 163, 184, 0.28));
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.28));
+}
+
+/* Header */
+.tax-summary__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 0.75rem);
+  padding: var(--space-5, 1.25rem) var(--space-6, 1.5rem);
+  border-bottom: 1px solid var(--color-border-subtle, rgba(148, 163, 184, 0.14));
+}
+
+.tax-summary__header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+}
+
+.tax-summary__header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--color-surface-active, rgba(34, 211, 238, 0.16));
+  color: var(--color-brand-primary, #22d3ee);
+  flex-shrink: 0;
+}
+
+.tax-summary__header-title {
+  margin: 0;
+  font-size: var(--text-base, 1rem);
+  font-weight: var(--font-semibold, 600);
+  color: var(--color-text-primary, #f8fafc);
+  line-height: var(--leading-tight, 1.2);
+}
+
+.tax-summary__header-count {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-medium, 500);
+  color: var(--color-text-subtle, #64748b);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--color-surface-subtle, #111827);
+  border: 1px solid var(--color-border-subtle, rgba(148, 163, 184, 0.16));
+}
+
+/* Table */
+.tax-summary__table-wrapper {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-subtle, rgba(148, 163, 184, 0.16)) transparent;
+}
+
+.tax-summary__table-wrapper::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tax-summary__table-wrapper::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-subtle, rgba(148, 163, 184, 0.16));
+  border-radius: var(--radius-full, 9999px);
+}
+
+.tax-summary__table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 480px;
+}
+
+.tax-summary__table th {
+  padding: var(--space-3, 0.75rem) var(--space-6, 1.5rem);
+  text-align: left;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-semibold, 600);
+  color: var(--color-text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider, 0.05em);
+  background: var(--color-surface-subtle, #111827);
+  border-bottom: 1px solid var(--color-border-subtle, rgba(148, 163, 184, 0.14));
+  white-space: nowrap;
+}
+
+.tax-summary__table td {
+  padding: var(--space-3, 0.75rem) var(--space-6, 1.5rem);
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-text-secondary, #cbd5e1);
+  border-bottom: 1px solid var(--color-border-subtle, rgba(148, 163, 184, 0.08));
+}
+
+.tax-summary__table tr:last-child td {
+  border-bottom: none;
+}
+
+.tax-summary__table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.tax-summary__table tbody tr:hover {
+  background: var(--table-row-hover, rgba(148, 163, 184, 0.08));
+}
+
+.tax-summary__table th:last-child,
+.tax-summary__table td:last-child {
+  text-align: right;
+}
+
+/* Tax name cell */
+.tax-summary__tax-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+}
+
+.tax-summary__tax-name-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tax-summary__tax-name-text {
+  font-weight: var(--font-medium, 500);
+  color: var(--color-text-primary, #f8fafc);
+}
+
+/* Rate pill */
+.tax-summary__rate-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-md, 0.5rem);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-medium, 500);
+  background: var(--color-surface-subtle, #111827);
+  color: var(--color-text-muted, #94a3b8);
+  border: 1px solid var(--color-border-subtle, rgba(148, 163, 184, 0.12));
+}
+
+/* Amount styling */
+.tax-summary__amount {
+  font-weight: var(--font-medium, 500);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary, #cbd5e1);
+}
+
+.tax-summary__amount--bold {
+  font-weight: var(--font-semibold, 600);
+  color: var(--color-text-primary, #f8fafc);
+}
+
+.tax-summary__amount--total {
+  font-size: var(--text-base, 1rem);
+  color: var(--color-brand-primary, #22d3ee);
+}
+
+/* Total row */
+.tax-summary__total-row td {
+  border-top: 2px solid var(--color-border-default, rgba(148, 163, 184, 0.28));
+  padding-top: var(--space-4, 1rem);
+  padding-bottom: var(--space-4, 1rem);
+  font-weight: var(--font-semibold, 600);
+}
+
+.tax-summary__total-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  color: var(--color-text-primary, #f8fafc);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.tax-summary__total-icon {
+  display: inline-flex;
+  color: var(--color-brand-primary, #22d3ee);
+}
+
+/* ==========================================================================
+   Empty State
+   ========================================================================== */
+.tax-summary__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12, 3rem) var(--space-6, 1.5rem);
+  text-align: center;
+  gap: var(--space-3, 0.75rem);
+}
+
+.tax-summary__empty-icon {
+  width: 3rem;
+  height: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--color-surface-subtle, #111827);
+  color: var(--color-text-muted, #94a3b8);
+  font-size: 1.25rem;
+}
+
+.tax-summary__empty-title {
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--font-semibold, 600);
+  color: var(--color-text-primary, #f8fafc);
+}
+
+.tax-summary__empty-body {
+  margin: 0;
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-subtle, #64748b);
+  max-width: 20rem;
+  line-height: var(--leading-relaxed, 1.65);
+}
+
+/* ==========================================================================
+   Loading Skeleton
+   ========================================================================== */
+.tax-summary__skeleton {
+  padding: var(--space-6, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1rem);
+}
+
+.tax-summary__skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4, 1rem);
+}
+
+.tax-summary__skeleton-cell {
+  height: 1rem;
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--skeleton-base, rgba(148, 163, 184, 0.16));
+  animation: tax-summary-pulse 1.5s ease-in-out infinite;
+}
+
+.tax-summary__skeleton-cell--sm {
+  width: 20%;
+}
+
+.tax-summary__skeleton-cell--md {
+  width: 30%;
+}
+
+.tax-summary__skeleton-cell--lg {
+  width: 40%;
+}
+
+.tax-summary__skeleton-cell--xl {
+  width: 50%;
+}
+
+@keyframes tax-summary-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ==========================================================================
+   Accordion / Expand Trigger (for inline use in InvoiceList)
+   ========================================================================== */
+.tax-summary-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5, 0.375rem);
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-md, 0.5rem);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-brand-primary, #22d3ee);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-medium, 500);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.tax-summary-toggle:hover,
+.tax-summary-toggle:focus-visible {
+  background: var(--color-surface-active, rgba(34, 211, 238, 0.12));
+  border-color: var(--color-brand-glow, rgba(34, 211, 238, 0.24));
+  outline: none;
+}
+
+.tax-summary-toggle__icon {
+  display: inline-flex;
+  align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.tax-summary-toggle__icon--expanded {
+  transform: rotate(180deg);
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+@media (max-width: 640px) {
+  .tax-summary__header {
+    padding: var(--space-4, 1rem) var(--space-4, 1rem);
+  }
+
+  .tax-summary__table th,
+  .tax-summary__table td {
+    padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  }
+
+  .tax-summary__total-row td {
+    padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  }
+}
+
+/* High Contrast / Forced Colors */
+@media (forced-colors: active) {
+  .tax-summary {
+    border: 1px solid CanvasText;
+  }
+
+  .tax-summary__table th {
+    background: Canvas;
+    border-bottom: 1px solid CanvasText;
+  }
+
+  .tax-summary__table td {
+    border-bottom: 1px solid CanvasText;
+  }
+
+  .tax-summary__total-row td {
+    border-top: 2px solid CanvasText;
+  }
+
+  .tax-summary__rate-pill {
+    border: 1px solid CanvasText;
+  }
+
+  .tax-summary-empty__icon {
+    border: 1px solid CanvasText;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .tax-summary,
+  .tax-summary__table tbody tr,
+  .tax-summary-toggle__icon {
+    transition: none;
+  }
+
+  .tax-summary__skeleton-cell {
+    animation: none;
+  }
+}
+
