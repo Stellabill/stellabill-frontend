@@ -154,7 +154,7 @@ export default function Dashboard() {
         </header>
 
         {/* KPI Grid */}
-        <div className="dashboard-kpi-grid">
+        <div className="dashboard-kpi-grid" data-help="Overview of your key performance indicators.">
           <DashboardCard
               title={t('dashboard.kpis.activeSubscriptions')}
               value="1,284"
@@ -162,6 +162,7 @@ export default function Dashboard() {
               trend="up"
               icon={<Users size={20} />}
               helpText={t('dashboard.kpis.activeSubscriptionsHelp')}
+              data-help="Total number of active subscribers currently on a plan."
           />
           <DashboardCard
               title={t('dashboard.kpis.mrr')}
@@ -191,7 +192,7 @@ export default function Dashboard() {
         {/* Main Content Grid */}
         <div className="dashboard-main-grid">
           {/* Chart Section */}
-          <div className="dashboard-panel dashboard-panel--chart">
+          <div className="dashboard-panel dashboard-panel--chart" data-help="A visual representation of your revenue over time. Use the detailed report for a breakdown.">
             <div className="dashboard-panel__header">
               <h2 className="dashboard-section-title">Revenue Growth</h2>
               <Link to="/reports" className="dashboard-link">
@@ -204,7 +205,7 @@ export default function Dashboard() {
           </div>
 
           {/* Activity Section */}
-          <div className="dashboard-activity-column">
+          <div className="dashboard-activity-column" data-help="A feed of recent events like payments, new subscriptions, and cancellations.">
             <div className="dashboard-activity-header">
               <h2 className="dashboard-section-title">Recent Activity</h2>
               <button className="dashboard-muted-button">

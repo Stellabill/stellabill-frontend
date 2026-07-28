@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import LandingNavbar from "./LandingNavbar";
 import CommandPalette, { CommandItem } from "./CommandPalette";
 import KeyboardShortcutsOverlay from "./KeyboardShortcutsOverlay";
+import ContextualHelpOverlay from "./ContextualHelpOverlay";
 import KeyboardChordIndicator from "./KeyboardChordIndicator";
 import TourResumeCheckpoint from "./Dashboard/TourResumeCheckpoint";
 import "../styles/sidebar.css";
@@ -100,6 +101,7 @@ export default function Layout() {
   const navigate = useNavigate();
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
+  const [isContextualHelpOpen, setIsContextualHelpOpen] = useState(false);
   const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
   
   const [pendingChordKey, setPendingChordKey] = useState<string | null>(null);
@@ -202,9 +204,17 @@ export default function Layout() {
         return;
       }
 
-      // ?: Show keyboard shortcuts overlay
-      if (event.key === '?' || event.key === '/') {
-        if (!isInputField && event.key === '?') {
+      // ?: Show contextual help overlay
+      if (event.key === '?') {
+        if (!isInputField) {
+          event.preventDefault();
+          setIsContextualHelpOpen(true);
+        }
+      }
+      
+      // /: Show keyboard shortcuts overlay
+      if (event.key === '/') {
+        if (!isInputField) {
           event.preventDefault();
           setIsShortcutsOverlayOpen(true);
         }
@@ -305,6 +315,11 @@ export default function Layout() {
       <KeyboardShortcutsOverlay
         isOpen={isShortcutsOverlayOpen}
         onClose={() => setIsShortcutsOverlayOpen(false)}
+      />
+      
+      <ContextualHelpOverlay
+        isOpen={isContextualHelpOpen}
+        onClose={() => setIsContextualHelpOpen(false)}
       />
       
       <KeyboardChordIndicator pendingKey={pendingChordKey} />
