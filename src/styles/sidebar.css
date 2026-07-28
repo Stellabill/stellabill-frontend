@@ -63,9 +63,10 @@
 }
 
 .sb-sidebar__link:focus-visible {
-  outline: 2px solid var(--sidebar-focus-ring);
+  outline: 2px solid var(--focus-ring-elevated, var(--sidebar-focus-ring));
   outline-offset: -2px;
   border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px transparent, 0 0 10px var(--focus-ring-halo, rgba(56, 189, 248, 0.45));
 }
 
 /* Active state */
