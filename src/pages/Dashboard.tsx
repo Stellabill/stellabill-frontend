@@ -151,8 +151,18 @@ export default function Dashboard() {
     }
   ];
 
+  const dateFilter = activeFilters.find((f) => f.id === 'date')?.label.replace('Date: ', '') || 'All Time';
+
   return (
       <div className="dashboard-page">
+        {/* Print Header */}
+        <div className="dashboard-print-header" aria-hidden="true">
+          <div className="print-merchant-info">
+            <h2>Stellabill Merchant</h2>
+            <p>Range: {dateFilter}</p>
+          </div>
+        </div>
+
         {/* Header */}
         <header className="dashboard-header">
           <div>
@@ -294,6 +304,12 @@ export default function Dashboard() {
               See all activity
             </button>
           </div>
+        </div>
+
+        {/* Print Footer */}
+        <div className="dashboard-print-footer" aria-hidden="true">
+          <p>Printed on: {new Date().toLocaleDateString()}</p>
+          <p>Source: {window.location.href}</p>
         </div>
       </div>
   );
