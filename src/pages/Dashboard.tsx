@@ -29,22 +29,23 @@ export default function Dashboard() {
     setError(null);
 
     window.setTimeout(() => {
-      if (window.location.search.includes('simulate_error')) {
-        const err: ApiError = new Error('Failed to fetch dashboard metrics');
-        err.status = 500;
-        err.technicalDetails = 'The metrics service is currently unavailable. [Error Code: MET-500]';
-        setError(err);
-      } else if (window.location.search.includes('simulate_offline')) {
-        const err: ApiError = new Error('No internet connection');
-        err.isOffline = true;
-        setError(err);
+      try {
+        if (window.location.search.includes('simulate_error')) {
+          const err: ApiError = new Error('Failed to fetch dashboard metrics');
+          err.status = 500;
+          err.technicalDetails = 'The metrics service is currently unavailable. [Error Code: MET-500]';
+          setError(err);
+        } else if (window.location.search.includes('simulate_offline')) {
+          const err: ApiError = new Error('No internet connection');
+          err.isOffline = true;
+          setError(err);
+        }
+      } catch (err: unknown) {
+        setError(err as Error);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
-    } catch (err: unknown) {
-      setError(err as Error);
-      setLoading(false);
-    }
+    }, 0);
   }, []);
 
   useEffect(() => {
