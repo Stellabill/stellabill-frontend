@@ -1,4 +1,10 @@
+import { useCallback, useId, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import {
+  Download,
+  FileText,
+  Receipt,
+} from 'lucide-react';
 import { PastPeriods } from '../components/past-periods/past-periods';
 import ReceiptPreview from '../components/past-periods/ReceiptPreview';
 import type { ReceiptData } from '../components/past-periods/ReceiptPreview';
@@ -303,8 +309,260 @@ export default function UsageBilling() {
                 <ReceiptPreview receipt={receipt} />
             </div>
 
+            <StatementOfAccount />
+
             <PastPeriods />
         </div>
     );
+}
+
+/* ───────────────────────────────────────────────────────────────────────────────
+ * Statement of Account
+ * ─────────────────────────────────────────────────────────────────────────────── */
+
+type StatementEntryType = 'invoice' | 'payment' | 'credit';
+
+interface StatementEntry {
+  id: string;
+  date: string;
+  description: string;
+  type: StatementEntryType;
+  amount: number;
+  currency: string;
+}
+
+const statementData: StatementEntry[] = [
+  { id: 'st-1',  date: '2026-01-15', description: 'Invoice INV-00123456785',  type: 'invoice', amount: 15.20, currency: 'USDC' },
+  { id: 'st-2',  date: '2026-01-31', description: 'Payment received',        type: 'payment', amount: -15.20, currency: 'USDC' },
+  { id: 'st-3',  date: '2026-02-10', description: 'Prepaid top-up',           type: 'credit',  amount: -50.00, currency: 'USDC' },
+  { id: 'st-4',  date: '2026-02-28', description: 'Invoice INV-00123456790',  type: 'invoice', amount: 12.10, currency: 'USDC' },
+  { id: 'st-5',  date: '2026-03-01', description: 'Payment received',        type: 'payment', amount: -12.10, currency: 'USDC' },
+  { id: 'st-6',  date: '2026-03-31', description: 'Invoice INV-00123456789',  type: 'invoice', amount: 16.23, currency: 'USDC' },
+  { id: 'st-7',  date: '2026-04-01', description: 'Payment received (pending)', type: 'payment', amount: -16.23, currency: 'USDC' },
+  { id: 'st-8',  date: '2026-04-15', description: 'Credit: referral bonus',  type: 'credit',  amount: -10.00, currency: 'USDC' },
+];
+
+const typeLabels: Record<StatementEntryType, string> = {
+  invoice: 'Invoice',
+  payment: 'Payment',
+  credit: 'Credit',
+};
+
+const typeColors: Record<StatementEntryType, string> = {
+  invoice: '#f59e0b',
+  payment: '#22c55e',
+  credit: '#3b82f6',
+};
+
+/** Format a number as a signed currency string. */
+function fmtSigned(value: number, currency: string): string {
+  const abs = Math.abs(value).toFixed(2);
+  if (value === 0) return `0.00 ${currency}`;
+  if (value < 0) return `-${abs} ${currency}`;
+  return `+${abs} ${currency}`;
+}
+
+function StatementOfAccount() {
+  const headingId = useId();
+
+  // ── Filters ──────────────────────────────────────────────────────────────
+  const [dateStart, setDateStart] = useState('2026-01-01');
+  const [dateEnd, setDateEnd] = useState('2026-12-31');
+  const [typeFilter, setTypeFilter] = useState<StatementEntryType | 'all'>('all');
+  const [sortAsc, setSortAsc] = useState(true);
+
+  const filtered = useMemo(() => {
+    let items = statementData;
+    if (dateStart) items = items.filter((e) => e.date >= dateStart);
+    if (dateEnd) items = items.filter((e) => e.date <= dateEnd);
+    if (typeFilter !== 'all') items = items.filter((e) => e.type === typeFilter);
+    items = [...items].sort((a, b) => (sortAsc ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)));
+    return items;
+  }, [dateStart, dateEnd, typeFilter, sortAsc]);
+
+  // ── Running balance ──────────────────────────────────────────────────────
+  const withBalance = useMemo(() => {
+    let running = 0;
+    return filtered.map((entry) => {
+      // Invoices add to balance (amount owed), payments and credits subtract
+      const change = entry.type === 'invoice' ? entry.amount : -entry.amount;
+      running += change;
+      return { ...entry, change, balance: running };
+    });
+  }, [filtered]);
+
+  // ── Export CSV ───────────────────────────────────────────────────────────
+  const exportCsv = useCallback(() => {
+    const header = 'Date,Description,Type,Amount,Currency,Running Balance';
+    const rows = withBalance.map(
+      (e) => `${e.date},"${e.description}",${typeLabels[e.type]},${e.change.toFixed(2)},${e.currency},${e.balance.toFixed(2)}`,
+    );
+    const blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `statement-of-account-${dateStart}-to-${dateEnd}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [withBalance, dateStart, dateEnd]);
+
+  // ── Export PDF (print stylesheet) ────────────────────────────────────────
+  const exportPdf = useCallback(() => {
+    window.print();
+  }, []);
+
+  return (
+    <section className="statement-section" aria-labelledby={headingId} style={{ marginTop: 32 }}>
+      <div className="main-card">
+        <div className="main-card-inner">
+          <h2 id={headingId} className="statement-heading">Statement of Account</h2>
+
+          {/* ── Filter bar ──────────────────────────────────────────────── */}
+          <div className="statement-filters" role="search" aria-label="Filter statement entries">
+            <div className="filter-group">
+              <label className="filter-label" htmlFor="soa-date-start">From</label>
+              <input
+                id="soa-date-start"
+                type="date"
+                className="filter-input"
+                value={dateStart}
+                onChange={(e) => setDateStart(e.target.value)}
+              />
+            </div>
+
+            <div className="filter-group">
+              <label className="filter-label" htmlFor="soa-date-end">To</label>
+              <input
+                id="soa-date-end"
+                type="date"
+                className="filter-input"
+                value={dateEnd}
+                onChange={(e) => setDateEnd(e.target.value)}
+              />
+            </div>
+
+            <div className="filter-group">
+              <label className="filter-label" htmlFor="soa-type">Type</label>
+              <select
+                id="soa-type"
+                className="filter-input"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as StatementEntryType | 'all')}
+              >
+                <option value="all">All</option>
+                <option value="invoice">Invoice</option>
+                <option value="payment">Payment</option>
+                <option value="credit">Credit</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              className="filter-sort-btn"
+              onClick={() => setSortAsc((p) => !p)}
+              aria-label={`Sort ${sortAsc ? 'descending' : 'ascending'}`}
+              title={`Sort ${sortAsc ? 'descending' : 'ascending'}`}
+            >
+              {sortAsc ? '↑ Oldest first' : '↓ Newest first'}
+            </button>
+
+            <div className="filter-actions">
+              <button type="button" className="statement-export-btn" onClick={exportCsv}>
+                <Download size={14} aria-hidden="true" />
+                CSV
+              </button>
+              <button type="button" className="statement-export-btn" onClick={exportPdf}>
+                <FileText size={14} aria-hidden="true" />
+                PDF
+              </button>
+            </div>
+          </div>
+
+          {/* ── Desktop table ─────────────────────────────────────────────── */}
+          <div className="statement-table-wrap hidden-mobile" role="region" aria-label="Statement entries">
+            <table className="statement-table">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Description</th>
+                  <th scope="col">Type</th>
+                  <th scope="col" className="col-amount">Amount</th>
+                  <th scope="col" className="col-amount">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {withBalance.map((entry) => (
+                  <tr key={entry.id}>
+                    <td className="cell-date">{entry.date}</td>
+                    <td className="cell-desc">{entry.description}</td>
+                    <td>
+                      <span
+                        className="type-badge"
+                        style={{
+                          background: `${typeColors[entry.type]}20`,
+                          color: typeColors[entry.type],
+                          borderColor: `${typeColors[entry.type]}40`,
+                        }}
+                      >
+                        {typeLabels[entry.type]}
+                      </span>
+                    </td>
+                    <td className={`col-amount ${entry.change >= 0 ? 'amount-debit' : 'amount-credit'}`}>
+                      {fmtSigned(entry.change, entry.currency)}
+                    </td>
+                    <td className="col-amount amount-balance">
+                      {entry.balance.toFixed(2)} {entry.currency}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {withBalance.length === 0 && (
+              <div className="statement-empty" role="status">
+                <Receipt size={32} aria-hidden="true" />
+                <p>No entries match the current filters.</p>
+              </div>
+            )}
+          </div>
+
+          {/* ── Mobile cards ──────────────────────────────────────────────── */}
+          <div className="statement-cards visible-mobile" role="list" aria-label="Statement entries">
+            {withBalance.map((entry) => (
+              <div key={entry.id} className="statement-card" role="listitem">
+                <div className="statement-card-header">
+                  <span className="cell-date">{entry.date}</span>
+                  <span
+                    className="type-badge"
+                    style={{
+                      background: `${typeColors[entry.type]}20`,
+                      color: typeColors[entry.type],
+                      borderColor: `${typeColors[entry.type]}40`,
+                    }}
+                  >
+                    {typeLabels[entry.type]}
+                  </span>
+                </div>
+                <p className="statement-card-desc">{entry.description}</p>
+                <div className="statement-card-footer">
+                  <span className={`statement-card-amount ${entry.change >= 0 ? 'amount-debit' : 'amount-credit'}`}>
+                    {fmtSigned(entry.change, entry.currency)}
+                  </span>
+                  <span className="amount-balance">
+                    Balance: {entry.balance.toFixed(2)} {entry.currency}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {withBalance.length === 0 && (
+              <div className="statement-empty" role="status">
+                <Receipt size={32} aria-hidden="true" />
+                <p>No entries match the current filters.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 

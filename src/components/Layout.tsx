@@ -346,6 +346,24 @@ export default function Layout() {
         </main>
       </div>
 
+      <div className="app-layout__bottom-nav-wrapper">
+        <nav className="app-layout__bottom-nav" aria-label="Primary bottom navigation">
+          {mainNav.map(({ path, label, icon }) => (
+            <Link
+              key={path}
+              to={path}
+              className={`app-layout__bottom-nav-link${isActive(path) ? ' app-layout__bottom-nav-link--active' : ''}`}
+              aria-current={isActive(path) ? 'page' : undefined}
+            >
+              <span className="app-layout__bottom-nav-icon" aria-hidden="true">
+                {icon}
+              </span>
+              <span className="app-layout__bottom-nav-label">{label}</span>
+            </Link>
+          ))}
+        </nav>
+      </div>
+
       <CommandPalette
         isOpen={isPaletteOpen}
         onClose={() => setIsPaletteOpen(false)}
