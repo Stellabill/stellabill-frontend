@@ -133,6 +133,11 @@
   --color-border-default: #cbd5e1;
   --color-border-strong: #94a3b8;
   --color-focus-ring: #0891b2;
+  --focus-ring: #0891b2;
+  --focus-ring-elevated: #0284c7;
+  --focus-ring-inverse: #ffffff;
+  --focus-ring-halo: rgba(8, 145, 178, 0.28);
+  --focus-ring-shadow: 0 0 0 2px var(--color-surface-canvas, #ffffff), 0 0 0 4px var(--focus-ring), 0 0 8px var(--focus-ring-halo);
 
   /* Brand */
   --color-brand-primary: #067d99;
@@ -234,7 +239,12 @@
     --color-border-subtle: rgba(148, 163, 184, 0.16);
     --color-border-default: rgba(148, 163, 184, 0.28);
     --color-border-strong: rgba(203, 213, 225, 0.42);
-    --color-focus-ring: #22d3ee;
+    --color-focus-ring: #38bdf8;
+    --focus-ring: #22d3ee;
+    --focus-ring-elevated: #38bdf8;
+    --focus-ring-inverse: #00060f;
+    --focus-ring-halo: rgba(56, 189, 248, 0.45);
+    --focus-ring-shadow: 0 0 0 2px var(--color-surface-card, #0a0f16), 0 0 0 4px var(--focus-ring-elevated), 0 0 12px var(--focus-ring-halo);
 
     --color-brand-primary: #22d3ee;
     --color-brand-primary-hover: #67e8f9;
@@ -331,7 +341,12 @@
   --color-border-subtle: rgba(148, 163, 184, 0.16);
   --color-border-default: rgba(148, 163, 184, 0.28);
   --color-border-strong: rgba(203, 213, 225, 0.42);
-  --color-focus-ring: #22d3ee;
+  --color-focus-ring: #38bdf8;
+  --focus-ring: #22d3ee;
+  --focus-ring-elevated: #38bdf8;
+  --focus-ring-inverse: #00060f;
+  --focus-ring-halo: rgba(56, 189, 248, 0.45);
+  --focus-ring-shadow: 0 0 0 2px var(--color-surface-card, #0a0f16), 0 0 0 4px var(--focus-ring-elevated), 0 0 12px var(--focus-ring-halo);
 
   --color-brand-primary: #22d3ee;
   --color-brand-primary-hover: #67e8f9;
