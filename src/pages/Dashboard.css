@@ -210,6 +210,10 @@
   }
 }
 
+.dashboard-revenue-split {
+  margin-top: var(--space-8);
+}
+
 @media (min-width: 1024px) {
   .dashboard-kpi-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));

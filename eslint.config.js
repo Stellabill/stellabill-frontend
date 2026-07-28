@@ -23,5 +23,17 @@ export default tseslint.config({
       { allowConstantExport: true },
     ],
     '@typescript-eslint/no-unused-vars': ['warn'],
+    // ── ICU pluralization enforcement ──────────────────────────
+    // Flags template literals that concatenate a count variable with a
+    // noun that should use ICU MessageFormat plurals via t().
+    'no-restricted-syntax': [
+      'warn',
+      {
+        selector: 'TemplateLiteral[expressions.length>0]',
+        message:
+          'Avoid interpolating counts directly into template strings. ' +
+          'Use ICU MessageFormat via t() instead — see docs/ICU_PLURALIZATION_GUIDE.md.',
+      },
+    ],
   },
 });

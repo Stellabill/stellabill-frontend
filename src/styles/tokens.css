@@ -86,6 +86,25 @@
   --radius-2xl:  1.5rem;
   --radius-full: 9999px;
 
+  /* Density scale */
+  --density-compact-padding-block:   0.375rem;  /*  6px */
+  --density-compact-padding-inline:  0.5rem;    /*  8px */
+  --density-compact-gap:             0.375rem;  /*  6px */
+  --density-compact-row-height:      2rem;      /* 32px */
+  --density-compact-font-scale:      0.9;
+
+  --density-comfortable-padding-block:   0.625rem;  /* 10px */
+  --density-comfortable-padding-inline:  0.75rem;   /* 12px */
+  --density-comfortable-gap:             0.625rem;  /* 10px */
+  --density-comfortable-row-height:      2.5rem;    /* 40px */
+  --density-comfortable-font-scale:      1;
+
+  --density-spacious-padding-block:   0.875rem;  /* 14px */
+  --density-spacious-padding-inline:  1rem;      /* 16px */
+  --density-spacious-gap:             0.875rem;  /* 14px */
+  --density-spacious-row-height:      3rem;      /* 48px */
+  --density-spacious-font-scale:      1.1;
+
   /* Sidebar color tokens */
   --sidebar-bg:              #1a1a2e;
   --sidebar-width:           220px;
@@ -133,6 +152,11 @@
   --color-border-default: #cbd5e1;
   --color-border-strong: #94a3b8;
   --color-focus-ring: #0891b2;
+  --focus-ring: #0891b2;
+  --focus-ring-elevated: #0284c7;
+  --focus-ring-inverse: #ffffff;
+  --focus-ring-halo: rgba(8, 145, 178, 0.28);
+  --focus-ring-shadow: 0 0 0 2px var(--color-surface-canvas, #ffffff), 0 0 0 4px var(--focus-ring), 0 0 8px var(--focus-ring-halo);
 
   /* Brand */
   --color-brand-primary: #067d99;
@@ -197,6 +221,24 @@
   --chart-point-stroke: var(--color-surface-card);
   --chart-tooltip-bg: var(--color-surface-elevated);
 
+  /* Colorblind-safe chart series (Okabe–Ito–inspired); ≥3:1 non-text contrast on canvas */
+  --chart-series-1: #0072b2;
+  --chart-series-2: #e69f00;
+  --chart-series-3: #009e73;
+  --chart-series-4: #cc79a7;
+  --chart-series-5: #56b4e9;
+  --chart-series-6: #d55e00;
+  --chart-series-7: #332288;
+  --chart-series-8: #882255;
+  --chart-series-pattern-ink: rgba(0, 0, 0, 0.22);
+
+  --delta-positive-bg: rgba(16, 185, 129, 0.12);
+  --delta-positive-text: #047857;
+  --delta-negative-bg: rgba(244, 63, 94, 0.12);
+  --delta-negative-text: #be123c;
+  --delta-neutral-bg: rgba(100, 116, 139, 0.12);
+  --delta-neutral-text: #475569;
+
   /* Sidebar */
   --sidebar-bg: #ffffff;
   --sidebar-item-color: #475569;
@@ -234,7 +276,12 @@
     --color-border-subtle: rgba(148, 163, 184, 0.16);
     --color-border-default: rgba(148, 163, 184, 0.28);
     --color-border-strong: rgba(203, 213, 225, 0.42);
-    --color-focus-ring: #22d3ee;
+    --color-focus-ring: #38bdf8;
+    --focus-ring: #22d3ee;
+    --focus-ring-elevated: #38bdf8;
+    --focus-ring-inverse: #00060f;
+    --focus-ring-halo: rgba(56, 189, 248, 0.45);
+    --focus-ring-shadow: 0 0 0 2px var(--color-surface-card, #0a0f16), 0 0 0 4px var(--focus-ring-elevated), 0 0 12px var(--focus-ring-halo);
 
     --color-brand-primary: #22d3ee;
     --color-brand-primary-hover: #67e8f9;
@@ -295,6 +342,23 @@
     --chart-point-stroke: var(--color-surface-card);
     --chart-tooltip-bg: var(--color-surface-elevated);
 
+    --chart-series-1: #56b4e9;
+    --chart-series-2: #e69f00;
+    --chart-series-3: #009e73;
+    --chart-series-4: #cc79a7;
+    --chart-series-5: #0072b2;
+    --chart-series-6: #d55e00;
+    --chart-series-7: #aea9f0;
+    --chart-series-8: #ee99aa;
+    --chart-series-pattern-ink: rgba(255, 255, 255, 0.28);
+
+    --delta-positive-bg: rgba(52, 211, 153, 0.16);
+    --delta-positive-text: #6ee7b7;
+    --delta-negative-bg: rgba(251, 113, 133, 0.16);
+    --delta-negative-text: #fda4af;
+    --delta-neutral-bg: rgba(148, 163, 184, 0.16);
+    --delta-neutral-text: #94a3b8;
+
     --sidebar-bg: #0f172a;
     --sidebar-item-color: #94a3b8;
     --sidebar-item-color-hover: #e2e8f0;
@@ -302,8 +366,37 @@
     --sidebar-item-active-color: #f8fafc;
     --sidebar-indicator-color: var(--color-brand-primary);
     --sidebar-group-label-color: #64748b;
-    --sidebar-focus-ring: var(--color-focus-ring);
-  }
+  --sidebar-focus-ring: var(--color-focus-ring);
+}
+
+/* ============================================================================
+   Density scope — maps generic --density-* variables to the active preset.
+   The data-density attribute on <html> selects the active preset.
+   ========================================================================== */
+[data-density="compact"] {
+  --density-padding-block:  var(--density-compact-padding-block);
+  --density-padding-inline: var(--density-compact-padding-inline);
+  --density-gap:            var(--density-compact-gap);
+  --density-row-height:     var(--density-compact-row-height);
+  --density-font-scale:     var(--density-compact-font-scale);
+}
+
+[data-density="comfortable"],
+:root:not([data-density]) {
+  --density-padding-block:  var(--density-comfortable-padding-block);
+  --density-padding-inline: var(--density-comfortable-padding-inline);
+  --density-gap:            var(--density-comfortable-gap);
+  --density-row-height:     var(--density-comfortable-row-height);
+  --density-font-scale:     var(--density-comfortable-font-scale);
+}
+
+[data-density="spacious"] {
+  --density-padding-block:  var(--density-spacious-padding-block);
+  --density-padding-inline: var(--density-spacious-padding-inline);
+  --density-gap:            var(--density-spacious-gap);
+  --density-row-height:     var(--density-spacious-row-height);
+  --density-font-scale:     var(--density-spacious-font-scale);
+}
 }
 
 [data-theme="dark"] {
@@ -331,7 +424,12 @@
   --color-border-subtle: rgba(148, 163, 184, 0.16);
   --color-border-default: rgba(148, 163, 184, 0.28);
   --color-border-strong: rgba(203, 213, 225, 0.42);
-  --color-focus-ring: #22d3ee;
+  --color-focus-ring: #38bdf8;
+  --focus-ring: #22d3ee;
+  --focus-ring-elevated: #38bdf8;
+  --focus-ring-inverse: #00060f;
+  --focus-ring-halo: rgba(56, 189, 248, 0.45);
+  --focus-ring-shadow: 0 0 0 2px var(--color-surface-card, #0a0f16), 0 0 0 4px var(--focus-ring-elevated), 0 0 12px var(--focus-ring-halo);
 
   --color-brand-primary: #22d3ee;
   --color-brand-primary-hover: #67e8f9;
@@ -391,6 +489,23 @@
   --chart-line: var(--color-brand-primary);
   --chart-point-stroke: var(--color-surface-card);
   --chart-tooltip-bg: var(--color-surface-elevated);
+
+  --chart-series-1: #56b4e9;
+  --chart-series-2: #e69f00;
+  --chart-series-3: #009e73;
+  --chart-series-4: #cc79a7;
+  --chart-series-5: #0072b2;
+  --chart-series-6: #d55e00;
+  --chart-series-7: #aea9f0;
+  --chart-series-8: #ee99aa;
+  --chart-series-pattern-ink: rgba(255, 255, 255, 0.28);
+
+  --delta-positive-bg: rgba(52, 211, 153, 0.16);
+  --delta-positive-text: #6ee7b7;
+  --delta-negative-bg: rgba(251, 113, 133, 0.16);
+  --delta-negative-text: #fda4af;
+  --delta-neutral-bg: rgba(148, 163, 184, 0.16);
+  --delta-neutral-text: #94a3b8;
 
   --sidebar-bg: #0f172a;
   --sidebar-item-color: #94a3b8;

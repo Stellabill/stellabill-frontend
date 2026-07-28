@@ -1,5 +1,5 @@
 import { Navigate, Routes, Route } from 'react-router-dom'
-import Layout from './components/Layout'
+import TransitionLayout from './components/TransitionLayout'
 import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
 import SubscriptionDetail from './pages/SubscriptionDetail' // Fixed: Added missing import
@@ -36,7 +36,7 @@ function App() {
       <Route path="/onboarding-success" element={<OnboardingSuccess />} />
 
       {/* 2. Authenticated Routes (Wrapped in Layout) */}
-      <Route element={<Layout />}>
+        <Route element={<TransitionLayout />}>
         {/* Redirect base dashboard path to specific dashboard component if needed */}
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/browse-plans" element={<BrowsePlans />} />
