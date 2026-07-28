@@ -55,11 +55,34 @@
       "noSubscriptions": "No subscriptions yet",
       "noSubscriptionsDesc": "You haven't subscribed to any plans yet. Browse available plans to get started with Stellabill."
     },
-    "pluralTest": "{count, plural, =0 {No active subscriptions} one {1 active subscription} other {{count} active subscriptions}}"
+    "pluralTest": "{count, plural, =0 {No active subscriptions} one {1 active subscription} other {{count} active subscriptions}}",
+    "subscriptionCount": "{count, plural, =0 {No subscriptions} one {1 subscription} other {{count} subscriptions}}",
+    "tabCount": "{label} ({count})",
+    "tabAriaLabel": "{count, plural, one {Show {label} subscriptions (1)} other {Show {label} subscriptions ({count})}}"
   },
   "aria": {
     "loadingSubscriptions": "Loading subscriptions",
     "filterByStatus": "Filter subscriptions by status",
     "subscriptionsList": "Subscriptions list"
+  },
+  "notifications": {
+    "unreadCount": "{count, plural, =0 {No unread notifications} one {1 unread notification} other {{count} unread notifications}}",
+    "billingAlerts": "Billing alerts",
+    "title": "Notifications",
+    "toolbar": "{count, plural, =0 {No alerts} one {1 unread} other {{count} unread}}",
+    "toolbarAllRead": "All caught up",
+    "markAllRead": "Mark all read",
+    "triggerLabel": "{count, plural, =0 {Open billing notifications} one {Open billing notifications, 1 unread} other {Open billing notifications, {count} unread}}",
+    "liveRegion": "{count, plural, =0 {All billing notifications are read} one {1 unread billing notification} other {{count} unread billing notifications}}",
+    "emptyTitle": "No billing alerts",
+    "emptyDescription": "Failed charges, low balances, and plan changes will appear here.",
+    "allReadTitle": "All caught up",
+    "allReadDescription": "There are no unread billing events right now."
+  },
+  "icu": {
+    "pluralExample": "{count, plural, =0 {No items} one {1 item} other {{count} items}}",
+    "selectExample": "{gender, select, male {He liked} female {She liked} other {They liked}} your post",
+    "selectOrdinalExample": "You finished {rank, selectordinal, one {{rank}st} two {{rank}nd} few {{rank}rd} other {{rank}th}}",
+    "combinedExample": "{gender, select, male {He has} female {She has} other {They have}} {count, plural, one {1 invoice} other {{count} invoices}}"
   }
 }
