@@ -1,0 +1,150 @@
+.invoice-list {
+  width: 100%;
+}
+
+.invoice-list__print-header {
+  display: none;
+}
+
+.invoice-list__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.invoice-list__subtitle {
+  margin: 0.25rem 0 0;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.invoice-list__meta {
+  margin: 0;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.invoice-list__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.invoice-list__table {
+  border-collapse: collapse;
+}
+
+.invoice-list__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
+.invoice-list__status--paid {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.invoice-list__status--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.invoice-list__status--failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.invoice-list__download {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .invoice-list {
+    color: #000000;
+  }
+
+  .invoice-list__print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #000000;
+  }
+
+  .invoice-list__title,
+  .invoice-list__subtitle,
+  .invoice-list__meta {
+    color: #000000;
+  }
+
+  .invoice-list__desktop,
+  .invoice-list__mobile {
+    display: block !important;
+  }
+
+  .invoice-list__mobile {
+    display: none !important;
+  }
+
+  .invoice-list__table {
+    width: 100%;
+    border: 1px solid #000000;
+  }
+
+  .invoice-list__table th,
+  .invoice-list__table td {
+    padding: 0.5rem 0.4rem;
+    border: 1px solid #000000;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .invoice-list__table thead {
+    display: table-header-group;
+  }
+
+  .invoice-list__table tbody tr {
+    page-break-inside: avoid;
+  }
+
+  .invoice-list__status {
+    background: transparent !important;
+    color: #000000 !important;
+    border: 1px solid #000000;
+    padding-inline: 0.5rem;
+  }
+
+  .invoice-list__download {
+    display: none !important;
+  }
+
+  .md\:block,
+  .md\:hidden {
+    display: block !important;
+  }
+}
