@@ -116,34 +116,34 @@ function SkeletonTable() {
 		<div className="subs-loading-wrapper" aria-busy="true" aria-label="Loading subscriptions" role="status">
 			<table className="subs-table" aria-label="Loading subscriptions">
 				<thead>
-					<tr>
-						<th scope="col">Plan</th>
-						<th scope="col">Status</th>
-						<th scope="col">Price</th>
-						<th scope="col">Next Charge</th>
-						<th scope="col">Prepaid Balance</th>
-						<th scope="col">Actions</th>
-					</tr>
+				<tr>
+					<th scope="col">Plan</th>
+					<th scope="col">Status</th>
+					<th scope="col">Price</th>
+					<th scope="col">Next Charge</th>
+					<th scope="col">Prepaid Balance</th>
+					<th scope="col">Actions</th>
+				</tr>
 				</thead>
 				<tbody>
-					{Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-						<tr key={i} className="skeleton-row" aria-hidden="true">
-							<td>
-								<div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-									<div className="skeleton skeleton-icon" />
-									<div>
-										<div className="skeleton skeleton-cell" style={{ width: "120px", marginBottom: "6px" }} />
-										<div className="skeleton skeleton-cell" style={{ width: "80px" }} />
-									</div>
+				{Array.from({ length: SKELETON_ROWS }).map((_, i) => (
+					<tr key={i} className="skeleton-row" aria-hidden="true">
+						<td>
+							<div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+								<div className="skeleton skeleton-icon" />
+								<div>
+									<div className="skeleton skeleton-cell" style={{ width: "120px", marginBottom: "6px" }} />
+									<div className="skeleton skeleton-cell" style={{ width: "80px" }} />
 								</div>
-							</td>
-							<td><div className="skeleton skeleton-badge" /></td>
-							<td><div className="skeleton skeleton-cell" style={{ width: "80px" }} /></td>
-							<td><div className="skeleton skeleton-cell" style={{ width: "100px" }} /></td>
-							<td><div className="skeleton skeleton-cell" style={{ width: "80px" }} /></td>
-							<td><div className="skeleton skeleton-cell" style={{ width: "60px" }} /></td>
-						</tr>
-					))}
+							</div>
+						</td>
+						<td><div className="skeleton skeleton-badge" /></td>
+						<td><div className="skeleton skeleton-cell" style={{ width: "80px" }} /></td>
+						<td><div className="skeleton skeleton-cell" style={{ width: "100px" }} /></td>
+						<td><div className="skeleton skeleton-cell" style={{ width: "80px" }} /></td>
+						<td><div className="skeleton skeleton-cell" style={{ width: "60px" }} /></td>
+					</tr>
+				))}
 				</tbody>
 			</table>
 		</div>
@@ -292,12 +292,13 @@ export default function Subscriptions() {
 				} else {
 					setData(INITIAL_DATA);
 				}
+
+				setLoading(false);
 			} catch (err: unknown) {
 				setError(err as Error);
-			} finally {
 				setLoading(false);
 			}
-		}, 0);
+		});
 	}, []);
 
 	useEffect(() => {
@@ -641,109 +642,109 @@ export default function Subscriptions() {
 							aria-label={t('subscriptions.pageTitle')}
 							data-testid="subscriptions-table">
 							<thead>
-								<tr>
-									<th scope="col">{t('subscriptions.table.plan')}</th>
-									<th scope="col">{t('subscriptions.table.status')}</th>
-									<th scope="col">{t('subscriptions.table.price')}</th>
-									<th scope="col">{t('subscriptions.table.nextCharge')}</th>
-									<th scope="col">{t('subscriptions.table.prepaidBalance')}</th>
-									<th scope="col">
-										<span className="visually-hidden">{t('subscriptions.table.actions')}</span>
-									</th>
-								</tr>
+							<tr>
+								<th scope="col">{t('subscriptions.table.plan')}</th>
+								<th scope="col">{t('subscriptions.table.status')}</th>
+								<th scope="col">{t('subscriptions.table.price')}</th>
+								<th scope="col">{t('subscriptions.table.nextCharge')}</th>
+								<th scope="col">{t('subscriptions.table.prepaidBalance')}</th>
+								<th scope="col">
+									<span className="visually-hidden">{t('subscriptions.table.actions')}</span>
+								</th>
+							</tr>
 							</thead>
 							<tbody>
-								{filteredData.map((sub) => (
-									<tr
-										key={sub.id}
-										tabIndex={0}
-										aria-label={`${sub.planName} by ${sub.merchantName}, ${sub.status}`}
-										onKeyDown={(e) => {
-											if (e.key === "Enter" || e.key === " ") {
-												e.preventDefault();
-												setSelectedId(sub.id);
-											}
-										}}
-										onClick={() => setSelectedId(sub.id)}
-										role="button">
-										{/* Plan cell */}
-										<td>
-											<div className="subs-table__plan-cell">
-												<div className="subs-table__plan-icon" aria-hidden="true">
-													{sub.icon}
-												</div>
-												<div>
-													<div className="subs-table__plan-name">{sub.planName}</div>
-													<div className="subs-table__merchant">{sub.merchantName}</div>
-												</div>
+							{filteredData.map((sub) => (
+								<tr
+									key={sub.id}
+									tabIndex={0}
+									aria-label={`${sub.planName} by ${sub.merchantName}, ${sub.status}`}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" || e.key === " ") {
+											e.preventDefault();
+											setSelectedId(sub.id);
+										}
+									}}
+									onClick={() => setSelectedId(sub.id)}
+									role="button">
+									{/* Plan cell */}
+									<td>
+										<div className="subs-table__plan-cell">
+											<div className="subs-table__plan-icon" aria-hidden="true">
+												{sub.icon}
 											</div>
-										</td>
+											<div>
+												<div className="subs-table__plan-name">{sub.planName}</div>
+												<div className="subs-table__merchant">{sub.merchantName}</div>
+											</div>
+										</div>
+									</td>
 
-										{/* Status */}
-										<td>
-											<StatusBadge status={sub.status as StatusType} />
-										</td>
+									{/* Status */}
+									<td>
+										<StatusBadge status={sub.status as StatusType} />
+									</td>
 
-										{/* Price */}
-										<td>
+									{/* Price */}
+									<td>
 											<span className="subs-table__price">
 												{sub.price} {sub.currency}
 												<span className="subs-table__price-interval">/ {sub.interval}</span>
 											</span>
-										</td>
+									</td>
 
-										{/* Tags */}
-										<td>
-											<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-												{sub.tags?.slice(0, 2).map((tag) => (
-													<Tag
-														key={tag.id}
-														label={tag.label}
-														color={tag.color}
-														size="small"
-													/>
-												))}
-												{sub.tags && sub.tags.length > 2 && (
-													<span style={{ fontSize: 'var(--text-xs)', color: '#64748b' }}>
+									{/* Tags */}
+									<td>
+										<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+											{sub.tags?.slice(0, 2).map((tag) => (
+												<Tag
+													key={tag.id}
+													label={tag.label}
+													color={tag.color}
+													size="small"
+												/>
+											))}
+											{sub.tags && sub.tags.length > 2 && (
+												<span style={{ fontSize: 'var(--text-xs)', color: '#64748b' }}>
 														+{sub.tags.length - 2}
 													</span>
-												)}
-											</div>
-										</td>
+											)}
+										</div>
+									</td>
 
-										{/* Next charge */}
-										<td>
+									{/* Next charge */}
+									<td>
 											<span className="subs-table__meta-cell">
 												<IconCalendar />
 												{sub.nextCharge}
 											</span>
-										</td>
+									</td>
 
-										{/* Prepaid balance */}
-										<td>
+									{/* Prepaid balance */}
+									<td>
 											<span className="subs-table__meta-cell">
 												<IconWallet />
 												{sub.prepaidBalance}
 											</span>
-										</td>
+									</td>
 
-										{/* Actions */}
-										<td>
-											<div className="subs-table__actions" onClick={(e) => e.stopPropagation()}>
-												<button
-													className="subs-table__btn subs-table__btn--primary"
-													id={`manage-btn-${sub.id}`}
-													onClick={(e) => {
-														e.stopPropagation();
-														setSelectedId(sub.id);
-													}}
-													aria-label={`Manage ${sub.planName}`}>
-													{t('subscriptions.table.manage')}
-												</button>
-											</div>
-										</td>
-									</tr>
-								))}
+									{/* Actions */}
+									<td>
+										<div className="subs-table__actions" onClick={(e) => e.stopPropagation()}>
+											<button
+												className="subs-table__btn subs-table__btn--primary"
+												id={`manage-btn-${sub.id}`}
+												onClick={(e) => {
+													e.stopPropagation();
+													setSelectedId(sub.id);
+												}}
+												aria-label={`Manage ${sub.planName}`}>
+												{t('subscriptions.table.manage')}
+											</button>
+										</div>
+									</td>
+								</tr>
+							))}
 							</tbody>
 						</table>
 					</div>
