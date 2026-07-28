@@ -8,6 +8,10 @@ vi.mock('../components/RevenueChart', () => ({
   default: () => <div data-testid="revenue-chart">Mock Chart</div>
 }));
 
+vi.mock('../components/Dashboard/RevenueSplitByPlanPanel', () => ({
+  default: () => <div data-testid="revenue-split-by-plan">Mock Revenue Split</div>
+}));
+
 // Mock Link from react-router-dom
 vi.mock('react-router-dom', async () => {
     const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -65,6 +69,7 @@ describe('Dashboard Page', () => {
 
     // Check for Chart
     expect(getByTestId('revenue-chart')).toBeInTheDocument();
+    expect(getByTestId('revenue-split-by-plan')).toBeInTheDocument();
   });
 
   it('renders action buttons with correct links', async () => {
