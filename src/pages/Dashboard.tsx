@@ -15,9 +15,19 @@ import RevenueChart from '../components/RevenueChart';
 import DashboardCard from '../components/Dashboard/DashboardCard';
 import ActivityList, { ActivityType } from '../components/Dashboard/ActivityList';
 import DashboardSkeleton from '../components/Dashboard/DashboardSkeleton';
+import RevenueSplitByPlanPanel from '../components/Dashboard/RevenueSplitByPlanPanel';
+import type { PlanRevenueSlice } from '../components/Dashboard/revenueSplitUtils';
 import ErrorState from '../components/ErrorState';
 import { ApiError } from '../api/client';
 import './Dashboard.css';
+
+/** Mock plan revenue until /api/merchant/revenue-by-plan is wired. */
+const MOCK_PLAN_REVENUE: PlanRevenueSlice[] = [
+  { planId: 'basic', planName: 'Basic', revenue: 8500, previousRevenue: 7800 },
+  { planId: 'pro', planName: 'Pro', revenue: 19200, previousRevenue: 17600 },
+  { planId: 'business', planName: 'Business', revenue: 9800, previousRevenue: 10200 },
+  { planId: 'enterprise', planName: 'Enterprise', revenue: 5000, previousRevenue: 4200 },
+];
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -29,22 +39,23 @@ export default function Dashboard() {
     setError(null);
 
     window.setTimeout(() => {
-      if (window.location.search.includes('simulate_error')) {
-        const err: ApiError = new Error('Failed to fetch dashboard metrics');
-        err.status = 500;
-        err.technicalDetails = 'The metrics service is currently unavailable. [Error Code: MET-500]';
-        setError(err);
-      } else if (window.location.search.includes('simulate_offline')) {
-        const err: ApiError = new Error('No internet connection');
-        err.isOffline = true;
-        setError(err);
+      try {
+        if (window.location.search.includes('simulate_error')) {
+          const err: ApiError = new Error('Failed to fetch dashboard metrics');
+          err.status = 500;
+          err.technicalDetails = 'The metrics service is currently unavailable. [Error Code: MET-500]';
+          setError(err);
+        } else if (window.location.search.includes('simulate_offline')) {
+          const err: ApiError = new Error('No internet connection');
+          err.isOffline = true;
+          setError(err);
+        }
+      } catch (err: unknown) {
+        setError(err as Error);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
-    } catch (err: unknown) {
-      setError(err as Error);
-      setLoading(false);
-    }
+    }, 1000);
   }, []);
 
   useEffect(() => {
@@ -204,6 +215,14 @@ export default function Dashboard() {
             See all activity
           </button>
         </div>
+      </div>
+
+      <div className="dashboard-revenue-split">
+        <RevenueSplitByPlanPanel
+          plans={MOCK_PLAN_REVENUE}
+          periodLabel="this month"
+          previousPeriodLabel="vs last month"
+        />
       </div>
     </div>
   );

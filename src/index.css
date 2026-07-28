@@ -34,9 +34,19 @@ textarea {
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-focus-ring);
+  outline: 3px solid var(--focus-ring, var(--color-focus-ring));
   outline-offset: 2px;
+  box-shadow: 0 0 0 1px transparent, 0 0 8px var(--focus-ring-halo, rgba(34, 211, 238, 0.35));
 }
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
 
 .blank-page {
   min-height: 100vh;

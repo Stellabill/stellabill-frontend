@@ -270,6 +270,256 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════
+   Quick-view popover
+   ═══════════════════════════════════════════════════ */
+.subscription-card {
+  position: relative;
+}
+
+.subscription-card--popover-open {
+  z-index: var(--z-dropdown);
+}
+
+.subscription-popover {
+  position: absolute;
+  min-width: 220px;
+  max-width: 280px;
+  background: var(--color-surface-elevated, #0f172a);
+  border: 1px solid var(--color-border-default, rgba(148, 163, 184, 0.28));
+  border-radius: var(--radius-lg, 0.75rem);
+  box-shadow: var(--shadow-lg, 0 16px 32px rgba(0, 0, 0, 0.4));
+  z-index: var(--z-dropdown, 100);
+  padding: 0;
+  animation: popover-fade-in 0.2s ease-out;
+}
+
+/* Position variants */
+.subscription-popover--bottom {
+  transform-origin: top center;
+}
+.subscription-popover--top {
+  transform-origin: bottom center;
+}
+.subscription-popover--right {
+  transform-origin: left center;
+}
+.subscription-popover--left {
+  transform-origin: right center;
+}
+
+/* Arrow indicator */
+.subscription-popover__arrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--color-surface-elevated, #0f172a);
+  border: 1px solid var(--color-border-default, rgba(148, 163, 184, 0.28));
+  transform: rotate(45deg);
+  z-index: -1;
+}
+
+.subscription-popover--bottom .subscription-popover__arrow {
+  top: -6px;
+  left: 24px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.subscription-popover--top .subscription-popover__arrow {
+  bottom: -6px;
+  left: 24px;
+  border-top: none;
+  border-left: none;
+}
+
+.subscription-popover--right .subscription-popover__arrow {
+  left: -6px;
+  top: 20px;
+  border-top: none;
+  border-right: none;
+}
+
+.subscription-popover--left .subscription-popover__arrow {
+  right: -6px;
+  top: 20px;
+  border-bottom: none;
+  border-left: none;
+}
+
+/* Popover body — key facts */
+.subscription-popover__body {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.subscription-popover__fact {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--radius-md, 0.5rem);
+  transition: background 0.15s ease;
+}
+
+.subscription-popover__fact:hover {
+  background: var(--color-surface-control-hover, rgba(148, 163, 184, 0.10));
+}
+
+.subscription-popover__fact-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.subscription-popover__fact-label {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-subtle, #64748b);
+  min-width: 72px;
+  font-weight: var(--font-medium, 500);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide, 0.025em);
+}
+
+.subscription-popover__fact-value {
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-text-primary, #f8fafc);
+  font-weight: var(--font-semibold, 600);
+  margin-left: auto;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+
+/* Status color in popover */
+.subscription-popover__status--active {
+  color: var(--color-success, #34d399);
+}
+
+.subscription-popover__status--paused {
+  color: var(--color-warning, #fbbf24);
+}
+
+.subscription-popover__status--cancelled {
+  color: var(--color-danger, #f87171);
+}
+
+/* Popover footer — View details CTA */
+.subscription-popover__footer {
+  border-top: 1px solid var(--color-border-subtle, rgba(148, 163, 184, 0.16));
+  padding: 0.5rem 0.75rem;
+}
+
+.subscription-popover__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-brand-gradient, linear-gradient(90deg, #22d3ee 0%, #2dd4bf 100%));
+  color: var(--color-brand-on, #02131a);
+  border-radius: var(--radius-md, 0.5rem);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--font-semibold, 600);
+  text-decoration: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.subscription-popover__cta:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.subscription-popover__cta:focus-visible {
+  outline: 2px solid var(--color-focus-ring, #22d3ee);
+  outline-offset: 2px;
+}
+
+.subscription-popover__cta-arrow {
+  transition: transform 0.2s ease;
+}
+
+.subscription-popover__cta:hover .subscription-popover__cta-arrow {
+  transform: translateX(3px);
+}
+
+/* ── Fade-in animation ── */
+@keyframes popover-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Reduced motion fallback ── */
+@media (prefers-reduced-motion: reduce) {
+  .subscription-popover {
+    animation: popover-fade-in-static 0.15s ease-out;
+  }
+
+  @keyframes popover-fade-in-static {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .subscription-popover__cta:hover {
+    transform: none;
+  }
+
+  .subscription-popover__cta:hover .subscription-popover__cta-arrow {
+    transform: none;
+  }
+}
+
+/* ── RTL support ── */
+[dir="rtl"] .subscription-popover__fact {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .subscription-popover__fact-value {
+  margin-left: 0;
+  margin-right: auto;
+  text-align: left;
+}
+
+[dir="rtl"] .subscription-popover--bottom .subscription-popover__arrow,
+[dir="rtl"] .subscription-popover--top .subscription-popover__arrow {
+  left: auto;
+  right: 24px;
+}
+
+[dir="rtl"] .subscription-popover__cta-arrow {
+  transform: rotate(180deg);
+}
+
+[dir="rtl"] .subscription-popover__cta:hover .subscription-popover__cta-arrow {
+  transform: rotate(180deg) translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [dir="rtl"] .subscription-popover__cta-arrow {
+    transform: rotate(180deg);
+  }
+
+  [dir="rtl"] .subscription-popover__cta:hover .subscription-popover__cta-arrow {
+    transform: rotate(180deg);
+  }
+}
+
 /* Loading and empty states */
 .subscriptions-empty {
   background: #1a1a1a;
