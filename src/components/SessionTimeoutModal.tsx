@@ -9,6 +9,45 @@ interface SessionTimeoutModalProps {
   onLogout: () => void;
 }
 
+const TOTAL_WARNING_SECONDS = 120;
+
+function usePrefersReducedMotion() {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      setPrefersReducedMotion(false);
+      return;
+    }
+
+    const mediaQueryList = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = () => setPrefersReducedMotion(Boolean(mediaQueryList?.matches));
+
+    updatePreference();
+    if (typeof mediaQueryList?.addEventListener === 'function') {
+      mediaQueryList.addEventListener('change', updatePreference);
+    }
+
+    return () => {
+      if (typeof mediaQueryList?.removeEventListener === 'function') {
+        mediaQueryList.removeEventListener('change', updatePreference);
+      }
+    };
+  }, []);
+
+  return prefersReducedMotion;
+}
+
+function getAnnouncementText(remainingSeconds: number) {
+  if (remainingSeconds <= 0) {
+    return 'Your session has expired.';
+  }
+
+  return remainingSeconds === 1
+    ? 'Your session will expire in 1 second.'
+    : `Your session will expire in ${remainingSeconds} seconds.`;
+}
+
 export default function SessionTimeoutModal({
   isOpen,
   remainingSeconds,
@@ -18,6 +57,7 @@ export default function SessionTimeoutModal({
   const modalRef = useRef<HTMLDivElement>(null);
   const initialFocusRef = useRef<HTMLButtonElement>(null);
   const [lastAnnouncedSeconds, setLastAnnouncedSeconds] = useState<number | null>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useModalFocus(modalRef, {
     isOpen,
@@ -25,24 +65,28 @@ export default function SessionTimeoutModal({
     initialFocusRef: initialFocusRef
   });
 
-  // Announce remaining time via aria-live every 30 seconds and at key milestones
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setLastAnnouncedSeconds(null);
+      return;
+    }
 
-    const milestones = [120, 90, 60, 30, 10, 5, 4, 3, 2, 1];
-    if (
-      remainingSeconds !== lastAnnouncedSeconds &&
-      (milestones.includes(remainingSeconds) || remainingSeconds % 30 === 0)
-    ) {
-      setLastAnnouncedSeconds(remainingSeconds);
+    const normalizedSeconds = Math.max(0, Math.min(remainingSeconds, TOTAL_WARNING_SECONDS));
+    const milestones = [TOTAL_WARNING_SECONDS, 90, 60, 30, 10, 5, 4, 3, 2, 1, 0];
+    const shouldAnnounce =
+      normalizedSeconds !== lastAnnouncedSeconds &&
+      (milestones.includes(normalizedSeconds) || normalizedSeconds % 30 === 0);
+
+    if (shouldAnnounce) {
+      setLastAnnouncedSeconds(normalizedSeconds);
     }
   }, [remainingSeconds, isOpen, lastAnnouncedSeconds]);
 
-  // Calculate progress for countdown ring
-  const totalWarningSeconds = 120; // 2 minutes warning
-  const progress = (remainingSeconds / totalWarningSeconds) * 100;
-  const circumference = 2 * Math.PI * 45; // r=45
+  const normalizedSeconds = Math.max(0, Math.min(remainingSeconds, TOTAL_WARNING_SECONDS));
+  const progress = (normalizedSeconds / TOTAL_WARNING_SECONDS) * 100;
+  const circumference = 2 * Math.PI * 42;
   const offset = circumference - (progress / 100) * circumference;
+  const countdownLabel = normalizedSeconds === 1 ? 'second' : 'seconds';
 
   if (!isOpen) return null;
 
@@ -56,56 +100,50 @@ export default function SessionTimeoutModal({
         aria-labelledby="session-timeout-title"
         aria-describedby="session-timeout-description"
       >
-        <div
-          className="session-timeout__live-region"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {lastAnnouncedSeconds !== null && (
-            <span>
-              {lastAnnouncedSeconds === 1
-                ? 'Your session will expire in 1 second.'
-                : `Your session will expire in ${lastAnnouncedSeconds} seconds.`}
-            </span>
-          )}
+        <div className="session-timeout__live-region" aria-live="polite" aria-atomic="true">
+          {lastAnnouncedSeconds !== null && <span>{getAnnouncementText(lastAnnouncedSeconds)}</span>}
         </div>
 
         <div className="session-timeout__content">
-          <div className="session-timeout__countdown">
-            <svg viewBox="0 0 100 100" aria-hidden="true">
-              <defs>
-                <linearGradient id="countdown-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#00CCFF" />
-                  <stop offset="100%" stopColor="#67d5f0" />
-                </linearGradient>
-              </defs>
-              <circle
-                className="session-timeout__countdown-bg"
-                cx="50"
-                cy="50"
-                r="45"
-                fill="none"
-                strokeWidth="8"
-              />
-              <circle
-                className="session-timeout__countdown-progress"
-                cx="50"
-                cy="50"
-                r="45"
-                fill="none"
-                strokeWidth="8"
-                strokeLinecap="round"
-                style={{
-                  strokeDasharray: `${circumference} ${circumference}`,
-                  strokeDashoffset: offset
-                }}
-              />
-            </svg>
+          <div className="session-timeout__countdown" data-reduced-motion={prefersReducedMotion ? 'true' : 'false'}>
+            {!prefersReducedMotion ? (
+              <svg viewBox="0 0 100 100" aria-hidden="true">
+                <defs>
+                  <linearGradient id="countdown-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#067d99" />
+                    <stop offset="100%" stopColor="#67d5f0" />
+                  </linearGradient>
+                </defs>
+                <circle
+                  className="session-timeout__countdown-bg"
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  fill="none"
+                  strokeWidth="8"
+                />
+                <circle
+                  className="session-timeout__countdown-progress"
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  fill="none"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  style={{
+                    strokeDasharray: `${circumference} ${circumference}`,
+                    strokeDashoffset: offset
+                  }}
+                />
+              </svg>
+            ) : (
+              <div className="session-timeout__countdown-plain" aria-hidden="true">
+                <span className="session-timeout__countdown-seconds">{normalizedSeconds}</span>
+              </div>
+            )}
             <div className="session-timeout__countdown-text">
-              <span className="session-timeout__countdown-seconds">
-                {remainingSeconds}
-              </span>
-              <span className="session-timeout__countdown-label">seconds</span>
+              <span className="session-timeout__countdown-seconds">{normalizedSeconds}</span>
+              <span className="session-timeout__countdown-label">{countdownLabel}</span>
             </div>
           </div>
 
@@ -114,23 +152,20 @@ export default function SessionTimeoutModal({
               Your session is about to expire
             </h2>
             <p id="session-timeout-description" className="session-timeout__description">
-              You'll be logged out automatically if there's no activity.
-              Continue to stay signed in and keep your work.
+              If you remain inactive, we’ll sign you out automatically and any unsaved work could be lost.
             </p>
           </div>
 
           <div className="session-timeout__actions">
             <button
+              type="button"
               className="session-timeout__btn session-timeout__btn--stay"
               onClick={onStaySignedIn}
               ref={initialFocusRef}
             >
               Stay signed in
             </button>
-            <button
-              className="session-timeout__btn session-timeout__btn--logout"
-              onClick={onLogout}
-            >
+            <button type="button" className="session-timeout__btn session-timeout__btn--logout" onClick={onLogout}>
               Log out now
             </button>
           </div>

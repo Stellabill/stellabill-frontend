@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
+import { PricingModeInput, type PricingMode } from './common/PricingModeInput'
 
 export type PlanInterval = 'Monthly' | 'Yearly'
 
 export interface PricingSectionValue {
   price: string
   interval: '' | PlanInterval
+  priceType: PricingMode
 }
 
 export interface PricingSectionProps {
@@ -40,6 +42,8 @@ export function validatePricing(value: PricingSectionValue): { priceError?: stri
     errors.priceError = 'Price is required'
   } else if (Number.isNaN(num) || num < 0) {
     errors.priceError = 'Price must be a valid number ≥ 0'
+  } else if (value.priceType === 'percent' && num > 100) {
+    errors.priceError = 'Percent values cannot exceed 100%'
   }
   if (!value.interval) {
     errors.intervalError = 'Billing interval is required'
@@ -87,56 +91,22 @@ export default function PricingSection({ value, onChange, priceError, intervalEr
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <label htmlFor="pricing-price" style={labelStyle}>
-            Price <span style={{ color: '#f00' }}>*</span>
-          </label>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'stretch',
-              background: '#192222',
-              border: `1px solid ${priceError ? '#dc2626' : '#2a2a2a'}`,
-              borderRadius: '8px',
-              overflow: 'hidden',
-              borderLeft: 'none'
-            }}
-          >
-            <input
-              id="pricing-price"
-              type="text"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={value.price}
-              onChange={handlePriceChange}
-              required
-              aria-required="true"
-              aria-invalid={!!priceError}
-              aria-describedby={priceError ? 'pricing-price-error' : undefined}
-              style={{
-                ...inputBaseStyle,
-                border: 'none',
-                flex: 1,
-                minWidth: 0,
-              }}
-            />
-            <span
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '0 1rem',
-                color: '#e2e8f0',
-                fontSize: '0.875rem',
-                background: '#1a1a1a',
-              }}
-            >
-              USDC
-            </span>
-          </div>
-          {priceError && (
-            <p id="pricing-price-error" style={{ color: '#dc2626', fontSize: '0.75rem', marginTop: '0.375rem' }}>
-              {priceError}
-            </p>
-          )}
+          <PricingModeInput
+            label="Price"
+            id="pricing-price"
+            value={value.price}
+            mode={value.priceType}
+            error={priceError}
+            helperText={
+              value.priceType === 'percent'
+                ? value.price === '0'
+                  ? '0% keeps the plan price unchanged.'
+                  : 'Enter a discount percentage between 0% and 100%.'
+                : 'Enter a fixed amount in USDC. Use 0 for a free plan.'
+            }
+            onChange={handlePriceChange}
+            onModeChange={(priceType) => onChange({ ...value, priceType })}
+          />
         </div>
         <div style={{ minWidth: 0 }}>
           <label htmlFor="pricing-interval" style={labelStyle}>
