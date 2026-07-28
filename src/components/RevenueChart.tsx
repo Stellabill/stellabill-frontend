@@ -8,9 +8,18 @@ export interface DataPoint {
   revenue: number;
 }
 
+export interface SeriesData {
+  id: string;
+  name: string;
+  data: DataPoint[];
+  color: string;
+  visible: boolean;
+}
+
 export interface RevenueChartProps {
   initialTimeRange?: TimeRange;
   data?: DataPoint[];
+  series?: SeriesData[];
   ariaLabel?: string;
 }
 
@@ -37,12 +46,49 @@ function generateMockData(days: number): DataPoint[] {
   return data;
 }
 
+// Mock series generator
+function generateMockSeries(days: number): SeriesData[] {
+  const baseData = generateMockData(days);
+  
+  return [
+    {
+      id: 'revenue',
+      name: 'Total Revenue',
+      color: 'var(--chart-series-1)',
+      visible: true,
+      data: baseData
+    },
+    {
+      id: 'subscriptions',
+      name: 'Subscriptions',
+      color: 'var(--chart-series-2)', 
+      visible: true,
+      data: baseData.map(d => ({
+        ...d,
+        revenue: Math.round(d.revenue * 0.7 + Math.random() * 100 - 50)
+      }))
+    },
+    {
+      id: 'oneTime',
+      name: 'One-time Payments',
+      color: 'var(--chart-series-3)',
+      visible: true,
+      data: baseData.map(d => ({
+        ...d,
+        revenue: Math.round(d.revenue * 0.3 + Math.random() * 150 - 75)
+      }))
+    }
+  ];
+}
+
 export default function RevenueChart({
   initialTimeRange = '30D',
   data: customData,
+  series: customSeries,
   ariaLabel = 'Revenue over time'
 }: RevenueChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>(initialTimeRange);
+  const [seriesVisibility, setSeriesVisibility] = useState<Record<string, boolean>>({});
   
   const data = useMemo(() => {
     if (customData) return customData;
@@ -50,21 +96,38 @@ export default function RevenueChart({
     return generateMockData(days);
   }, [timeRange, customData]);
 
+  const series = useMemo(() => {
+    if (customSeries) return customSeries;
+    const days = timeRange === '7D' ? 7 : timeRange === '30D' ? 30 : 90;
+    return generateMockSeries(days);
+  }, [timeRange, customSeries]);
+
+  // Apply visibility state to series
+  const visibleSeries = useMemo(() => {
+    return series.map(s => ({
+      ...s,
+      visible: seriesVisibility[s.id] !== undefined ? seriesVisibility[s.id] : s.visible
+    }));
+  }, [series, seriesVisibility]);
+
+  const toggleSeriesVisibility = (seriesId: string) => {
+    setSeriesVisibility(prev => ({
+      ...prev,
+      [seriesId]: prev[seriesId] !== undefined ? !prev[seriesId] : !series.find(s => s.id === seriesId)?.visible
+    }));
+  };
+
   // Dataset summary statistics for screen readers
   const summary = useMemo(() => {
-    if (!data.length) return 'No revenue data available.';
-    const revenues = data.map(d => d.revenue);
-    const maxRev = Math.max(...revenues);
-    const minRev = Math.min(...revenues);
-    const totalRev = revenues.reduce((a, b) => a + b, 0);
-    const avgRev = Math.round(totalRev / data.length);
+    const activeSeries = visibleSeries.filter(s => s.visible);
+    if (!data.length || !activeSeries.length) return 'No revenue data available.';
+    
     const startDate = data[0].date;
     const endDate = data[data.length - 1].date;
-    const maxPoint = data.find(d => d.revenue === maxRev);
-    const minPoint = data.find(d => d.revenue === minRev);
-
-    return `Revenue chart summary from ${startDate} to ${endDate}: ${data.length} total data points. Highest revenue is $${maxRev.toLocaleString()} on ${maxPoint?.date}, lowest revenue is $${minRev.toLocaleString()} on ${minPoint?.date}. Average revenue is $${avgRev.toLocaleString()}. Use Left and Right arrow keys to explore individual data points. Press Escape to dismiss tooltip.`;
-  }, [data]);
+    const seriesNames = activeSeries.map(s => s.name).join(', ');
+    
+    return `Revenue chart summary from ${startDate} to ${endDate}: ${data.length} data points showing ${seriesNames}. Use Left and Right arrow keys to explore individual data points. Press Escape to dismiss tooltip.`;
+  }, [data, visibleSeries]);
   
   return (
     <div className="revenue-chart-container" role="region" aria-label={ariaLabel}>
@@ -87,27 +150,176 @@ export default function RevenueChart({
           ))}
         </div>
       </div>
-      <LineChart data={data} />
+      <InteractiveLegend 
+        series={visibleSeries}
+        onToggleSeries={toggleSeriesVisibility}
+      />
+      <LineChart data={data} series={visibleSeries} />
+    </div>
+  );
+}
+
+interface InteractiveLegendProps {
+  series: SeriesData[];
+  onToggleSeries: (seriesId: string) => void;
+}
+
+function InteractiveLegend({ series, onToggleSeries }: InteractiveLegendProps) {
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const [announcement, setAnnouncement] = useState<string>('');
+  const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Reset refs array when series length changes
+  useEffect(() => {
+    chipRefs.current = chipRefs.current.slice(0, series.length);
+  }, [series.length]);
+
+  const handleToggle = (seriesId: string, seriesName: string, isVisible: boolean) => {
+    onToggleSeries(seriesId);
+    const newState = isVisible ? 'hidden' : 'shown';
+    setAnnouncement(`${seriesName} series ${newState}`);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (series.length === 0) return;
+
+    let nextIndex: number | null = null;
+
+    switch (e.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        nextIndex = Math.min(series.length - 1, index + 1);
+        break;
+      case 'ArrowLeft': 
+      case 'ArrowUp':
+        nextIndex = Math.max(0, index - 1);
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = series.length - 1;
+        break;
+      case ' ':
+      case 'Enter': {
+        e.preventDefault();
+        const currentSeries = series[index];
+        handleToggle(currentSeries.id, currentSeries.name, currentSeries.visible);
+        return;
+      }
+      default:
+        return;
+    }
+
+    if (nextIndex !== null && nextIndex !== index) {
+      e.preventDefault();
+      setFocusedIndex(nextIndex);
+      chipRefs.current[nextIndex]?.focus();
+    }
+  };
+
+  const visibleCount = series.filter(s => s.visible).length;
+  const allHidden = visibleCount === 0;
+
+  return (
+    <div className="legend-container">
+      {/* Live region for screen reader announcements */}
+      <div 
+        role="status" 
+        aria-live="polite" 
+        aria-atomic="true" 
+        className="sr-only"
+        data-testid="legend-live-region"
+      >
+        {announcement}
+      </div>
+      
+      <div 
+        className="legend-chips"
+        role="group" 
+        aria-label={`Chart legend with ${series.length} series`}
+      >
+        {series.map((seriesItem, index) => {
+          const isRovingTabTarget = focusedIndex !== null ? focusedIndex === index : index === 0;
+          const isVisible = seriesItem.visible;
+          const isOnlyVisible = isVisible && visibleCount === 1;
+          
+          return (
+            <button
+              key={seriesItem.id}
+              ref={(el) => { chipRefs.current[index] = el; }}
+              type="button"
+              className={`legend-chip ${isVisible ? 'legend-chip--visible' : 'legend-chip--hidden'} ${isOnlyVisible ? 'legend-chip--only-visible' : ''}`}
+              onClick={() => handleToggle(seriesItem.id, seriesItem.name, isVisible)}
+              onKeyDown={(e) => handleKeyDown(e, index)}
+              onFocus={() => setFocusedIndex(index)}
+              onBlur={() => {
+                // Only reset focus if moving outside the legend
+                setTimeout(() => {
+                  const newFocus = document.activeElement;
+                  if (!chipRefs.current.includes(newFocus as HTMLButtonElement)) {
+                    setFocusedIndex(null);
+                  }
+                }, 0);
+              }}
+              tabIndex={isRovingTabTarget ? 0 : -1}
+              aria-pressed={isVisible}
+              aria-describedby={isOnlyVisible ? 'legend-only-visible-hint' : undefined}
+              aria-label={`${seriesItem.name} series, ${isVisible ? 'visible' : 'hidden'}`}
+              disabled={isOnlyVisible}
+              style={{
+                '--series-color': seriesItem.color
+              } as React.CSSProperties}
+            >
+              <span 
+                className={`legend-chip__indicator ${isVisible ? 'legend-chip__indicator--visible' : 'legend-chip__indicator--hidden'}`}
+                aria-hidden="true"
+              />
+              <span className="legend-chip__label">
+                {seriesItem.name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      
+      {allHidden && (
+        <div className="legend-warning" role="alert">
+          All series are hidden. At least one series must be visible.
+        </div>
+      )}
+      
+      <div id="legend-only-visible-hint" className="sr-only">
+        This is the only visible series and cannot be hidden. Show another series first to hide this one.
+      </div>
     </div>
   );
 }
 
 interface LineChartProps {
   data: DataPoint[];
+  series: SeriesData[];
 }
 
-export function LineChart({ data }: LineChartProps) {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+export function LineChart({ data, series }: LineChartProps) {
+  const [hoveredPoint, setHoveredPoint] = useState<{ seriesId: string; index: number } | null>(null);
+  const [focusedPoint, setFocusedPoint] = useState<{ seriesId: string; index: number } | null>(null);
   const [announcement, setAnnouncement] = useState<string>('');
   
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const pointRefs = useRef<(SVGCircleElement | null)[]>([]);
+  const pointRefs = useRef<Map<string, (SVGCircleElement | null)[]>>(new Map());
 
-  // Reset refs array when data length changes
+  const visibleSeries = series.filter(s => s.visible);
+  const allSeries = series;
+
+  // Reset refs when data or series changes (track refs for ALL series)
   useEffect(() => {
-    pointRefs.current = pointRefs.current.slice(0, data.length);
-  }, [data.length]);
+    const newMap = new Map();
+    allSeries.forEach(s => {
+      newMap.set(s.id, new Array(data.length).fill(null));
+    });
+    pointRefs.current = newMap;
+  }, [data.length, allSeries]);
 
   // Chart dimensions
   const width = 800;
@@ -116,60 +328,75 @@ export function LineChart({ data }: LineChartProps) {
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
   
-  // Calculate scales
-  const maxRevenue = data.length > 0 ? Math.max(...data.map(d => d.revenue)) : 100;
-  const yMax = Math.max(400, Math.ceil(maxRevenue / 400) * 400); // Round up to nearest 400
+  // Calculate scales across ALL series (including hidden) for stable y-axis
+  const maxRevenue = useMemo(() => {
+    if (!allSeries.length || !data.length) return 100;
+    const allValues = allSeries.flatMap(s => s.data.map(d => d.revenue));
+    return Math.max(...allValues);
+  }, [allSeries, data]);
+  
+  const yMax = Math.max(400, Math.ceil(maxRevenue / 400) * 400);
   const yTicks = 5;
   const yStep = yMax / (yTicks - 1);
   
-  // Calculate points
-  const points = useMemo(() => {
+  // Calculate points for each series (ALL series including hidden)
+  const seriesPoints = useMemo(() => {
     if (data.length === 0) return [];
-    if (data.length === 1) {
-      return [{
-        x: padding.left + chartWidth / 2,
-        y: padding.top + chartHeight - (data[0].revenue / yMax) * chartHeight,
-        ...data[0]
-      }];
-    }
-    return data.map((d, i) => {
-      const x = padding.left + (i / (data.length - 1)) * chartWidth;
-      const y = padding.top + chartHeight - (d.revenue / yMax) * chartHeight;
-      return { x, y, ...d };
+    
+    return allSeries.map(seriesItem => {
+      const points = data.map((_, i) => {
+        const seriesDataPoint = seriesItem.data[i];
+        if (!seriesDataPoint) return null;
+        
+        let x: number;
+        if (data.length === 1) {
+          x = padding.left + chartWidth / 2;
+        } else {
+          x = padding.left + (i / (data.length - 1)) * chartWidth;
+        }
+        const y = padding.top + chartHeight - (seriesDataPoint.revenue / yMax) * chartHeight;
+        
+        return { x, y, ...seriesDataPoint, seriesId: seriesItem.id, pointIndex: i };
+      }).filter(Boolean);
+      
+      return {
+        ...seriesItem,
+        points
+      };
     });
-  }, [data, yMax, chartWidth, chartHeight, padding.left, padding.top]);
+  }, [data, allSeries, yMax, chartWidth, chartHeight, padding.left, padding.top]);
 
-  // Active point index (keyboard focus takes precedence, fallback to hover)
-  const activeIndex = focusedIndex !== null ? focusedIndex : hoveredIndex;
+  // Active point (keyboard focus takes precedence, fallback to hover)
+  const activePoint = focusedPoint || hoveredPoint;
 
   // Announce active point changes via aria-live
   useEffect(() => {
-    if (focusedIndex !== null && points[focusedIndex]) {
-      const point = points[focusedIndex];
-      let trendNotice = '';
-      if (focusedIndex > 0) {
-        const prevRevenue = points[focusedIndex - 1].revenue;
-        const diff = point.revenue - prevRevenue;
-        if (diff > 0) {
-          trendNotice = `, up $${diff.toLocaleString()} from previous`;
-        } else if (diff < 0) {
-          trendNotice = `, down $${Math.abs(diff).toLocaleString()} from previous`;
-        } else {
-          trendNotice = ', unchanged from previous';
+    if (focusedPoint && data[focusedPoint.index]) {
+      const seriesItem = visibleSeries.find(s => s.id === focusedPoint.seriesId);
+      const dataPoint = seriesItem?.data[focusedPoint.index];
+      if (seriesItem && dataPoint) {
+        let trendNotice = '';
+        if (focusedPoint.index > 0) {
+          const prevDataPoint = seriesItem.data[focusedPoint.index - 1];
+          if (prevDataPoint) {
+            const diff = dataPoint.revenue - prevDataPoint.revenue;
+            if (diff > 0) {
+              trendNotice = `, up $${diff.toLocaleString()} from previous`;
+            } else if (diff < 0) {
+              trendNotice = `, down $${Math.abs(diff).toLocaleString()} from previous`;
+            } else {
+              trendNotice = ', unchanged from previous';
+            }
+          }
         }
+        setAnnouncement(
+          `${seriesItem.name}: ${dataPoint.date}, $${dataPoint.revenue.toLocaleString()}${trendNotice}. Point ${focusedPoint.index + 1} of ${data.length}.`
+        );
       }
-      setAnnouncement(
-        `${point.date}: $${point.revenue.toLocaleString()}${trendNotice}. Data point ${focusedIndex + 1} of ${data.length}.`
-      );
     }
-  }, [focusedIndex, points, data.length]);
+  }, [focusedPoint, data, visibleSeries]);
   
-  // Create path
-  const pathData = points.map((p, i) => 
-    `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
-  ).join(' ');
-  
-  // X-axis labels (show subset based on data length)
+  // X-axis labels
   const xLabelIndices = useMemo(() => {
     if (data.length <= 7) return data.map((_, i) => i);
     if (data.length <= 30) {
@@ -178,76 +405,100 @@ export function LineChart({ data }: LineChartProps) {
     return data.map((_, i) => i).filter(i => i % 10 === 0 || i === data.length - 1);
   }, [data]);
 
-  // Keyboard navigation handler
-  const handleKeyDown = (e: KeyboardEvent<SVGCircleElement>, index: number) => {
+  // Keyboard navigation
+  const handleKeyDown = (e: KeyboardEvent<SVGCircleElement>, seriesId: string, pointIndex: number) => {
     if (data.length === 0) return;
 
-    // Detect RTL context
     const isRTL = svgRef.current?.closest('[dir="rtl"]') !== null || document.dir === 'rtl';
-
-    let nextIndex: number | null = null;
+    let nextPoint: { seriesId: string; index: number } | null = null;
 
     switch (e.key) {
       case 'ArrowRight':
-        nextIndex = isRTL ? Math.max(0, index - 1) : Math.min(data.length - 1, index + 1);
+        nextPoint = {
+          seriesId,
+          index: isRTL ? Math.max(0, pointIndex - 1) : Math.min(data.length - 1, pointIndex + 1)
+        };
         break;
       case 'ArrowLeft':
-        nextIndex = isRTL ? Math.min(data.length - 1, index + 1) : Math.max(0, index - 1);
+        nextPoint = {
+          seriesId,
+          index: isRTL ? Math.min(data.length - 1, pointIndex + 1) : Math.max(0, pointIndex - 1)
+        };
         break;
-      case 'ArrowUp':
-        nextIndex = Math.min(data.length - 1, index + 1);
+      case 'ArrowUp': {
+        const currentSeriesIndex = visibleSeries.findIndex(s => s.id === seriesId);
+        const nextSeriesIndex = Math.max(0, currentSeriesIndex - 1);
+        nextPoint = {
+          seriesId: visibleSeries[nextSeriesIndex].id,
+          index: pointIndex
+        };
         break;
-      case 'ArrowDown':
-        nextIndex = Math.max(0, index - 1);
+      }
+      case 'ArrowDown': {
+        const currentSeriesIndexDown = visibleSeries.findIndex(s => s.id === seriesId);
+        const nextSeriesIndexDown = Math.min(visibleSeries.length - 1, currentSeriesIndexDown + 1);
+        nextPoint = {
+          seriesId: visibleSeries[nextSeriesIndexDown].id,
+          index: pointIndex
+        };
         break;
+      }
       case 'Home':
-        nextIndex = 0;
+        nextPoint = { seriesId, index: 0 };
         break;
       case 'End':
-        nextIndex = data.length - 1;
+        nextPoint = { seriesId, index: data.length - 1 };
         break;
       case 'Escape':
         e.preventDefault();
-        setFocusedIndex(null);
-        pointRefs.current[index]?.blur();
+        setFocusedPoint(null);
+        pointRefs.current.get(seriesId)?.[pointIndex]?.blur();
         return;
       default:
         return;
     }
 
-    if (nextIndex !== null) {
+    if (nextPoint) {
       e.preventDefault();
-      setFocusedIndex(nextIndex);
-      if (nextIndex !== index) {
-        pointRefs.current[nextIndex]?.focus();
+      setFocusedPoint(nextPoint);
+      if (nextPoint.seriesId !== seriesId || nextPoint.index !== pointIndex) {
+        pointRefs.current.get(nextPoint.seriesId)?.[nextPoint.index]?.focus();
       }
     }
   };
 
-  // Tooltip position calculations (stable positioning, boundary awareness)
+  // Tooltip calculations
   const tooltipCoords = useMemo(() => {
-    if (activeIndex === null || !points[activeIndex]) return null;
-    const pt = points[activeIndex];
+    if (!activePoint || !data[activePoint.index]) return null;
     
-    const tooltipWidth = 100;
-    const tooltipHeight = 44;
+    const seriesItem = seriesPoints.find(s => s.id === activePoint.seriesId);
+    const point = seriesItem?.points.find(p => p.pointIndex === activePoint.index);
+    if (!point) return null;
     
-    let x = pt.x;
-    let y = pt.y - tooltipHeight - 12; // place above point by default
+    const tooltipWidth = 120;
+    const tooltipHeight = 60;
+    
+    let x = point.x;
+    let y = point.y - tooltipHeight - 12;
 
-    // Horizontal boundary clamping
+    // Boundary clamping
     const minX = padding.left + tooltipWidth / 2;
     const maxX = width - padding.right - tooltipWidth / 2;
     if (x < minX) x = minX;
     if (x > maxX) x = maxX;
 
-    // Vertical boundary flipping (if near top edge)
     if (y < padding.top) {
-      y = pt.y + 16; // place below point
+      y = point.y + 16;
     }
 
-    return { x, y, width: tooltipWidth, height: tooltipHeight, pointX: pt.x, pointY: pt.y };
-  }, [activeIndex, points, padding.left, padding.right, padding.top, width]);
+    return { 
+      x, y, width: tooltipWidth, height: tooltipHeight, 
+      pointX: point.x, pointY: point.y,
+      seriesName: seriesItem.name,
+      value: point.revenue,
+      date: point.date
+    };
+  }, [activePoint, seriesPoints, data, padding.left, padding.right, padding.top, width]);
   
   return (
     <div className="chart-wrapper">
@@ -267,11 +518,27 @@ export function LineChart({ data }: LineChartProps) {
         viewBox={`0 0 ${width} ${height}`} 
         className="line-chart"
         role="img"
-        aria-label="Revenue data visualization"
+        aria-label="Multi-series revenue data visualization"
         aria-describedby="revenue-chart-summary-desc"
       >
-        <title>Revenue over time</title>
-        <desc>Interactive line chart showing revenue trends over the selected time period. Navigate data points using arrow keys.</desc>
+        <title>Revenue over time - Multiple series</title>
+        <desc>Interactive multi-series line chart showing revenue trends. Navigate between series using up/down arrows and between data points using left/right arrows.</desc>
+        
+        {/* Patterns for hidden series — defined for ALL series so toggling works cleanly */}
+        <defs>
+          {allSeries.map(seriesItem => (
+            <pattern 
+              key={`pattern-${seriesItem.id}`}
+              id={`pattern-${seriesItem.id}`}
+              patternUnits="userSpaceOnUse" 
+              width="4" 
+              height="4"
+            >
+              <rect width="4" height="4" fill={seriesItem.color} opacity="0.2"/>
+              <path d="M0,4 L4,0 M-1,1 L1,-1 M3,5 L5,3" stroke="var(--chart-series-pattern-ink)" strokeWidth="0.5"/>
+            </pattern>
+          ))}
+        </defs>
         
         {/* Grid lines */}
         {Array.from({ length: yTicks }).map((_, i) => {
@@ -308,12 +575,15 @@ export function LineChart({ data }: LineChartProps) {
         
         {/* X-axis labels */}
         {xLabelIndices.map((i) => {
-          const point = points[i];
-          if (!point) return null;
+          if (!data[i]) return null;
+          const x = data.length === 1 
+            ? padding.left + chartWidth / 2
+            : padding.left + (i / (data.length - 1)) * chartWidth;
+            
           return (
             <text
               key={`x-label-${i}`}
-              x={point.x}
+              x={x}
               y={height - padding.bottom + 22}
               className="axis-label"
               textAnchor="middle"
@@ -323,70 +593,98 @@ export function LineChart({ data }: LineChartProps) {
           );
         })}
         
-        {/* Line */}
-        {points.length > 1 && (
-          <path
-            d={pathData}
-            className="revenue-line"
-            fill="none"
-          />
-        )}
+        {/* Lines for each series */}
+        {seriesPoints.map(seriesItem => {
+          if (seriesItem.points.length <= 1) return null;
+          
+          const pathData = seriesItem.points.map((p, i) => 
+            `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
+          ).join(' ');
+          
+          return (
+            <path
+              key={`line-${seriesItem.id}`}
+              d={pathData}
+              className={`revenue-line ${!seriesItem.visible ? 'revenue-line--hidden' : ''}`}
+              fill="none"
+              stroke={seriesItem.color}
+              style={{
+                strokeDasharray: !seriesItem.visible ? '5,5' : 'none',
+                opacity: !seriesItem.visible ? 0.5 : 1
+              }}
+            />
+          );
+        })}
 
-        {/* Drop Guide Line for Active Point */}
-        {activeIndex !== null && points[activeIndex] && (
+        {/* Drop guide line for active point */}
+        {activePoint && tooltipCoords && (
           <line
-            x1={points[activeIndex].x}
-            y1={points[activeIndex].y}
-            x2={points[activeIndex].x}
+            x1={tooltipCoords.pointX}
+            y1={tooltipCoords.pointY}
+            x2={tooltipCoords.pointX}
             y2={height - padding.bottom}
             className="active-drop-line"
           />
         )}
         
-        {/* Data points */}
-        {points.map((point, i) => {
-          const isActive = activeIndex === i;
-          const isFocused = focusedIndex === i;
-          const isRovingTabTarget = focusedIndex !== null ? isFocused : i === 0;
+        {/* Data points for each series (hidden series are non-interactive with pattern fill) */}
+        {seriesPoints.map(seriesItem =>
+          seriesItem.points.map((point, i) => {
+            const isVisible = seriesItem.visible;
+            const isActivePoint = isVisible && activePoint?.seriesId === seriesItem.id && activePoint?.index === point.pointIndex;
+            const isFocusedPoint = isVisible && focusedPoint?.seriesId === seriesItem.id && focusedPoint?.index === point.pointIndex;
+            
+            // Roving tabindex: only visible series participate. First point of first visible series
+            // is initial tab target; otherwise the focused point is tab target.
+            const isRovingTabTarget = isVisible && (focusedPoint 
+              ? isFocusedPoint 
+              : seriesItem.id === visibleSeries[0]?.id && i === 0);
 
-          return (
-            <g key={`point-group-${i}`} className="data-point-group">
-              {isActive && (
+            return (
+              <g 
+                key={`point-group-${seriesItem.id}-${i}`} 
+                className={`data-point-group ${!isVisible ? 'data-point-group--hidden' : ''}`}
+                style={!isVisible ? { pointerEvents: 'none' } : undefined}
+              >
+                {isActivePoint && (
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r={10}
+                    className="data-point-pulse"
+                    fill={seriesItem.color}
+                  />
+                )}
                 <circle
+                  ref={(el) => {
+                    const seriesRefs = pointRefs.current.get(seriesItem.id) || [];
+                    seriesRefs[i] = el;
+                    pointRefs.current.set(seriesItem.id, seriesRefs);
+                  }}
                   cx={point.x}
                   cy={point.y}
-                  r={10}
-                  className="data-point-pulse"
+                  r={isActivePoint ? 6 : 4}
+                  className={`data-point ${isActivePoint ? 'active' : ''} ${isFocusedPoint ? 'focused' : ''} ${!isVisible ? 'data-point--hidden' : ''}`}
+                  fill={isVisible ? seriesItem.color : `url(#pattern-${seriesItem.id})`}
+                  stroke={isVisible ? 'var(--chart-point-stroke)' : seriesItem.color}
+                  strokeWidth={isVisible ? 2 : 1}
+                  style={{ opacity: isVisible ? 1 : 0.55 }}
+                  onMouseEnter={isVisible ? () => setHoveredPoint({ seriesId: seriesItem.id, index: point.pointIndex }) : undefined}
+                  onMouseLeave={isVisible ? () => setHoveredPoint(null) : undefined}
+                  onFocus={isVisible ? () => setFocusedPoint({ seriesId: seriesItem.id, index: point.pointIndex }) : undefined}
+                  onKeyDown={isVisible ? (e) => handleKeyDown(e, seriesItem.id, point.pointIndex) : undefined}
+                  role={isVisible ? 'button' : undefined}
+                  tabIndex={isRovingTabTarget ? 0 : -1}
+                  aria-label={isVisible ? `${seriesItem.name}: ${point.date}, $${point.revenue.toLocaleString()} (Point ${point.pointIndex + 1} of ${data.length})` : undefined}
+                  aria-describedby={isActivePoint ? "chart-active-tooltip" : undefined}
                 />
-              )}
-              <circle
-                ref={(el) => { pointRefs.current[i] = el; }}
-                cx={point.x}
-                cy={point.y}
-                r={isActive ? 6 : 4}
-                className={`data-point ${isActive ? 'active' : ''} ${isFocused ? 'focused' : ''}`}
-                onMouseEnter={() => setHoveredIndex(i)}
-                onMouseLeave={() => setHoveredIndex(null)}
-                onFocus={() => setFocusedIndex(i)}
-                onBlur={(e) => {
-                  const relatedTarget = e.relatedTarget as Node | null;
-                  if (relatedTarget && svgRef.current?.contains(relatedTarget)) {
-                    return;
-                  }
-                }}
-                onKeyDown={(e) => handleKeyDown(e, i)}
-                role="button"
-                tabIndex={isRovingTabTarget ? 0 : -1}
-                aria-label={`${point.date}: $${point.revenue.toLocaleString()} (Point ${i + 1} of ${data.length})`}
-                aria-describedby={isActive ? "chart-active-tooltip" : undefined}
-                data-index={i}
-              />
-            </g>
-          );
-        })}
+              </g>
+            );
+          })
+        )}
         
-        {/* Tooltip Overlay */}
-        {activeIndex !== null && tooltipCoords && (
+        {/* Tooltip */}
+        {activePoint && tooltipCoords && (
           <g className="tooltip" id="chart-active-tooltip" role="tooltip">
             <filter id="tooltip-shadow" x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3" />
@@ -402,19 +700,27 @@ export function LineChart({ data }: LineChartProps) {
             />
             <text
               x={tooltipCoords.x}
-              y={tooltipCoords.y + 18}
-              className="tooltip-text"
+              y={tooltipCoords.y + 16}
+              className="tooltip-text tooltip-series"
               textAnchor="middle"
             >
-              ${points[activeIndex].revenue.toLocaleString()}
+              {tooltipCoords.seriesName}
             </text>
             <text
               x={tooltipCoords.x}
-              y={tooltipCoords.y + 34}
+              y={tooltipCoords.y + 32}
+              className="tooltip-text"
+              textAnchor="middle"
+            >
+              ${tooltipCoords.value.toLocaleString()}
+            </text>
+            <text
+              x={tooltipCoords.x}
+              y={tooltipCoords.y + 48}
               className="tooltip-date"
               textAnchor="middle"
             >
-              {data[activeIndex].date}
+              {tooltipCoords.date}
             </text>
           </g>
         )}

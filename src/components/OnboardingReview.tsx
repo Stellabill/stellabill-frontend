@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import OnboardingShell from './Onboarding/OnboardingShell';
 import './Onboarding/OnboardingShell.css';
@@ -7,6 +7,7 @@ export default function OnboardingReview() {
   const navigate = useNavigate();
   const [businessName, setBusinessName] = useState('');
   const [website, setWebsite] = useState('');
+  const [country, setCountry] = useState('');
   const [payoutAddress, setPayoutAddress] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -18,12 +19,15 @@ export default function OnboardingReview() {
         const businessData = JSON.parse(businessJson) as {
           businessName?: string;
           website?: string;
+          country?: string;
         };
         setBusinessName(businessData.businessName || '');
         setWebsite(businessData.website || '');
+        setCountry(businessData.country || '');
       } catch {
         setBusinessName('');
         setWebsite('');
+        setCountry('');
       }
     }
 
@@ -48,11 +52,32 @@ export default function OnboardingReview() {
     navigate('/onboarding-success');
   };
 
+  const displayNames = useMemo(() => {
+    try {
+      return new Intl.DisplayNames('en', { type: 'region' });
+    } catch {
+      return undefined;
+    }
+  }, []);
+
+  const countryLabel = useMemo(
+    () => (country ? displayNames?.of(country) ?? country : 'No country selected'),
+    [country, displayNames]
+  );
+
   const truncateAddress = (address: string) => {
     if (!address) return 'No payout address provided';
     if (address.length <= 18) return address;
     return `${address.slice(0, 10)}...${address.slice(-8)}`;
   };
+
+  const getCountryName = (code: string) => {
+    try {
+      return new Intl.DisplayNames(undefined, { type: 'region' }).of(code) ?? code
+    } catch {
+      return code
+    }
+  }
 
   return (
     <OnboardingShell
@@ -69,6 +94,11 @@ export default function OnboardingReview() {
       <div className="onboarding-field">
         <label className="onboarding-label">Website</label>
         <div className="onboarding-readonly">{website || 'No website provided'}</div>
+      </div>
+
+      <div className="onboarding-field">
+        <label className="onboarding-label">Country</label>
+        <div className="onboarding-readonly">{countryLabel}</div>
       </div>
 
       <div className="onboarding-field">
