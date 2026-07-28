@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { 
-  Users, 
-  TrendingUp, 
-  AlertCircle, 
-  Calendar, 
-  Plus, 
+import {
+  Users,
+  TrendingUp,
+  AlertCircle,
+  Calendar,
+  Plus,
   LayoutGrid,
   ExternalLink,
   ArrowRight
@@ -29,22 +29,24 @@ export default function Dashboard() {
     setError(null);
 
     window.setTimeout(() => {
-      if (window.location.search.includes('simulate_error')) {
-        const err: ApiError = new Error('Failed to fetch dashboard metrics');
-        err.status = 500;
-        err.technicalDetails = 'The metrics service is currently unavailable. [Error Code: MET-500]';
-        setError(err);
-      } else if (window.location.search.includes('simulate_offline')) {
-        const err: ApiError = new Error('No internet connection');
-        err.isOffline = true;
-        setError(err);
-      }
+      try {
+        if (window.location.search.includes('simulate_error')) {
+          const err: ApiError = new Error('Failed to fetch dashboard metrics');
+          err.status = 500;
+          err.technicalDetails = 'The metrics service is currently unavailable. [Error Code: MET-500]';
+          setError(err);
+        } else if (window.location.search.includes('simulate_offline')) {
+          const err: ApiError = new Error('No internet connection');
+          err.isOffline = true;
+          setError(err);
+        }
 
-      setLoading(false);
-    } catch (err: unknown) {
-      setError(err as Error);
-      setLoading(false);
-    }
+        setLoading(false);
+      } catch (err: unknown) {
+        setError(err as Error);
+        setLoading(false);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -57,16 +59,16 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="dashboard-error-shell">
-        <ErrorState 
-          title={t('dashboard.unavailable')}
-          message={error.message}
-          technicalDetails={error.technicalDetails}
-          onRetry={fetchDashboardData}
-          isRetrying={loading}
-          type={error.isOffline ? 'offline' : 'error'}
-        />
-      </div>
+        <div className="dashboard-error-shell">
+          <ErrorState
+              title={t('dashboard.unavailable')}
+              message={error.message}
+              technicalDetails={error.technicalDetails}
+              onRetry={fetchDashboardData}
+              isRetrying={loading}
+              type={error.isOffline ? 'offline' : 'error'}
+          />
+        </div>
     );
   }
 
@@ -111,100 +113,100 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="dashboard-page">
-      {/* Header */}
-      <header className="dashboard-header">
-        <div>
-          <div className="dashboard-heading-row">
-            <LayoutGrid size={20} aria-hidden="true" />
-            <h1>Dashboard Overview</h1>
+      <div className="dashboard-page">
+        {/* Header */}
+        <header className="dashboard-header">
+          <div>
+            <div className="dashboard-heading-row">
+              <LayoutGrid size={20} aria-hidden="true" />
+              <h1>Dashboard Overview</h1>
+            </div>
+            <p className="dashboard-description">
+              Monitor your subscription performance and growth metrics.
+            </p>
           </div>
-          <p className="dashboard-description">
-            Monitor your subscription performance and growth metrics.
-          </p>
-        </div>
-        <div className="dashboard-actions">
-          <Link
-            to="/plans"
-            className="dashboard-action dashboard-action--secondary"
-          >
-            <ExternalLink size={16} />
-            {t('dashboard.viewPlans')}
-          </Link>
-          <Link
-            to="/plans?create=true"
-            className="dashboard-action dashboard-action--primary"
-          >
-            <Plus size={16} />
-            {t('dashboard.createPlan')}
-          </Link>
-        </div>
-      </header>
-
-      {/* KPI Grid */}
-      <div className="dashboard-kpi-grid">
-        <DashboardCard
-          title={t('dashboard.kpis.activeSubscriptions')}
-          value="1,284"
-          change={12.5}
-          trend="up"
-          icon={<Users size={20} />}
-          helpText={t('dashboard.kpis.activeSubscriptionsHelp')}
-        />
-        <DashboardCard
-          title={t('dashboard.kpis.mrr')}
-          value="$42,500"
-          change={8.2}
-          trend="up"
-          icon={<TrendingUp size={20} />}
-          helpText={t('dashboard.kpis.mrrHelp')}
-        />
-        <DashboardCard
-          title={t('dashboard.kpis.failedCharges')}
-          value="12"
-          change={-4.1}
-          trend="down"
-          icon={<AlertCircle size={20} />}
-          helpText={t('dashboard.kpis.failedChargesHelp')}
-        />
-        <DashboardCard
-          title={t('dashboard.kpis.upcomingRenewals')}
-          value="48"
-          trend="neutral"
-          icon={<Calendar size={20} />}
-          helpText={t('dashboard.kpis.upcomingRenewalsHelp')}
-        />
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="dashboard-main-grid">
-        {/* Chart Section */}
-        <div className="dashboard-panel dashboard-panel--chart">
-          <div className="dashboard-panel__header">
-            <h2 className="dashboard-section-title">Revenue Growth</h2>
-            <Link to="/reports" className="dashboard-link">
-              View Detailed Report <ArrowRight size={12} />
+          <div className="dashboard-actions">
+            <Link
+                to="/plans"
+                className="dashboard-action dashboard-action--secondary"
+            >
+              <ExternalLink size={16} />
+              {t('dashboard.viewPlans')}
+            </Link>
+            <Link
+                to="/plans?create=true"
+                className="dashboard-action dashboard-action--primary"
+            >
+              <Plus size={16} />
+              {t('dashboard.createPlan')}
             </Link>
           </div>
-          <div className="dashboard-chart-wrapper">
-            <RevenueChart />
-          </div>
+        </header>
+
+        {/* KPI Grid */}
+        <div className="dashboard-kpi-grid">
+          <DashboardCard
+              title={t('dashboard.kpis.activeSubscriptions')}
+              value="1,284"
+              change={12.5}
+              trend="up"
+              icon={<Users size={20} />}
+              helpText={t('dashboard.kpis.activeSubscriptionsHelp')}
+          />
+          <DashboardCard
+              title={t('dashboard.kpis.mrr')}
+              value="$42,500"
+              change={8.2}
+              trend="up"
+              icon={<TrendingUp size={20} />}
+              helpText={t('dashboard.kpis.mrrHelp')}
+          />
+          <DashboardCard
+              title={t('dashboard.kpis.failedCharges')}
+              value="12"
+              change={-4.1}
+              trend="down"
+              icon={<AlertCircle size={20} />}
+              helpText={t('dashboard.kpis.failedChargesHelp')}
+          />
+          <DashboardCard
+              title={t('dashboard.kpis.upcomingRenewals')}
+              value="48"
+              trend="neutral"
+              icon={<Calendar size={20} />}
+              helpText={t('dashboard.kpis.upcomingRenewalsHelp')}
+          />
         </div>
 
-        {/* Activity Section */}
-        <div className="dashboard-activity-column">
-          <div className="dashboard-activity-header">
-            <h2 className="dashboard-section-title">Recent Activity</h2>
-            <button className="dashboard-muted-button">
-              Mark all as read
+        {/* Main Content Grid */}
+        <div className="dashboard-main-grid">
+          {/* Chart Section */}
+          <div className="dashboard-panel dashboard-panel--chart">
+            <div className="dashboard-panel__header">
+              <h2 className="dashboard-section-title">Revenue Growth</h2>
+              <Link to="/reports" className="dashboard-link">
+                View Detailed Report <ArrowRight size={12} />
+              </Link>
+            </div>
+            <div className="dashboard-chart-wrapper">
+              <RevenueChart />
+            </div>
+          </div>
+
+          {/* Activity Section */}
+          <div className="dashboard-activity-column">
+            <div className="dashboard-activity-header">
+              <h2 className="dashboard-section-title">Recent Activity</h2>
+              <button className="dashboard-muted-button">
+                Mark all as read
+              </button>
+            </div>
+            <ActivityList activities={mockActivities} />
+            <button className="dashboard-load-more">
+              See all activity
             </button>
           </div>
-          <ActivityList activities={mockActivities} />
-          <button className="dashboard-load-more">
-            See all activity
-          </button>
         </div>
       </div>
-    </div>
   );
 }

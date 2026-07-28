@@ -3,7 +3,7 @@
 This document outlines the rules and conventions for translating microcopy within the Stellabill application. Adhering to these rules ensures that our app remains accessible, easy to translate, and robust against text expansion.
 
 ## 1. No Concatenation
-Never build sentences by concatenating translated strings together. Sentence structure varies significantly across languages. 
+Never build sentences by concatenating translated strings together. Sentence structure varies significantly across languages.
 
 **Bad:**
 ```tsx
@@ -57,3 +57,17 @@ When writing copy for ARIA labels or screen-reader only text, group them logical
 - `aria.closeModal`: "Close modal"
 
 Ensure that dynamically generated strings pronounce correctly on screen readers. Use explicit punctuation within the translation string to enforce proper screen reader cadence.
+
+## 6. Locale switcher
+
+The shared application header includes an accessible locale switcher. Locale entries are grouped by region and include the native language name, English language name, and region. Flags are intentionally not used as the only cue because they represent countries rather than languages and are ambiguous for multi-region languages.
+
+### Interaction contract
+
+- The trigger always exposes the active locale in its accessible name and shows its BCP-47 code (or `AUTO`) visually.
+- `Auto · Browser language` is the default. It uses the browser's preferred language and falls back to English.
+- Open the menu with the trigger, search by native name, English name, locale code, or region, then use `↑`/`↓`, `Home`, `End`, and `Enter` to select. `Escape` closes and restores focus.
+- Region headings remain sticky while the results list scrolls. The list has a labelled `combobox`/`listbox` relationship for assistive technology.
+- Selecting an RTL locale updates the document direction. Long native names wrap instead of clipping, and the menu becomes a full-width mobile sheet within the viewport.
+
+When adding a translation bundle, add its resource to `src/i18n/config.ts` and keep the locale catalog in `src/i18n/locales.ts` as the single source for the switcher's display metadata.
