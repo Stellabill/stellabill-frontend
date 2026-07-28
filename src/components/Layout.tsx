@@ -9,6 +9,8 @@ import "../styles/sidebar.css";
 
 const RECENT_COMMANDS_KEY = "sb:recent-commands";
 const RECENT_COMMANDS_LIMIT = 5;
+const PINNED_COMMANDS_KEY = "sb:pinned-commands";
+const PINNED_COMMANDS_LIMIT = 5;
 
 function readRecentCommands(): string[] {
   try {
@@ -17,6 +19,28 @@ function readRecentCommands(): string[] {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+}
+
+function readPinnedCommands(): string[] {
+  try {
+    const raw = localStorage.getItem(PINNED_COMMANDS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistPinnedCommands(ids: string[]) {
+  try {
+    if (ids.length === 0) {
+      localStorage.removeItem(PINNED_COMMANDS_KEY);
+    } else {
+      localStorage.setItem(PINNED_COMMANDS_KEY, JSON.stringify(ids));
+    }
+  } catch {
+    // storage unavailable — keep pins in memory only
   }
 }
 
@@ -101,6 +125,7 @@ export default function Layout() {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
   const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => readPinnedCommands());
   
   const [pendingChordKey, setPendingChordKey] = useState<string | null>(null);
   const pendingChordKeyRef = useRef<string | null>(null);
@@ -127,15 +152,6 @@ export default function Layout() {
     return [...pages, ...actions];
   }, [navigate]);
 
-  // Surface recently chosen commands as their own group.
-  const paletteItems = useMemo<CommandItem[]>(() => {
-    const recent = recentIds
-      .map((id) => catalog.find((item) => item.id === id))
-      .filter((item): item is CommandItem => Boolean(item))
-      .map((item) => ({ ...item, id: `recent-${item.id}`, group: "Recent" as const }));
-    return [...catalog, ...recent];
-  }, [catalog, recentIds]);
-
   const handleCommandSelect = (item: CommandItem) => {
     const baseId = item.id.replace(/^recent-/, "");
     setRecentIds((prev) => {
@@ -148,6 +164,31 @@ export default function Layout() {
       return next;
     });
   };
+
+  const handleTogglePin = (itemId: string) => {
+    setPinnedIds((prev) => {
+      const isPinned = prev.includes(itemId);
+      const next = isPinned ? prev.filter((id) => id !== itemId) : [itemId, ...prev].slice(0, PINNED_COMMANDS_LIMIT);
+      persistPinnedCommands(next);
+      return next;
+    });
+  };
+
+  // Build palette items: each command appears once — in Pinned if pinned,
+  // in Recent if recently used, or in its original group otherwise.
+  const paletteItems = useMemo<CommandItem[]>(() => {
+    const pinned = pinnedIds
+      .map((id) => catalog.find((item) => item.id === id))
+      .filter((item): item is CommandItem => Boolean(item))
+      .map((item) => ({ ...item, group: "Pinned" as const }));
+    const recent = recentIds
+      .map((id) => catalog.find((item) => item.id === id))
+      .filter((item): item is CommandItem => Boolean(item))
+      .filter((item) => !pinnedIds.includes(item.id))
+      .map((item) => ({ ...item, id: `recent-${item.id}`, group: "Recent" as const }));
+    const unpinnedNonRecent = catalog.filter((item) => !pinnedIds.includes(item.id));
+    return [...pinned, ...unpinnedNonRecent, ...recent];
+  }, [catalog, recentIds, pinnedIds]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -300,6 +341,7 @@ export default function Layout() {
         onClose={() => setIsPaletteOpen(false)}
         items={paletteItems}
         onSelect={handleCommandSelect}
+        onTogglePin={handleTogglePin}
       />
 
       <KeyboardShortcutsOverlay
