@@ -48,6 +48,13 @@ const DEFAULT_SHORTCUTS: ShortcutGroup[] = [
         hiddenOnMobile: true,
       },
       {
+        id: 'go-to-subscriptions',
+        label: 'Go to Subscriptions',
+        keys: ['g', 's'],
+        description: 'Navigate to the subscriptions page',
+        hiddenOnMobile: true,
+      },
+      {
         id: 'close-overlay',
         label: 'Close overlay or modal',
         keys: ['Esc'],

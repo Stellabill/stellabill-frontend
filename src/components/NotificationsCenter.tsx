@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
   Bell,
@@ -90,6 +91,7 @@ const categoryIcon = {
 export default function NotificationsCenter({
   initialNotifications = defaultNotifications,
 }: NotificationsCenterProps) {
+  const { t } = useTranslation();
   const panelId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -144,18 +146,14 @@ export default function NotificationsCenter({
   return (
     <div className="notifications-center">
       <span className="notifications-live-region" aria-live="polite">
-        {unreadCount > 0
-          ? `${unreadCount} unread billing notification${unreadCount === 1 ? '' : 's'}`
-          : 'All billing notifications are read'}
+        {t('notifications.liveRegion', { count: unreadCount })}
       </span>
 
       <button
         ref={triggerRef}
         type="button"
         className="notifications-trigger"
-        aria-label={`Open billing notifications${
-          unreadCount > 0 ? `, ${unreadCount} unread` : ''
-        }`}
+        aria-label={t('notifications.triggerLabel', { count: unreadCount })}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls={panelId}
@@ -180,8 +178,8 @@ export default function NotificationsCenter({
         >
           <div className="notifications-panel-header">
             <div>
-              <p className="notifications-kicker">Billing alerts</p>
-              <h2 id={`${panelId}-title`}>Notifications</h2>
+              <p className="notifications-kicker">{t('notifications.billingAlerts')}</p>
+              <h2 id={`${panelId}-title`}>{t('notifications.title')}</h2>
             </div>
             <button
               type="button"
@@ -198,11 +196,9 @@ export default function NotificationsCenter({
 
           <div className="notifications-toolbar">
             <span>
-              {unreadCount > 0
-                ? `${unreadCount} unread`
-                : hasNotifications
-                  ? 'All caught up'
-                  : 'No alerts'}
+              {allRead
+                ? t('notifications.toolbarAllRead')
+                : t('notifications.toolbar', { count: unreadCount })}
             </span>
             <button
               type="button"
@@ -210,21 +206,21 @@ export default function NotificationsCenter({
               onClick={markAllRead}
               disabled={unreadCount === 0}
             >
-              Mark all read
+              {t('notifications.markAllRead')}
             </button>
           </div>
 
           {!hasNotifications ? (
             <div className="notifications-empty" role="status">
               <CheckCircle2 size={32} aria-hidden="true" />
-              <h3>No billing alerts</h3>
-              <p>Failed charges, low balances, and plan changes will appear here.</p>
+              <h3>{t('notifications.emptyTitle')}</h3>
+              <p>{t('notifications.emptyDescription')}</p>
             </div>
           ) : allRead ? (
             <div className="notifications-empty notifications-empty-compact" role="status">
               <CheckCircle2 size={28} aria-hidden="true" />
-              <h3>All caught up</h3>
-              <p>There are no unread billing events right now.</p>
+              <h3>{t('notifications.allReadTitle')}</h3>
+              <p>{t('notifications.allReadDescription')}</p>
             </div>
           ) : (
             <ul className="notifications-list" aria-label="Billing notification list">

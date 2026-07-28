@@ -1,0 +1,337 @@
+/* ScheduleChangePreview.css
+   Two-column old-vs-new billing schedule comparison.
+   Mirrors the visual language of PauseSchedulePreview. */
+
+.schedule-change-preview {
+  background: linear-gradient(135deg, #0d0d0d 0%, #121415 100%);
+  border: 1px solid #1a1a1a;
+  border-radius: 16px;
+  padding: 20px;
+  margin: 24px 0;
+  animation: scp-slide-up 0.3s ease-out;
+}
+
+@keyframes scp-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+.scp-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.scp-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #00ccff;
+  color: #0d0d0d;
+  flex-shrink: 0;
+}
+
+.scp-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+/* ── Effective-date badge ────────────────────────────────────────────── */
+.scp-effective-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background-color: rgba(0, 204, 255, 0.12);
+  border: 1px solid rgba(0, 204, 255, 0.35);
+  font-size: 11px;
+  font-weight: 700;
+  color: #00ccff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: auto;
+}
+
+.scp-effective-badge svg {
+  flex-shrink: 0;
+}
+
+/* ── Two-column comparison grid ─────────────────────────────────────── */
+.scp-columns {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.scp-column {
+  background-color: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s ease;
+}
+
+.scp-column--old {
+  opacity: 0.75;
+}
+
+.scp-column--new {
+  background: linear-gradient(135deg, rgba(0, 204, 255, 0.08) 0%, rgba(0, 204, 255, 0.04) 100%);
+  border-color: rgba(0, 204, 255, 0.35);
+}
+
+.scp-column-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scp-column-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.scp-column--new .scp-column-label {
+  color: #00ccff;
+}
+
+.scp-interval-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.scp-interval-chip--old {
+  background-color: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+}
+
+.scp-interval-chip--new {
+  background-color: rgba(0, 204, 255, 0.15);
+  color: #00ccff;
+}
+
+/* ── Divider arrow between columns ─────────────────────────────────── */
+.scp-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  padding-top: 36px; /* align with column content after label */
+}
+
+/* ── Date rows inside a column ──────────────────────────────────────── */
+.scp-date-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.scp-date-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.scp-cycle-num {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  min-width: 20px;
+}
+
+.scp-date-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e2e8f0;
+  flex: 1;
+}
+
+.scp-column--old .scp-date-value {
+  color: #64748b;
+}
+
+/* First diverging row – highlighted in new column */
+.scp-date-row--diverge .scp-date-value {
+  color: #00ccff;
+  font-weight: 700;
+}
+
+.scp-date-row--diverge-old .scp-date-value {
+  text-decoration: line-through;
+  text-decoration-color: #ff8a00;
+  text-decoration-thickness: 2px;
+  color: #888;
+}
+
+/* The "new" badge on the first diverging date */
+.scp-diverge-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background-color: rgba(0, 204, 255, 0.15);
+  border: 1px solid rgba(0, 204, 255, 0.35);
+  font-size: 10px;
+  font-weight: 700;
+  color: #00ccff;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+/* ── Amount row ─────────────────────────────────────────────────────── */
+.scp-amount {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  background-color: rgba(0, 204, 255, 0.08);
+  border: 1px solid rgba(0, 204, 255, 0.25);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #00ccff;
+}
+
+.scp-amount--old {
+  background-color: rgba(100, 116, 139, 0.1);
+  border-color: rgba(100, 116, 139, 0.25);
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ── Microcopy notice ───────────────────────────────────────────────── */
+.scp-notice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 14px;
+  background-color: rgba(0, 204, 255, 0.05);
+  border: 1px solid rgba(0, 204, 255, 0.18);
+  border-radius: 10px;
+  margin-top: 4px;
+}
+
+.scp-notice svg {
+  flex-shrink: 0;
+  color: #00ccff;
+  margin-top: 1px;
+}
+
+.scp-notice p {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .schedule-change-preview {
+    padding: 16px;
+    margin: 16px 0;
+  }
+
+  .scp-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .scp-effective-badge {
+    margin-left: 0;
+  }
+
+  .scp-columns {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 8px;
+  }
+
+  /* On mobile: arrow points down */
+  .scp-arrow {
+    padding-top: 0;
+    transform: rotate(90deg);
+    justify-self: center;
+  }
+
+  .scp-column {
+    padding: 12px 14px;
+  }
+
+  .scp-notice p {
+    font-size: 11px;
+  }
+}
+
+/* ── RTL support ─────────────────────────────────────────────────────── */
+[dir="rtl"] .scp-effective-badge {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+[dir="rtl"] .scp-arrow {
+  transform: scaleX(-1);
+}
+
+/* ── Print ──────────────────────────────────────────────────────────── */
+@media print {
+  .schedule-change-preview {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    color: #000;
+    animation: none;
+  }
+
+  .scp-column,
+  .scp-notice {
+    background-color: #f5f5f5;
+    border-color: #ddd;
+  }
+
+  .scp-column--new {
+    background-color: #f0f8ff;
+    border-color: #60a5fa;
+  }
+
+  .scp-date-value,
+  .scp-amount,
+  .scp-title {
+    color: #000 !important;
+  }
+
+  .scp-column-label,
+  .scp-cycle-num {
+    color: #666 !important;
+  }
+}
