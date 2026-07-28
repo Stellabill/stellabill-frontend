@@ -9,6 +9,7 @@ export interface CountryRegionPickerProps {
   placeholder?: string
   disabled?: boolean
   recentStorageKey?: string
+  errorMessage?: string
 }
 
 const RECENT_COUNTRIES_MAX = 5
@@ -48,6 +49,7 @@ export function CountryRegionPicker({
   placeholder = 'Start typing a country name…',
   disabled = false,
   recentStorageKey = 'country-region-picker-recent',
+  errorMessage,
 }: CountryRegionPickerProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [query, setQuery] = useState('')
@@ -204,6 +206,7 @@ export function CountryRegionPicker({
   }
 
   const displayValue = isExpanded ? query : selectedOption?.label ?? ''
+  const errorMessageId = `${inputId}-error`
 
   return (
     <div className="flex flex-col gap-2" ref={wrapperRef} onFocus={handleWrapperFocus} onBlur={handleWrapperBlur}>
@@ -223,7 +226,8 @@ export function CountryRegionPicker({
             aria-controls={listboxId}
             aria-expanded={isExpanded}
             aria-activedescendant={activeOption ? `${listboxId}-option-${activeOption.code}` : undefined}
-            aria-describedby={`${helperTextId} ${statusId}`}
+            aria-describedby={`${helperTextId} ${statusId}${errorMessage ? ` ${errorMessageId}` : ''}`}
+            aria-invalid={!!errorMessage}
             value={displayValue}
             onChange={handleInputChange}
             onKeyDown={handleInputKeyDown}
@@ -300,6 +304,11 @@ export function CountryRegionPicker({
           </div>
         )}
       </div>
+      {errorMessage ? (
+        <p id={errorMessageId} className="text-sm text-rose-400" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
     </div>
   )
 }
