@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import LandingNavbar from "./LandingNavbar";
 import CommandPalette, { CommandItem } from "./CommandPalette";
 import KeyboardShortcutsOverlay from "./KeyboardShortcutsOverlay";
+import KeyboardChordIndicator from "./KeyboardChordIndicator";
 import "../styles/sidebar.css";
 
 const RECENT_COMMANDS_KEY = "sb:recent-commands";
@@ -99,6 +100,9 @@ export default function Layout() {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
   const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
+  
+  const [pendingChordKey, setPendingChordKey] = useState<string | null>(null);
+  const pendingChordKeyRef = useRef<string | null>(null);
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
@@ -146,7 +150,50 @@ export default function Layout() {
 
   // Global keyboard shortcuts
   useEffect(() => {
+    let chordTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Ignore if in an input field (except for Escape maybe, but handled separately usually)
+      const target = event.target as HTMLElement;
+      const isInputField =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable;
+      
+      // Ignore IME composition
+      if (event.isComposing || event.keyCode === 229) return;
+
+      if (!isInputField) {
+        // If a chord is pending, process the second key
+        if (pendingChordKeyRef.current) {
+          const chord = pendingChordKeyRef.current;
+          const key = event.key.toLowerCase();
+          
+          if (chord === 'g' && key === 's') {
+            event.preventDefault();
+            navigate('/subscriptions');
+          }
+          
+          // Clear chord regardless of match
+          setPendingChordKey(null);
+          pendingChordKeyRef.current = null;
+          if (chordTimeoutId) clearTimeout(chordTimeoutId);
+          return;
+        }
+
+        // Check for chord start
+        if (event.key === 'g') {
+          event.preventDefault();
+          setPendingChordKey('g');
+          pendingChordKeyRef.current = 'g';
+          chordTimeoutId = setTimeout(() => {
+            setPendingChordKey(null);
+            pendingChordKeyRef.current = null;
+          }, 2000);
+          return;
+        }
+      }
+
       // Cmd+K / Ctrl+K: Open command palette
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         event.preventDefault();
@@ -155,14 +202,7 @@ export default function Layout() {
       }
 
       // ?: Show keyboard shortcuts overlay
-      // Only trigger if not in an input, textarea, or contentEditable element
       if (event.key === '?' || event.key === '/') {
-        const target = event.target as HTMLElement;
-        const isInputField =
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable;
-
         if (!isInputField && event.key === '?') {
           event.preventDefault();
           setIsShortcutsOverlayOpen(true);
@@ -171,8 +211,11 @@ export default function Layout() {
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (chordTimeoutId) clearTimeout(chordTimeoutId);
+    };
+  }, [navigate]);
 
   return (
     <div className="app-layout">
@@ -262,6 +305,8 @@ export default function Layout() {
         isOpen={isShortcutsOverlayOpen}
         onClose={() => setIsShortcutsOverlayOpen(false)}
       />
+      
+      <KeyboardChordIndicator pendingKey={pendingChordKey} />
     </div>
   );
 }
