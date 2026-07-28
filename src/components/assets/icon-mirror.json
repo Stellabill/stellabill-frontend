@@ -1,0 +1,17 @@
+{
+  "always": [
+    "arrow.svg",
+    "Icon (5).svg"
+  ],
+  "never": [
+    "Icon (4).svg",
+    "Icon (6).svg",
+    "Icon (7).svg",
+    "Icon (8).svg",
+    "close.svg",
+    "dollar-sign.svg",
+    "dolllar.svg",
+    "wallet.svg"
+  ],
+  "context": []
+}
