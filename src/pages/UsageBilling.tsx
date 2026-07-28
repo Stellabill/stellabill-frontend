@@ -9,7 +9,7 @@ import { PastPeriods } from '../components/past-periods/past-periods';
 import ReceiptPreview from '../components/past-periods/ReceiptPreview';
 import type { ReceiptData } from '../components/past-periods/ReceiptPreview';
 import './UsageBilling.css';
-import InvoiceList from "../components/InvoiceList";
+import InvoiceList, { Invoice } from "../components/InvoiceList";
 
 
 interface UsageData {
@@ -112,22 +112,38 @@ export default function UsageBilling() {
     const usageCountFmt = usageCount.toLocaleString();
     const usageLimitFmt = usageLimit.toLocaleString();
 
-    const invoicesData: {
-        id: string;
-        date: string;
-        status: "paid" | "pending" | "failed";
-        total: string;
-        currency: string;
-    }[] = [
+    const invoicesData: Invoice[] = [
     {
         id: "INV-00123456789",
+        type: "invoice",
         date: "Mar 31, 2026",
         status: "paid",
         total: "16.23",
         currency: "USDC",
     },
     {
+        id: "CN-00000000001",
+        type: "credit_note",
+        date: "Mar 15, 2026",
+        status: "adjusted",
+        total: "5.00",
+        currency: "USDC",
+        parentInvoiceId: "INV-00123456790",
+        reason: "Partial refund for downtime",
+        amountRedeemed: "2.50",
+    },
+    {
+        id: "CN-00000000002",
+        type: "credit_note",
+        date: "Feb 10, 2026",
+        status: "refunded",
+        total: "10.00",
+        currency: "USDC",
+        reason: "Goodwill credit",
+    },
+    {
         id: "INV-00123456790",
+        type: "invoice",
         date: "Feb 28, 2026",
         status: "pending",
         total: "12.10",
@@ -135,6 +151,7 @@ export default function UsageBilling() {
     },
     {
         id: "INV-00123456791",
+        type: "invoice",
         date: "Jan 31, 2026",
         status: "failed",
         total: "8.50",
