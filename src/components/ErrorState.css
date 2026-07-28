@@ -138,3 +138,162 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ─── Rate-limited error variant ─────────────────────────────────────── */
+
+.icon-rate-limit {
+  color: #f59e0b;
+  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.4));
+}
+
+.rate-limit-countdown-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: rotate(-90deg);
+}
+
+.countdown-text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  z-index: 1;
+}
+
+.countdown-value {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #f59e0b;
+  line-height: 1;
+}
+
+/* "Why did this happen?" popover/section */
+.rate-limit-explainer {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-top: 1px solid rgba(245, 158, 11, 0.15);
+  padding-top: 0.75rem;
+}
+
+.explainer-toggle {
+  background: transparent;
+  border: none;
+  color: #f59e0b;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  margin: 0 auto;
+  padding: 0.5rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: opacity 0.2s;
+}
+
+.explainer-toggle:hover {
+  opacity: 0.8;
+}
+
+.explainer-toggle:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.explainer-content {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-radius: 0.75rem;
+  text-align: left;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+.explainer-content p {
+  margin: 0 0 0.5rem;
+}
+
+.explainer-content ul {
+  margin: 0.25rem 0 0.75rem 1.25rem;
+  padding: 0;
+}
+
+.explainer-content li {
+  margin-bottom: 0.25rem;
+}
+
+.explainer-tip {
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 3px solid #f59e0b;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  margin-top: 0.5rem !important;
+}
+
+.rate-limit-headers {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.headers-content {
+  margin-top: 0.4rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 0.5rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: #e2e8f0;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Retry button disabled state during countdown */
+.retry-button:disabled.rate-limited-waiting {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  cursor: not-allowed;
+}
+
+/* Reduced motion: skip ring transition, don't animate the ring fill */
+@media (prefers-reduced-motion: reduce) {
+  .progress-ring-circle {
+    transition: none !important;
+  }
+
+  .spin {
+    animation: none !important;
+  }
+}
+
+/* Responsive: stack actions on small screens */
+@media (max-width: 480px) {
+  .error-state-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .retry-button,
+  .support-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
