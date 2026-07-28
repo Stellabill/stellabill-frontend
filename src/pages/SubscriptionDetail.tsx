@@ -3,6 +3,7 @@ import { useState } from 'react';
 import RecentPayments from '../components/RecentPayments';
 import UsageThisPeriod from '../components/UsageThisPeriod';
 import PaymentFailedBanner from '../components/Dunning/PaymentFailedBanner';
+import PlanStatusTimeline from '../components/PlanStatusTimeline';
 
 export default function SubscriptionDetail() {
     const { id } = useParams();
