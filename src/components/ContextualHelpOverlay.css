@@ -1,0 +1,142 @@
+.ctx-help-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 9999;
+  display: flex;
+  pointer-events: auto;
+}
+
+.ctx-help-connectors {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10000;
+}
+
+.ctx-help-line {
+  stroke: var(--sb-primary, #6366f1);
+  stroke-width: 2;
+  stroke-dasharray: 4;
+}
+
+.ctx-help-callout {
+  position: absolute;
+  background-color: var(--sb-surface, #1e1e24);
+  color: var(--sb-text, #f8fafc);
+  border: 1px solid var(--sb-border, #334155);
+  border-radius: 8px;
+  padding: 12px 16px;
+  max-width: 280px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  z-index: 10001;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  pointer-events: none; /* Let clicks pass through if needed, though backdrop handles it */
+}
+
+/* Ensure RTL support for callouts */
+[dir="rtl"] .ctx-help-callout {
+  text-align: right;
+  flex-direction: row-reverse;
+}
+
+.ctx-help-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--sb-primary, #6366f1);
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.ctx-help-text {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ctx-help-highlight {
+  position: absolute;
+  border: 2px solid var(--sb-primary, #6366f1);
+  border-radius: 4px;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.ctx-help-actions {
+  position: absolute;
+  bottom: 32px;
+  right: 32px;
+  z-index: 10002;
+}
+
+.ctx-help-print-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--sb-surface, #1e1e24);
+  color: var(--sb-text, #f8fafc);
+  border: 1px solid var(--sb-border, #334155);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ctx-help-print-btn:hover {
+  background-color: var(--sb-surface-hover, #2d2d36);
+}
+
+.ctx-help-print-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Print styles */
+@media print {
+  .ctx-help-overlay {
+    position: static;
+    background: none;
+    display: block !important;
+  }
+  .ctx-help-actions,
+  .ctx-help-connectors,
+  .ctx-help-highlight {
+    display: none !important;
+  }
+  
+  .ctx-help-callout {
+    position: static !important;
+    transform: none !important;
+    margin-bottom: 16px;
+    box-shadow: none;
+    border: 1px solid #ccc;
+    page-break-inside: avoid;
+  }
+}
