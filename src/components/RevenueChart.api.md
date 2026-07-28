@@ -1,74 +1,49 @@
-# Revenue Chart API Integration Guide
+# Revenue Chart Component API & Accessibility Guide
 
-## Current Implementation
-The RevenueChart component currently uses mock data generated client-side. To integrate with your backend API:
+## Overview
+The `RevenueChart` component renders an interactive, responsive line chart with full WCAG 2.1 AA accessibility, keyboard traversal, screen reader support, and customizable data inputs.
 
-## API Integration Steps
-
-### 1. Update the component to fetch real data:
+## Props API
 
 ```typescript
-// Add to RevenueChart.tsx
-import { useEffect } from 'react';
-import { apiClient } from '../api/client';
+export interface RevenueChartProps {
+  /** Initial selected time range preset. Defaults to '30D'. */
+  initialTimeRange?: '7D' | '30D' | '90D';
+  /** Optional custom data array for deterministic chart rendering or API data integration. */
+  data?: DataPoint[];
+  /** Accessible label for the chart region landmark. Defaults to 'Revenue over time'. */
+  ariaLabel?: string;
+}
 
-// Replace generateMockData with API call
-useEffect(() => {
-  async function fetchRevenueData() {
-    try {
-      const days = timeRange === '7D' ? 7 : timeRange === '30D' ? 30 : 90;
-      const response = await apiClient.get(`/api/revenue?days=${days}`);
-      setData(response.data);
-    } catch (error) {
-      console.error('Failed to fetch revenue data:', error);
-      // Fallback to mock data
-      setData(generateMockData(days));
-    }
-  }
-  
-  fetchRevenueData();
-}, [timeRange]);
-```
-
-### 2. Expected API Response Format:
-
-```json
-{
-  "data": [
-    {
-      "date": "Jan 1",
-      "revenue": 450
-    },
-    {
-      "date": "Jan 2",
-      "revenue": 520
-    }
-  ]
+export interface DataPoint {
+  date: string;
+  revenue: number;
 }
 ```
 
-### 3. API Endpoint Specification:
-
-- **Endpoint**: `GET /api/revenue`
-- **Query Parameters**:
-  - `days` (required): Number of days (7, 30, or 90)
-- **Response**: Array of objects with `date` (string) and `revenue` (number)
-
 ## Features Implemented
 
-✅ Dark theme with #1a1a1a background
-✅ Time range selector (7D/30D/90D) with light blue active state
-✅ SVG-based line chart with light blue (#60a5fa) line and markers
-✅ Hover tooltips showing exact revenue values
-✅ Responsive design with horizontal scroll on small screens
-✅ Accessible with ARIA labels and keyboard navigation
-✅ Grid lines for better readability
-✅ Y-axis with revenue values, X-axis with dates
-✅ Smooth transitions and hover effects
+✅ **Accessible Keyboard Traversal**: Navigate data points via `ArrowRight`, `ArrowLeft`, `ArrowUp`, `ArrowDown`, `Home`, and `End` keys.
+✅ **Roving TabIndex**: Only active point has `tabIndex=0` to ensure clean tabbing into and out of chart.
+✅ **Stable Tooltip Positioning**: Dynamic coordinate calculations prevent tooltips from clipping at chart canvas edges.
+✅ **Hover & Focus Synchronization**: Tooltips render seamlessly on mouse hover or keyboard focus.
+✅ **Screen Reader Summary**: Hidden description element (`#revenue-chart-summary-desc`) summarizes min, max, average revenue, and date range.
+✅ **Live Region Status (`aria-live="polite"`)**: Updates screen reader on point change with exact value, trend delta, and position index.
+✅ **RTL Support**: Detects `dir="rtl"` and inverts horizontal arrow navigation directions.
+✅ **Escape Key Dismissal**: Pressing `Escape` hides tooltip and clears active focus.
+✅ **Reduced Motion**: Disables smooth transitions and animations when `prefers-reduced-motion: reduce` is active.
 
-## Customization
+## Usage Example
 
-To adjust colors, modify `RevenueChart.css`:
-- Line color: `.revenue-line { stroke: #60a5fa; }`
-- Background: `.revenue-chart-container { background: #1a1a1a; }`
-- Active button: `.time-range-btn.active { background: #60a5fa; }`
+```tsx
+import RevenueChart from './RevenueChart';
+
+export function DashboardPage() {
+  return (
+    <RevenueChart 
+      initialTimeRange="30D" 
+      ariaLabel="Monthly Revenue Performance"
+    />
+  );
+}
+```

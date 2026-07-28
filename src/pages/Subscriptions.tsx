@@ -623,7 +623,7 @@ export default function Subscriptions() {
 						className={`filter-tab${activeFilter === tab ? " active" : ""}`}
 						onClick={() => setActiveFilter(tab)}
 						aria-pressed={activeFilter === tab}
-						aria-label={`Show ${tab} subscriptions (${stats[tab]})`}>
+						aria-label={t('subscriptions.tabAriaLabel', { label: tab, count: stats[tab] })}>
 						{t(`subscriptions.tabs.${tab.toLowerCase()}`)} <span>({stats[tab]})</span>
 					</button>
 				))}
