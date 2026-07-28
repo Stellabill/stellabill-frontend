@@ -1,0 +1,119 @@
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-primary, #f8fafc);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  outline: none;
+}
+
+.icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.icon-button--sm {
+  width: 2rem;
+  height: 2rem;
+  padding: var(--space-1, 4px);
+  font-size: var(--text-xs, 0.75rem);
+}
+
+.icon-button--md {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: var(--space-2, 8px);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.icon-button--lg {
+  width: 3rem;
+  height: 3rem;
+  padding: var(--space-3, 12px);
+  font-size: var(--text-base, 1rem);
+}
+
+/* Variants */
+.icon-button--primary {
+  background: var(--color-brand-primary, #22d3ee);
+  color: var(--color-brand-on, #02131a);
+}
+
+.icon-button--primary:hover:not(:disabled) {
+  background: var(--color-brand-primary-hover, #67e8f9);
+}
+
+.icon-button--secondary {
+  background: var(--color-surface-control, rgba(148, 163, 184, 0.1));
+  border-color: var(--color-border-subtle, rgba(148, 163, 184, 0.16));
+}
+
+.icon-button--secondary:hover:not(:disabled) {
+  background: var(--color-surface-control-hover, rgba(148, 163, 184, 0.2));
+  border-color: var(--color-border-default, rgba(148, 163, 184, 0.28));
+}
+
+.icon-button--ghost {
+  background: transparent;
+  color: var(--color-text-secondary, #cbd5e1);
+}
+
+.icon-button--ghost:hover:not(:disabled) {
+  background: var(--color-surface-control-hover, rgba(148, 163, 184, 0.16));
+  color: var(--color-text-primary, #f8fafc);
+}
+
+.icon-button--outline {
+  background: transparent;
+  border-color: var(--color-border-default, rgba(148, 163, 184, 0.28));
+}
+
+.icon-button--outline:hover:not(:disabled) {
+  border-color: var(--color-border-strong, rgba(203, 213, 225, 0.42));
+  background: var(--color-surface-control-hover, rgba(148, 163, 184, 0.1));
+}
+
+.icon-button--elevated {
+  background: var(--color-surface-elevated, #0f172a);
+  border-color: var(--color-border-default, rgba(148, 163, 184, 0.28));
+  box-shadow: var(--shadow-md, 0 8px 18px rgba(0, 0, 0, 0.32));
+}
+
+.icon-button--elevated:hover:not(:disabled) {
+  background: var(--color-surface-card-hover, #111827);
+}
+
+.icon-button--inverse {
+  background: var(--color-text-primary, #ffffff);
+  color: var(--color-surface-canvas, #00060f);
+}
+
+/* Focus state using dark-mode focus ring tokens */
+.icon-button:focus-visible {
+  outline: 3px solid var(--focus-ring, var(--color-focus-ring, #22d3ee));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px transparent, 0 0 10px var(--focus-ring-halo, rgba(56, 189, 248, 0.45));
+}
+
+.icon-button--elevated:focus-visible {
+  outline-color: var(--focus-ring-elevated, #38bdf8);
+  box-shadow: 0 0 0 2px var(--color-surface-elevated, #0f172a), 0 0 0 4px var(--focus-ring-elevated, #38bdf8), 0 0 12px var(--focus-ring-halo, rgba(56, 189, 248, 0.45));
+}
+
+.icon-button--inverse:focus-visible {
+  outline-color: var(--focus-ring-inverse, #ffffff);
+  box-shadow: 0 0 0 2px var(--color-text-primary, #ffffff), 0 0 0 4px var(--focus-ring, #22d3ee), 0 0 12px var(--focus-ring-halo, rgba(56, 189, 248, 0.45));
+}
+
+@media (forced-colors: active) {
+  .icon-button:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
