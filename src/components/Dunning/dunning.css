@@ -15,14 +15,171 @@
 .dunning-ctas { display: flex; gap: 8px; }
 .dunning-primary { background: #0ea5a4; color: #042023; padding: 8px 12px; border-radius: 6px; text-decoration: none; }
 .dunning-secondary { background: transparent; color: #cbd5e1; border: 1px solid rgba(203,213,225,0.08); padding: 8px 12px; border-radius: 6px; }
-.dunning-timeline-wrapper { min-width: 220px; }
-.dunning-timeline { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
-.dunning-step { display: flex; gap: 8px; align-items: center; }
-.dunning-step-icon { width: 28px; text-align: center; }
-.dunning-step-when { font-weight: 600; }
-.dunning-step-status { font-size: 0.9rem; color: #94a3b8; }
+.dunning-timeline-wrapper { min-width: 240px; }
+
+.dunning-schedule {
+  display: grid;
+  gap: 10px;
+}
+.dunning-schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.dunning-schedule-kicker {
+  margin: 0 0 2px;
+  color: #fdba74;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.dunning-schedule-title {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.dunning-schedule-help {
+  border: 1px solid rgba(203, 213, 225, 0.3);
+  background: rgba(15, 23, 42, 0.65);
+  color: #f8fafc;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.dunning-schedule-help:hover,
+.dunning-schedule-help:focus-visible {
+  border-color: #f59e0b;
+  outline: none;
+}
+.dunning-schedule-summary {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.88rem;
+}
+.dunning-schedule-live {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #f8fafc;
+  font-weight: 600;
+}
+.dunning-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 10px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  position: relative;
+}
+.dunning-timeline::before {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.55), rgba(249, 115, 22, 0.8));
+  border-radius: 999px;
+}
+.dunning-step-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 0 0 146px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(203, 213, 225, 0.2);
+  background: rgba(15, 23, 42, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  min-height: 120px;
+}
+.dunning-step-card--upcoming {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3);
+}
+.dunning-step-card--failed {
+  border-color: rgba(248, 113, 113, 0.6);
+}
+.dunning-step-card--succeeded {
+  border-color: rgba(52, 211, 153, 0.5);
+}
+.dunning-step-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  align-self: flex-start;
+}
+.dunning-step-content {
+  display: grid;
+  gap: 6px;
+}
+.dunning-step-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.dunning-step-label {
+  font-size: 0.76rem;
+  color: #cbd5e1;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.dunning-step-delta {
+  font-size: 0.76rem;
+  color: #fdba74;
+  font-weight: 600;
+}
+.dunning-step-when {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.dunning-step-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dunning-step-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 0.72rem;
+}
+.dunning-schedule-dialog {
+  border: 1px solid rgba(203, 213, 225, 0.24);
+  background: rgba(2, 6, 23, 0.95);
+  color: #f8fafc;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 12px 40px rgba(2, 6, 23, 0.35);
+}
+.dunning-schedule-dialog h4 { margin: 0 0 6px; font-size: 0.92rem; }
+.dunning-schedule-dialog p { margin: 0; color: #cbd5e1; font-size: 0.84rem; line-height: 1.5; }
 
 @media (max-width: 640px) {
   .dunning-banner-inner { flex-direction: column; }
-  .dunning-timeline-wrapper { width: 100%; }
+  .dunning-timeline-wrapper { width: 100%; min-width: 0; }
+  .dunning-schedule-header { flex-direction: column; }
+  .dunning-step-card { flex-basis: 160px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dunning-schedule-help,
+  .dunning-step-card {
+    transition: none;
+  }
 }
