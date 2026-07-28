@@ -17,6 +17,16 @@ interface PricingCardProps {
   isPopular?: boolean
   isPopularLabel?: string
   useGradientButton?: boolean
+  /**
+   * Base price per seat (number). When provided together with `seats > 0`
+   * and `pricingMode === 'per-seat'`, the card shows the per-seat rate and
+   * a total line below it. Set to `null` to indicate custom/contact pricing.
+   */
+  basePricePerSeat?: number | null
+  /** Current pricing mode driven by the page-level toggle. */
+  pricingMode?: 'flat' | 'per-seat'
+  /** Current seat count driven by the page-level stepper. */
+  seats?: number
 }
 
 export default function PricingCard({
@@ -32,7 +42,31 @@ export default function PricingCard({
   isPopular = false,
   isPopularLabel = 'Most popular',
   useGradientButton = false,
+  basePricePerSeat,
+  pricingMode = 'flat',
+  seats = 1,
 }: PricingCardProps) {
+  // ── Derive displayed price strings ──────────────────────────────────────
+  const isPerSeat = pricingMode === 'per-seat' && basePricePerSeat != null
+  const isCustom = basePricePerSeat === null
+
+  const displayPrice: string | undefined = (() => {
+    if (isCustom) return undefined
+    if (isPerSeat && typeof basePricePerSeat === 'number') {
+      return `$${basePricePerSeat}`
+    }
+    return price
+  })()
+
+  const displaySubtext: string | undefined = (() => {
+    if (isPerSeat && typeof basePricePerSeat === 'number' && seats > 0) {
+      const total = basePricePerSeat * seats
+      return `$${total.toLocaleString('en-US')} / mo total for ${seats} seat${seats !== 1 ? 's' : ''}`
+    }
+    return priceSubtext
+  })()
+
+  const perSeatLabel = isPerSeat ? '/ seat / mo' : '/mo'
   return (
     <div className="relative flex-1 min-w-[300px] max-w-[380px] h-full group">
       {/* Most popular tag */}
@@ -68,18 +102,38 @@ export default function PricingCard({
 
           {/* Price Section */}
           <div className="mb-10">
-            {price !== undefined ? (
-              <div className="flex flex-col gap-1">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-5xl font-bold text-white tracking-tighter">
-                    {price}
-                  </span>
-                  {priceSubtext && price !== "Custom" && (
-                     <span className="text-slate-500 text-sm font-medium">/mo</span>
+            {isCustom ? (
+              /* Custom / Enterprise: show the priceLabel fallback */
+              priceLabel ? (
+                <div className="flex flex-col gap-1">
+                  <p className="text-4xl font-bold text-white tracking-tight">{priceLabel}</p>
+                  {priceSubtext && (
+                    <p className="text-slate-500 text-sm">{priceSubtext}</p>
                   )}
                 </div>
-                {priceSubtext && (
-                  <p className="text-slate-500 text-sm">{priceSubtext}</p>
+              ) : null
+            ) : displayPrice !== undefined ? (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-baseline gap-1 flex-wrap">
+                  <span
+                    className="text-5xl font-bold text-white tracking-tighter transition-all duration-300"
+                    key={`${pricingMode}-${seats}`}
+                    style={{ willChange: 'opacity' }}
+                  >
+                    {displayPrice}
+                  </span>
+                  <span className="text-slate-500 text-sm font-medium">
+                    {perSeatLabel}
+                  </span>
+                </div>
+                {displaySubtext && (
+                  <p
+                    className="text-slate-500 text-sm transition-all duration-300"
+                    aria-live="polite"
+                    aria-atomic="true"
+                  >
+                    {displaySubtext}
+                  </p>
                 )}
               </div>
             ) : priceLabel ? (
