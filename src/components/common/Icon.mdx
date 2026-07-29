@@ -1,0 +1,34 @@
+import { Meta } from '@storybook/blocks';
+import * as IconStories from './Icon.stories';
+
+<Meta of={IconStories} />
+
+# RTL Icon Mirroring Audit
+
+When rendering layouts in RTL (Right-to-Left) languages, some icons inherently possess directionality and must be mirrored to remain logical and intuitive, whereas other icons (like digits, brands, and certain symbols) should **never** be mirrored.
+
+## Categories
+
+### Always Mirror (`data-mirror="always"`)
+Icons that depict direction, movement, or sequential flow. These must always be mirrored in RTL contexts.
+- `arrow.svg`
+- `Icon (5).svg` (Trend up/pump arrow)
+
+### Never Mirror (`data-mirror="never"`)
+Icons representing brands, logos, text/digits, or non-directional concepts. These must remain unchanged in RTL contexts.
+- `close.svg`
+- `dollar-sign.svg`
+- `dolllar.svg`
+- `wallet.svg`
+- `Icon (4).svg` (User profile)
+- `Icon (6).svg` (Dollar/Currency)
+- `Icon (7).svg` (Clock/Time)
+- `Icon (8).svg` (Wallet)
+
+### Context-Dependent Mirror (`data-mirror="context"`)
+Currently, no icons in our system require context-dependent mirroring. If such icons are added, they should be evaluated based on their specific usage (e.g., inside buttons, badges, mixed LTR/RTL text runs).
+
+## Accessibility Guidelines
+- Ensure that mirrored icons maintain their accessibility standards (WCAG 2.1 AA). 
+- Use the `Icon` helper component to automatically apply the correct `data-mirror` attribute based on `icon-mirror.json`.
+- The `[dir="rtl"]` attribute controls the mirroring via CSS transforms (`transform: scaleX(-1)`).
