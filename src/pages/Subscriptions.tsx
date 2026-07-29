@@ -9,6 +9,7 @@ import UsageThisPeriod from "../components/UsageThisPeriod";
 import ErrorState from "../components/ErrorState";
 import Tag from "../components/Tag";
 import AddTagPopover, { TagOption } from "../components/AddTagPopover";
+import { useRefresh } from "../hooks/useRefresh";
 import "./Subscriptions.css";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -281,29 +282,42 @@ export default function Subscriptions() {
 		setLoading(true);
 		setError(null);
 
-		window.setTimeout(() => {
-			try {
-				if (window.location.search.includes("simulate_error")) {
-					const err: ApiError = new Error("Failed to load subscriptions");
-					err.status = 500;
-					err.technicalDetails =
-						"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
-					setError(err);
-				} else {
-					setData(INITIAL_DATA);
-				}
+		return new Promise<void>((resolve) => {
+			window.setTimeout(() => {
+				try {
+					if (window.location.search.includes("simulate_error")) {
+						const err: ApiError = new Error("Failed to load subscriptions");
+						err.status = 500;
+						err.technicalDetails =
+							"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
+						setError(err);
+					} else {
+						setData(INITIAL_DATA);
+					}
 
-				setLoading(false);
-			} catch (err: unknown) {
-				setError(err as Error);
-				setLoading(false);
-			}
+					setLoading(false);
+					resolve();
+				} catch (err: unknown) {
+					setError(err as Error);
+					setLoading(false);
+					resolve();
+				}
+			}, 800); // Added slight delay to simulate network
 		});
 	}, []);
 
 	useEffect(() => {
 		fetchSubscriptions();
 	}, [fetchSubscriptions]);
+
+	const {
+		pullDistance,
+		isRefreshing,
+		triggerRefresh,
+		handlers: refreshHandlers
+	} = useRefresh({
+		onRefresh: fetchSubscriptions
+	});
 
 	const handleViewFullUsage = () => {
 		/* TODO: Navigate to full usage page */
@@ -750,7 +764,47 @@ export default function Subscriptions() {
 					</div>
 
 					{/* ── Mobile cards ──────────────────────────────────── */}
-					<div className="subs-cards" aria-label="Subscriptions" data-testid="subscriptions-cards">
+					<div
+						className="subs-cards"
+						aria-label="Subscriptions"
+						data-testid="subscriptions-cards"
+						{...refreshHandlers}
+					>
+						{/* Polite live region for accessibility announcements */}
+						<div className="visually-hidden" aria-live="polite">
+							{isRefreshing ? t('subscriptions.refreshing', 'Refreshing subscriptions...') : ''}
+						</div>
+						
+						{/* Fallback Refresh Button for keyboard users and screen readers */}
+						<button 
+							className="ptr-fallback-btn"
+							onClick={triggerRefresh}
+							aria-label="Refresh subscriptions"
+						>
+							<IconPlay />
+							<span className="visually-hidden">Refresh</span>
+						</button>
+
+						{/* Pull-to-refresh visual indicator */}
+						<div 
+							className="ptr-indicator"
+							style={{ 
+								height: `${Math.min(pullDistance, 100)}px`,
+								opacity: pullDistance > 10 ? 1 : 0
+							}}
+							aria-hidden="true"
+						>
+							{isRefreshing || pullDistance > 0 ? (
+								<div className={`ptr-spinner ${isRefreshing ? 'spinning' : ''}`} style={{ transform: `rotate(${pullDistance * 3}deg)` }}>
+									<IconCog />
+								</div>
+							) : null}
+						</div>
+
+						<div 
+							className="subs-cards-inner"
+							style={{ transform: `translateY(${pullDistance}px)` }}
+						>
 						{filteredData.map((sub) => (
 							<article
 								key={sub.id}
@@ -835,6 +889,7 @@ export default function Subscriptions() {
 								</div>
 							</article>
 						))}
+						</div>
 					</div>
 				</>
 			)}
