@@ -1,5 +1,7 @@
-import { useParams, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { useCommandScope } from '../hooks/useCommandScope';
+import type { CommandItem } from '../components/CommandPalette';
 import RecentPayments from '../components/RecentPayments';
 import UsageThisPeriod from '../components/UsageThisPeriod';
 import PaymentFailedBanner from '../components/Dunning/PaymentFailedBanner';
@@ -130,6 +132,59 @@ export default function SubscriptionDetail() {
         { label: 'Quarterly', value: 'quarterly' },
         { label: 'Yearly', value: 'yearly' },
     ];
+
+    const navigate = useNavigate();
+
+    const scopedActions = useMemo<CommandItem[]>(() => {
+        const actions: CommandItem[] = [];
+        
+        if (showReactivateCTA) {
+            actions.push({
+                id: 'reactivate-sub',
+                label: 'Reactivate subscription',
+                group: 'Actions',
+                keywords: 'restore resume',
+                perform: () => setIsReactivationModalOpen(true)
+            });
+        }
+        
+        if (subscriptionStatus === 'active') {
+            actions.push({
+                id: 'downgrade-sub',
+                label: 'Downgrade plan',
+                group: 'Actions',
+                keywords: 'lower plan',
+                perform: () => setIsDowngradeModalOpen(true)
+            });
+            actions.push({
+                id: 'preview-proration',
+                label: 'Preview Proration',
+                group: 'Actions',
+                keywords: 'proration calculate',
+                perform: () => setIsProrationModalOpen(true)
+            });
+        }
+        
+        actions.push({
+            id: 'view-usage',
+            label: 'View full usage',
+            group: 'Actions',
+            keywords: 'metrics api calls',
+            perform: handleViewFullUsage
+        });
+        
+        actions.push({
+            id: 'back-to-subs',
+            label: 'Back to Subscriptions',
+            group: 'Pages',
+            keywords: 'list',
+            perform: () => navigate('/subscriptions')
+        });
+
+        return actions;
+    }, [showReactivateCTA, subscriptionStatus, navigate]);
+    
+    useCommandScope(`Subscription ${id || 'Detail'}`, scopedActions);
 
     return (
         <div style={{ padding: '2rem', background: '#0a0a0a', minHeight: '100vh', color: '#f8fafc' }}>

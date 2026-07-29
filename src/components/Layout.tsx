@@ -8,6 +8,7 @@ import KeyboardChordIndicator from "./KeyboardChordIndicator";
 import HelpSidebar from "./help/HelpSidebar";
 import ChangelogPanel from "./changelog/ChangelogPanel";
 import FocusOrderVisualizer from "./FocusOrderVisualizer";
+import { LayoutContextType } from "../hooks/useCommandScope";
 import "../styles/sidebar.css";
 
 const RECENT_COMMANDS_KEY = "sb:recent-commands";
@@ -132,6 +133,23 @@ export default function Layout() {
   const [isQAOverlayOpen, setIsQAOverlayOpen] = useState(false);
   const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => readPinnedCommands());
+  const [scopeName, setScopeName] = useState<string | null>(null);
+  const [scopedItems, setScopedItems] = useState<CommandItem[]>([]);
+  const [paletteMode, setPaletteMode] = useState<'global' | 'scoped'>('global');
+  const [showScopeToast, setShowScopeToast] = useState(false);
+  
+  const registerScope = useMemo(() => (name: string, items: CommandItem[]) => {
+    setScopeName(name);
+    setScopedItems(items);
+  }, []);
+  const clearScope = useMemo(() => () => {
+    setScopeName(null);
+    setScopedItems([]);
+    setPaletteMode('global');
+  }, []);
+  const layoutContext = useMemo<LayoutContextType>(() => ({
+    registerScope, clearScope
+  }), [registerScope, clearScope]);
   
   const [pendingChordKey, setPendingChordKey] = useState<string | null>(null);
   const pendingChordKeyRef = useRef<string | null>(null);
@@ -242,10 +260,29 @@ export default function Layout() {
         }
       }
 
-      // Cmd+K / Ctrl+K: Open command palette
-      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+      // Cmd+Shift+K: Open scoped palette
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setIsPaletteOpen(true);
+        if (scopeName) {
+            setPaletteMode('scoped');
+            const hasSeenToast = localStorage.getItem('sb:seen-scoped-toast');
+            if (!hasSeenToast) {
+                localStorage.setItem('sb:seen-scoped-toast', 'true');
+                setShowScopeToast(true);
+                setTimeout(() => setShowScopeToast(false), 4000);
+            }
+        } else {
+            setPaletteMode('global');
+        }
+        return;
+      }
+
+      // Cmd+K / Ctrl+K: Open command palette
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setIsPaletteOpen(true);
+        setPaletteMode('global');
         return;
       }
 
@@ -378,7 +415,7 @@ export default function Layout() {
         {/* Main Content Area */}
         <main className="app-layout__main">
           <div className="app-layout__content">
-            <Outlet />
+            <Outlet context={layoutContext} />
           </div>
 
           {/* Subtle background glow */}
@@ -407,10 +444,19 @@ export default function Layout() {
       <CommandPalette
         isOpen={isPaletteOpen}
         onClose={() => setIsPaletteOpen(false)}
-        items={paletteItems}
+        items={paletteMode === 'scoped' ? scopedItems : paletteItems}
         onSelect={handleCommandSelect}
         onTogglePin={handleTogglePin}
+        mode={paletteMode}
+        onModeChange={(mode) => setPaletteMode(mode)}
+        scopeName={scopeName}
       />
+
+      {showScopeToast && (
+        <div className="cmdk-toast" role="alert">
+          <p>You've opened the scoped command palette! Press <strong>Backspace</strong> to clear the scope and search globally.</p>
+        </div>
+      )}
 
       <KeyboardShortcutsOverlay
         isOpen={isShortcutsOverlayOpen}
