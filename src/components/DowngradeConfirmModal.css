@@ -1,0 +1,444 @@
+/* DowngradeConfirmModal.css
+   Mirrors ReactivationModal visual language:
+   dark bg, border-radius 28px, modal-fade-in animation,
+   amber (#f59e0b) warning accent instead of cyan. */
+
+/* ── Overlay ─────────────────────────────────────────────────────────── */
+.downgrade-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  padding: 1rem;
+}
+
+/* ── Modal container ─────────────────────────────────────────────────── */
+.downgrade-modal-content {
+  background-color: #0d0d0d;
+  border-radius: 28px;
+  width: calc(100% - 2rem);
+  max-width: 500px;
+  max-height: 92vh;
+  overflow-y: auto;
+  position: relative;
+  padding: 48px 32px 32px;
+  border: 1px solid #1a1a1a;
+  color: #ffffff;
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.7);
+  animation: downgrade-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  scrollbar-width: thin;
+  scrollbar-color: #1a1a1a transparent;
+}
+
+.downgrade-modal-content::-webkit-scrollbar { width: 6px; }
+.downgrade-modal-content::-webkit-scrollbar-thumb {
+  background-color: #1a1a1a;
+  border-radius: 10px;
+}
+
+@keyframes downgrade-fade-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .downgrade-modal-content { animation: none; }
+}
+
+/* ── Close button ────────────────────────────────────────────────────── */
+.downgrade-close-btn {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: transparent;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.downgrade-close-btn:hover { background-color: #1a1a1a; color: #fff; }
+.downgrade-close-btn:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
+.downgrade-close-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Icon header ─────────────────────────────────────────────────────── */
+.downgrade-icon-header {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.downgrade-icon-circle {
+  width: 64px;
+  height: 64px;
+  border: 4px solid rgba(245, 158, 11, 0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(245, 158, 11, 0.08);
+  color: #f59e0b;
+}
+
+/* ── Title & description ─────────────────────────────────────────────── */
+.downgrade-title {
+  font-size: 26px;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 8px;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.downgrade-description {
+  font-size: 14px;
+  color: #888;
+  text-align: center;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+/* ── Plan delta row ──────────────────────────────────────────────────── */
+.downgrade-plan-delta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  /* Allow chips to wrap on very small screens */
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.downgrade-plan-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+}
+
+.downgrade-plan-chip--current {
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.downgrade-plan-chip--new {
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.downgrade-plan-chip__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.downgrade-plan-chip--new .downgrade-plan-chip__name {
+  color: #f59e0b;
+}
+
+.downgrade-plan-chip__price {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.downgrade-plan-chip--new .downgrade-plan-chip__price {
+  color: #fbbf24;
+}
+
+.downgrade-plan-arrow {
+  color: #475569;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Features section ────────────────────────────────────────────────── */
+.downgrade-features-section {
+  margin-bottom: 20px;
+}
+
+.downgrade-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 10px;
+}
+
+/* No-features-lost variant */
+.downgrade-no-loss {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(34, 197, 94, 0.07);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  border-radius: 10px;
+  color: #4ade80;
+  font-size: 13px;
+}
+
+.downgrade-no-loss svg { flex-shrink: 0; }
+.downgrade-no-loss p { margin: 0; color: #86efac; }
+
+/* Lost feature list */
+.downgrade-feature-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.downgrade-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.downgrade-feature-item__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  margin-top: 1px;
+}
+
+/* ── Effective date notice ────────────────────────────────────────────── */
+.downgrade-effective-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.downgrade-effective-notice__icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.downgrade-effective-notice p { margin: 0; color: #94a3b8; }
+
+/* Delayed: informational blue */
+.downgrade-effective-notice--delayed {
+  background: rgba(0, 204, 255, 0.05);
+  border: 1px solid rgba(0, 204, 255, 0.18);
+}
+.downgrade-effective-notice--delayed .downgrade-effective-notice__icon {
+  color: #00ccff;
+}
+
+/* Immediate: amber warning */
+.downgrade-effective-notice--immediate {
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.downgrade-effective-notice--immediate .downgrade-effective-notice__icon {
+  color: #f59e0b;
+}
+
+/* ── Compare plans link ──────────────────────────────────────────────── */
+.downgrade-compare-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #60a5fa;
+  text-decoration: none;
+  margin-bottom: 20px;
+  transition: color 0.15s ease;
+}
+
+.downgrade-compare-link:hover { color: #93c5fd; text-decoration: underline; }
+.downgrade-compare-link:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ── Screen-reader only utility ──────────────────────────────────────── */
+.downgrade-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Acknowledgement checkbox ────────────────────────────────────────── */
+.downgrade-ack-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  margin-bottom: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.04);
+  border: 1px solid rgba(245, 158, 11, 0.18);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.downgrade-ack-label:has(.downgrade-ack-checkbox:checked) {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+/* Fallback for browsers without :has() */
+.downgrade-ack-label:hover {
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.downgrade-ack-checkbox {
+  /* Custom visible checkbox */
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  accent-color: #f59e0b;
+  cursor: pointer;
+}
+
+.downgrade-ack-checkbox:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.downgrade-ack-text {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.downgrade-ack-hint {
+  font-size: 11px;
+  color: #475569;
+  margin: 0 0 20px;
+  padding: 0 2px;
+}
+
+/* ── Action buttons ──────────────────────────────────────────────────── */
+.downgrade-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.downgrade-btn {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px; /* WCAG 2.5.5 touch target */
+}
+
+.downgrade-btn--cancel {
+  background-color: #121415;
+  color: #e2e8f0;
+  border: 1px solid #222;
+}
+.downgrade-btn--cancel:hover:not(:disabled) {
+  background-color: #1a1a1a;
+  border-color: #333;
+}
+.downgrade-btn--cancel:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
+.downgrade-btn--cancel:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.downgrade-btn--confirm {
+  background: linear-gradient(90deg, #d97706 0%, #f59e0b 100%);
+  color: #0d0d0d;
+  font-weight: 700;
+  box-shadow: 0 8px 20px -6px rgba(245, 158, 11, 0.35);
+}
+.downgrade-btn--confirm:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -6px rgba(245, 158, 11, 0.45);
+}
+.downgrade-btn--confirm:active:not(:disabled) { transform: translateY(0); }
+.downgrade-btn--confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.downgrade-btn--confirm:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
+
+/* ── Loading spinner ─────────────────────────────────────────────────── */
+.downgrade-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(13, 13, 13, 0.3);
+  border-top-color: #0d0d0d;
+  border-radius: 50%;
+  animation: downgrade-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes downgrade-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .downgrade-spinner { animation: none; opacity: 0.7; }
+  .downgrade-btn--confirm { transition: none; }
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .downgrade-modal-content {
+    padding: 40px 20px 24px;
+    border-radius: 24px;
+  }
+  .downgrade-title { font-size: 22px; }
+  .downgrade-actions { flex-direction: column; gap: 10px; }
+  .downgrade-plan-delta { gap: 6px; }
+  .downgrade-plan-chip { min-width: 100px; }
+}
+
+/* ── RTL ─────────────────────────────────────────────────────────────── */
+[dir="rtl"] .downgrade-close-btn { right: unset; left: 24px; }
+[dir="rtl"] .downgrade-plan-delta { flex-direction: row-reverse; }
+[dir="rtl"] .downgrade-feature-item { flex-direction: row-reverse; }
+[dir="rtl"] .downgrade-ack-label { flex-direction: row-reverse; }
+[dir="rtl"] .downgrade-compare-link { flex-direction: row-reverse; }

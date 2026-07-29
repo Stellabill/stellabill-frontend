@@ -1,5 +1,6 @@
 import { ReactNode, HTMLAttributes } from 'react';
 import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import CardErrorSlot from './CardErrorSlot';
 import './DashboardCard.css';
 
 interface DashboardCardProps extends HTMLAttributes<HTMLDivElement> {
@@ -10,6 +11,14 @@ interface DashboardCardProps extends HTMLAttributes<HTMLDivElement> {
   loading?: boolean;
   icon?: ReactNode;
   helpText?: string;
+  /** When set the card body is replaced with an in-card error slot. */
+  error?: string | null;
+  /** True when the error is an offline / no-network condition. */
+  isOfflineError?: boolean;
+  /** Called when the user presses the in-card Retry button. */
+  onRetry?: () => void;
+  /** True while a retry request is in-flight. */
+  retrying?: boolean;
 }
 
 export default function DashboardCard({
@@ -20,6 +29,10 @@ export default function DashboardCard({
   loading = false,
   icon,
   helpText,
+  error,
+  isOfflineError = false,
+  onRetry,
+  retrying = false,
   ...rest
 }: DashboardCardProps) {
   if (loading) {
@@ -45,7 +58,7 @@ export default function DashboardCard({
   const TrendIcon = trendMeta?.icon;
 
   return (
-    <div className="dashboard-card" {...rest}>
+    <div className={`dashboard-card${error ? ' dashboard-card--error' : ''}`} {...rest}>
       <div className="dashboard-card__header">
         <div>
           <h3 className="dashboard-card__title">
@@ -60,20 +73,32 @@ export default function DashboardCard({
         {icon && <div className="dashboard-card__icon">{icon}</div>}
       </div>
 
-      <div className="dashboard-card__metric">
-        <div className="dashboard-card__value">{value}</div>
-        {change !== undefined && TrendIcon && trendMeta && (
-          <div className={`dashboard-card__trend ${trendMeta.className}`}>
-            <TrendIcon size={12} aria-hidden="true" />
-            {Math.abs(change)}%
+      {error ? (
+        <CardErrorSlot
+          widgetLabel={title}
+          message={error}
+          isOffline={isOfflineError}
+          onRetry={onRetry}
+          retrying={retrying}
+        />
+      ) : (
+        <>
+          <div className="dashboard-card__metric">
+            <div className="dashboard-card__value">{value}</div>
+            {change !== undefined && TrendIcon && trendMeta && (
+              <div className={`dashboard-card__trend ${trendMeta.className}`}>
+                <TrendIcon size={12} aria-hidden="true" />
+                {Math.abs(change)}%
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {change !== undefined && (
-        <p className="dashboard-card__caption">
-          vs last 30 days
-        </p>
+          {change !== undefined && (
+            <p className="dashboard-card__caption">
+              vs last 30 days
+            </p>
+          )}
+        </>
       )}
     </div>
   );
