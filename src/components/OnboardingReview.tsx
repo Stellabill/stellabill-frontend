@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import OnboardingShell from './Onboarding/OnboardingShell';
+import { ReviewStep } from './common/ReviewStep';
 import './Onboarding/OnboardingShell.css';
 
 export default function OnboardingReview() {
@@ -9,7 +10,6 @@ export default function OnboardingReview() {
   const [website, setWebsite] = useState('');
   const [country, setCountry] = useState('');
   const [payoutAddress, setPayoutAddress] = useState('');
-  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -35,23 +35,6 @@ export default function OnboardingReview() {
     setPayoutAddress(payout || '');
   }, []);
 
-  const onBack = () => {
-    navigate('/onboarding/payout');
-  };
-
-  const handleComplete = async () => {
-    if (!agreed) return;
-
-    setLoading(true);
-    await new Promise<void>((resolve) => {
-      window.setTimeout(() => {
-        resolve();
-      }, 1000);
-    });
-    setLoading(false);
-    navigate('/onboarding-success');
-  };
-
   const displayNames = useMemo(() => {
     try {
       return new Intl.DisplayNames('en', { type: 'region' });
@@ -71,13 +54,24 @@ export default function OnboardingReview() {
     return `${address.slice(0, 10)}...${address.slice(-8)}`;
   };
 
-  const getCountryName = (code: string) => {
-    try {
-      return new Intl.DisplayNames(undefined, { type: 'region' }).of(code) ?? code
-    } catch {
-      return code
-    }
-  }
+  const handleSectionEdit = (sectionId: string) => {
+    if (sectionId === 'business') navigate('/onboarding/business');
+    else if (sectionId === 'payout') navigate('/onboarding/payout');
+  };
+
+  const handleComplete = async () => {
+    setLoading(true);
+    await new Promise<void>((resolve) => {
+      window.setTimeout(() => resolve(), 1000);
+    });
+    setLoading(false);
+    navigate('/onboarding-success');
+  };
+
+  const sections = [
+    { id: 'business', label: 'Business Information', value: `${businessName || 'Not provided'} — ${website || 'No website'} — ${countryLabel}`, editLink: '/onboarding/business' },
+    { id: 'payout', label: 'Payout Address', value: truncateAddress(payoutAddress), editLink: '/onboarding/payout' },
+  ];
 
   return (
     <OnboardingShell
@@ -86,58 +80,25 @@ export default function OnboardingReview() {
       title="Review and confirm"
       subtitle="Verify your business and payout details before completing onboarding."
     >
-      <div className="onboarding-field">
-        <label className="onboarding-label">Business name</label>
-        <div className="onboarding-readonly">{businessName || 'Not provided yet'}</div>
-      </div>
-
-      <div className="onboarding-field">
-        <label className="onboarding-label">Website</label>
-        <div className="onboarding-readonly">{website || 'No website provided'}</div>
-      </div>
-
-      <div className="onboarding-field">
-        <label className="onboarding-label">Country</label>
-        <div className="onboarding-readonly">{countryLabel}</div>
-      </div>
-
-      <div className="onboarding-field">
-        <label className="onboarding-label">Payout address</label>
-        <div className="onboarding-readonly">{truncateAddress(payoutAddress)}</div>
-      </div>
-
-      <div className="onboarding-checkbox-row">
-        <input
-          id="terms"
-          type="checkbox"
-          checked={agreed}
-          onChange={(e) => setAgreed(e.target.checked)}
-        />
-        <label htmlFor="terms" className="onboarding-checkbox-label">
-          I agree to the{' '}
-          <a href="/terms" target="_blank" rel="noreferrer" className="onboarding-link">
-            Terms of Service
-          </a>{' '}
-          and{' '}
-          <a href="/merchant-agreement" target="_blank" rel="noreferrer" className="onboarding-link">
-            Merchant Agreement
-          </a>
-        </label>
-      </div>
-
-      <div className="onboarding-actions">
-        <button type="button" className="onboarding-btn onboarding-btn-secondary" onClick={onBack}>
-          Back
-        </button>
-        <button
-          type="button"
-          className="onboarding-btn onboarding-btn-primary"
-          disabled={!agreed || loading}
-          onClick={handleComplete}
-        >
-          {loading ? 'Completing...' : 'Complete setup'}
-        </button>
-      </div>
+      <ReviewStep
+        title=""
+        sections={sections}
+        onSectionEdit={handleSectionEdit}
+        primaryAction={{
+          label: loading ? 'Completing...' : 'Complete setup',
+          onClick: handleComplete,
+          disabled: loading,
+          loading,
+        }}
+        secondaryAction={{
+          label: 'Back',
+          onClick: () => navigate('/onboarding/payout'),
+        }}
+        footerHelp={{
+          label: 'Questions? Contact support',
+          onClick: () => window.open('/support', '_blank'),
+        }}
+      />
     </OnboardingShell>
   );
 }
