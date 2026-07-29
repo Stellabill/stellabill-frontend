@@ -11,6 +11,7 @@ import type { ReceiptData } from '../components/past-periods/ReceiptPreview';
 import { useScopedTheme } from '../hooks/useScopedTheme';
 import './UsageBilling.css';
 import InvoiceList from "../components/InvoiceList";
+import PlanRecommendationBanner from "../components/PlanRecommendationBanner";
 
 
 interface UsageData {
@@ -208,6 +209,21 @@ export default function UsageBilling() {
                 <h1>Usage & Billing</h1>
                 <p>Usage-based charges for <span style={{ color: '#FFFFFF' }}>{planName}</span></p>
             </header>
+
+            {usagePct >= 80 && (
+              <div className="mb-6">
+                <PlanRecommendationBanner
+                  currentPlan={planName}
+                  recommendedPlan="Enterprise Tier"
+                  currentLimit={usageLimit}
+                  recommendedLimit={100000}
+                  costDelta="+$29/mo"
+                  currency={currency}
+                  consecutiveMonthsOverThreshold={2}
+                  thresholdPct={80}
+                />
+              </div>
+            )}
 
             <div className="main-card">
                 <div className="main-card-inner">
