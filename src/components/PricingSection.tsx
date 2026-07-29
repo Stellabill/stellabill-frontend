@@ -1,6 +1,7 @@
-import { useState, useEffect, type CSSProperties } from 'react'
+import { useState, useEffect } from 'react'
 import { PricingModeInput, type PricingMode } from './common/PricingModeInput'
 import AmountInput from './common/AmountInput'
+import { FieldLabelWithHelp } from './common/FieldHelpPopover'
 
 export type PlanInterval = 'Monthly' | 'Yearly'
 
@@ -162,9 +163,15 @@ export default function PricingSection({ value, onChange, priceError, intervalEr
           )}
         </div>
         <div style={{ minWidth: 0 }}>
-          <label htmlFor="pricing-interval" style={labelStyle}>
-            Billing interval <span style={{ color: '#f00' }}>*</span>
-          </label>
+          <FieldLabelWithHelp
+            htmlFor="pricing-interval"
+            required
+            helpTitle="Billing interval"
+            help={<p>Choose how often the recurring plan renews and invoices subscribers.</p>}
+            style={labelStyle}
+          >
+            Billing interval
+          </FieldLabelWithHelp>
           <div style={{ position: 'relative' }}>
             <select
               id="pricing-interval"

@@ -4,6 +4,7 @@ import DangerZone, { DangerZoneItem } from '../common/DangerZone'
 import ConfirmDialog from '../common/ConfirmDialog'
 import Avatar from '../common/Avatar'
 import AvatarUploader from '../common/AvatarUploader'
+import { FieldLabelWithHelp } from '../common/FieldHelpPopover'
 
 interface OrganizationData {
   name: string
@@ -162,10 +163,16 @@ export default function OrganizationSettings() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="organization-name"
+                helpTitle="Organization name"
+                help={<p>This display name appears in customer-facing invoices, emails, and workspace headers.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Organization Name
-              </label>
+              </FieldLabelWithHelp>
               <input
+                id="organization-name"
                 type="text"
                 value={orgData.name}
                 onChange={(e) => setOrgData({ ...orgData, name: e.target.value })}
@@ -184,10 +191,16 @@ export default function OrganizationSettings() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="organization-domain"
+                helpTitle="Domain"
+                help={<p>Use the primary company domain for workspace identity and future domain verification.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Domain
-              </label>
+              </FieldLabelWithHelp>
               <input
+                id="organization-domain"
                 type="text"
                 value={orgData.domain}
                 onChange={(e) => setOrgData({ ...orgData, domain: e.target.value })}
@@ -206,10 +219,16 @@ export default function OrganizationSettings() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="organization-contact-email"
+                helpTitle="Contact email"
+                help={<p>Operational notices and organization-level account messages are sent here.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Contact Email
-              </label>
+              </FieldLabelWithHelp>
               <input
+                id="organization-contact-email"
                 type="email"
                 value={orgData.email}
                 onChange={(e) => setOrgData({ ...orgData, email: e.target.value })}
@@ -228,10 +247,16 @@ export default function OrganizationSettings() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="organization-timezone"
+                helpTitle="Timezone"
+                help={<p>Controls date boundaries for reports, invoice schedules, and activity timestamps.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Timezone
-              </label>
+              </FieldLabelWithHelp>
               <select
+                id="organization-timezone"
                 value={orgData.timezone}
                 onChange={(e) => setOrgData({ ...orgData, timezone: e.target.value })}
                 disabled={!isEditing}
@@ -255,10 +280,16 @@ export default function OrganizationSettings() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="organization-currency"
+                helpTitle="Currency"
+                help={<p>Sets the default reporting and invoice currency for new plans and billing summaries.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Currency
-              </label>
+              </FieldLabelWithHelp>
               <select
+                id="organization-currency"
                 value={orgData.currency}
                 onChange={(e) => setOrgData({ ...orgData, currency: e.target.value })}
                 disabled={!isEditing}
@@ -281,10 +312,16 @@ export default function OrganizationSettings() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="organization-language"
+                helpTitle="Language"
+                help={<p>Sets the default locale for customer-facing billing copy where localization is available.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Language
-              </label>
+              </FieldLabelWithHelp>
               <select
+                id="organization-language"
                 value={orgData.language}
                 onChange={(e) => setOrgData({ ...orgData, language: e.target.value })}
                 disabled={!isEditing}
