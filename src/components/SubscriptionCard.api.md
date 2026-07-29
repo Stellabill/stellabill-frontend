@@ -53,7 +53,8 @@ export default function Subscriptions() {
       "prepaidBalance": 30,
       "coverage": 3,
       "nextChargeDate": "Mar 15, 2026",
-      "icon": "📰"
+      "icon": "📰",
+      "isQuietPeriod": false
     }
   ]
 }
@@ -80,12 +81,14 @@ export default function Subscriptions() {
 | `coverage` | number | Number of payments covered by balance |
 | `nextChargeDate` | string | Next charge date (formatted string) |
 | `icon` | string (optional) | Emoji or icon identifier |
+| `isQuietPeriod` | boolean (optional) | True if subscription is in a quiet period (paused but no charges until next charge date) |
 
 ## Features Implemented
 
 ✅ Dark theme card design (#1a1a1a background)
 ✅ Plan icon, name, and merchant display
 ✅ Status badge with color coding (green=active, yellow=paused, red=cancelled)
+✅ Quiet period badge indicator when `isQuietPeriod` is true
 ✅ Price display with currency and interval
 ✅ Subscription ID display
 ✅ Prepaid balance in teal pill
@@ -121,6 +124,7 @@ Modify in `SubscriptionCard.css`:
 .subscription-status-badge.active { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
 .subscription-status-badge.paused { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
 .subscription-status-badge.cancelled { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.subscription-quiet-badge { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
 ```
 
 ### Balance Pill Color

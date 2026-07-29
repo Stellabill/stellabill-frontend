@@ -36,16 +36,19 @@
   box-shadow: var(--shadow-md);
 }
 
-.activity-list__skeleton-avatar,
-.activity-list__skeleton-line,
 .activity-list__dot-separator {
   background: var(--skeleton-base);
 }
 
+/*
+ * Sizing/shape only for the two skeleton elements below — the shimmer sweep
+ * and background gradient are owned by the shared .sb-shimmer mixin
+ * (src/styles/shimmer.css), applied via the <Shimmer/> component they render
+ * through.
+ */
 .activity-list__skeleton-avatar {
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: var(--radius-full);
   flex-shrink: 0;
 }
 
