@@ -1,5 +1,6 @@
 import { ReactNode, HTMLAttributes } from 'react';
 import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import Shimmer from '../common/Shimmer';
 import './DashboardCard.css';
 
 interface DashboardCardProps extends HTMLAttributes<HTMLDivElement> {
@@ -24,13 +25,18 @@ export default function DashboardCard({
 }: DashboardCardProps) {
   if (loading) {
     return (
-      <div className="dashboard-card dashboard-card--loading animate-pulse">
+      <div
+        className="dashboard-card dashboard-card--loading"
+        role="status"
+        aria-busy="true"
+        aria-label={`${title} loading`}
+      >
         <div className="dashboard-card__header">
-          <div className="dashboard-card__skeleton-line dashboard-card__skeleton-line--title" />
-          <div className="dashboard-card__skeleton-icon" />
+          <Shimmer className="dashboard-card__skeleton-line dashboard-card__skeleton-line--title" />
+          <Shimmer className="dashboard-card__skeleton-icon" delay="0.05s" />
         </div>
-        <div className="dashboard-card__skeleton-line dashboard-card__skeleton-line--value" />
-        <div className="dashboard-card__skeleton-line dashboard-card__skeleton-line--caption" />
+        <Shimmer className="dashboard-card__skeleton-line dashboard-card__skeleton-line--value" delay="0.1s" />
+        <Shimmer className="dashboard-card__skeleton-line dashboard-card__skeleton-line--caption" delay="0.15s" />
       </div>
     );
   }
