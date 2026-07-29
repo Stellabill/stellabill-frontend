@@ -1,4 +1,5 @@
 import { CheckCircle2, XCircle, AlertCircle, RefreshCcw, UserPlus, CreditCard } from 'lucide-react';
+import Shimmer from '../common/Shimmer';
 import './ActivityList.css';
 
 export type ActivityType = 'subscription.created' | 'payment.succeeded' | 'payment.failed' | 'subscription.cancelled' | 'renewal.upcoming';
@@ -28,13 +29,18 @@ const icons = {
 export default function ActivityList({ activities = [], loading = false }: ActivityListProps) {
   if (loading) {
     return (
-      <div className="activity-list__loading animate-pulse">
+      <div
+        className="activity-list__loading"
+        role="status"
+        aria-busy="true"
+        aria-label="Loading recent activity"
+      >
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="activity-list__skeleton-item">
-            <div className="activity-list__skeleton-avatar" />
+            <Shimmer shape="circle" className="activity-list__skeleton-avatar" delay={`${i * 0.05}s`} />
             <div className="activity-list__skeleton-content">
-              <div className="activity-list__skeleton-line" />
-              <div className="activity-list__skeleton-line" />
+              <Shimmer className="activity-list__skeleton-line" delay={`${i * 0.05}s`} />
+              <Shimmer className="activity-list__skeleton-line" delay={`${i * 0.05 + 0.03}s`} />
             </div>
           </div>
         ))}
