@@ -1,0 +1,122 @@
+@import '../../styles/tokens.css';
+
+/*
+ * CardErrorSlot
+ * -------------
+ * Fills the card body in place of the failed metric / chart.
+ * Heights are intentionally fixed to match the typical card body so the
+ * layout grid never shifts when swapping between data and error states.
+ */
+
+.card-error-slot {
+  /* Mimic the vertical space of a KPI metric block */
+  min-height: 4.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+}
+
+/* For a chart panel the slot should be taller */
+.card-error-slot--chart {
+  min-height: 18rem;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+}
+
+/* Icon */
+.card-error-slot__icon {
+  display: inline-flex;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  background: var(--color-danger-bg);
+}
+
+.card-error-slot__icon--error {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.card-error-slot__icon--offline {
+  background: var(--color-surface-subtle);
+  color: var(--color-text-muted);
+}
+
+/* Message */
+.card-error-slot__message {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  line-height: var(--leading-snug);
+  /* Cap width so long messages don't overflow small KPI cards */
+  max-width: 20ch;
+}
+
+.card-error-slot--chart .card-error-slot__message {
+  max-width: 36ch;
+}
+
+/* Retry button */
+.card-error-slot__retry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-danger);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+  /* Minimum 44×44 touch target via padding compensation */
+  min-height: 1.75rem;
+}
+
+.card-error-slot__retry:hover:not(:disabled) {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger);
+}
+
+.card-error-slot__retry:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.card-error-slot__retry:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Spinner */
+.card-error-slot__spin {
+  animation: card-error-spin 0.8s linear infinite;
+}
+
+@keyframes card-error-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Honour reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .card-error-slot__retry,
+  .card-error-slot__spin {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ─── Dark-mode border override ─────────────────────────────────────── */
+[data-theme="dark"] .card-error-slot__retry,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .card-error-slot__retry {
+    border-color: var(--color-danger-border);
+  }
+}

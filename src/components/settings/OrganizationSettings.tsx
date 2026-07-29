@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { Save, Building2, Users, Trash2, Edit2 } from 'lucide-react'
 import DangerZone, { DangerZoneItem } from '../common/DangerZone'
 import ConfirmDialog from '../common/ConfirmDialog'
+import Avatar from '../common/Avatar'
+import AvatarUploader from '../common/AvatarUploader'
+import { FieldLabelWithHelp } from '../common/FieldHelpPopover'
 
 interface OrganizationData {
   name: string
@@ -31,12 +34,15 @@ export default function OrganizationSettings() {
     language: 'en-US',
   })
 
+  const [orgAvatar, setOrgAvatar] = useState<string | null>(null)
+
   const [teamMembers] = useState<TeamMember[]>([
     {
       id: '1',
       name: 'John Doe',
       email: 'john@acme.com',
       role: 'admin',
+      avatar: undefined,
       joinedAt: '2024-01-15',
     },
     {
@@ -53,7 +59,7 @@ export default function OrganizationSettings() {
 
   const handleSave = () => {
     // TODO: Implement save logic
-    console.log('Saving organization data:', orgData)
+    console.log('Saving organization data:', { ...orgData, avatar: orgAvatar })
     setIsEditing(false)
   }
 
@@ -61,6 +67,21 @@ export default function OrganizationSettings() {
     // TODO: Implement delete logic with proper confirmation
     console.log('Deleting organization...')
     setShowDeleteConfirmation(false)
+  }
+
+  const handleAvatarUpload = async (file: File) => {
+    // TODO: Replace with actual upload to server/cloud storage
+    // For now, create a local preview URL
+    const url = URL.createObjectURL(file)
+    setOrgAvatar(url)
+    console.log('Avatar uploaded:', file.name)
+  }
+
+  const handleAvatarRemove = () => {
+    if (orgAvatar) {
+      URL.revokeObjectURL(orgAvatar)
+    }
+    setOrgAvatar(null)
   }
 
   return (
@@ -100,9 +121,7 @@ export default function OrganizationSettings() {
             }}
           >
             {isEditing ? (
-              <>
-                <span>Cancel</span>
-              </>
+              <span>Cancel</span>
             ) : (
               <>
                 <Edit2 size={14} />
@@ -113,12 +132,47 @@ export default function OrganizationSettings() {
         </div>
 
         <div style={{ background: '#0a0a0a', borderRadius: '6px', padding: '1.5rem', border: '1px solid #2d2d44' }}>
+          {/* Avatar Upload Section */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1.5rem',
+            marginBottom: '1.5rem',
+            paddingBottom: '1.5rem',
+            borderBottom: '1px solid #2d2d44',
+          }}>
+            <AvatarUploader
+              currentSrc={orgAvatar}
+              name={orgData.name}
+              size="xl"
+              onUpload={handleAvatarUpload}
+              onRemove={handleAvatarRemove}
+            />
+            <div>
+              <div style={{ fontWeight: 600, color: '#e2e8f0', marginBottom: '0.25rem' }}>
+                Organization Avatar
+              </div>
+              <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                {orgAvatar
+                  ? 'Hover over the avatar to change or remove the photo.'
+                  : 'Click or drag an image to upload. Recommended: Square, at least 200×200px.'
+                }
+              </p>
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="organization-name"
+                helpTitle="Organization name"
+                help={<p>This display name appears in customer-facing invoices, emails, and workspace headers.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Organization Name
-              </label>
+              </FieldLabelWithHelp>
               <input
+                id="organization-name"
                 type="text"
                 value={orgData.name}
                 onChange={(e) => setOrgData({ ...orgData, name: e.target.value })}
@@ -137,10 +191,16 @@ export default function OrganizationSettings() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="organization-domain"
+                helpTitle="Domain"
+                help={<p>Use the primary company domain for workspace identity and future domain verification.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Domain
-              </label>
+              </FieldLabelWithHelp>
               <input
+                id="organization-domain"
                 type="text"
                 value={orgData.domain}
                 onChange={(e) => setOrgData({ ...orgData, domain: e.target.value })}
@@ -159,10 +219,16 @@ export default function OrganizationSettings() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="organization-contact-email"
+                helpTitle="Contact email"
+                help={<p>Operational notices and organization-level account messages are sent here.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Contact Email
-              </label>
+              </FieldLabelWithHelp>
               <input
+                id="organization-contact-email"
                 type="email"
                 value={orgData.email}
                 onChange={(e) => setOrgData({ ...orgData, email: e.target.value })}
@@ -181,10 +247,16 @@ export default function OrganizationSettings() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="organization-timezone"
+                helpTitle="Timezone"
+                help={<p>Controls date boundaries for reports, invoice schedules, and activity timestamps.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Timezone
-              </label>
+              </FieldLabelWithHelp>
               <select
+                id="organization-timezone"
                 value={orgData.timezone}
                 onChange={(e) => setOrgData({ ...orgData, timezone: e.target.value })}
                 disabled={!isEditing}
@@ -208,10 +280,16 @@ export default function OrganizationSettings() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="organization-currency"
+                helpTitle="Currency"
+                help={<p>Sets the default reporting and invoice currency for new plans and billing summaries.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Currency
-              </label>
+              </FieldLabelWithHelp>
               <select
+                id="organization-currency"
                 value={orgData.currency}
                 onChange={(e) => setOrgData({ ...orgData, currency: e.target.value })}
                 disabled={!isEditing}
@@ -234,10 +312,16 @@ export default function OrganizationSettings() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="organization-language"
+                helpTitle="Language"
+                help={<p>Sets the default locale for customer-facing billing copy where localization is available.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Language
-              </label>
+              </FieldLabelWithHelp>
               <select
+                id="organization-language"
                 value={orgData.language}
                 onChange={(e) => setOrgData({ ...orgData, language: e.target.value })}
                 disabled={!isEditing}
@@ -341,22 +425,7 @@ export default function OrganizationSettings() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #67d5f0, #5ce0b8)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#fff',
-                    fontWeight: 600,
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  {member.name.split(' ').map(n => n[0]).join('')}
-                </div>
+                <Avatar name={member.name} src={member.avatar} size="lg" />
                 <div>
                   <div style={{ fontWeight: 500, color: '#e2e8f0', marginBottom: '0.25rem' }}>
                     {member.name}

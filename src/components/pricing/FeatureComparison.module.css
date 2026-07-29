@@ -4,19 +4,16 @@
   padding: 0 1.5rem;
 }
 
-/* Mobile-First: Base styles for xs screens (< 640px) */
 .title {
   color: #ffffff;
   font-size: 1.25rem;
   font-weight: 700;
-  margin: 0 0 1rem 0;
+  margin: 0 0 1.5rem 0;
   text-align: center;
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
+/* ── Desktop table wrapper ─────────────────────────────────────────────────── */
 .tableWrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -27,6 +24,7 @@
   background-color: transparent;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  position: relative;
 }
 
 .tableWrapper::-webkit-scrollbar {
@@ -38,114 +36,202 @@
   border-radius: 10px;
 }
 
+/* ── Table layout ──────────────────────────────────────────────────────────── */
 .table {
-  width: 750px;
-  min-width: 750px;
+  width: 100%;
+  min-width: 640px;
   border-collapse: collapse;
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
+  table-layout: fixed;
 }
 
+/* First column (features) gets 36% width, remaining 3 columns split the rest */
+.table th:first-child,
+.table td:first-child {
+  width: 36%;
+}
+
+.table th:nth-child(n+2),
+.table td:nth-child(n+2) {
+  width: 21.33%;
+}
+
+/* ── Header row ─────────────────────────────────────────────────────────────── */
 .headerRow {
   height: 72.5px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background-color: transparent;
 }
 
-.featureHeader,
-.columnHeader {
-  padding: 0.5rem 0.75rem;
+.cornerHeader,
+.planHeader {
+  padding: 0.75rem 1rem;
   text-align: left;
   color: #ffffff;
   font-weight: 600;
   font-size: 0.75rem;
   background-color: transparent;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.columnHeader {
+.cornerHeader {
+  color: #90a1b9;
+  left: 0;
+  z-index: 4;
+}
+
+.planHeader {
   text-align: center;
   font-size: 0.8rem;
   font-weight: 600;
+  transition: background-color 0.15s ease;
 }
 
-.featureHeader {
-  color: #90a1b9;
-  width: 40%;
-}
-
-.columnHeader.proColumn {
+.proHeader {
   background: linear-gradient(90deg, #00b8db1a, #00bba71a);
 }
 
-.featureCell {
+.colHover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* ── Group header rows ──────────────────────────────────────────────────────── */
+.groupRow {
+  border-bottom: none;
+}
+
+.groupRow:first-child .groupCell {
+  border-top: none;
+}
+
+.groupCell {
+  padding: 0;
+  background-color: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.groupToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: none;
+  background: none;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: color 0.15s ease;
+}
+
+.groupToggle:hover {
+  color: #e2e8f0;
+}
+
+.groupToggle:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+.groupArrow {
+  font-size: 0.6rem;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.groupArrowCollapsed {
+  transform: rotate(-90deg);
+}
+
+/* ── Feature rows ───────────────────────────────────────────────────────────── */
+.featureRow {
+  height: 56px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 0.15s ease;
+}
+
+.featureRow:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.rowHidden {
+  display: none;
+}
+
+.featureLabel {
   padding: 0.5rem 0.75rem;
   color: #cad5e2;
   font-size: 0.75rem;
+  font-weight: 400;
   text-align: left;
   background-color: transparent;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* Sticky first column in the table body */
+.featureRow .featureLabel {
+  background-color: #0a0a0a;
+}
+
+.featureRow:hover .featureLabel {
+  background-color: #111111;
+}
+
+/* ── Data cells ─────────────────────────────────────────────────────────────── */
 .dataCell {
   padding: 0.5rem 0.75rem;
   text-align: center;
   background-color: transparent;
+  transition: background-color 0.15s ease;
 }
 
 .dataCell.proColumn {
   background: linear-gradient(90deg, #00b8db0d, #00bba70d);
 }
 
-.dataCell:last-child,
-.columnHeader:last-child {
-  border-right: none;
-}
-
-.row {
-  height: 65px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  transition: background-color 0.2s ease;
-}
-
-.row:hover {
-  background-color: transparent;
-}
-
-.row.withDivider {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.checkmarkCell {
-  display: flex;
-  justify-content: center;
+.cellIcon {
+  display: inline-flex;
   align-items: center;
-}
-
-.checkmark {
+  justify-content: center;
   color: #00d3f2;
   font-size: 0.875rem;
-  flex-shrink: 0;
 }
 
-.dashCell {
-  display: flex;
-  justify-content: center;
+.cellIconDim {
+  display: inline-flex;
   align-items: center;
-}
-
-.dash {
+  justify-content: center;
   color: #45556c;
   font-size: 0.875rem;
-  flex-shrink: 0;
 }
 
-.textValue {
+.cellText {
   color: #cad5e2;
   font-size: 0.7rem;
   font-weight: 500;
 }
 
+.cellLimit {
+  color: #fbbf24;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+/* ── Screen-reader only ─────────────────────────────────────────────────────── */
 .srOnly {
   position: absolute;
   width: 1px;
@@ -158,73 +244,131 @@
   border-width: 0;
 }
 
-/* Progressive Enhancement */
+/* =============================================================================
+   Mobile card-stack view (< 720px)
+   ============================================================================= */
+.cardStack {
+  display: none;
+}
 
-/* sm breakpoint (640px to 767px) - Small Device */
-@media (min-width: 640px) {
-  .title {
-    font-size: 1.375rem;
-    margin-bottom: 1.25rem;
+@media (max-width: 719px) {
+  .tableWrapper {
+    display: none;
   }
 
-  .table {
-    width: 825px;
-    min-width: 825px;
+  .cardStack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
 
-  .featureHeader,
-  .columnHeader,
-  .featureCell,
-  .dataCell {
-    padding: 0.65rem 0.875rem;
-    font-size: 0.8125rem;
+  .planCard {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    overflow: hidden;
   }
 
-  .columnHeader {
+  .cardHeader {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 1rem 1.25rem;
+    background: #0f172a;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+  }
+
+  .cardHeaderPro {
+    background: linear-gradient(90deg, #00b8db1a, #00bba71a);
+  }
+
+  .cardPlanName {
+    margin: 0;
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .cardFeatureList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .cardGroupSection {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .cardGroupSection:last-child {
+    border-bottom: none;
+  }
+
+  .cardGroupLabel {
+    margin: 0;
+    padding: 0.65rem 1.25rem 0.35rem;
+    color: #64748b;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .cardGroupFeatures {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0.5rem;
+  }
+
+  .cardFeature {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1.25rem;
+    gap: 0.75rem;
+  }
+
+  .cardFeatureName {
+    color: #cad5e2;
+    font-size: 0.8rem;
+  }
+}
+
+/* =============================================================================
+   Responsive – Tablet and up (> 720px)
+   ============================================================================= */
+@media (min-width: 720px) {
+  .cornerHeader,
+  .planHeader {
+    padding: 0.75rem 1rem;
     font-size: 0.8rem;
   }
 
-  .checkmark,
-  .dash {
+  .featureLabel {
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  .dataCell {
+    padding: 0.6rem 1rem;
+  }
+
+  .groupToggle {
+    padding: 0.75rem 1rem;
+    font-size: 0.7rem;
+  }
+
+  .cellIcon,
+  .cellIconDim {
     font-size: 0.95rem;
   }
 
-  .textValue {
+  .cellText,
+  .cellLimit {
     font-size: 0.75rem;
   }
 }
 
-/* md breakpoint (768px to 1023px) - Tablet */
-@media (min-width: 768px) {
-  .title {
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .table {
-    width: 900px;
-    min-width: 900px;
-  }
-
-  .featureHeader,
-  .columnHeader,
-  .featureCell,
-  .dataCell {
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
-  }
-
-  .checkmark,
-  .dash {
-    font-size: 1rem;
-  }
-
-  .textValue {
-    font-size: 0.8rem;
-  }
-}
-
-/* lg breakpoint (1024px and up) - Desktop */
 @media (min-width: 1024px) {
   .title {
     font-size: 36px;
@@ -233,32 +377,182 @@
 
   .tableWrapper {
     overflow-x: visible;
-    width: 1014px;
   }
 
-  .table {
-    width: 1014px;
-    min-width: 1014px;
-  }
-
-  .featureHeader,
-  .columnHeader,
-  .featureCell,
-  .dataCell {
+  .cornerHeader,
+  .planHeader {
     padding: 1rem 1.5rem;
     font-size: 0.95rem;
   }
 
-  .columnHeader {
+  .planHeader {
     font-size: 0.95rem;
   }
 
-  .checkmark,
-  .dash {
+  .featureLabel {
+    padding: 0.85rem 1.5rem;
+    font-size: 0.95rem;
+  }
+
+  .dataCell {
+    padding: 0.85rem 1.5rem;
+  }
+
+  .groupToggle {
+    padding: 0.85rem 1.5rem;
+    font-size: 0.75rem;
+  }
+
+  .cellIcon,
+  .cellIconDim {
     font-size: 1.25rem;
   }
 
-  .textValue {
+  .cellText,
+  .cellLimit {
     font-size: 0.9rem;
+  }
+}
+
+/* =============================================================================
+   RTL support
+   ============================================================================= */
+[dir="rtl"] .featureLabel {
+  left: auto;
+  right: 0;
+  border-right: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+[dir="rtl"] .groupToggle {
+  text-align: right;
+}
+
+[dir="rtl"] .cornerHeader {
+  left: auto;
+  right: 0;
+}
+
+/* =============================================================================
+   Print stylesheet
+   ============================================================================= */
+@media print {
+  .container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .title {
+    font-size: 18pt;
+    color: #000;
+    margin-bottom: 12pt;
+  }
+
+  .tableWrapper {
+    overflow: visible;
+    border: 1px solid #ccc;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .tableWrapper::-webkit-scrollbar {
+    display: none;
+  }
+
+  .table {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .cornerHeader,
+  .planHeader {
+    position: static;
+    color: #000;
+    background: #f5f5f5 !important;
+    border-bottom: 2px solid #000;
+    font-size: 10pt;
+  }
+
+  .featureLabel {
+    position: static;
+    color: #000;
+    background: #fff !important;
+    border-right: 1px solid #ddd;
+    font-size: 9pt;
+  }
+
+  .featureRow:hover {
+    background: transparent;
+  }
+
+  .featureRow .featureLabel {
+    background: #fff !important;
+  }
+
+  .dataCell {
+    font-size: 9pt;
+  }
+
+  .dataCell.proColumn {
+    background: transparent !important;
+  }
+
+  .colHover {
+    background: transparent !important;
+  }
+
+  .groupCell {
+    background: #fafafa !important;
+    border-top: 1px solid #999;
+    border-bottom: 1px solid #999;
+  }
+
+  .groupToggle {
+    color: #000;
+    font-size: 8pt;
+  }
+
+  .groupToggle:hover {
+    color: #000;
+  }
+
+  .groupArrow {
+    display: none;
+  }
+
+  .cellIcon {
+    color: #166534;
+  }
+
+  .cellIconDim {
+    color: #9ca3af;
+  }
+
+  .cellText {
+    color: #000;
+  }
+
+  .cellLimit {
+    color: #92400e;
+  }
+
+  /* Hide mobile card stack in print */
+  .cardStack {
+    display: none !important;
+  }
+
+  /* Avoid page breaks inside rows */
+  .featureRow {
+    break-inside: avoid;
+    border-bottom: 1px solid #eee;
+  }
+
+  .groupRow {
+    break-inside: avoid;
+  }
+
+  /* Ensure all rows are visible in print */
+  .rowHidden {
+    display: table-row !important;
   }
 }

@@ -1,42 +1,85 @@
 @import './tokens.css';
 
-/* Global theme utility classes backed by semantic tokens. */
+/* ─── Theme toggle: tri-state segmented control ────────────────────────── */
+
+/* Outer wrapper (positions the hidden live region) */
+.theme-toggle-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Off-screen live region for AT announcements */
+.theme-toggle-sr-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Segmented track */
 .theme-toggle {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  min-height: 2.5rem;
-  padding: 0 var(--space-3);
+  gap: 2px;
+  padding: 3px;
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-full);
   background: var(--color-surface-control);
-  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Individual segment button */
+.theme-toggle__option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 1.875rem;   /* 30 px — 44 px touch target via padding */
+  padding: 0.25rem var(--space-3);
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-muted);
   font-family: inherit;
   font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
   transition:
     background-color 150ms ease,
-    border-color 150ms ease,
     color 150ms ease,
-    box-shadow 150ms ease,
-    transform 150ms ease;
+    box-shadow 150ms ease;
 }
 
-.theme-toggle:hover {
+.theme-toggle__option:hover:not(.theme-toggle__option--active) {
+  color: var(--color-text-primary);
   background: var(--color-surface-control-hover);
-  border-color: var(--color-border-strong);
-  transform: translateY(-1px);
 }
 
-.theme-toggle:focus-visible {
-  outline: 3px solid var(--color-focus-ring);
-  outline-offset: 2px;
+/* Active/selected segment */
+.theme-toggle__option--active {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Focus ring (keyboard nav) */
+.theme-toggle__option:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
 }
 
 .theme-toggle__icon {
   display: inline-flex;
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.theme-toggle__option--active .theme-toggle__icon {
   color: var(--color-brand-primary);
 }
 
@@ -44,14 +87,16 @@
   line-height: 1;
 }
 
+/* ── Responsive: icon-only below 480 px ─────────────────────────────── */
 @media (max-width: 480px) {
-  .theme-toggle {
-    min-width: 2.5rem;
+  .theme-toggle__option {
+    padding: 0.25rem var(--space-2);
+    min-width: 2rem;
     justify-content: center;
-    padding-inline: var(--space-2);
   }
 
   .theme-toggle__label {
+    /* Visually hidden but still read by AT */
     position: absolute;
     width: 1px;
     height: 1px;
@@ -282,12 +327,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .theme-toggle,
+  .theme-toggle__option,
   .site-navbar {
     transition: none;
   }
 
-  .theme-toggle:hover {
+  .theme-toggle__option:hover {
     transform: none;
   }
 }
