@@ -1,0 +1,451 @@
+/* ReactivationModal.css
+   Subscription reactivation confirm modal.
+   Mirrors PauseSubscriptionModal visual language: dark bg, border-radius 28px,
+   modal-fade-in animation, cyan (#00CCFF) brand accent. */
+
+/* ── Overlay ─────────────────────────────────────────────────────────── */
+.reactivation-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  padding: 1rem;
+}
+
+/* ── Modal container ─────────────────────────────────────────────────── */
+.reactivation-modal-content {
+  background-color: #0d0d0d;
+  border-radius: 28px;
+  width: calc(100% - 2rem);
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  padding: 48px 32px 32px;
+  border: 1px solid #1a1a1a;
+  color: #ffffff;
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.7);
+  animation: reactivation-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  scrollbar-width: thin;
+  scrollbar-color: #1a1a1a transparent;
+}
+
+.reactivation-modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.reactivation-modal-content::-webkit-scrollbar-thumb {
+  background-color: #1a1a1a;
+  border-radius: 10px;
+}
+
+@keyframes reactivation-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Close button ────────────────────────────────────────────────────── */
+.reactivation-close-btn {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: transparent;
+  border: none;
+  color: #555555;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.reactivation-close-btn:hover {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+.reactivation-close-btn:focus-visible {
+  outline: 2px solid #00ccff;
+  outline-offset: 2px;
+}
+
+/* ── Icon header ─────────────────────────────────────────────────────── */
+.reactivation-icon-header {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.reactivation-icon-circle {
+  width: 64px;
+  height: 64px;
+  border: 4px solid #0d2a2e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0d0d0d;
+  color: #00ccff;
+}
+
+/* ── Title & description ─────────────────────────────────────────────── */
+.reactivation-title {
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 10px;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.reactivation-description {
+  font-size: 15px;
+  color: #888888;
+  text-align: center;
+  margin-bottom: 28px;
+  line-height: 1.5;
+  max-width: 360px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Plan summary card ───────────────────────────────────────────────── */
+.reactivation-plan-card {
+  background-color: #121415;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 24px;
+  border: 1px solid #1c1f20;
+}
+
+.reactivation-plan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reactivation-plan-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.reactivation-plan-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.reactivation-plan-interval {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.reactivation-plan-price {
+  font-size: 20px;
+  font-weight: 700;
+  color: #00ccff;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Deleted-plan warning ────────────────────────────────────────────── */
+.reactivation-plan-deleted {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 10px;
+  font-size: 12px;
+  color: #f87171;
+}
+
+.reactivation-plan-deleted svg {
+  flex-shrink: 0;
+}
+
+/* ── Start-date section ──────────────────────────────────────────────── */
+.reactivation-date-section {
+  margin-bottom: 24px;
+}
+
+.reactivation-section-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+/* Start-date toggle pills */
+.reactivation-date-options {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.reactivation-date-opt {
+  flex: 1;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #1a1a1a;
+  background-color: #0a0a0a;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.reactivation-date-opt:hover:not(:disabled) {
+  border-color: #2a2a2a;
+  color: #e2e8f0;
+}
+
+.reactivation-date-opt[aria-pressed="true"] {
+  border-color: rgba(0, 204, 255, 0.5);
+  background-color: rgba(0, 204, 255, 0.08);
+  color: #ffffff;
+}
+
+.reactivation-date-opt:focus-visible {
+  outline: 2px solid #00ccff;
+  outline-offset: 2px;
+}
+
+.reactivation-date-opt-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.reactivation-date-opt-sub {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/* Custom-date picker wrapper */
+.reactivation-date-picker-wrapper {
+  margin-top: 4px;
+}
+
+/* Microcopy notice */
+.reactivation-date-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background-color: rgba(0, 204, 255, 0.05);
+  border: 1px solid rgba(0, 204, 255, 0.18);
+  border-radius: 10px;
+  margin-top: 12px;
+}
+
+.reactivation-date-notice svg {
+  flex-shrink: 0;
+  color: #00ccff;
+  margin-top: 1px;
+}
+
+.reactivation-date-notice p {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Expired window banner ───────────────────────────────────────────── */
+.reactivation-expired-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  background-color: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.reactivation-expired-banner svg {
+  flex-shrink: 0;
+  color: #fbbf24;
+  margin-top: 1px;
+}
+
+.reactivation-expired-banner p {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.reactivation-expired-banner strong {
+  color: #fbbf24;
+}
+
+/* ── Action buttons ──────────────────────────────────────────────────── */
+.reactivation-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.reactivation-btn {
+  flex: 1;
+  padding: 15px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.reactivation-btn-cancel {
+  background-color: #121415;
+  color: #ffffff;
+  border: 1px solid #222222;
+}
+
+.reactivation-btn-cancel:hover:not(:disabled) {
+  background-color: #1a1a1a;
+  border-color: #333333;
+}
+
+.reactivation-btn-cancel:focus-visible {
+  outline: 2px solid #00ccff;
+  outline-offset: 2px;
+}
+
+.reactivation-btn-confirm {
+  background: linear-gradient(90deg, #0099cc 0%, #00ccff 100%);
+  color: #0d0d0d;
+  font-weight: 700;
+  box-shadow: 0 10px 20px -5px rgba(0, 204, 255, 0.25);
+}
+
+.reactivation-btn-confirm:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 25px -5px rgba(0, 204, 255, 0.35);
+}
+
+.reactivation-btn-confirm:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.reactivation-btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.reactivation-btn-confirm:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* ── Loading spinner ─────────────────────────────────────────────────── */
+.reactivation-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(13, 13, 13, 0.3);
+  border-top-color: #0d0d0d;
+  border-radius: 50%;
+  animation: reactivation-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes reactivation-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .reactivation-modal-content {
+    padding: 40px 20px 24px;
+    border-radius: 24px;
+  }
+
+  .reactivation-title {
+    font-size: 24px;
+  }
+
+  .reactivation-description {
+    font-size: 14px;
+  }
+
+  .reactivation-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .reactivation-date-options {
+    flex-direction: column;
+  }
+
+  .reactivation-date-opt {
+    min-width: unset;
+  }
+}
+
+/* ── RTL ─────────────────────────────────────────────────────────────── */
+[dir="rtl"] .reactivation-close-btn {
+  right: unset;
+  left: 24px;
+}
+
+[dir="rtl"] .reactivation-plan-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .reactivation-date-opt {
+  text-align: right;
+}
+
+/* ── Print ───────────────────────────────────────────────────────────── */
+@media print {
+  .reactivation-modal-overlay {
+    position: static;
+    background: none;
+    backdrop-filter: none;
+  }
+
+  .reactivation-modal-content {
+    background: #fff;
+    color: #000;
+    border: 1px solid #ccc;
+    box-shadow: none;
+    animation: none;
+  }
+}

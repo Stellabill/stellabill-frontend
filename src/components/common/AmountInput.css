@@ -1,0 +1,225 @@
+/* ─── AmountInput ──────────────────────────────────────────────────────────── */
+
+.amt-input-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+}
+
+/* Label */
+.amt-input-label {
+  display: block;
+  color: #e2e8f0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.amt-input-required {
+  color: #ef4444;
+}
+
+/* Visually hidden but accessible */
+.amt-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ─── Group container ──────────────────────────────────────────────────────── */
+.amt-input-group {
+  display: flex;
+  align-items: stretch;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  /* Reduced motion: skip transitions */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .amt-input-group {
+    transition: none;
+  }
+}
+
+.amt-input-group--focused {
+  border-color: rgba(77, 216, 225, 0.5);
+  box-shadow: 0 0 0 3px rgba(77, 216, 225, 0.12);
+}
+
+.amt-input-group--error {
+  border-color: rgba(220, 38, 38, 0.6);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.amt-input-group--success {
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.amt-input-group--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Currency selector ────────────────────────────────────────────────────── */
+.amt-currency-selector {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.amt-currency-select {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  color: #e2e8f0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0 2rem 0 0.75rem;
+  height: 100%;
+  min-width: 68px;
+  cursor: pointer;
+  outline: none;
+  letter-spacing: 0.03em;
+}
+
+.amt-currency-select:focus-visible {
+  outline: 2px solid #4dd8e1;
+  outline-offset: -2px;
+  border-radius: 0;
+}
+
+.amt-currency-select:disabled {
+  cursor: not-allowed;
+}
+
+/* Option styles inherit from browser; override for dark backgrounds */
+.amt-currency-select option {
+  background: #1a1a1a;
+  color: #e2e8f0;
+}
+
+.amt-currency-chevron {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+}
+
+/* ─── Divider ──────────────────────────────────────────────────────────────── */
+.amt-divider {
+  width: 1px;
+  background: #2a2a2a;
+  flex-shrink: 0;
+  align-self: stretch;
+  margin: 4px 0;
+}
+
+/* ─── Symbol prefix ────────────────────────────────────────────────────────── */
+.amt-symbol {
+  display: flex;
+  align-items: center;
+  padding: 0 0 0 0.75rem;
+  color: #64748b;
+  font-size: 0.9375rem;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* ─── Numeric input ────────────────────────────────────────────────────────── */
+.amt-input-field {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  padding: 0.6875rem 0.75rem;
+  outline: none;
+  direction: ltr; /* Always LTR for numeric fields */
+}
+
+.amt-input-field::placeholder {
+  color: #3a3a4a;
+}
+
+.amt-input-field:disabled {
+  cursor: not-allowed;
+}
+
+/* ─── Status icons (right side of group) ──────────────────────────────────── */
+.amt-status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  flex-shrink: 0;
+}
+
+.amt-status-icon--pending {
+  color: #94a3b8;
+  animation: amt-spin 0.8s linear infinite;
+}
+
+@keyframes amt-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .amt-status-icon--pending {
+    animation: none;
+  }
+}
+
+.amt-status-icon--success {
+  color: #22c55e;
+}
+
+.amt-status-icon--error {
+  color: #ef4444;
+}
+
+/* ─── Message / helper text ────────────────────────────────────────────────── */
+.amt-input-message {
+  font-size: 0.75rem;
+  color: #64748b;
+  min-height: 1rem;
+  line-height: 1.4;
+}
+
+.amt-input-message--error {
+  color: #f87171;
+}
+
+/* ─── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 400px) {
+  .amt-currency-select {
+    min-width: 56px;
+    font-size: 0.75rem;
+  }
+
+  .amt-input-field {
+    font-size: 0.875rem;
+    padding: 0.625rem 0.5rem;
+  }
+
+  .amt-symbol {
+    padding-left: 0.5rem;
+    font-size: 0.875rem;
+  }
+}

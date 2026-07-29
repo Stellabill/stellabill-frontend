@@ -2,6 +2,21 @@
 
 Stellabill's brand is built on a dark, technical, and cosmic aesthetic, reflecting its position in the Stellar blockchain ecosystem.
 
+## Merchant brand asset uploader
+
+The Brand Pack now includes a merchant-focused uploader for logo assets. It is designed for review workflows where a brand mark must be checked across header, receipt, and social-share layouts before publication.
+
+### Requirements
+- Accept transparent PNG files and SVG assets.
+- Validate a minimum size of 512x512 pixels before the asset is promoted to the crop stage.
+- Reject SVG content that includes scripts or other unsafe markup.
+- Provide a safe-area overlay, crop guidance, and preview tiles for each usage context.
+
+### Accessibility guidance
+- The uploader supports drag and drop, browse, and keyboard access.
+- Crop handles can be adjusted with arrow keys and the Shift modifier for larger nudges.
+- Status messaging and validation errors should be announced through the live region and alert patterns.
+
 ## Logo Usage
 
 The logo consists of a stylized "S" in a square box with a linear gradient.

@@ -1,0 +1,824 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ReactivationModal – snapshot > matches snapshot for deleted plan 1`] = `
+<div
+  aria-describedby="reactivation-modal-description"
+  aria-labelledby="reactivation-modal-title"
+  aria-modal="true"
+  class="reactivation-modal-overlay"
+  role="dialog"
+>
+  <div
+    class="reactivation-modal-content"
+  >
+    <button
+      aria-label="Close reactivation dialog"
+      class="reactivation-close-btn"
+    >
+      <svg
+        aria-hidden="true"
+        fill="none"
+        height="20"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="20"
+      >
+        <line
+          x1="18"
+          x2="6"
+          y1="6"
+          y2="18"
+        />
+        <line
+          x1="6"
+          x2="18"
+          y1="6"
+          y2="18"
+        />
+      </svg>
+    </button>
+    <div
+      aria-hidden="true"
+      class="reactivation-icon-header"
+    >
+      <div
+        class="reactivation-icon-circle"
+      >
+        <svg
+          aria-hidden="true"
+          fill="none"
+          height="26"
+          stroke="#00ccff"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2.2"
+          viewBox="0 0 24 24"
+          width="26"
+        >
+          <polyline
+            points="23 4 23 10 17 10"
+          />
+          <path
+            d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"
+          />
+        </svg>
+      </div>
+    </div>
+    <h2
+      class="reactivation-title"
+      id="reactivation-modal-title"
+    >
+      Reactivate subscription?
+    </h2>
+    <p
+      class="reactivation-description"
+      id="reactivation-modal-description"
+    >
+      Restore your
+       
+      <strong
+        style="color: rgb(226, 232, 240);"
+      >
+        Pro Monthly
+      </strong>
+       plan with the same settings. Choose when billing should restart.
+    </p>
+    <div
+      aria-label="Plan summary"
+      class="reactivation-plan-card"
+    >
+      <div
+        class="reactivation-plan-row"
+      >
+        <div
+          class="reactivation-plan-info"
+        >
+          <p
+            class="reactivation-plan-name"
+          >
+            Pro Monthly
+          </p>
+          <p
+            class="reactivation-plan-interval"
+          >
+            Monthly
+          </p>
+        </div>
+        <span
+          class="reactivation-plan-price"
+        >
+          50 USDC
+        </span>
+      </div>
+      <div
+        class="reactivation-plan-deleted"
+        role="alert"
+      >
+        <svg
+          aria-hidden="true"
+          fill="none"
+          height="14"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="14"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <line
+            x1="15"
+            x2="9"
+            y1="9"
+            y2="15"
+          />
+          <line
+            x1="9"
+            x2="15"
+            y1="9"
+            y2="15"
+          />
+        </svg>
+        This plan is no longer available. Reactivation is not possible.
+      </div>
+    </div>
+    <div
+      class="reactivation-date-section"
+    >
+      <p
+        class="reactivation-section-label"
+        id="reactivation-date-label"
+      >
+        Start date
+      </p>
+      <div
+        aria-labelledby="reactivation-date-label"
+        class="reactivation-date-options"
+        role="group"
+      >
+        <button
+          aria-pressed="true"
+          class="reactivation-date-opt"
+          disabled=""
+        >
+          <span
+            class="reactivation-date-opt-title"
+          >
+            Start today
+          </span>
+          <span
+            class="reactivation-date-opt-sub"
+          >
+            <time
+              datetime="2026-07-28"
+            >
+              Jul 28, 2026
+            </time>
+          </span>
+        </button>
+        <button
+          aria-pressed="false"
+          class="reactivation-date-opt"
+          disabled=""
+        >
+          <span
+            class="reactivation-date-opt-title"
+          >
+            Same billing day
+          </span>
+          <span
+            class="reactivation-date-opt-sub"
+          >
+            Day 
+            1
+             ·
+             
+            <time
+              datetime="2026-08-01"
+            >
+              Aug 1, 2026
+            </time>
+          </span>
+        </button>
+        <button
+          aria-pressed="false"
+          class="reactivation-date-opt"
+          disabled=""
+        >
+          <span
+            class="reactivation-date-opt-title"
+          >
+            Custom date
+          </span>
+          <span
+            class="reactivation-date-opt-sub"
+          >
+            Pick a date
+          </span>
+        </button>
+      </div>
+      <div
+        class="reactivation-date-notice"
+        role="note"
+      >
+        <svg
+          aria-hidden="true"
+          fill="none"
+          height="14"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="14"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <line
+            x1="12"
+            x2="12"
+            y1="8"
+            y2="12"
+          />
+          <line
+            x1="12"
+            x2="12.01"
+            y1="16"
+            y2="16"
+          />
+        </svg>
+        <p>
+          Access and billing begin today, Jul 28, 2026.
+        </p>
+      </div>
+    </div>
+    <div
+      class="reactivation-actions"
+    >
+      <button
+        class="reactivation-btn reactivation-btn-cancel"
+      >
+        Keep cancelled
+      </button>
+      <button
+        aria-disabled="true"
+        aria-label="Confirm reactivation"
+        aria-live="polite"
+        class="reactivation-btn reactivation-btn-confirm"
+        disabled=""
+      >
+        Reactivate
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ReactivationModal – snapshot > matches snapshot for expired window 1`] = `
+<div
+  aria-describedby="reactivation-modal-description"
+  aria-labelledby="reactivation-modal-title"
+  aria-modal="true"
+  class="reactivation-modal-overlay"
+  role="dialog"
+>
+  <div
+    class="reactivation-modal-content"
+  >
+    <button
+      aria-label="Close reactivation dialog"
+      class="reactivation-close-btn"
+    >
+      <svg
+        aria-hidden="true"
+        fill="none"
+        height="20"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="20"
+      >
+        <line
+          x1="18"
+          x2="6"
+          y1="6"
+          y2="18"
+        />
+        <line
+          x1="6"
+          x2="18"
+          y1="6"
+          y2="18"
+        />
+      </svg>
+    </button>
+    <div
+      aria-hidden="true"
+      class="reactivation-icon-header"
+    >
+      <div
+        class="reactivation-icon-circle"
+      >
+        <svg
+          aria-hidden="true"
+          fill="none"
+          height="26"
+          stroke="#00ccff"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2.2"
+          viewBox="0 0 24 24"
+          width="26"
+        >
+          <polyline
+            points="23 4 23 10 17 10"
+          />
+          <path
+            d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"
+          />
+        </svg>
+      </div>
+    </div>
+    <h2
+      class="reactivation-title"
+      id="reactivation-modal-title"
+    >
+      Reactivate subscription?
+    </h2>
+    <p
+      class="reactivation-description"
+      id="reactivation-modal-description"
+    >
+      Restore your
+       
+      <strong
+        style="color: rgb(226, 232, 240);"
+      >
+        Pro Monthly
+      </strong>
+       plan with the same settings. Choose when billing should restart.
+    </p>
+    <div
+      class="reactivation-expired-banner"
+      role="alert"
+    >
+      <svg
+        aria-hidden="true"
+        fill="none"
+        height="16"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="16"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <line
+          x1="12"
+          x2="12"
+          y1="8"
+          y2="12"
+        />
+        <line
+          x1="12"
+          x2="12.01"
+          y1="16"
+          y2="16"
+        />
+      </svg>
+      <p>
+        <strong>
+          Reactivation window has expired.
+        </strong>
+         It has been too long since this subscription was cancelled. Please
+         
+        <strong>
+          browse plans
+        </strong>
+         to start a new subscription.
+      </p>
+    </div>
+    <div
+      aria-label="Plan summary"
+      class="reactivation-plan-card"
+    >
+      <div
+        class="reactivation-plan-row"
+      >
+        <div
+          class="reactivation-plan-info"
+        >
+          <p
+            class="reactivation-plan-name"
+          >
+            Pro Monthly
+          </p>
+          <p
+            class="reactivation-plan-interval"
+          >
+            Monthly
+          </p>
+        </div>
+        <span
+          class="reactivation-plan-price"
+        >
+          50 USDC
+        </span>
+      </div>
+    </div>
+    <div
+      class="reactivation-date-section"
+    >
+      <p
+        class="reactivation-section-label"
+        id="reactivation-date-label"
+      >
+        Start date
+      </p>
+      <div
+        aria-labelledby="reactivation-date-label"
+        class="reactivation-date-options"
+        role="group"
+      >
+        <button
+          aria-pressed="true"
+          class="reactivation-date-opt"
+          disabled=""
+        >
+          <span
+            class="reactivation-date-opt-title"
+          >
+            Start today
+          </span>
+          <span
+            class="reactivation-date-opt-sub"
+          >
+            <time
+              datetime="2026-07-28"
+            >
+              Jul 28, 2026
+            </time>
+          </span>
+        </button>
+        <button
+          aria-pressed="false"
+          class="reactivation-date-opt"
+          disabled=""
+        >
+          <span
+            class="reactivation-date-opt-title"
+          >
+            Same billing day
+          </span>
+          <span
+            class="reactivation-date-opt-sub"
+          >
+            Day 
+            1
+             ·
+             
+            <time
+              datetime="2026-08-01"
+            >
+              Aug 1, 2026
+            </time>
+          </span>
+        </button>
+        <button
+          aria-pressed="false"
+          class="reactivation-date-opt"
+          disabled=""
+        >
+          <span
+            class="reactivation-date-opt-title"
+          >
+            Custom date
+          </span>
+          <span
+            class="reactivation-date-opt-sub"
+          >
+            Pick a date
+          </span>
+        </button>
+      </div>
+      <div
+        class="reactivation-date-notice"
+        role="note"
+      >
+        <svg
+          aria-hidden="true"
+          fill="none"
+          height="14"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="14"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <line
+            x1="12"
+            x2="12"
+            y1="8"
+            y2="12"
+          />
+          <line
+            x1="12"
+            x2="12.01"
+            y1="16"
+            y2="16"
+          />
+        </svg>
+        <p>
+          Access and billing begin today, Jul 28, 2026.
+        </p>
+      </div>
+    </div>
+    <div
+      class="reactivation-actions"
+    >
+      <button
+        class="reactivation-btn reactivation-btn-cancel"
+      >
+        Keep cancelled
+      </button>
+      <button
+        aria-disabled="true"
+        aria-label="Confirm reactivation"
+        aria-live="polite"
+        class="reactivation-btn reactivation-btn-confirm"
+        disabled=""
+      >
+        Reactivate
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ReactivationModal – snapshot > matches snapshot for standard open state 1`] = `
+<div
+  aria-describedby="reactivation-modal-description"
+  aria-labelledby="reactivation-modal-title"
+  aria-modal="true"
+  class="reactivation-modal-overlay"
+  role="dialog"
+>
+  <div
+    class="reactivation-modal-content"
+  >
+    <button
+      aria-label="Close reactivation dialog"
+      class="reactivation-close-btn"
+    >
+      <svg
+        aria-hidden="true"
+        fill="none"
+        height="20"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="20"
+      >
+        <line
+          x1="18"
+          x2="6"
+          y1="6"
+          y2="18"
+        />
+        <line
+          x1="6"
+          x2="18"
+          y1="6"
+          y2="18"
+        />
+      </svg>
+    </button>
+    <div
+      aria-hidden="true"
+      class="reactivation-icon-header"
+    >
+      <div
+        class="reactivation-icon-circle"
+      >
+        <svg
+          aria-hidden="true"
+          fill="none"
+          height="26"
+          stroke="#00ccff"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2.2"
+          viewBox="0 0 24 24"
+          width="26"
+        >
+          <polyline
+            points="23 4 23 10 17 10"
+          />
+          <path
+            d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"
+          />
+        </svg>
+      </div>
+    </div>
+    <h2
+      class="reactivation-title"
+      id="reactivation-modal-title"
+    >
+      Reactivate subscription?
+    </h2>
+    <p
+      class="reactivation-description"
+      id="reactivation-modal-description"
+    >
+      Restore your
+       
+      <strong
+        style="color: rgb(226, 232, 240);"
+      >
+        Pro Monthly
+      </strong>
+       plan with the same settings. Choose when billing should restart.
+    </p>
+    <div
+      aria-label="Plan summary"
+      class="reactivation-plan-card"
+    >
+      <div
+        class="reactivation-plan-row"
+      >
+        <div
+          class="reactivation-plan-info"
+        >
+          <p
+            class="reactivation-plan-name"
+          >
+            Pro Monthly
+          </p>
+          <p
+            class="reactivation-plan-interval"
+          >
+            Monthly
+          </p>
+        </div>
+        <span
+          class="reactivation-plan-price"
+        >
+          50 USDC
+        </span>
+      </div>
+    </div>
+    <div
+      class="reactivation-date-section"
+    >
+      <p
+        class="reactivation-section-label"
+        id="reactivation-date-label"
+      >
+        Start date
+      </p>
+      <div
+        aria-labelledby="reactivation-date-label"
+        class="reactivation-date-options"
+        role="group"
+      >
+        <button
+          aria-pressed="true"
+          class="reactivation-date-opt"
+        >
+          <span
+            class="reactivation-date-opt-title"
+          >
+            Start today
+          </span>
+          <span
+            class="reactivation-date-opt-sub"
+          >
+            <time
+              datetime="2026-07-28"
+            >
+              Jul 28, 2026
+            </time>
+          </span>
+        </button>
+        <button
+          aria-pressed="false"
+          class="reactivation-date-opt"
+        >
+          <span
+            class="reactivation-date-opt-title"
+          >
+            Same billing day
+          </span>
+          <span
+            class="reactivation-date-opt-sub"
+          >
+            Day 
+            15
+             ·
+             
+            <time
+              datetime="2026-08-15"
+            >
+              Aug 15, 2026
+            </time>
+          </span>
+        </button>
+        <button
+          aria-pressed="false"
+          class="reactivation-date-opt"
+        >
+          <span
+            class="reactivation-date-opt-title"
+          >
+            Custom date
+          </span>
+          <span
+            class="reactivation-date-opt-sub"
+          >
+            Pick a date
+          </span>
+        </button>
+      </div>
+      <div
+        class="reactivation-date-notice"
+        role="note"
+      >
+        <svg
+          aria-hidden="true"
+          fill="none"
+          height="14"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="14"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <line
+            x1="12"
+            x2="12"
+            y1="8"
+            y2="12"
+          />
+          <line
+            x1="12"
+            x2="12.01"
+            y1="16"
+            y2="16"
+          />
+        </svg>
+        <p>
+          Access and billing begin today, Jul 28, 2026.
+        </p>
+      </div>
+    </div>
+    <div
+      class="reactivation-actions"
+    >
+      <button
+        class="reactivation-btn reactivation-btn-cancel"
+      >
+        Keep cancelled
+      </button>
+      <button
+        aria-disabled="false"
+        aria-label="Confirm reactivation"
+        aria-live="polite"
+        class="reactivation-btn reactivation-btn-confirm"
+      >
+        Reactivate
+      </button>
+    </div>
+  </div>
+</div>
+`;

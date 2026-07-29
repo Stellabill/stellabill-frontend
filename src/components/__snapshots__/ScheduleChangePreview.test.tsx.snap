@@ -1,0 +1,346 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ScheduleChangePreview – snapshot > matches snapshot for weekly → monthly change 1`] = `
+<div
+  aria-labelledby="scp-heading"
+  class="schedule-change-preview"
+  role="region"
+>
+  <div
+    class="scp-header"
+  >
+    <div
+      aria-hidden="true"
+      class="scp-icon"
+    >
+      <svg
+        aria-hidden="true"
+        fill="none"
+        height="18"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2.2"
+        viewBox="0 0 24 24"
+        width="18"
+      >
+        <rect
+          height="18"
+          rx="2"
+          ry="2"
+          width="18"
+          x="3"
+          y="4"
+        />
+        <line
+          x1="16"
+          x2="16"
+          y1="2"
+          y2="6"
+        />
+        <line
+          x1="8"
+          x2="8"
+          y1="2"
+          y2="6"
+        />
+        <line
+          x1="3"
+          x2="21"
+          y1="10"
+          y2="10"
+        />
+        <polyline
+          points="8 14 10 16 16 12"
+        />
+      </svg>
+    </div>
+    <h3
+      class="scp-title"
+      id="scp-heading"
+    >
+      Schedule change preview
+    </h3>
+    <span
+      aria-live="polite"
+      class="scp-effective-badge"
+      role="status"
+    >
+      <svg
+        aria-hidden="true"
+        fill="none"
+        height="12"
+        stroke="currentColor"
+        stroke-width="2.5"
+        viewBox="0 0 24 24"
+        width="12"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+        />
+        <polyline
+          points="12 6 12 12 16 14"
+        />
+      </svg>
+      Effective
+       
+      <time
+        datetime="2026-08-01"
+      >
+        Aug 1, 2026
+      </time>
+    </span>
+  </div>
+  <div
+    class="scp-columns"
+  >
+    <div
+      class="scp-column scp-column--old"
+    >
+      <div
+        class="scp-column-header"
+      >
+        <span
+          class="scp-column-label"
+        >
+          Current schedule
+        </span>
+        <span
+          aria-label="Current interval: Weekly"
+          class="scp-interval-chip scp-interval-chip--old"
+        >
+          Weekly
+        </span>
+      </div>
+      <ul
+        aria-label="Current schedule dates"
+        class="scp-date-list"
+      >
+        <li
+          class="scp-date-row"
+        >
+          <span
+            aria-hidden="true"
+            class="scp-cycle-num"
+          >
+            1
+            .
+          </span>
+          <time
+            class="scp-date-value"
+            datetime="2026-08-01"
+          >
+            Aug 1, 2026
+          </time>
+        </li>
+        <li
+          class="scp-date-row scp-date-row--diverge-old"
+        >
+          <span
+            aria-hidden="true"
+            class="scp-cycle-num"
+          >
+            2
+            .
+          </span>
+          <time
+            aria-label="Cycle 2: Aug 8, 2026, removed"
+            class="scp-date-value"
+            datetime="2026-08-08"
+          >
+            Aug 8, 2026
+          </time>
+        </li>
+        <li
+          class="scp-date-row scp-date-row--diverge-old"
+        >
+          <span
+            aria-hidden="true"
+            class="scp-cycle-num"
+          >
+            3
+            .
+          </span>
+          <time
+            aria-label="Cycle 3: Aug 15, 2026, removed"
+            class="scp-date-value"
+            datetime="2026-08-15"
+          >
+            Aug 15, 2026
+          </time>
+        </li>
+      </ul>
+      <div
+        aria-label="Current charge amount: 50 USDC"
+        class="scp-amount scp-amount--old"
+      >
+        50
+         
+        USDC
+      </div>
+    </div>
+    <div
+      aria-hidden="true"
+      class="scp-arrow"
+    >
+      <svg
+        aria-hidden="true"
+        fill="none"
+        height="20"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="20"
+      >
+        <polyline
+          points="9 18 15 12 9 6"
+        />
+      </svg>
+    </div>
+    <div
+      class="scp-column scp-column--new"
+    >
+      <div
+        class="scp-column-header"
+      >
+        <span
+          class="scp-column-label"
+        >
+          New schedule
+        </span>
+        <span
+          aria-label="New interval: Monthly"
+          class="scp-interval-chip scp-interval-chip--new"
+        >
+          Monthly
+        </span>
+      </div>
+      <ul
+        aria-label="New schedule dates"
+        class="scp-date-list"
+      >
+        <li
+          class="scp-date-row"
+        >
+          <span
+            aria-hidden="true"
+            class="scp-cycle-num"
+          >
+            1
+            .
+          </span>
+          <time
+            class="scp-date-value"
+            datetime="2026-08-01"
+          >
+            Aug 1, 2026
+          </time>
+        </li>
+        <li
+          class="scp-date-row scp-date-row--diverge"
+        >
+          <span
+            aria-hidden="true"
+            class="scp-cycle-num"
+          >
+            2
+            .
+          </span>
+          <time
+            class="scp-date-value"
+            datetime="2026-09-01"
+          >
+            Sep 1, 2026
+          </time>
+          <span
+            aria-label="First changed date"
+            class="scp-diverge-badge"
+          >
+            new
+          </span>
+        </li>
+        <li
+          class="scp-date-row scp-date-row--diverge"
+        >
+          <span
+            aria-hidden="true"
+            class="scp-cycle-num"
+          >
+            3
+            .
+          </span>
+          <time
+            class="scp-date-value"
+            datetime="2026-10-01"
+          >
+            Oct 1, 2026
+          </time>
+        </li>
+      </ul>
+      <div
+        aria-label="New charge amount: 50 USDC"
+        class="scp-amount"
+      >
+        50
+         
+        USDC
+      </div>
+    </div>
+  </div>
+  <div
+    class="scp-notice"
+    role="note"
+  >
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="14"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="14"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+      />
+      <line
+        x1="12"
+        x2="12"
+        y1="8"
+        y2="12"
+      />
+      <line
+        x1="12"
+        x2="12.01"
+        y1="16"
+        y2="16"
+      />
+    </svg>
+    <p>
+      Dates are rounded to your billing day. The new
+       
+      <strong>
+        monthly
+      </strong>
+       schedule starts on
+       
+      <time
+        datetime="2026-08-01"
+      >
+        <strong>
+          Aug 1, 2026
+        </strong>
+      </time>
+      . Any partial period up to that date is pro-rated.
+    </p>
+  </div>
+</div>
+`;

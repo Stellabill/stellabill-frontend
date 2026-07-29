@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Trash2, Edit2, Check, X, Tags } from 'lucide-react';
 import Tag, { TagProps } from '../Tag';
+import ColorPicker from './ColorPicker';
+import type { TagColor } from './ColorSwatch';
 import './ManageTagsSettings.css';
 
 export interface TagData {
@@ -25,7 +27,7 @@ export default function ManageTagsSettings({
 }: ManageTagsSettingsProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
-  const [editColor, setEditColor] = useState<TagProps['color']>('blue');
+  const [editColor, setEditColor] = useState<TagColor>('blue');
 
   const handleStartEdit = (tag: TagData) => {
     setEditingId(tag.id);
@@ -85,22 +87,12 @@ export default function ManageTagsSettings({
                 <tr key={tag.id}>
                   <td>
                     {editingId === tag.id ? (
-                      <div className="manage-tags-color-picker-inline">
-                        {(['blue', 'green', 'yellow', 'red', 'purple', 'pink', 'orange', 'gray'] as const).map(
-                          (color) => (
-                            <button
-                              key={color}
-                              type="button"
-                              className={`manage-tags-color-btn manage-tags-color-btn--${color} ${
-                                editColor === color ? 'active' : ''
-                              }`}
-                              onClick={() => setEditColor(color)}
-                              aria-label={`Select ${color} color`}
-                              aria-pressed={editColor === color}
-                            />
-                          )
-                        )}
-                      </div>
+                      <ColorPicker
+                        value={editColor}
+                        previewLabel={editLabel || tag.label}
+                        onChange={(color) => setEditColor(color)}
+                        labelId={`color-label-${tag.id}`}
+                      />
                     ) : (
                       <Tag label={tag.label} color={tag.color} size="small" />
                     )}

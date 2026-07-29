@@ -100,6 +100,8 @@ describe('en.json catalogue completeness', () => {
     expect(enJson).toHaveProperty('dashboard');
     expect(enJson).toHaveProperty('subscriptions');
     expect(enJson).toHaveProperty('aria');
+    expect(enJson).toHaveProperty('notifications');
+    expect(enJson).toHaveProperty('icu');
   });
 
   it('dashboard namespace has all required keys', async () => {
@@ -184,6 +186,77 @@ describe('en.json catalogue completeness', () => {
     expect(aria).toHaveProperty('loadingSubscriptions');
     expect(aria).toHaveProperty('filterByStatus');
     expect(aria).toHaveProperty('subscriptionsList');
+  });
+
+  it('notifications namespace has required keys', async () => {
+    const { notifications } = await import('../locales/en.json');
+    expect(notifications).toHaveProperty('unreadCount');
+    expect(notifications).toHaveProperty('billingAlerts');
+    expect(notifications).toHaveProperty('title');
+    expect(notifications).toHaveProperty('toolbar');
+    expect(notifications).toHaveProperty('toolbarAllRead');
+    expect(notifications).toHaveProperty('markAllRead');
+    expect(notifications).toHaveProperty('triggerLabel');
+    expect(notifications).toHaveProperty('liveRegion');
+    expect(notifications).toHaveProperty('emptyTitle');
+    expect(notifications).toHaveProperty('emptyDescription');
+    expect(notifications).toHaveProperty('allReadTitle');
+    expect(notifications).toHaveProperty('allReadDescription');
+  });
+
+  it('icu namespace exists with all example keys', async () => {
+    const { icu } = await import('../locales/en.json');
+    expect(icu).toHaveProperty('pluralExample');
+    expect(icu).toHaveProperty('selectExample');
+    expect(icu).toHaveProperty('selectOrdinalExample');
+    expect(icu).toHaveProperty('combinedExample');
+  });
+
+  it('notifications.unreadCount contains ICU plural syntax', async () => {
+    const { notifications } = await import('../locales/en.json');
+    expect(notifications.unreadCount).toContain('plural');
+    expect(notifications.unreadCount).toContain('=0');
+    expect(notifications.unreadCount).toContain('one');
+    expect(notifications.unreadCount).toContain('other');
+  });
+
+  it('notifications.liveRegion contains ICU plural syntax', async () => {
+    const { notifications } = await import('../locales/en.json');
+    expect(notifications.liveRegion).toContain('plural');
+    expect(notifications.liveRegion).toContain('=0');
+    expect(notifications.liveRegion).toContain('one');
+    expect(notifications.liveRegion).toContain('other');
+  });
+
+  it('subscriptions.subscriptionCount contains ICU plural syntax', async () => {
+    const { subscriptions } = await import('../locales/en.json');
+    expect(subscriptions.subscriptionCount).toContain('plural');
+    expect(subscriptions.subscriptionCount).toContain('=0');
+    expect(subscriptions.subscriptionCount).toContain('one');
+    expect(subscriptions.subscriptionCount).toContain('other');
+  });
+
+  it('icu.selectExample contains select syntax', async () => {
+    const { icu } = await import('../locales/en.json');
+    expect(icu.selectExample).toContain('select');
+    expect(icu.selectExample).toContain('male');
+    expect(icu.selectExample).toContain('female');
+    expect(icu.selectExample).toContain('other');
+  });
+
+  it('icu.selectOrdinalExample contains selectordinal syntax', async () => {
+    const { icu } = await import('../locales/en.json');
+    expect(icu.selectOrdinalExample).toContain('selectordinal');
+    expect(icu.selectOrdinalExample).toContain('one');
+    expect(icu.selectOrdinalExample).toContain('two');
+    expect(icu.selectOrdinalExample).toContain('few');
+    expect(icu.selectOrdinalExample).toContain('other');
+  });
+
+  it('icu.combinedExample contains both select and plural', async () => {
+    const { icu } = await import('../locales/en.json');
+    expect(icu.combinedExample).toContain('select');
+    expect(icu.combinedExample).toContain('plural');
   });
 
   it('all string values are non-empty', async () => {
