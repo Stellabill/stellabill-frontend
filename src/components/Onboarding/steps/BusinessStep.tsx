@@ -1,31 +1,54 @@
 import { useState, useRef } from 'react';
+import CountryRegionPicker from '../../common/CountryRegionPicker';
 import './BusinessStep.css';
 import '../OnboardingShell.css';
 
 interface BusinessStepProps {
   onBack?: () => void;
-  onNext?: (data: { businessName: string; website: string; logo: File | null }) => void;
+  onNext?: (data: { businessName: string; website: string; logo: File | null; country: string }) => void;
 }
 
 export default function BusinessStep({ onNext }: BusinessStepProps) {
   const [businessName, setBusinessName] = useState('');
   const [website, setWebsite] = useState('');
+  const [country, setCountry] = useState('');
   const [logo, setLogo] = useState<File | null>(null);
-  const [error, setError] = useState('');
+  const [country, setCountry] = useState('');
+  const [businessError, setBusinessError] = useState('');
+  const [countryError, setCountryError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleNext = () => {
-    if (!businessName.trim()) {
-      setError('Business name is required.');
+    const trimmedName = businessName.trim();
+    const hasCountry = !!country;
+
+    if (!trimmedName) {
+      setBusinessError('Business name is required.');
+    } else {
+      setBusinessError('');
+    }
+
+    if (!hasCountry) {
+      setCountryError('Country is required.');
+    } else {
+      setCountryError('');
+    }
+
+    if (!trimmedName || !hasCountry) {
       return;
     }
-    setError('');
-    onNext?.({ businessName: businessName.trim(), website: website.trim(), logo });
+
+    onNext?.({
+      businessName: trimmedName,
+      website: website.trim(),
+      logo,
+      country,
+    });
   };
 
   const nameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBusinessName(e.target.value);
-    if (error) setError('');
+    if (businessError) setBusinessError('');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,19 +66,33 @@ export default function BusinessStep({ onNext }: BusinessStepProps) {
         <input
           id="business-name"
           type="text"
-          className={`onboarding-input${error ? ' onboarding-input--error' : ''}`}
+          className={`onboarding-input${businessError ? ' onboarding-input--error' : ''}`}
           value={businessName}
           onChange={nameChange}
           placeholder="Acme Inc."
           aria-required="true"
-          aria-invalid={!!error}
-          aria-describedby={error ? 'business-error' : undefined}
+          aria-invalid={!!businessError}
+          aria-describedby={businessError ? 'business-error' : undefined}
         />
-        {error && (
+        {businessError && (
           <p id="business-error" className="onboarding-error" role="alert">
-            {error}
+            {businessError}
           </p>
         )}
+      </div>
+
+      <div className="onboarding-field">
+        <CountryRegionPicker
+          value={country}
+          onChange={(code) => {
+            setCountry(code)
+            if (countryError) setCountryError('')
+          }}
+          label="Country / Region"
+          placeholder="Search for a country"
+          helperText="Search for the country where your business is registered."
+          errorMessage={countryError}
+        />
       </div>
 
       <div className="onboarding-field">
@@ -85,6 +122,24 @@ export default function BusinessStep({ onNext }: BusinessStepProps) {
           />
         </div>
         <p className="onboarding-helper">Recommended: Square image, at least 200x200px</p>
+      </div>
+
+      <div className="onboarding-field">
+        <CountryRegionPicker
+          value={country}
+          onChange={(value) => {
+            setCountry(value)
+            if (countryError) setCountryError('')
+          }}
+          label="Country"
+          helperText="Search countries by name, ISO code, or region."
+          placeholder="Select a country"
+        />
+        {countryError && (
+          <p className="onboarding-error" role="alert">
+            {countryError}
+          </p>
+        )}
       </div>
 
       <div className="onboarding-field">

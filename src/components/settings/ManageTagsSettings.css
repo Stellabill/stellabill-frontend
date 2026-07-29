@@ -129,40 +129,8 @@
   border-color: #6366f1;
 }
 
-.manage-tags-color-picker-inline {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.manage-tags-color-btn {
-  width: 24px;
-  height: 24px;
-  border: 2px solid transparent;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  padding: 0;
-}
-
-.manage-tags-color-btn.active {
-  border-color: #ffffff;
-  transform: scale(1.15);
-}
-
-.manage-tags-color-btn:focus-visible {
-  outline: 2px solid #6366f1;
-  outline-offset: 2px;
-}
-
-.manage-tags-color-btn--blue { background: #1e40af; }
-.manage-tags-color-btn--green { background: #15803d; }
-.manage-tags-color-btn--yellow { background: #a16207; }
-.manage-tags-color-btn--red { background: #b91c1c; }
-.manage-tags-color-btn--purple { background: #7e22ce; }
-.manage-tags-color-btn--pink { background: #be185d; }
-.manage-tags-color-btn--orange { background: #c2410c; }
-.manage-tags-color-btn--gray { background: #475569; }
+/* Color picker is now rendered by the standalone ColorPicker component.
+   See src/components/settings/ColorPicker.css for all swatch styles. */
 
 .manage-tags-actions {
   display: flex;

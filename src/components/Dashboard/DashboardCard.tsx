@@ -1,8 +1,8 @@
-import { ReactNode } from 'react';
+import { ReactNode, HTMLAttributes } from 'react';
 import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import './DashboardCard.css';
 
-interface DashboardCardProps {
+interface DashboardCardProps extends HTMLAttributes<HTMLDivElement> {
   title: string;
   value: string | number;
   change?: number;
@@ -20,6 +20,7 @@ export default function DashboardCard({
   loading = false,
   icon,
   helpText,
+  ...rest
 }: DashboardCardProps) {
   if (loading) {
     return (
@@ -44,7 +45,7 @@ export default function DashboardCard({
   const TrendIcon = trendMeta?.icon;
 
   return (
-    <div className="dashboard-card">
+    <div className="dashboard-card" {...rest}>
       <div className="dashboard-card__header">
         <div>
           <h3 className="dashboard-card__title">

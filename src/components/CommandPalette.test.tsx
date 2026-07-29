@@ -231,4 +231,143 @@ describe('CommandPalette', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await waitFor(() => expect(opener).toHaveFocus());
   });
+
+  describe('Pinned group', () => {
+    it('renders pinned items in their own group', () => {
+      const items: CommandItem[] = [
+        { id: 'dashboard', label: 'Dashboard', group: 'Pages', perform: vi.fn() },
+        { id: 'plan', label: 'Create plan', group: 'Pinned', perform: vi.fn() },
+        { id: 'subs', label: 'Subscriptions', group: 'Actions', perform: vi.fn() },
+      ];
+      renderOpen({ items });
+
+      const groups = screen.getAllByRole('group');
+      const groupLabels = groups.map((g) => {
+        const labelEl = g.querySelector('.cmdk-group__label');
+        return labelEl?.textContent ?? '';
+      });
+      expect(groupLabels).toEqual(['Pages', 'Pinned', 'Actions', 'Recent']);
+    });
+
+    it('calls onTogglePin with the item id when the pin button is clicked', () => {
+      const onTogglePin = vi.fn();
+      const items: CommandItem[] = [
+        { id: 'dashboard', label: 'Dashboard', group: 'Pages', perform: vi.fn() },
+      ];
+      renderOpen({ items, onTogglePin });
+
+      fireEvent.click(screen.getByRole('button', { name: /pin dashboard/i }));
+      expect(onTogglePin).toHaveBeenCalledWith('dashboard');
+    });
+
+    it('does not call onTogglePin when an option is selected via Enter', () => {
+      const onTogglePin = vi.fn();
+      renderOpen({ onTogglePin });
+
+      fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
+      expect(onTogglePin).not.toHaveBeenCalled();
+    });
+
+    it('labels pinned items as "Unpin" and unpinned as "Pin"', () => {
+      const items: CommandItem[] = [
+        { id: 'a', label: 'Alpha', group: 'Pinned', perform: vi.fn() },
+        { id: 'b', label: 'Bravo', group: 'Actions', perform: vi.fn() },
+      ];
+      renderOpen({ items });
+
+      expect(screen.getByRole('button', { name: /unpin alpha/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /pin bravo/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('Empty recents state', () => {
+    it('shows a placeholder when the Recent group is empty and no query', () => {
+      const items: CommandItem[] = [
+        { id: 'd', label: 'Dashboard', group: 'Pages', perform: vi.fn() },
+      ];
+      renderOpen({ items });
+
+      expect(screen.getByText('No recent actions yet.')).toBeInTheDocument();
+      expect(screen.getByText('Select an action to see it here.')).toBeInTheDocument();
+    });
+
+    it('does not show the placeholder when Recent has items', () => {
+      renderOpen();
+      expect(screen.queryByText('No recent actions yet.')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Group separators', () => {
+    it('applies the separator class to non-first groups', () => {
+      const items: CommandItem[] = [
+        { id: 'a', label: 'Alpha', group: 'Pages', perform: vi.fn() },
+        { id: 'b', label: 'Bravo', group: 'Actions', perform: vi.fn() },
+      ];
+      renderOpen({ items });
+
+      const groups = screen.getAllByRole('group');
+      expect(groups[0].className).not.toContain('cmdk-group--separator');
+      expect(groups[1].className).toContain('cmdk-group--separator');
+    });
+  });
+
+  describe('Group announcements', () => {
+    it('announces the group name when navigating to a different group', () => {
+      const items: CommandItem[] = [
+        { id: 'a', label: 'Alpha', group: 'Pages', perform: vi.fn() },
+        { id: 'b', label: 'Bravo', group: 'Actions', perform: vi.fn() },
+      ];
+      renderOpen({ items });
+
+      const input = screen.getByRole('combobox');
+      const status = screen.getByRole('status');
+
+      // Initial group is Pages — no announcement yet since it's the starting group.
+      fireEvent.keyDown(input, { key: 'ArrowDown' }); // moves to Actions
+      expect(status).toHaveTextContent(/Actions group/i);
+    });
+
+    it('includes group in result count announcement', () => {
+      renderOpen();
+      const status = screen.getByRole('status');
+      expect(status.textContent).toContain('result');
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('pin button is keyboard-focusable', () => {
+      renderOpen();
+      const pinBtns = screen.getAllByRole('button', { name: /pin/i });
+      const pinBtn = pinBtns[0];
+      pinBtn.focus();
+      expect(pinBtn).toHaveFocus();
+    });
+
+    it('all groups have aria-labelledby pointing to their label', () => {
+      const items: CommandItem[] = [
+        { id: 'a', label: 'Alpha', group: 'Pages', perform: vi.fn() },
+        { id: 'b', label: 'Bravo', group: 'Actions', perform: vi.fn() },
+      ];
+      renderOpen({ items });
+
+      const groups = screen.getAllByRole('group');
+      for (const group of groups) {
+        expect(group).toHaveAttribute('aria-labelledby');
+        const labelId = group.getAttribute('aria-labelledby');
+        expect(document.getElementById(labelId!)).toBeInTheDocument();
+      }
+    });
+
+    it('live region is polite and atomic', () => {
+      renderOpen();
+      const status = screen.getByRole('status');
+      expect(status).toHaveAttribute('aria-live', 'polite');
+      expect(status).toHaveAttribute('aria-atomic', 'true');
+    });
+
+    it('listbox has a descriptive label', () => {
+      renderOpen();
+      expect(screen.getByRole('listbox', { name: /search results/i })).toBeInTheDocument();
+    });
+  });
 });

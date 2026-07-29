@@ -1,0 +1,172 @@
+/* ============================================================================
+   ColorPicker — tag colour selection widget
+   Follows the project's dark-first colour palette and CSS-custom-property
+   spacing/typography tokens from src/styles/tokens.css.
+   ============================================================================ */
+
+/* ── Swatch button ──────────────────────────────────────────────────────────── */
+.color-swatch {
+  /*
+   * Layout: fills the grid cell while keeping a 1:1 aspect ratio.
+   * Using aspect-ratio is more robust than fixed width/height for responsive
+   * grids.
+   */
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-width: 32px;
+  min-height: 32px;
+
+  /* Colour: driven by --swatch-bg CSS variable set inline */
+  background: var(--swatch-bg, #475569);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md, 0.5rem);
+
+  cursor: pointer;
+  padding: 0;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* Selected state: white border + subtle scale */
+.color-swatch--selected {
+  border-color: #ffffff;
+  transform: scale(1.1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5);
+}
+
+/* Focus ring — WCAG-visible, matches project focus ring token (#6366f1 dark) */
+.color-swatch:focus-visible {
+  outline: 2px solid var(--focus-ring, var(--color-focus-ring, #6366f1));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px transparent, 0 0 8px var(--focus-ring-halo, rgba(99, 102, 241, 0.45));
+}
+
+/* Hover (non-selected) */
+.color-swatch:not(.color-swatch--selected):hover {
+  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* ── ColorPicker container ──────────────────────────────────────────────────── */
+.color-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 0.75rem);
+}
+
+/* ── Swatch grid (4 columns) ────────────────────────────────────────────────── */
+.color-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2, 0.5rem);
+
+  /* Constrain width so swatches stay square and compact */
+  max-width: 200px;
+}
+
+/* ── Live preview row ───────────────────────────────────────────────────────── */
+.color-picker__preview-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+}
+
+.color-picker__preview-label {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-medium, 500);
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide, 0.025em);
+  white-space: nowrap;
+}
+
+/* ── Contrast info strip ────────────────────────────────────────────────────── */
+.color-picker__contrast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  font-size: var(--text-xs, 0.75rem);
+}
+
+/* Ratio number */
+.color-picker__contrast-ratio {
+  font-family: var(--font-family-mono, monospace);
+  font-size: var(--text-xs, 0.75rem);
+  color: #94a3b8;
+}
+
+/* Level badge */
+.color-picker__contrast-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2, 0.5rem);
+  height: 20px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-semibold, 600);
+  letter-spacing: var(--tracking-wide, 0.025em);
+  line-height: 1;
+}
+
+.color-picker__contrast-badge--aaa {
+  background: #166534;
+  color: #bbf7d0;
+}
+
+.color-picker__contrast-badge--aa {
+  background: #14532d;
+  color: #86efac;
+}
+
+.color-picker__contrast-badge--aa-large {
+  background: #78350f;
+  color: #fde68a;
+}
+
+.color-picker__contrast-badge--fail {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+/* Warning message (only shown when contrast < AA threshold) */
+.color-picker__contrast-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2, 0.5rem);
+  width: 100%;
+  margin-top: var(--space-1, 0.25rem);
+  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  background: rgba(127, 29, 29, 0.2);
+  border: 1px solid rgba(252, 165, 165, 0.3);
+  border-radius: var(--radius-md, 0.5rem);
+  color: #fca5a5;
+  font-size: var(--text-xs, 0.75rem);
+  line-height: var(--leading-relaxed, 1.65);
+}
+
+.color-picker__contrast-warning-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .color-picker__grid {
+    max-width: 100%;
+    grid-template-columns: repeat(4, minmax(32px, 48px));
+  }
+}
+
+/* ── RTL support ────────────────────────────────────────────────────────────── */
+[dir="rtl"] .color-picker__grid {
+  /* Grid reverses naturally with logical column direction; swatches maintain
+     correct appearance. No additional changes needed. */
+}
+
+[dir="rtl"] .color-picker__preview-row {
+  flex-direction: row-reverse;
+}

@@ -9,7 +9,10 @@ import {
   Plus,
   LayoutGrid,
   ExternalLink,
-  ArrowRight
+  ArrowRight,
+  X,
+  Save,
+  RotateCcw
 } from 'lucide-react';
 import RevenueChart from '../components/RevenueChart';
 import DashboardCard from '../components/Dashboard/DashboardCard';
@@ -33,6 +36,32 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
+
+  const [activeFilters, setActiveFilters] = useState([
+    { id: 'status', label: 'Status: Active' },
+    { id: 'plan', label: 'Plan: Pro' },
+    { id: 'date', label: 'Date: Last 30 Days' },
+  ]);
+  const [announcement, setAnnouncement] = useState('');
+
+  const removeFilter = (id: string) => {
+    setActiveFilters((prev) => {
+      const filter = prev.find((f) => f.id === id);
+      if (filter) {
+        setAnnouncement(`Filter ${filter.label} removed.`);
+      }
+      return prev.filter((f) => f.id !== id);
+    });
+  };
+
+  const resetFilters = () => {
+    setActiveFilters([]);
+    setAnnouncement('All filters reset.');
+  };
+
+  const saveView = () => {
+    setAnnouncement('Filter view saved successfully.');
+  };
 
   const fetchDashboardData = useCallback(() => {
     setLoading(true);
@@ -153,8 +182,56 @@ export default function Dashboard() {
           </div>
         </header>
 
+        {/* Live Region for Screen Readers */}
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {announcement}
+        </div>
+
+        {/* Filter Chip Bar */}
+        {activeFilters.length > 0 && (
+          <div className="dashboard-filter-bar" aria-label="Active filters">
+            <div className="dashboard-filter-chips">
+              <span className="dashboard-filter-label" id="active-filters-label">
+                Active Filters:
+              </span>
+              <ul className="dashboard-filter-list" aria-labelledby="active-filters-label">
+                {activeFilters.map((filter) => (
+                  <li key={filter.id} className="dashboard-filter-chip">
+                    <span>{filter.label}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFilter(filter.id)}
+                      aria-label={`Remove filter ${filter.label}`}
+                    >
+                      <X size={14} aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="dashboard-filter-actions">
+              <button
+                type="button"
+                className="dashboard-filter-action dashboard-filter-action--reset"
+                onClick={resetFilters}
+              >
+                <RotateCcw size={14} aria-hidden="true" />
+                Reset
+              </button>
+              <button
+                type="button"
+                className="dashboard-filter-action dashboard-filter-action--save"
+                onClick={saveView}
+              >
+                <Save size={14} aria-hidden="true" />
+                Save View
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* KPI Grid */}
-        <div className="dashboard-kpi-grid">
+        <div className="dashboard-kpi-grid" data-help="Overview of your key performance indicators.">
           <DashboardCard
               title={t('dashboard.kpis.activeSubscriptions')}
               value="1,284"
@@ -162,6 +239,7 @@ export default function Dashboard() {
               trend="up"
               icon={<Users size={20} />}
               helpText={t('dashboard.kpis.activeSubscriptionsHelp')}
+              data-help="Total number of active subscribers currently on a plan."
           />
           <DashboardCard
               title={t('dashboard.kpis.mrr')}
@@ -191,7 +269,7 @@ export default function Dashboard() {
         {/* Main Content Grid */}
         <div className="dashboard-main-grid">
           {/* Chart Section */}
-          <div className="dashboard-panel dashboard-panel--chart">
+          <div className="dashboard-panel dashboard-panel--chart" data-help="A visual representation of your revenue over time. Use the detailed report for a breakdown.">
             <div className="dashboard-panel__header">
               <h2 className="dashboard-section-title">Revenue Growth</h2>
               <Link to="/reports" className="dashboard-link">
@@ -204,7 +282,7 @@ export default function Dashboard() {
           </div>
 
           {/* Activity Section */}
-          <div className="dashboard-activity-column">
+          <div className="dashboard-activity-column" data-help="A feed of recent events like payments, new subscriptions, and cancellations.">
             <div className="dashboard-activity-header">
               <h2 className="dashboard-section-title">Recent Activity</h2>
               <button className="dashboard-muted-button">
