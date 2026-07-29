@@ -21,6 +21,7 @@ import ActivityList, { ActivityType } from '../components/Dashboard/ActivityList
 import DashboardSkeleton from '../components/Dashboard/DashboardSkeleton';
 import RevenueSplitByPlanPanel from '../components/Dashboard/RevenueSplitByPlanPanel';
 import CardErrorSlot from '../components/Dashboard/CardErrorSlot';
+import OnboardingChecklistWidget from '../components/Dashboard/OnboardingChecklistWidget';
 import type { PlanRevenueSlice } from '../components/Dashboard/revenueSplitUtils';
 import {
   useDashboardWidgets,
@@ -266,6 +267,9 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* ── Onboarding Checklist ────────────────────────────────────── */}
+      <OnboardingChecklistWidget />
 
       {/* ── KPI Grid ────────────────────────────────────────────────── */}
       <div
