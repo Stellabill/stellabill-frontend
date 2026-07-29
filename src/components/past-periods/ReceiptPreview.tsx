@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useMemo, useState } from "react";
 import "./ReceiptPrint.css";
+import { useScopedTheme } from "../../hooks/useScopedTheme";
 
 type Money = {
   amount: number;
@@ -105,6 +106,10 @@ export default function ReceiptPreview({ receipt }: { receipt: ReceiptData | nul
   const [downloadState, setDownloadState] = useState<"idle" | "compiling" | "ready">("idle");
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const downloadButtonId = useId();
+
+  // Force light theme on the paper element — receipts/PDFs must always render
+  // in light mode regardless of the user's global theme preference.
+  const paperRef = useScopedTheme<HTMLDivElement>('light');
 
   const hasHistory = !!receipt && receipt.lineItems && receipt.lineItems.length > 0;
 
@@ -250,7 +255,7 @@ export default function ReceiptPreview({ receipt }: { receipt: ReceiptData | nul
       </header>
 
       <div className="rp-preview" aria-label="Receipt preview container">
-        <div className="rp-paper" role="region" aria-label="Receipt document" tabIndex={0}>
+        <div className="rp-paper" ref={paperRef} role="region" aria-label="Receipt document" tabIndex={0}>
           {/* Header area */}
           <div className="rp-doc-header">
             <div className="rp-doc-brand">

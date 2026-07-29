@@ -16,6 +16,7 @@ export interface SubscriptionData {
   coverage: number;
   nextChargeDate: string;
   icon?: string;
+  isQuietPeriod?: boolean;
 }
 
 interface SubscriptionCardProps {
@@ -76,7 +77,8 @@ export default function SubscriptionCard({ subscription }: SubscriptionCardProps
     prepaidBalance,
     coverage,
     nextChargeDate,
-    icon
+    icon,
+    isQuietPeriod
   } = subscription;
 
   /* ── Popover state ─────────────────────────────────────────── */
@@ -285,10 +287,23 @@ export default function SubscriptionCard({ subscription }: SubscriptionCardProps
             <p className="subscription-merchant">{merchant}</p>
           </div>
         </div>
-        <span className={`subscription-status-badge ${currentStatus.className}`}>
-          <span className="status-icon" aria-hidden="true">{currentStatus.icon}</span>
-          {currentStatus.label}
-        </span>
+        <div className="subscription-badges">
+          <span className={`subscription-status-badge ${currentStatus.className}`}>
+            <span className="status-icon" aria-hidden="true">{currentStatus.icon}</span>
+            {currentStatus.label}
+          </span>
+          {isQuietPeriod && (
+            <span 
+              className="subscription-quiet-badge" 
+              title={`Quiet period: Subscription will pause and no charges will apply after ${nextChargeDate}`}
+              role="status"
+              aria-label={`Quiet period until ${nextChargeDate}`}
+            >
+              <span className="quiet-icon" aria-hidden="true">🌙</span>
+              Quiet period
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="subscription-pricing">

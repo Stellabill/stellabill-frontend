@@ -312,3 +312,215 @@
     max-height: calc(100vh - 7rem);
   }
 }
+
+/* ============================================================
+   Snooze / Mute affordances
+   ============================================================ */
+
+/* Per-item meta row — right-side cluster (timestamp + snooze trigger) */
+.notifications-item-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* ---- Snooze trigger button ---- */
+.notifications-snooze-wrapper {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.notifications-snooze-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 28px;
+  min-width: 28px;
+  padding: 0 6px;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.notifications-snooze-trigger:hover {
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.notifications-snooze-trigger:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}
+
+/* Highlight when snoozed */
+.notifications-snooze-trigger[data-snoozed] {
+  color: #fbbf24;
+}
+
+/* Highlight when muted */
+.notifications-snooze-trigger[data-muted] {
+  color: #94a3b8;
+}
+
+.notifications-snooze-chevron {
+  opacity: 0.7;
+  transition: transform 0.15s ease;
+}
+
+/* ---- Dropdown menu ---- */
+.notifications-snooze-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 168px;
+  padding: 4px;
+  background: #131c2e;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  z-index: 1300;
+  /* RTL-aware: menu opens to the left when dir=rtl */
+}
+
+[dir='rtl'] .notifications-snooze-menu {
+  right: auto;
+  left: 0;
+}
+
+.notifications-snooze-menu-heading {
+  margin: 0 0 2px;
+  padding: 6px 10px 4px;
+  color: #64748b;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.notifications-snooze-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  color: #cbd5e1;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: start;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.notifications-snooze-menu-item:hover,
+.notifications-snooze-menu-item:focus-visible {
+  background: rgba(34, 211, 238, 0.1);
+  color: #ffffff;
+  outline: none;
+}
+
+.notifications-snooze-menu-item:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: -2px;
+}
+
+.notifications-snooze-menu-item-mute {
+  color: #94a3b8;
+}
+
+.notifications-snooze-menu-item-mute:hover,
+.notifications-snooze-menu-item-mute:focus-visible {
+  color: #fca5a5;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.notifications-snooze-menu-item-unmute,
+.notifications-snooze-menu-item-unsnooze {
+  color: #2dd4bf;
+}
+
+.notifications-snooze-menu-item-unmute:hover,
+.notifications-snooze-menu-item-unmute:focus-visible,
+.notifications-snooze-menu-item-unsnooze:hover,
+.notifications-snooze-menu-item-unsnooze:focus-visible {
+  color: #ffffff;
+  background: rgba(45, 212, 191, 0.1);
+}
+
+.notifications-snooze-divider {
+  height: 1px;
+  margin: 4px 10px;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+/* ---- Inline resume hint ---- */
+.notifications-snooze-resume {
+  display: block;
+  margin-top: 2px;
+  padding-inline-end: 4px;
+  color: #64748b;
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-align: end;
+}
+
+/* ---- Silenced item appearance ---- */
+.notifications-item-muted {
+  opacity: 0.5;
+}
+
+/* ============================================================
+   Muted (n) section footer
+   ============================================================ */
+
+.notifications-silenced-section {
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.notifications-silenced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  color: #64748b;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: start;
+  transition: color 0.15s ease;
+}
+
+.notifications-silenced-toggle:hover {
+  color: #94a3b8;
+}
+
+.notifications-silenced-toggle:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: -2px;
+}
+
+.notifications-silenced-chevron {
+  margin-inline-start: auto;
+  transition: transform 0.2s ease;
+}
+
+.notifications-silenced-chevron-open {
+  transform: rotate(180deg);
+}
+
+.notifications-list-silenced {
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+}

@@ -30,13 +30,17 @@
   gap: var(--space-3);
 }
 
+/*
+ * Sizing/shape only — the shimmer sweep and background gradient are owned by
+ * the shared .sb-shimmer mixin (src/styles/shimmer.css), applied via the
+ * <Shimmer/> component these elements render through.
+ */
 .dashboard-skeleton__line,
 .dashboard-skeleton__button,
 .dashboard-skeleton__card,
 .dashboard-skeleton__chart,
 .dashboard-skeleton__activity {
   border-radius: var(--radius-lg);
-  background: linear-gradient(90deg, var(--skeleton-base), var(--skeleton-highlight), var(--skeleton-base));
 }
 
 .dashboard-skeleton__line--title {

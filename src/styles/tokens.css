@@ -568,3 +568,17 @@
   --sidebar-group-label-color: #64748b;
   --sidebar-focus-ring: var(--color-focus-ring);
 }
+
+/* ============================================================================
+   Reduced-motion override — WCAG 2.1 SC 2.3.3 (AAA) + SC 1.4.3 (AA)
+   When the user has requested reduced motion, collapse all FLIP durations to
+   1ms (instant swap) so positions still update, but no motion occurs.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-reorder-duration: 1ms;
+    --motion-reorder-easing:   linear;
+    --motion-entry-duration:   1ms;
+    --motion-entry-easing:     linear;
+  }
+}
