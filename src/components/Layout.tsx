@@ -7,6 +7,7 @@ import KeyboardShortcutsOverlay from "./KeyboardShortcutsOverlay";
 import KeyboardChordIndicator from "./KeyboardChordIndicator";
 import HelpSidebar from "./help/HelpSidebar";
 import ChangelogPanel from "./changelog/ChangelogPanel";
+import FocusOrderVisualizer from "./FocusOrderVisualizer";
 import "../styles/sidebar.css";
 
 const RECENT_COMMANDS_KEY = "sb:recent-commands";
@@ -128,6 +129,7 @@ export default function Layout() {
   const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+  const [isQAOverlayOpen, setIsQAOverlayOpen] = useState(false);
   const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => readPinnedCommands());
   
@@ -259,7 +261,16 @@ export default function Layout() {
           if (event.key === '?') {
             event.preventDefault();
             setIsShortcutsOverlayOpen(true);
+            return;
           }
+        }
+      }
+
+      // QA Shortcut: Ctrl+Shift+F
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'f') {
+        if (import.meta.env.DEV || localStorage.getItem('sb:qa-focus-visualizer') === 'true') {
+          event.preventDefault();
+          setIsQAOverlayOpen((prev) => !prev);
         }
       }
     };
@@ -419,6 +430,8 @@ export default function Layout() {
       />
 
       <KeyboardChordIndicator pendingKey={pendingChordKey} />
+
+      {isQAOverlayOpen && <FocusOrderVisualizer onClose={() => setIsQAOverlayOpen(false)} />}
     </div>
   );
 }
