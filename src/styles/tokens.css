@@ -105,6 +105,16 @@
   --density-spacious-row-height:      3rem;      /* 48px */
   --density-spacious-font-scale:      1.1;
 
+  /* ── Motion tokens (FLIP reorder) ─────────────────────────── */
+  /* Duration: how long a row slides into its new position */
+  --motion-reorder-duration:   320ms;
+  /* Easing: cubic-bezier matching a natural deceleration */
+  --motion-reorder-easing:     cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  /* Entry fade: newly-visible items after a filter change */
+  --motion-entry-duration:     200ms;
+  --motion-entry-easing:       ease-out;
+  /* Reduced-motion overrides are applied in the @media block below */
+
   /* Sidebar color tokens */
   --sidebar-bg:              #1a1a2e;
   --sidebar-width:           220px;
@@ -515,4 +525,18 @@
   --sidebar-indicator-color: var(--color-brand-primary);
   --sidebar-group-label-color: #64748b;
   --sidebar-focus-ring: var(--color-focus-ring);
+}
+
+/* ============================================================================
+   Reduced-motion override — WCAG 2.1 SC 2.3.3 (AAA) + SC 1.4.3 (AA)
+   When the user has requested reduced motion, collapse all FLIP durations to
+   1ms (instant swap) so positions still update, but no motion occurs.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-reorder-duration: 1ms;
+    --motion-reorder-easing:   linear;
+    --motion-entry-duration:   1ms;
+    --motion-entry-easing:     linear;
+  }
 }

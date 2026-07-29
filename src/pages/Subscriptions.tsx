@@ -9,6 +9,7 @@ import UsageThisPeriod from "../components/UsageThisPeriod";
 import ErrorState from "../components/ErrorState";
 import Tag from "../components/Tag";
 import AddTagPopover, { TagOption } from "../components/AddTagPopover";
+import { useFlip } from "../hooks/useFlip";
 import "./Subscriptions.css";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -20,6 +21,78 @@ interface SubscriptionWithIcon extends Omit<Subscription, "icon"> {
 }
 
 type StatusType = "Active" | "Paused" | "Cancelled";
+
+type SortField = "planName" | "price" | "nextCharge" | "status";
+type SortDirection = "asc" | "desc";
+
+interface SortState {
+	field: SortField;
+	direction: SortDirection;
+}
+
+/* ─── Sort helpers ───────────────────────────────────────────── */
+function compareDates(a: string, b: string): number {
+	if (a === "N/A") return 1;
+	if (b === "N/A") return -1;
+	return new Date(a).getTime() - new Date(b).getTime();
+}
+
+function sortSubscriptions(
+	data: SubscriptionWithIcon[],
+	sort: SortState,
+): SubscriptionWithIcon[] {
+	return [...data].sort((a, b) => {
+		let cmp = 0;
+		switch (sort.field) {
+			case "planName":
+				cmp = a.planName.localeCompare(b.planName);
+				break;
+			case "price":
+				cmp = a.price - b.price;
+				break;
+			case "nextCharge":
+				cmp = compareDates(a.nextCharge ?? "N/A", b.nextCharge ?? "N/A");
+				break;
+			case "status": {
+				const order: Record<StatusType, number> = { Active: 0, Paused: 1, Cancelled: 2 };
+				cmp = (order[a.status as StatusType] ?? 3) - (order[b.status as StatusType] ?? 3);
+				break;
+			}
+		}
+		return sort.direction === "asc" ? cmp : -cmp;
+	});
+}
+
+/* ─── Sort button ────────────────────────────────────────────── */
+const SORT_LABELS: Record<SortField, string> = {
+	planName: "Plan name",
+	price: "Price",
+	nextCharge: "Next charge",
+	status: "Status",
+};
+
+function SortButton({
+	field,
+	sort,
+	onSort,
+}: {
+	field: SortField;
+	sort: SortState;
+	onSort: (f: SortField) => void;
+}) {
+	const isActive = sort.field === field;
+	const indicator = isActive ? (sort.direction === "asc" ? " ↑" : " ↓") : "";
+	return (
+		<button
+			type="button"
+			className={`sort-btn${isActive ? " sort-btn--active" : ""}`}
+			onClick={() => onSort(field)}
+			aria-label={`Sort by ${SORT_LABELS[field]}${isActive ? `, currently ${sort.direction === "asc" ? "ascending" : "descending"}` : ""}`}
+			aria-pressed={isActive}>
+			{SORT_LABELS[field]}{indicator}
+		</button>
+	);
+}
 
 /* ─── Icons ─────────────────────────────────────────────────── */
 const IconNews = () => (
@@ -272,10 +345,19 @@ export default function Subscriptions() {
 	const [error, setError] = useState<ApiError | null>(null);
 	const [activeFilter, setActiveFilter] = useState("All");
 	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [sort, setSort] = useState<SortState>({ field: "planName", direction: "asc" });
 
 	const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
 	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 	const [isActionLoading, setIsActionLoading] = useState(false);
+
+	const handleSortField = useCallback((field: SortField) => {
+		setSort((prev) =>
+			prev.field === field
+				? { field, direction: prev.direction === "asc" ? "desc" : "asc" }
+				: { field, direction: "asc" },
+		);
+	}, []);
 
 	const fetchSubscriptions = useCallback(() => {
 		setLoading(true);
@@ -310,9 +392,21 @@ export default function Subscriptions() {
 	};
 
 	const filteredData = useMemo(() => {
-		if (activeFilter === "All") return data;
-		return data.filter((sub) => sub.status === activeFilter);
-	}, [activeFilter, data]);
+		const filtered = activeFilter === "All" ? data : data.filter((sub) => sub.status === activeFilter);
+		return sortSubscriptions(filtered, sort);
+	}, [activeFilter, data, sort]);
+
+	// FLIP animation — keys must match the render order
+	const flipKeys = useMemo(() => filteredData.map((s) => s.id), [filteredData]);
+	const { containerRef: tableBodyRef, getItemProps } = useFlip({
+		keys: flipKeys,
+		enabled: !loading && filteredData.length > 0,
+	});
+	// Mobile cards use a separate FLIP container
+	const { containerRef: cardsContainerRef, getItemProps: getCardItemProps } = useFlip({
+		keys: flipKeys,
+		enabled: !loading && filteredData.length > 0,
+	});
 
 	const selectedSub = useMemo(
 		() => data.find((sub) => sub.id === selectedId),
@@ -635,6 +729,28 @@ export default function Subscriptions() {
 				<EmptyState filter={activeFilter} />
 			) : (
 				<>
+					{/* ── Sort controls ─────────────────────────────────── */}
+					<div
+						className="sort-toolbar"
+						role="toolbar"
+						aria-label="Sort subscriptions"
+						data-testid="sort-toolbar">
+						<span className="sort-toolbar__label" id="sort-toolbar-label">Sort by:</span>
+						<div className="sort-toolbar__buttons" aria-labelledby="sort-toolbar-label">
+							{(["planName", "price", "status", "nextCharge"] as SortField[]).map((f) => (
+								<SortButton key={f} field={f} sort={sort} onSort={handleSortField} />
+							))}
+						</div>
+						{/* Accessible live announcement for sort changes */}
+						<span
+							className="visually-hidden"
+							role="status"
+							aria-live="polite"
+							aria-atomic="true">
+							{`Sorted by ${SORT_LABELS[sort.field]}, ${sort.direction === "asc" ? "ascending" : "descending"}`}
+						</span>
+					</div>
+
 					{/* ── Desktop table ─────────────────────────────────── */}
 					<div className="subs-table-wrapper" role="region" aria-label="Subscriptions list">
 						<table
@@ -653,10 +769,12 @@ export default function Subscriptions() {
 								</th>
 							</tr>
 							</thead>
-							<tbody>
+							{/* FLIP container — tableBodyRef tracks child positions */}
+							<tbody ref={tableBodyRef as React.RefObject<HTMLTableSectionElement>}>
 							{filteredData.map((sub) => (
 								<tr
 									key={sub.id}
+									{...getItemProps(sub.id)}
 									tabIndex={0}
 									aria-label={`${sub.planName} by ${sub.merchantName}, ${sub.status}`}
 									onKeyDown={(e) => {
@@ -750,10 +868,16 @@ export default function Subscriptions() {
 					</div>
 
 					{/* ── Mobile cards ──────────────────────────────────── */}
-					<div className="subs-cards" aria-label="Subscriptions" data-testid="subscriptions-cards">
+					{/* FLIP container for mobile card stack */}
+					<div
+						ref={cardsContainerRef as React.RefObject<HTMLDivElement>}
+						className="subs-cards"
+						aria-label="Subscriptions"
+						data-testid="subscriptions-cards">
 						{filteredData.map((sub) => (
 							<article
 								key={sub.id}
+								{...getCardItemProps(sub.id)}
 								className="subs-card"
 								tabIndex={0}
 								role="button"
