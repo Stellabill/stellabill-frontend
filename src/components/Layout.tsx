@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { CircleHelp } from "lucide-react";
 import LandingNavbar from "./LandingNavbar";
 import CommandPalette, { CommandItem } from "./CommandPalette";
 import KeyboardShortcutsOverlay from "./KeyboardShortcutsOverlay";
-import ContextualHelpOverlay from "./ContextualHelpOverlay";
+<<<<<<< Updated upstream
 import KeyboardChordIndicator from "./KeyboardChordIndicator";
-import TourResumeCheckpoint from "./Dashboard/TourResumeCheckpoint";
+=======
+import HelpSidebar from "./help/HelpSidebar";
+>>>>>>> Stashed changes
 import "../styles/sidebar.css";
 
 const RECENT_COMMANDS_KEY = "sb:recent-commands";
@@ -125,7 +128,7 @@ export default function Layout() {
   const navigate = useNavigate();
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
-  const [isContextualHelpOpen, setIsContextualHelpOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => readPinnedCommands());
   
@@ -245,19 +248,33 @@ export default function Layout() {
         return;
       }
 
-      // ?: Show contextual help overlay
-      if (event.key === '?') {
-        if (!isInputField) {
-          event.preventDefault();
-          setIsContextualHelpOpen(true);
-        }
-      }
-      
-      // /: Show keyboard shortcuts overlay
-      if (event.key === '/') {
-        if (!isInputField) {
+<<<<<<< Updated upstream
+      // ?: Show keyboard shortcuts overlay
+      if (event.key === '?' || event.key === '/') {
+        if (!isInputField && event.key === '?') {
           event.preventDefault();
           setIsShortcutsOverlayOpen(true);
+=======
+      // Shift+?: Open help sidebar (outside input fields)
+      // ? alone: Show keyboard shortcuts overlay
+      if (event.key === '?' || event.key === '/') {
+        const target = event.target as HTMLElement;
+        const isInputField =
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable;
+
+        if (!isInputField) {
+          if (event.shiftKey && event.key === '?') {
+            event.preventDefault();
+            setIsHelpOpen((open) => !open);
+            return;
+          }
+          if (event.key === '?') {
+            event.preventDefault();
+            setIsShortcutsOverlayOpen(true);
+          }
+>>>>>>> Stashed changes
         }
       }
     };
@@ -332,6 +349,21 @@ export default function Layout() {
                 </Link>
               ))}
             </div>
+
+            <div className="sb-sidebar__group" style={{ marginTop: 'auto' }}>
+              <p className="sb-sidebar__group-label" aria-hidden="true">Help</p>
+              <button
+                type="button"
+                className="sb-sidebar__link"
+                onClick={() => setIsHelpOpen(true)}
+                aria-haspopup="dialog"
+                aria-expanded={isHelpOpen}
+                aria-keyshortcuts="Shift+?"
+              >
+                <CircleHelp className="sb-sidebar__icon" aria-hidden="true" />
+                <span className="sb-sidebar__link-label">Help &amp; support</span>
+              </button>
+            </div>
           </nav>
         </aside>
 
@@ -376,6 +408,7 @@ export default function Layout() {
         isOpen={isShortcutsOverlayOpen}
         onClose={() => setIsShortcutsOverlayOpen(false)}
       />
+<<<<<<< Updated upstream
       
       <ContextualHelpOverlay
         isOpen={isContextualHelpOpen}
@@ -383,8 +416,14 @@ export default function Layout() {
       />
       
       <KeyboardChordIndicator pendingKey={pendingChordKey} />
+=======
 
-      <TourResumeCheckpoint />
+      <HelpSidebar
+        isOpen={isHelpOpen}
+        onOpenChange={setIsHelpOpen}
+        showTrigger={false}
+      />
+>>>>>>> Stashed changes
     </div>
   );
 }
