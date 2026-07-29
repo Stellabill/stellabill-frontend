@@ -4,11 +4,9 @@ import { CircleHelp } from "lucide-react";
 import LandingNavbar from "./LandingNavbar";
 import CommandPalette, { CommandItem } from "./CommandPalette";
 import KeyboardShortcutsOverlay from "./KeyboardShortcutsOverlay";
-<<<<<<< Updated upstream
 import KeyboardChordIndicator from "./KeyboardChordIndicator";
-=======
 import HelpSidebar from "./help/HelpSidebar";
->>>>>>> Stashed changes
+import ChangelogPanel from "./changelog/ChangelogPanel";
 import "../styles/sidebar.css";
 
 const RECENT_COMMANDS_KEY = "sb:recent-commands";
@@ -129,6 +127,7 @@ export default function Layout() {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
   const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => readPinnedCommands());
   
@@ -248,22 +247,9 @@ export default function Layout() {
         return;
       }
 
-<<<<<<< Updated upstream
-      // ?: Show keyboard shortcuts overlay
-      if (event.key === '?' || event.key === '/') {
-        if (!isInputField && event.key === '?') {
-          event.preventDefault();
-          setIsShortcutsOverlayOpen(true);
-=======
       // Shift+?: Open help sidebar (outside input fields)
       // ? alone: Show keyboard shortcuts overlay
       if (event.key === '?' || event.key === '/') {
-        const target = event.target as HTMLElement;
-        const isInputField =
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable;
-
         if (!isInputField) {
           if (event.shiftKey && event.key === '?') {
             event.preventDefault();
@@ -274,7 +260,6 @@ export default function Layout() {
             event.preventDefault();
             setIsShortcutsOverlayOpen(true);
           }
->>>>>>> Stashed changes
         }
       }
     };
@@ -355,6 +340,18 @@ export default function Layout() {
               <button
                 type="button"
                 className="sb-sidebar__link"
+                onClick={() => setIsChangelogOpen((o) => !o)}
+                aria-haspopup="dialog"
+                aria-expanded={isChangelogOpen}
+              >
+                <svg className="sb-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                <span className="sb-sidebar__link-label">What's new</span>
+              </button>
+              <button
+                type="button"
+                className="sb-sidebar__link"
                 onClick={() => setIsHelpOpen(true)}
                 aria-haspopup="dialog"
                 aria-expanded={isHelpOpen}
@@ -408,22 +405,20 @@ export default function Layout() {
         isOpen={isShortcutsOverlayOpen}
         onClose={() => setIsShortcutsOverlayOpen(false)}
       />
-<<<<<<< Updated upstream
-      
-      <ContextualHelpOverlay
-        isOpen={isContextualHelpOpen}
-        onClose={() => setIsContextualHelpOpen(false)}
-      />
-      
-      <KeyboardChordIndicator pendingKey={pendingChordKey} />
-=======
+
 
       <HelpSidebar
         isOpen={isHelpOpen}
         onOpenChange={setIsHelpOpen}
         showTrigger={false}
       />
->>>>>>> Stashed changes
+
+      <ChangelogPanel
+        isOpen={isChangelogOpen}
+        onOpenChange={setIsChangelogOpen}
+      />
+
+      <KeyboardChordIndicator pendingKey={pendingChordKey} />
     </div>
   );
 }
