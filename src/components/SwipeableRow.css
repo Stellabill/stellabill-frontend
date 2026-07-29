@@ -1,0 +1,112 @@
+.swipeable-row-container {
+	position: relative;
+	overflow: hidden;
+	touch-action: pan-y;
+	width: 100%;
+}
+
+.swipeable-row-container:focus-visible {
+	outline: 2px solid var(--primary-color, #007bff);
+	outline-offset: 2px;
+}
+
+.swipeable-actions-background {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	justify-content: space-between;
+	background-color: var(--background-secondary, #f8f9fa);
+	border-radius: var(--border-radius-md, 8px);
+	z-index: 0;
+}
+
+.swipeable-actions {
+	display: flex;
+	height: 100%;
+}
+
+.swipeable-actions-leading {
+	justify-content: flex-start;
+}
+
+.swipeable-actions-trailing {
+	justify-content: flex-end;
+}
+
+.swipe-action-btn {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	background: transparent;
+	padding: 0 0.5rem;
+	cursor: pointer;
+	height: 100%;
+	transition: opacity 0.2s;
+}
+
+.swipe-action-btn:hover {
+	opacity: 0.9;
+}
+
+.swipe-action-icon {
+	margin-bottom: 0.25rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.swipe-action-label {
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
+.swipeable-row-content {
+	position: relative;
+	z-index: 1;
+	background-color: var(--background-primary, #ffffff);
+	width: 100%;
+	border-radius: inherit;
+}
+
+.swipeable-keyboard-menu {
+	position: absolute;
+	bottom: -100%;
+	left: 0;
+	right: 0;
+	background: var(--background-primary, #ffffff);
+	border: 1px solid var(--border-color, #e2e8f0);
+	border-radius: var(--border-radius-md, 8px);
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+	z-index: 10;
+	display: flex;
+	flex-direction: column;
+	padding: 0.5rem 0;
+}
+
+.swipeable-menu-item {
+	display: flex;
+	align-items: center;
+	padding: 0.75rem 1rem;
+	background: none;
+	border: none;
+	width: 100%;
+	text-align: left;
+	font-size: 0.875rem;
+	color: var(--text-primary, #1e293b);
+	cursor: pointer;
+}
+
+.swipeable-menu-item:hover,
+.swipeable-menu-item:focus {
+	background-color: var(--background-secondary, #f8f9fa);
+}
+
+.swipeable-menu-item .swipe-action-icon {
+	margin-right: 0.75rem;
+	margin-bottom: 0;
+}

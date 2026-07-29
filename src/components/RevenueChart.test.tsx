@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import RevenueChart, { LineChart, SeriesData } from './RevenueChart';
 
@@ -884,6 +884,70 @@ describe('RevenueChart — Chart Point Trend Announcement Branches (lines 383-38
     await waitFor(() => {
       const txt = chartLiveRegion.textContent || '';
       expect(txt).toContain('unchanged from previous');
+    });
+  });
+});
+
+describe('RevenueChart — Table View Mode', () => {
+  it('toggles between chart and table view', () => {
+    render(<RevenueChart series={mockSeriesData} />);
+    
+    const chartBtn = screen.getByRole('button', { name: 'Chart' });
+    const tableBtn = screen.getByRole('button', { name: 'Table' });
+    
+    expect(chartBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(tableBtn).toHaveAttribute('aria-pressed', 'false');
+    
+    // Switch to table view
+    fireEvent.click(tableBtn);
+    expect(chartBtn).toHaveAttribute('aria-pressed', 'false');
+    expect(tableBtn).toHaveAttribute('aria-pressed', 'true');
+    
+    // Check table is rendered
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy as CSV' })).toBeInTheDocument();
+  });
+
+  it('renders correct table headers and data', () => {
+    render(<RevenueChart series={mockSeriesData} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Table' }));
+    
+    // Caption
+    expect(screen.getByText(/Revenue data from Jan 1 to/i)).toBeInTheDocument();
+    
+    // Headers
+    expect(screen.getByRole('columnheader', { name: 'Date' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Total Revenue' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Subscriptions' })).toBeInTheDocument();
+    
+    // Data (Jan 1 row)
+    const rowHeader = screen.getByRole('rowheader', { name: 'Jan 1' });
+    expect(rowHeader).toBeInTheDocument();
+    
+    const row = rowHeader.closest('tr');
+    expect(row).toHaveTextContent('$500'); // Total Revenue
+    expect(row).toHaveTextContent('$300'); // Subscriptions
+  });
+
+  it('handles copy as CSV functionality', async () => {
+    // Mock clipboard
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockImplementation(() => Promise.resolve()),
+      },
+    });
+
+    render(<RevenueChart series={mockSeriesData} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Table' }));
+    
+    const copyBtn = screen.getByRole('button', { name: 'Copy as CSV' });
+    fireEvent.click(copyBtn);
+    
+    expect(navigator.clipboard.writeText).toHaveBeenCalled();
+    
+    // Button text changes
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copied!' })).toBeInTheDocument();
     });
   });
 });

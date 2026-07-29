@@ -104,6 +104,11 @@
   border-color: var(--color-border-subtle);
 }
 
+/* Error state — keeps card size identical to prevent layout shift */
+.dashboard-card--error {
+  border-color: var(--color-danger-border);
+}
+
 .dashboard-card__skeleton-line,
 .dashboard-card__skeleton-icon {
   border-radius: var(--radius-md);
