@@ -3,6 +3,7 @@
   color: #f8fafc;
   padding: 12px 16px;
   border-left: 4px solid #f97316;
+  position: relative;
 }
 .dunning-banner-inner {
   display: flex;
@@ -12,9 +13,31 @@
 }
 .dunning-content h2 { margin: 0 0 6px 0; font-size: 1.05rem; }
 .dunning-message { margin: 0 0 10px 0; color: #cbd5e1; }
-.dunning-ctas { display: flex; gap: 8px; }
-.dunning-primary { background: #0ea5a4; color: #042023; padding: 8px 12px; border-radius: 6px; text-decoration: none; }
-.dunning-secondary { background: transparent; color: #cbd5e1; border: 1px solid rgba(203,213,225,0.08); padding: 8px 12px; border-radius: 6px; }
+.dunning-ctas { display: flex; gap: 8px; flex-wrap: wrap; }
+.dunning-primary { background: #0ea5a4; color: #042023; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-weight: 600; transition: background 0.2s; }
+.dunning-primary:hover { background: #14b8b6; }
+.dunning-secondary { background: transparent; color: #cbd5e1; border: 1px solid rgba(203,213,225,0.08); padding: 8px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: background 0.2s; }
+.dunning-secondary:hover { background: rgba(203,213,225,0.05); }
+.dunning-retry {
+  background: #f97316;
+  color: #fff;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s, opacity 0.2s;
+  white-space: nowrap;
+}
+.dunning-retry:hover:not(:disabled) { background: #ea580c; }
+.dunning-retry:disabled { opacity: 0.5; cursor: not-allowed; }
+.dunning-retry:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}
 .dunning-timeline-wrapper { min-width: 220px; }
 .dunning-timeline { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .dunning-step { display: flex; gap: 8px; align-items: center; }
@@ -25,4 +48,6 @@
 @media (max-width: 640px) {
   .dunning-banner-inner { flex-direction: column; }
   .dunning-timeline-wrapper { width: 100%; }
+  .dunning-ctas { flex-direction: column; }
+  .dunning-ctas > * { width: 100%; justify-content: center; }
 }

@@ -1,4 +1,5 @@
 import { Navigate, Routes, Route } from 'react-router-dom'
+import Layout from './components/Layout'
 import TransitionLayout from './components/TransitionLayout'
 import Dashboard from './pages/Dashboard'
 import Subscriptions from './pages/Subscriptions'
@@ -36,23 +37,25 @@ function App() {
       <Route path="/onboarding-success" element={<OnboardingSuccess />} />
 
       {/* 2. Authenticated Routes (Wrapped in Layout) */}
+      <Route element={<Layout />}>
         <Route element={<TransitionLayout />}>
-        {/* Redirect base dashboard path to specific dashboard component if needed */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/browse-plans" element={<BrowsePlans />} />
-        {/* Plans Management */}
-        <Route path="/plans" element={<Plans />} />
-        <Route path="/plans/create" element={<CreatePlan />} />
-        <Route path="/plans/new" element={<CreatePlan />} />{" "}
-        {/* Alias for flexibility */}
-        {/* Subscriptions Management */}
-        <Route path="/subscriptions" element={<Subscriptions />} />
-        <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />
-        <Route path="/subscriptions/:id/usage" element={<UsageBilling />} />
-        <Route path="/settings" element={<Settings />} />
-        {/* Development/UI Kit */}
-        <Route path="/ui-kit" element={<UIMockups />} />
-        <Route path="/brand" element={<BrandPack />} />
+          {/* Redirect base dashboard path to specific dashboard component if needed */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/browse-plans" element={<BrowsePlans />} />
+          {/* Plans Management */}
+          <Route path="/plans" element={<Plans />} />
+          <Route path="/plans/create" element={<CreatePlan />} />
+          <Route path="/plans/new" element={<CreatePlan />} />{" "}
+          {/* Alias for flexibility */}
+          {/* Subscriptions Management */}
+          <Route path="/subscriptions" element={<Subscriptions />} />
+          <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />
+          <Route path="/subscriptions/:id/usage" element={<UsageBilling />} />
+          <Route path="/settings" element={<Settings />} />
+          {/* Development/UI Kit */}
+          <Route path="/ui-kit" element={<UIMockups />} />
+          <Route path="/brand" element={<BrandPack />} />
+        </Route>
       </Route>
 
       {/* 3. Catch-all redirect - Sends users back to the dashboard for safety */}
