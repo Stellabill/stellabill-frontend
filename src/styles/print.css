@@ -1,0 +1,426 @@
+/* ==========================================================================
+   Stellabill — Invoice Print Stylesheet
+   @media print  |  WCAG 2.1 AA  |  A4 + Letter
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   @page — paper setup
+   A4:     210 × 297 mm  | safe margins: 15mm top/bottom, 18mm left/right
+   Letter: 8.5 × 11 in  | honour both via named page sizes
+   -------------------------------------------------------------------------- */
+@page {
+  size: A4 portrait;
+  margin: 15mm 18mm 20mm;
+
+  /* Running header: site name left, page number right */
+  @top-left {
+    content: "Stellabill";
+    font-family: system-ui, sans-serif;
+    font-size: 8pt;
+    color: #555;
+  }
+  @top-right {
+    content: "Page " counter(page) " of " counter(pages);
+    font-family: system-ui, sans-serif;
+    font-size: 8pt;
+    color: #555;
+  }
+  @bottom-center {
+    content: "CONFIDENTIAL — Do not distribute";
+    font-family: system-ui, sans-serif;
+    font-size: 7pt;
+    color: #888;
+  }
+}
+
+@page :first {
+  @top-left  { content: ""; }
+  @top-right { content: ""; }
+}
+
+/* Named page for Letter paper — applied via .invoice-print-letter class */
+@page letter {
+  size: letter portrait;
+  margin: 19mm 22mm 22mm;
+}
+
+/* --------------------------------------------------------------------------
+   @media print  — Global overrides
+   -------------------------------------------------------------------------- */
+@media print {
+  /* ---- Reset background / color system ---- */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact;   /* Chrome/Safari */
+    print-color-adjust: exact;           /* Firefox / standard */
+    color-adjust: exact;                 /* legacy */
+  }
+
+  :root {
+    /* Force high-contrast print tokens — override dark-mode vars */
+    --color-text-primary:    #000000;
+    --color-text-secondary:  #1a1a1a;
+    --color-text-muted:      #444444;
+    --color-text-subtle:     #666666;
+
+    --color-surface-card:    #ffffff;
+    --color-surface-subtle:  #f5f5f5;
+    --color-surface-canvas:  #ffffff;
+
+    --color-border-subtle:   #d0d0d0;
+    --color-border-default:  #b0b0b0;
+    --color-border-strong:   #888888;
+
+    --color-brand-primary:   #006699;   /* links printable on white */
+    --color-success:         #155724;
+    --color-warning:         #856404;
+    --color-danger:          #7b1d1d;
+
+    --app-background:        #ffffff;
+
+    /* Disable all motion */
+    --motion-reorder-duration: 0ms;
+    --motion-entry-duration:   0ms;
+  }
+
+  /* ---- Reset document background ---- */
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt;
+    line-height: 1.5;
+    font-family: system-ui, "Segoe UI", Arial, sans-serif;
+  }
+
+  /* ---- Hide app chrome ---- */
+  .sb-sidebar,
+  .app-layout__glow,
+  .app-layout__bottom-nav-wrapper,
+  .landing-navbar,
+  .sb-sidebar__brand,
+  [class*="cmdk"],
+  [class*="toast"],
+  [class*="tooltip"],
+  [class*="overlay"],
+  [class*="palette"],
+  [class*="shortcuts"],
+  [class*="changelog"],
+  [class*="help-sidebar"],
+  [data-print="hide"],
+  .no-print {
+    display: none !important;
+  }
+
+  /* ---- Layout: collapse sidebar shell ---- */
+  .app-layout {
+    display: block !important;
+  }
+
+  .app-layout__shell {
+    display: block !important;
+  }
+
+  .app-layout__main {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .app-layout__content {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* ---- Links — show href after link text ---- */
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 8pt;
+    color: #555555;
+    word-break: break-all;
+  }
+
+  /* Exception: decorative / UI links (icons, nav items) */
+  a[href="#"]::after,
+  a[href^="javascript"]::after,
+  [data-print-no-href] a[href]::after,
+  .no-print-href a[href]::after {
+    content: none;
+  }
+
+  /* ---- Page break helpers ---- */
+  .page-break-before { page-break-before: always; }
+  .page-break-after  { page-break-after:  always; }
+  .page-break-avoid  {
+    page-break-inside: avoid;
+    break-inside:      avoid;
+  }
+
+  /* ---- Animations & transitions: off ---- */
+  *,
+  *::before,
+  *::after {
+    animation:        none !important;
+    transition:       none !important;
+    box-shadow:       none !important;
+    text-shadow:      none !important;
+    backdrop-filter:  none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* ==========================================================================
+   Invoice-specific print styles
+   ========================================================================== */
+
+@media print {
+
+  /* ---- Invoice print root wrapper ---- */
+  .invoice-print-root {
+    page: auto;
+    font-family: system-ui, "Segoe UI", Arial, sans-serif;
+    color: #000000;
+    background: #ffffff;
+  }
+
+  /* Letter variant */
+  .invoice-print-root.invoice-print-letter {
+    page: letter;
+  }
+
+  /* ---- Header (from / bill-to / meta) ---- */
+  .invoice-print-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1.5pt solid #000000;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .invoice-print-header__brand {
+    font-size: 18pt;
+    font-weight: 700;
+    color: #000000;
+  }
+
+  .invoice-print-header__meta {
+    text-align: right;
+    font-size: 9pt;
+    color: #333333;
+    line-height: 1.7;
+  }
+
+  .invoice-print-header__label {
+    font-size: 8pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #555555;
+  }
+
+  /* ---- Status badge (print-safe) ---- */
+  .invoice-print-status {
+    display: inline-block;
+    padding: 2pt 6pt;
+    border: 1pt solid currentColor;
+    border-radius: 3pt;
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .invoice-print-status--paid    { color: #155724; border-color: #155724; }
+  .invoice-print-status--pending { color: #856404; border-color: #856404; }
+  .invoice-print-status--failed  { color: #7b1d1d; border-color: #7b1d1d; }
+
+  /* ---- Line-items table ---- */
+  .ibc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+    color: #000000;
+    page-break-inside: auto;
+  }
+
+  .ibc-table thead {
+    display: table-header-group; /* repeat on every printed page */
+  }
+
+  .ibc-table tfoot {
+    display: table-footer-group;
+  }
+
+  .ibc-table th {
+    background-color: #f0f0f0 !important;
+    color: #000000 !important;
+    border-bottom: 1.5pt solid #000000 !important;
+    border-top: 1.5pt solid #000000 !important;
+    padding: 4pt 6pt !important;
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  .ibc-table td {
+    border-bottom: 0.5pt solid #cccccc !important;
+    padding: 4pt 6pt !important;
+    font-size: 9.5pt;
+    color: #1a1a1a !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .ibc-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Zebra rows — helps readability in B&W printing */
+  .ibc-table tbody tr:nth-child(even) td {
+    background-color: #fafafa !important;
+  }
+
+  /* ---- Summary / totals block ---- */
+  .ibc-summary {
+    margin-top: 0.75rem;
+    border-top: 1.5pt solid #000000 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .ibc-summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 2pt 6pt;
+    font-size: 9.5pt;
+    color: #1a1a1a !important;
+  }
+
+  .ibc-summary-row--total {
+    font-weight: 700;
+    font-size: 11pt;
+    color: #000000 !important;
+    border-top: 1.5pt solid #000000 !important;
+    padding-top: 4pt;
+    margin-top: 2pt;
+  }
+
+  .ibc-summary-row--total .ibc-summary-row__value {
+    color: #000000 !important;
+  }
+
+  .ibc-summary-row--credit .ibc-summary-row__value {
+    color: #155724 !important;
+  }
+
+  /* ---- Card wrapper — remove decorative radius/shadow ---- */
+  .ibc-wrap {
+    border: 1pt solid #cccccc !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    margin-bottom: 1rem;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Keep expanded body always visible in print */
+  .ibc-body {
+    display: block !important;
+    border-top: 1pt solid #cccccc !important;
+    padding: 0.5rem 0.75rem !important;
+    animation: none !important;
+  }
+
+  /* ---- Toggle button: suppress in print ---- */
+  .ibc-toggle {
+    cursor: default !important;
+    pointer-events: none !important;
+    background: #f5f5f5 !important;
+    padding: 4pt 6pt !important;
+  }
+
+  .ibc-toggle__chevron {
+    display: none !important;
+  }
+
+  /* ---- Action buttons: suppress in print ---- */
+  .ibc-actions,
+  .ibc-download-btn,
+  [class*="download"],
+  button[data-print="hide"] {
+    display: none !important;
+  }
+
+  /* ---- Numeric cells — mono for alignment ---- */
+  .ibc-num {
+    font-family: "Courier New", Courier, monospace !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
+  /* ---- Truncation: show full text in print ---- */
+  .ibc-desc {
+    max-width: none !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    text-overflow: clip !important;
+    word-break: break-word;
+  }
+
+  /* ---- Forced-colors (high-contrast system mode) ---- */
+  @media (forced-colors: active) {
+    .ibc-wrap {
+      border: 1pt solid CanvasText !important;
+    }
+
+    .ibc-table th {
+      background: Canvas !important;
+      color: CanvasText !important;
+      border-color: CanvasText !important;
+    }
+
+    .ibc-table td {
+      border-color: CanvasText !important;
+      color: CanvasText !important;
+    }
+
+    .ibc-summary-row--total,
+    .ibc-summary-row--total .ibc-summary-row__value {
+      color: CanvasText !important;
+    }
+
+    .invoice-print-status {
+      border-color: CanvasText !important;
+      color: CanvasText !important;
+    }
+  }
+
+  /* ---- RTL support ---- */
+  [dir="rtl"] .invoice-print-header__meta {
+    text-align: left;
+  }
+
+  [dir="rtl"] .ibc-table th:last-child,
+  [dir="rtl"] .ibc-table td:last-child {
+    text-align: left;
+  }
+
+  [dir="rtl"] .ibc-table th:nth-child(2),
+  [dir="rtl"] .ibc-table td:nth-child(2),
+  [dir="rtl"] .ibc-table th:nth-child(3),
+  [dir="rtl"] .ibc-table td:nth-child(3) {
+    text-align: left;
+  }
+
+  [dir="rtl"] @page {
+    @top-left  { content: "Page " counter(page) " of " counter(pages); }
+    @top-right { content: "Stellabill"; }
+  }
+}
