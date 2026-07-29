@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Logo from '../components/Branding/Logo';
 import Icon from '../components/Branding/Icon';
 import { EmptyDashboard, NoTransactions } from '../components/Branding/Illustrations';
+import ThemePreview from '../components/settings/ThemePreview';
+import type { ThemeTokens } from '../types/theme';
+import { DEFAULT_THEME_TOKENS } from '../types/theme';
 
 type CropFrame = {
   x: number;
@@ -38,6 +41,7 @@ const BrandPack: React.FC = () => {
   const [cropFrame, setCropFrame] = useState<CropFrame>({ x: 20, y: 20, width: 60, height: 60 });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [themeTokens, setThemeTokens] = useState<ThemeTokens>(DEFAULT_THEME_TOKENS);
 
   useEffect(() => {
     return () => {
@@ -479,6 +483,14 @@ const BrandPack: React.FC = () => {
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="space-y-8">
+          <h2 className="border-b border-slate-800 pb-2 text-2xl font-semibold">Live Theme Preview</h2>
+          <p className="text-sm text-slate-400">
+            Edit theme tokens on the left and see real-time updates in the preview pane. Toggle between checkout, dashboard, and receipt views.
+          </p>
+          <ThemePreview tokens={themeTokens} onChange={setThemeTokens} />
         </section>
 
         <section className="space-y-8">
