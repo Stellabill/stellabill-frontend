@@ -1,0 +1,614 @@
+/* RetryScheduleViz — smart-retry schedule visualization
+   -------------------------------------------------------
+   Uses design-system tokens (tokens.css) wherever possible.
+   Supports RTL via logical properties and [dir=rtl] overrides.
+   Reduced-motion: disables all transitions/animations.
+   Forced-colors: explicit ButtonBorder/Highlight mapping.
+*/
+
+/* ─── Container ──────────────────────────────────────────── */
+
+.rsv {
+  container-type: inline-size;
+  width: 100%;
+}
+
+/* Header row: title + "why these times?" trigger */
+.rsv__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  margin-block-end: var(--space-4, 1rem);
+  flex-wrap: wrap;
+}
+
+.rsv__title {
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--font-semibold, 600);
+  color: var(--color-text-primary, #f8fafc);
+  letter-spacing: var(--tracking-wide, 0.025em);
+  text-transform: uppercase;
+}
+
+/* ─── Timeline track ─────────────────────────────────────── */
+
+.rsv__track {
+  /* Horizontal scroll for long schedules; never clips chips */
+  overflow-x: auto;
+  /* Inset ring instead of outline to avoid clipping */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+  padding-block-end: var(--space-2, 0.5rem); /* space for scrollbar */
+
+  /* Snap-scroll for mobile swipe */
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rsv__track:focus-visible {
+  outline: 2px solid var(--color-focus-ring, #22d3ee);
+  outline-offset: 2px;
+}
+
+/* Inner list */
+.rsv__list {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;                /* connector lines are part of each item */
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-width: max-content; /* allow overflow-x */
+}
+
+/* ─── Attempt item ───────────────────────────────────────── */
+
+.rsv__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  scroll-snap-align: center;
+
+  /* Minimum tap target width so chips don't crowd */
+  min-width: 7rem; /* 112px */
+}
+
+/* Connector line between items (pseudo on all but last) */
+.rsv__item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--rsv-icon-size, 2rem) / 2);
+  /* start from right edge of icon */
+  inset-inline-start: calc(50% + var(--rsv-icon-size, 2rem) / 2);
+  /* stretch to right edge of next item's icon */
+  inset-inline-end: calc(-50% + var(--rsv-icon-size, 2rem) / 2);
+  height: 2px;
+  background: var(--rsv-connector-color, rgba(100, 116, 139, 0.35));
+  transition: background 200ms ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Connector dims behind failed items */
+.rsv__item--failed:not(:last-child)::after,
+.rsv__item--all-failed + .rsv__item:not(:last-child)::after {
+  background: rgba(248, 113, 113, 0.18);
+}
+
+/* Connector brightens into succeeded item */
+.rsv__item--succeeded:not(:last-child)::after {
+  background: rgba(52, 211, 153, 0.4);
+}
+
+/* ─── Chip (icon node) ───────────────────────────────────── */
+
+.rsv__chip {
+  --rsv-icon-size: 2rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rsv-icon-size);
+  height: var(--rsv-icon-size);
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    transform 150ms ease;
+  cursor: default;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+/* Status variants */
+.rsv__item--past .rsv__chip {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #94a3b8;
+}
+
+.rsv__item--upcoming .rsv__chip {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #fbbf24;
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.08);
+}
+
+/* "Next" pulsing ring for the first upcoming attempt */
+.rsv__item--upcoming.rsv__item--next .rsv__chip::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(251, 191, 36, 0.35);
+  animation: rsv-pulse 2s ease-in-out infinite;
+}
+
+.rsv__item--failed .rsv__chip {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.45);
+  color: #f87171;
+}
+
+.rsv__item--succeeded .rsv__chip {
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.45);
+  color: #34d399;
+}
+
+/* Hover — show subtle elevation when clickable popovers are attached */
+.rsv__chip:hover {
+  transform: scale(1.08);
+}
+
+/* Focus ring on chip wrapper when it has a button inside */
+.rsv__chip-btn {
+  all: unset;
+  /* Re-apply chip layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.rsv__chip-btn:focus-visible {
+  outline: 3px solid var(--color-focus-ring, #22d3ee);
+  outline-offset: 3px;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
+}
+
+/* ─── Labels under each chip ─────────────────────────────── */
+
+.rsv__labels {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-block-start: var(--space-2, 0.5rem);
+  text-align: center;
+  max-width: 8rem;
+}
+
+/* Absolute date / time */
+.rsv__when {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-semibold, 600);
+  color: var(--color-text-primary, #f8fafc);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Relative delta: "+2 d", "now", "−3 h" */
+.rsv__delta {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-muted, #64748b);
+  line-height: 1.2;
+}
+
+/* Method badge: "card", "USDC", etc. */
+.rsv__method {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: var(--font-bold, 700);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider, 0.05em);
+  white-space: nowrap;
+  margin-block-start: var(--space-1, 0.25rem);
+}
+
+.rsv__method--card {
+  background: rgba(99, 102, 241, 0.14);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.rsv__method--usdc {
+  background: rgba(14, 165, 164, 0.14);
+  color: #2dd4bf;
+  border: 1px solid rgba(14, 165, 164, 0.25);
+}
+
+.rsv__method--prepaid {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.rsv__method--bank {
+  background: rgba(96, 165, 250, 0.14);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.rsv__method--other {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+/* Success probability bar */
+.rsv__prob-track {
+  width: 100%;
+  max-width: 4.5rem;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.15);
+  overflow: hidden;
+  margin-block-start: var(--space-1, 0.25rem);
+}
+
+.rsv__prob-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 400ms ease;
+}
+
+.rsv__prob-fill--high   { background: #34d399; }
+.rsv__prob-fill--medium { background: #fbbf24; }
+.rsv__prob-fill--low    { background: #f87171; }
+
+/* Probability label (visually hidden, accessible via aria-label) */
+.rsv__prob-label {
+  font-size: 10px;
+  color: var(--color-text-muted, #64748b);
+  line-height: 1;
+}
+
+/* ─── Status badge ───────────────────────────────────────── */
+
+.rsv__status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: var(--font-bold, 700);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider, 0.05em);
+  white-space: nowrap;
+  margin-block-start: var(--space-1, 0.25rem);
+}
+
+.rsv__status-badge--past     { background: rgba(148,163,184,0.1); color: #94a3b8; border: 1px solid rgba(148,163,184,0.2); }
+.rsv__status-badge--failed   { background: rgba(248,113,113,0.1); color: #f87171; border: 1px solid rgba(248,113,113,0.25); }
+.rsv__status-badge--succeeded{ background: rgba(52,211,153,0.1);  color: #34d399; border: 1px solid rgba(52,211,153,0.25); }
+.rsv__status-badge--upcoming { background: rgba(251,191,36,0.1);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+
+/* ─── Empty / all-failed callout ─────────────────────────── */
+
+.rsv__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  padding: var(--space-6, 1.5rem) var(--space-4, 1rem);
+  border-radius: 10px;
+  background: rgba(248, 113, 113, 0.07);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  text-align: center;
+}
+
+.rsv__empty-icon {
+  color: #f87171;
+}
+
+.rsv__empty-title {
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--font-semibold, 600);
+  color: #f87171;
+}
+
+.rsv__empty-body {
+  margin: 0;
+  font-size: var(--text-xs, 0.75rem);
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+/* ─── "Show more" overflow control ───────────────────────── */
+
+.rsv__overflow-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1, 0.25rem);
+  margin-block-start: var(--space-3, 0.75rem);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-semibold, 600);
+  color: #60a5fa;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.rsv__overflow-btn:hover  { color: #93c5fd; }
+
+.rsv__overflow-btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring, #22d3ee);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Why popover (FieldHelpPopover pattern) ─────────────── */
+
+.rsv__why-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.rsv__why-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1, 0.25rem);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-medium, 500);
+  color: var(--color-text-muted, #64748b);
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 2px var(--space-2, 0.5rem);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.rsv__why-btn:hover,
+.rsv__why-btn[aria-expanded="true"] {
+  color: #67d5f0;
+  border-color: rgba(103, 213, 240, 0.35);
+  background: rgba(103, 213, 240, 0.08);
+}
+
+.rsv__why-btn:focus-visible {
+  outline: 3px solid var(--color-focus-ring, #22d3ee);
+  outline-offset: 2px;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
+}
+
+.rsv__why-popover {
+  position: absolute;
+  /* Opens upward by default; if not enough space, JS flips it */
+  inset-block-end: calc(100% + 0.5rem);
+  inset-inline-start: 0;
+  z-index: var(--z-dropdown, 100);
+  width: min(22rem, calc(100vw - 2rem));
+  padding: var(--space-4, 1rem);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 10px;
+  background: #06111d;
+  color: #cbd5e1;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+}
+
+.rsv__why-popover--below {
+  inset-block-end: auto;
+  inset-block-start: calc(100% + 0.5rem);
+}
+
+.rsv__why-popover:focus {
+  outline: none;
+}
+
+.rsv__why-title {
+  margin: 0 0 var(--space-3, 0.75rem);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--font-bold, 700);
+  color: #f8fafc;
+}
+
+.rsv__why-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 0.75rem);
+}
+
+.rsv__why-item {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  gap: var(--space-2, 0.5rem);
+  align-items: start;
+}
+
+.rsv__why-icon {
+  display: inline-flex;
+  color: #0ea5e9;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.rsv__why-text {
+  font-size: var(--text-xs, 0.75rem);
+  line-height: 1.55;
+  color: #94a3b8;
+}
+
+.rsv__why-text strong {
+  display: block;
+  color: #e2e8f0;
+  font-weight: var(--font-semibold, 600);
+  margin-block-end: 2px;
+}
+
+.rsv__why-close {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  margin-block-start: var(--space-3, 0.75rem);
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 6px;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-semibold, 600);
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.rsv__why-close:hover {
+  border-color: rgba(103, 213, 240, 0.35);
+  color: #67d5f0;
+}
+
+.rsv__why-close:focus-visible {
+  outline: 3px solid var(--color-focus-ring, #22d3ee);
+  outline-offset: 2px;
+}
+
+/* ─── SR-only live region ─────────────────────────────────── */
+
+.rsv__sr-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── RTL ────────────────────────────────────────────────── */
+
+[dir="rtl"] .rsv__list {
+  flex-direction: row-reverse;
+}
+
+/* Connector lines already use logical inset-inline-* so they flip automatically */
+
+/* ─── Responsive (container queries) ────────────────────── */
+
+/* Below ~480px: stack vertically */
+@container (max-width: 30rem) {
+  .rsv__list {
+    flex-direction: column;
+    min-width: unset;
+    gap: var(--space-4, 1rem);
+    align-items: flex-start;
+  }
+
+  .rsv__item {
+    flex-direction: row;
+    align-items: flex-start;
+    min-width: unset;
+    width: 100%;
+    gap: var(--space-3, 0.75rem);
+  }
+
+  /* No horizontal connector in vertical layout */
+  .rsv__item:not(:last-child)::after {
+    content: none;
+  }
+
+  /* Vertical connector instead */
+  .rsv__item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: calc(var(--rsv-icon-size, 2rem) / 2 - 1px);
+    top: var(--rsv-icon-size, 2rem);
+    bottom: calc(-1 * var(--space-4, 1rem));
+    width: 2px;
+    background: rgba(100, 116, 139, 0.25);
+  }
+
+  .rsv__labels {
+    align-items: flex-start;
+    text-align: start;
+    max-width: none;
+    margin-block-start: 0;
+  }
+
+  [dir="rtl"] .rsv__list {
+    flex-direction: column;
+  }
+}
+
+/* ─── Animations ─────────────────────────────────────────── */
+
+@keyframes rsv-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%       { opacity: 0.8; transform: scale(1.15); }
+}
+
+/* ─── Reduced motion ─────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .rsv__chip,
+  .rsv__chip:hover,
+  .rsv__prob-fill,
+  .rsv__why-btn,
+  .rsv__overflow-btn {
+    transition: none;
+  }
+
+  .rsv__item--upcoming.rsv__item--next .rsv__chip::before {
+    animation: none;
+    opacity: 0.45;
+  }
+}
+
+/* ─── Forced colors (Windows HCM) ────────────────────────── */
+
+@media (forced-colors: active) {
+  .rsv__chip {
+    border-color: ButtonBorder;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+
+  .rsv__chip-btn:focus-visible,
+  .rsv__why-btn:focus-visible,
+  .rsv__overflow-btn:focus-visible,
+  .rsv__why-close:focus-visible {
+    outline: 3px solid Highlight;
+    box-shadow: none;
+  }
+
+  .rsv__why-popover {
+    border-color: ButtonBorder;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .rsv__prob-fill { background: ButtonText; }
+  .rsv__item--upcoming.rsv__item--next .rsv__chip::before { display: none; }
+}
