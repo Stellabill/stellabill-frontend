@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect, KeyboardEvent } from 'react';
 import './RevenueChart.css';
+import { seriesVar } from '@/tokens/chartPalette';
 
 export type TimeRange = '7D' | '30D' | '90D';
 
@@ -54,14 +55,14 @@ function generateMockSeries(days: number): SeriesData[] {
     {
       id: 'revenue',
       name: 'Total Revenue',
-      color: 'var(--chart-series-1)',
+      color: seriesVar(0),
       visible: true,
       data: baseData
     },
     {
       id: 'subscriptions',
       name: 'Subscriptions',
-      color: 'var(--chart-series-2)', 
+      color: seriesVar(1), 
       visible: true,
       data: baseData.map(d => ({
         ...d,
@@ -71,7 +72,7 @@ function generateMockSeries(days: number): SeriesData[] {
     {
       id: 'oneTime',
       name: 'One-time Payments',
-      color: 'var(--chart-series-3)',
+      color: seriesVar(2),
       visible: true,
       data: baseData.map(d => ({
         ...d,
@@ -94,9 +95,12 @@ export default function RevenueChart({
   
   const data = useMemo(() => {
     if (customData) return customData;
+    // When custom series are supplied without explicit data, use the first
+    // series' data points so the table caption and x-axis dates are consistent.
+    if (customSeries && customSeries.length > 0) return customSeries[0].data;
     const days = timeRange === '7D' ? 7 : timeRange === '30D' ? 30 : 90;
     return generateMockData(days);
-  }, [timeRange, customData]);
+  }, [timeRange, customData, customSeries]);
 
   const series = useMemo(() => {
     if (customSeries) return customSeries;

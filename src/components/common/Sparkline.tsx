@@ -1,4 +1,5 @@
 import React from "react";
+import { SPARKLINE_DEFAULT_COLOR } from "@/tokens/chartPalette";
 
 interface SparklineProps {
   data: number[];
@@ -16,7 +17,7 @@ export default function Sparkline({
   data,
   width = 120,
   height = 40,
-  color = "#6366f1",
+  color = SPARKLINE_DEFAULT_COLOR,
   strokeWidth = 2,
   showArea = true,
   areaOpacity = 0.15,

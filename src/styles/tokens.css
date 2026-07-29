@@ -252,15 +252,29 @@
   --chart-point-stroke: var(--color-surface-card);
   --chart-tooltip-bg: var(--color-surface-elevated);
 
-  /* Colorblind-safe chart series (Okabe–Ito–inspired); ≥3:1 non-text contrast on canvas */
+  /* ── Chart series palette — issue #314 ────────────────────────────────────
+     Light-mode variant: tuned for #f8fafc canvas (≥ 3:1 non-text contrast).
+     Meets WCAG 2.1 §1.4.11 Non-text Contrast AA for all 8 series.
+     Mirror of LIGHT_PALETTE in src/tokens/chartPalette.ts.
+
+     Token                Light hex    CR vs #f8fafc   WCAG level
+     --chart-series-1     #0072b2      4.96:1          AA
+     --chart-series-2     #d97706      3.04:1          AA Large
+     --chart-series-3     #059669      3.60:1          AA Large
+     --chart-series-4     #db2777      4.39:1          AA Large
+     --chart-series-5     #7c3aed      5.45:1          AA
+     --chart-series-6     #b45309      4.80:1          AA
+     --chart-series-7     #1d4ed8      6.41:1          AA
+     --chart-series-8     #065f46      7.34:1          AAA
+  ──────────────────────────────────────────────────────────────────────── */
   --chart-series-1: #0072b2;
-  --chart-series-2: #e69f00;
-  --chart-series-3: #009e73;
-  --chart-series-4: #cc79a7;
-  --chart-series-5: #56b4e9;
-  --chart-series-6: #d55e00;
-  --chart-series-7: #332288;
-  --chart-series-8: #882255;
+  --chart-series-2: #d97706;
+  --chart-series-3: #059669;
+  --chart-series-4: #db2777;
+  --chart-series-5: #7c3aed;
+  --chart-series-6: #b45309;
+  --chart-series-7: #1d4ed8;
+  --chart-series-8: #065f46;
   --chart-series-pattern-ink: rgba(0, 0, 0, 0.22);
 
   --delta-positive-bg: rgba(16, 185, 129, 0.12);
@@ -373,14 +387,29 @@
     --chart-point-stroke: var(--color-surface-card);
     --chart-tooltip-bg: var(--color-surface-elevated);
 
-    --chart-series-1: #56b4e9;
-    --chart-series-2: #e69f00;
-    --chart-series-3: #009e73;
-    --chart-series-4: #cc79a7;
-    --chart-series-5: #0072b2;
-    --chart-series-6: #d55e00;
-    --chart-series-7: #aea9f0;
-    --chart-series-8: #ee99aa;
+    /* ── Chart series palette — issue #314 dark variant ────────────────────
+       Dark-mode variant: tuned for #00060f canvas (≥ 3:1 non-text contrast).
+       Higher lightness/chroma so series stay distinct on deep-dark surfaces.
+       Mirror of DARK_PALETTE in src/tokens/chartPalette.ts.
+
+       Token                Dark hex    CR vs #00060f   WCAG level
+       --chart-series-1     #38bdf8     9.49:1          AAA
+       --chart-series-2     #fb923c     8.98:1          AAA
+       --chart-series-3     #34d399     10.58:1         AAA
+       --chart-series-4     #f472b6     7.68:1          AAA
+       --chart-series-5     #a78bfa     7.47:1          AAA
+       --chart-series-6     #facc15     13.28:1         AAA
+       --chart-series-7     #60a5fa     8.00:1          AAA
+       --chart-series-8     #86efac     14.48:1         AAA
+    ──────────────────────────────────────────────────────────────────────── */
+    --chart-series-1: #38bdf8;
+    --chart-series-2: #fb923c;
+    --chart-series-3: #34d399;
+    --chart-series-4: #f472b6;
+    --chart-series-5: #a78bfa;
+    --chart-series-6: #facc15;
+    --chart-series-7: #60a5fa;
+    --chart-series-8: #86efac;
     --chart-series-pattern-ink: rgba(255, 255, 255, 0.28);
 
     --delta-positive-bg: rgba(52, 211, 153, 0.16);
@@ -542,14 +571,28 @@
   --chart-point-stroke: var(--color-surface-card);
   --chart-tooltip-bg: var(--color-surface-elevated);
 
-  --chart-series-1: #56b4e9;
-  --chart-series-2: #e69f00;
-  --chart-series-3: #009e73;
-  --chart-series-4: #cc79a7;
-  --chart-series-5: #0072b2;
-  --chart-series-6: #d55e00;
-  --chart-series-7: #aea9f0;
-  --chart-series-8: #ee99aa;
+  /* ── Chart series palette — issue #314 dark variant ────────────────────
+     Dark-mode variant: tuned for #00060f canvas (≥ 3:1 non-text contrast).
+     Mirror of DARK_PALETTE in src/tokens/chartPalette.ts.
+
+     Token                Dark hex    CR vs #00060f   WCAG level
+     --chart-series-1     #38bdf8     9.49:1          AAA
+     --chart-series-2     #fb923c     8.98:1          AAA
+     --chart-series-3     #34d399     10.58:1         AAA
+     --chart-series-4     #f472b6     7.68:1          AAA
+     --chart-series-5     #a78bfa     7.47:1          AAA
+     --chart-series-6     #facc15     13.28:1         AAA
+     --chart-series-7     #60a5fa     8.00:1          AAA
+     --chart-series-8     #86efac     14.48:1         AAA
+  ──────────────────────────────────────────────────────────────────────── */
+  --chart-series-1: #38bdf8;
+  --chart-series-2: #fb923c;
+  --chart-series-3: #34d399;
+  --chart-series-4: #f472b6;
+  --chart-series-5: #a78bfa;
+  --chart-series-6: #facc15;
+  --chart-series-7: #60a5fa;
+  --chart-series-8: #86efac;
   --chart-series-pattern-ink: rgba(255, 255, 255, 0.28);
 
   --delta-positive-bg: rgba(52, 211, 153, 0.16);
