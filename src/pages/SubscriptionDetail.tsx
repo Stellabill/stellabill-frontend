@@ -8,6 +8,7 @@ import ScheduleChangePreview, { type BillingInterval } from '../components/Sched
 import ReactivationModal, { type ReactivationPlan } from '../components/ReactivationModal';
 import DowngradeConfirmModal, { type PlanFeature } from '../components/DowngradeConfirmModal';
 import TrialCountdownBanner from '../components/TrialCountdownBanner';
+import ProrationPreviewModal from '../components/common/ProrationPreviewModal';
 
 // ── Mock subscription status type ────────────────────────────────────────────
 type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
@@ -38,6 +39,9 @@ export default function SubscriptionDetail() {
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + 2); // <3 days → urgent tier
     const isTrialSubscription = true; // replace with real flag from API
+
+    // ── Proration preview state ────────────────────────────────────────────────
+    const [isProrationModalOpen, setIsProrationModalOpen] = useState(false);
 
     // ── Downgrade state ───────────────────────────────────────────────────────
     const [isDowngradeModalOpen, setIsDowngradeModalOpen] = useState(false);
@@ -225,6 +229,31 @@ export default function SubscriptionDetail() {
                             Downgrade plan
                         </button>
                     )}
+
+                    {/* ── Proration CTA ──────────────────────────────────────── */}
+                    {subscriptionStatus === 'active' && (
+                        <button
+                            onClick={() => setIsProrationModalOpen(true)}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.625rem 1.25rem',
+                                borderRadius: '12px',
+                                border: '1px solid rgba(34,211,238,0.35)',
+                                background: 'rgba(34,211,238,0.08)',
+                                color: '#22d3ee',
+                                fontWeight: 700,
+                                fontSize: '0.9rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                flexShrink: 0,
+                            }}
+                            aria-label="Preview proration for plan change"
+                        >
+                            Preview Proration
+                        </button>
+                    )}
                 </div>
 
                 {/* Reactivation window notice */}
@@ -363,6 +392,23 @@ export default function SubscriptionDetail() {
                 windowExpired={!isWithinWindow}
                 billingDay={subscription.billingDay}
                 isLoading={isReactivating}
+            />
+
+            {/* ── Proration preview modal ─────────────────────────────────── */}
+            <ProrationPreviewModal
+                isOpen={isProrationModalOpen}
+                onClose={() => setIsProrationModalOpen(false)}
+                onConfirm={() => {
+                    setIsProrationModalOpen(false);
+                }}
+                currentPlan="Pro"
+                newPlan="Basic"
+                effectiveDate="Aug 1, 2026"
+                lineItems={[
+                    { label: 'Unused Pro (15 days)', amount: 2500, type: 'credit' },
+                    { label: 'Basic plan (remaining 15 days)', amount: 1000, type: 'charge' },
+                ]}
+                nextInvoiceTotal={1000}
             />
 
             {/* ── Downgrade confirmation modal ──────────────────────────────── */}
