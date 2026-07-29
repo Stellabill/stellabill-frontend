@@ -9,6 +9,7 @@ import UsageThisPeriod from "../components/UsageThisPeriod";
 import ErrorState from "../components/ErrorState";
 import Tag from "../components/Tag";
 import AddTagPopover, { TagOption } from "../components/AddTagPopover";
+import SwipeableRow, { SwipeAction } from "../components/SwipeableRow";
 import "./Subscriptions.css";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -89,6 +90,27 @@ const IconEmptySubscriptions = () => (
 const IconArrowLeft = () => (
 	<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 		<polyline points="15 18 9 12 15 6" />
+	</svg>
+);
+
+const IconPause = () => (
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<rect x="6" y="4" width="4" height="16" />
+		<rect x="14" y="4" width="4" height="16" />
+	</svg>
+);
+
+const IconX = () => (
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<line x1="18" y1="6" x2="6" y2="18" />
+		<line x1="6" y1="6" x2="18" y2="18" />
+	</svg>
+);
+
+const IconManage = () => (
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<path d="M12 20h9" />
+		<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
 	</svg>
 );
 
@@ -751,90 +773,136 @@ export default function Subscriptions() {
 
 					{/* ── Mobile cards ──────────────────────────────────── */}
 					<div className="subs-cards" aria-label="Subscriptions" data-testid="subscriptions-cards">
-						{filteredData.map((sub) => (
-							<article
-								key={sub.id}
-								className="subs-card"
-								tabIndex={0}
-								role="button"
-								aria-label={`${sub.planName} – ${sub.status}. Tap to manage.`}
-								onClick={() => setSelectedId(sub.id)}
-								onKeyDown={(e) => {
-									if (e.key === "Enter" || e.key === " ") {
-										e.preventDefault();
+						{filteredData.map((sub) => {
+							const leadingActions: SwipeAction[] = [
+								{
+									id: "manage",
+									label: "Manage",
+									icon: <IconManage />,
+									backgroundColor: "var(--primary-color, #007bff)",
+									color: "#fff",
+									onClick: () => setSelectedId(sub.id)
+								}
+							];
+
+							const trailingActions: SwipeAction[] = [];
+							
+							if (sub.status === "Active") {
+								trailingActions.push({
+									id: "pause",
+									label: "Pause",
+									icon: <IconPause />,
+									backgroundColor: "#f59e0b", // orange-500
+									color: "#fff",
+									onClick: () => {
 										setSelectedId(sub.id);
+										setIsPauseModalOpen(true);
 									}
-								}}>
-								<div className="subs-card__top">
-									<div className="subs-card__plan-info">
-										<div className="subs-card__icon" aria-hidden="true">
-											{sub.icon}
-										</div>
-										<div>
-											<div className="subs-card__name">{sub.planName}</div>
-											<div className="subs-card__merchant">{sub.merchantName}</div>
-											{/* Tags for mobile */}
-											{sub.tags && sub.tags.length > 0 && (
-												<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-													{sub.tags.slice(0, 2).map((tag) => (
-														<Tag
-															key={tag.id}
-															label={tag.label}
-															color={tag.color}
-															size="small"
-														/>
-													))}
-													{sub.tags.length > 2 && (
-														<span style={{ fontSize: 'var(--text-xs)', color: '#64748b', alignSelf: 'center' }}>
-															+{sub.tags.length - 2}
-														</span>
-													)}
-												</div>
-											)}
-										</div>
-									</div>
-									<StatusBadge status={sub.status as StatusType} />
-								</div>
+								});
+							} else if (sub.status === "Paused") {
+								trailingActions.push({
+									id: "resume",
+									label: "Resume",
+									icon: <IconPlay />,
+									backgroundColor: "#10b981", // emerald-500
+									color: "#fff",
+									onClick: () => handleResume(sub.id)
+								});
+							}
 
-								<div className="subs-card__meta">
-									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">{t('subscriptions.table.prepaid')}</span>
-										<span className="subs-card__meta-value">{sub.prepaidBalance}</span>
-									</div>
-									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">{t('subscriptions.table.coverage')}</span>
-										<span className="subs-card__meta-value">{sub.coverage}</span>
-									</div>
-									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">{t('subscriptions.table.nextCharge')}</span>
-										<span className="subs-card__meta-value">{sub.nextCharge}</span>
-									</div>
-									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">{t('subscriptions.table.lastPayment')}</span>
-										<span className="subs-card__meta-value">{sub.lastPayment}</span>
-									</div>
-								</div>
+							if (sub.status !== "Cancelled") {
+								trailingActions.push({
+									id: "cancel",
+									label: "Cancel",
+									icon: <IconX />,
+									backgroundColor: "#ef4444", // red-500
+									color: "#fff",
+									onClick: () => {
+										setSelectedId(sub.id);
+										setIsCancelModalOpen(true);
+									}
+								});
+							}
 
-								<div className="subs-card__footer">
-									<span className="subs-card__price">
-										{sub.price} {sub.currency}
-										<span className="subs-card__price-interval">
-											/ {sub.interval}
+							return (
+							<SwipeableRow key={sub.id} leadingActions={leadingActions} trailingActions={trailingActions}>
+								<article
+									className="subs-card"
+									tabIndex={-1}
+									role="button"
+									aria-label={`${sub.planName} – ${sub.status}. Tap to manage.`}
+									onClick={() => setSelectedId(sub.id)}>
+									<div className="subs-card__top">
+										<div className="subs-card__plan-info">
+											<div className="subs-card__icon" aria-hidden="true">
+												{sub.icon}
+											</div>
+											<div>
+												<div className="subs-card__name">{sub.planName}</div>
+												<div className="subs-card__merchant">{sub.merchantName}</div>
+												{/* Tags for mobile */}
+												{sub.tags && sub.tags.length > 0 && (
+													<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+														{sub.tags.slice(0, 2).map((tag) => (
+															<Tag
+																key={tag.id}
+																label={tag.label}
+																color={tag.color}
+																size="small"
+															/>
+														))}
+														{sub.tags.length > 2 && (
+															<span style={{ fontSize: 'var(--text-xs)', color: '#64748b', alignSelf: 'center' }}>
+																+{sub.tags.length - 2}
+															</span>
+														)}
+													</div>
+												)}
+											</div>
+										</div>
+										<StatusBadge status={sub.status as StatusType} />
+									</div>
+
+									<div className="subs-card__meta">
+										<div className="subs-card__meta-item">
+											<span className="subs-card__meta-label">{t('subscriptions.table.prepaid')}</span>
+											<span className="subs-card__meta-value">{sub.prepaidBalance}</span>
+										</div>
+										<div className="subs-card__meta-item">
+											<span className="subs-card__meta-label">{t('subscriptions.table.coverage')}</span>
+											<span className="subs-card__meta-value">{sub.coverage}</span>
+										</div>
+										<div className="subs-card__meta-item">
+											<span className="subs-card__meta-label">{t('subscriptions.table.nextCharge')}</span>
+											<span className="subs-card__meta-value">{sub.nextCharge}</span>
+										</div>
+										<div className="subs-card__meta-item">
+											<span className="subs-card__meta-label">{t('subscriptions.table.lastPayment')}</span>
+											<span className="subs-card__meta-value">{sub.lastPayment}</span>
+										</div>
+									</div>
+
+									<div className="subs-card__footer">
+										<span className="subs-card__price">
+											{sub.price} {sub.currency}
+											<span className="subs-card__price-interval">
+												/ {sub.interval}
+											</span>
 										</span>
-									</span>
-									<button
-										className="subs-table__btn subs-table__btn--primary"
-										id={`manage-card-btn-${sub.id}`}
-										onClick={(e) => {
-											e.stopPropagation();
-											setSelectedId(sub.id);
-										}}
-										aria-label={`Open ${sub.planName} from card`}>
-										Manage
-									</button>
-								</div>
-							</article>
-						))}
+										<button
+											className="subs-table__btn subs-table__btn--primary"
+											id={`manage-card-btn-${sub.id}`}
+											onClick={(e) => {
+												e.stopPropagation();
+												setSelectedId(sub.id);
+											}}
+											aria-label={`Open ${sub.planName} from card`}>
+											Manage
+										</button>
+									</div>
+								</article>
+							</SwipeableRow>
+						)})}
 					</div>
 				</>
 			)}
