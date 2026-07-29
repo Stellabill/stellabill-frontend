@@ -384,29 +384,42 @@ export default function Subscriptions() {
 		setLoading(true);
 		setError(null);
 
-		window.setTimeout(() => {
-			try {
-				if (window.location.search.includes("simulate_error")) {
-					const err: ApiError = new Error("Failed to load subscriptions");
-					err.status = 500;
-					err.technicalDetails =
-						"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
-					setError(err);
-				} else {
-					setData(INITIAL_DATA);
-				}
+		return new Promise<void>((resolve) => {
+			window.setTimeout(() => {
+				try {
+					if (window.location.search.includes("simulate_error")) {
+						const err: ApiError = new Error("Failed to load subscriptions");
+						err.status = 500;
+						err.technicalDetails =
+							"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
+						setError(err);
+					} else {
+						setData(INITIAL_DATA);
+					}
 
-				setLoading(false);
-			} catch (err: unknown) {
-				setError(err as Error);
-				setLoading(false);
-			}
+					setLoading(false);
+					resolve();
+				} catch (err: unknown) {
+					setError(err as Error);
+					setLoading(false);
+					resolve();
+				}
+			}, 800); // Added slight delay to simulate network
 		});
 	}, []);
 
 	useEffect(() => {
 		fetchSubscriptions();
 	}, [fetchSubscriptions]);
+
+	const {
+		pullDistance,
+		isRefreshing,
+		triggerRefresh,
+		handlers: refreshHandlers
+	} = useRefresh({
+		onRefresh: fetchSubscriptions
+	});
 
 	const handleViewFullUsage = () => {
 		/* TODO: Navigate to full usage page */

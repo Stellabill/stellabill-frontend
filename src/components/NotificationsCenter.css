@@ -524,3 +524,188 @@
 .notifications-list-silenced {
   border-top: 1px solid rgba(148, 163, 184, 0.08);
 }
+
+/* ============================================================
+   Digest (notification digest rows (grouped repeat events)
+   ============================================================ */
+
+.notifications-digest-row {
+  display: block;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.notifications-digest-row + .notifications-item,
+.notifications-item + .notifications-digest-row,
+.notifications-digest-row + .notifications-digest-row {
+  margin-top: 0.25rem;
+}
+
+.notifications-digest-header {
+  display: block;
+  width: 100%;
+  padding: 0;
+  padding: 0.875rem;
+  border: 0;
+  background: transparent;
+  border-radius: 10px;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+
+.notifications-digest-header:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.notifications-digest-header:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: -2px;
+}
+
+.notifications-digest-row[data-read='false'] .notifications-digest-header {
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.notifications-digest-head-grid {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.notifications-digest-head-main {
+  min-width: 0;
+}
+
+.notifications-digest-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.125rem 0.5rem;
+  margin-inline-end: 0.5rem;
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.notifications-item-warning .notifications-digest-count-badge {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.25);
+}
+
+.notifications-item-error .notifications-digest-count-badge {
+  color: #fca5a5;
+  background: rgba(220, 38, 38, 0.15);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.notifications-digest-time-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #94a3b8;
+}
+
+.notifications-digest-footer {
+  position: relative;
+}
+
+.notifications-digest-chevron {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  color: #64748b;
+  transition: transform 0.18s ease;
+}
+
+[dir='rtl'] .notifications-digest-chevron {
+  right: auto;
+  left: 0;
+}
+
+/* When the digest row has an explicit spacing at left (action)
+    we leave room for the chevron. */
+.notifications-digest-footer .notifications-action {
+  margin-right: 24px;
+}
+
+[dir='rtl'] .notifications-digest-footer .notifications-action {
+  margin-right: 0;
+  margin-left: 24px;
+}
+
+.notifications-digest-chevron-open {
+  transform: rotate(180deg);
+}
+
+.notifications-digest-items {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0 0.25rem 2rem;
+  border-left: 1px dashed rgba(148, 163, 184, 0.2);
+  margin-left: calc(18px + 0.75rem / 2);
+  display: flex;
+  flex-direction: column;
+}
+
+[dir='rtl'] .notifications-digest-items {
+  padding: 0.25rem 2rem 0.25rem 0;
+  border-left: 0;
+  border-right: 1px dashed rgba(148, 163, 184, 0.2);
+  margin-left: 0;
+  margin-right: calc(18px + 0.75rem / 2);
+}
+
+.notifications-item-nested {
+  padding: 0.65rem 0.75rem;
+}
+
+.notifications-item-nested .notifications-type-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.notifications-item-nested .notifications-type-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.notifications-item-nested h3 {
+  font-size: 0.875rem;
+}
+
+.notifications-item-nested p {
+  font-size: 0.8125rem;
+}
+
+/* Accessibility: keep chevron + count badges — reduced motion
+ */
+@media (prefers-reduced-motion: reduce) {
+  .notifications-digest-chevron,
+  .notifications-silenced-chevron {
+    transition: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .notifications-digest-items {
+    padding-left: 1.25rem;
+    margin-left: calc(14px);
+  }
+  [dir='rtl'] .notifications-digest-items {
+    padding-right: 1.25rem;
+    margin-right: calc(14px);
+  }
+  .notifications-digest-count-badge {
+    padding: 0.1rem 0.4rem;
+    font-size: 0.65rem;
+  }
+}

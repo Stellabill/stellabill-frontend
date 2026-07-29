@@ -931,3 +931,57 @@
   .subs-table tbody tr,
   .filter-tab { transition: none; }
 }
+
+/* ─── Pull to Refresh ─────────────────────────────────────────── */
+.ptr-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  transition: opacity 0.2s ease, height 0.2s ease;
+  color: var(--primary-color, #3b82f6);
+}
+
+.ptr-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform-origin: center;
+}
+
+.ptr-spinner.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ptr-fallback-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 50%;
+  padding: 8px;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  color: var(--text-color, #333);
+}
+
+.ptr-fallback-btn:focus-visible {
+  outline: 2px solid var(--primary-color, #3b82f6);
+  outline-offset: 2px;
+}
+
+.subs-cards-inner {
+  transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .subs-cards-inner {
+    transition: none;
+  }
+}
