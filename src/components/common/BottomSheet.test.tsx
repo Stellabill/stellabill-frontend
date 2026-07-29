@@ -1,9 +1,20 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import BottomSheet from "./BottomSheet";
 
+const MOBILE_WIDTH = 375;
+
 describe("BottomSheet", () => {
+  beforeEach(() => {
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      configurable: true,
+      value: MOBILE_WIDTH,
+    });
+    window.dispatchEvent(new Event("resize"));
+  });
+
   it("renders when open", () => {
     render(
       <BottomSheet isOpen={true} onClose={vi.fn()} title="Test Sheet">

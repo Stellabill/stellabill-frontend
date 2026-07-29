@@ -58,18 +58,6 @@ export default function BottomSheet({
 
   useEffect(() => {
     if (!isOpen || isDesktop()) return;
-    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, isDesktop]);
-
-  useEffect(() => {
-    if (!isOpen || isDesktop()) return;
     const handlePointerDown = (e: PointerEvent) => {
       if (
         panelRef.current &&
