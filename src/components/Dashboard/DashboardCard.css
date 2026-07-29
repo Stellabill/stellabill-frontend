@@ -104,11 +104,14 @@
   border-color: var(--color-border-subtle);
 }
 
+/*
+ * Sizing/shape only — the shimmer sweep and background gradient are owned by
+ * the shared .sb-shimmer mixin (src/styles/shimmer.css), applied via the
+ * <Shimmer/> component these elements render through.
+ */
 .dashboard-card__skeleton-line,
 .dashboard-card__skeleton-icon {
   border-radius: var(--radius-md);
-  background: linear-gradient(90deg, var(--skeleton-base), var(--skeleton-highlight), var(--skeleton-base));
-  background-size: 240px 100%;
 }
 
 .dashboard-card__skeleton-line--title {

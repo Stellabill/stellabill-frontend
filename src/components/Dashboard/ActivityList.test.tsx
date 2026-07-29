@@ -36,8 +36,9 @@ describe('ActivityList', () => {
   });
 
   it('renders loading state correctly', () => {
-    const { container } = render(<ActivityList loading={true} />);
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    const { container, getByRole } = render(<ActivityList loading={true} />);
+    expect(getByRole('status')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('.sb-shimmer').length).toBeGreaterThan(0);
   });
 
   it('renders activity statuses correctly', () => {
