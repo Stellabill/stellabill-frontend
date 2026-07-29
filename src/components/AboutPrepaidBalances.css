@@ -1,39 +1,41 @@
 /* Universal Parent Section */
 .about-prepaid-section {
-  background-color: #000000; /* Black universal parent */
+  background-color: var(--color-surface-canvas, #000000);
   min-height: 100vh;
   width: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
-  padding: 2rem;
+  align-items: flex-start;
+  padding: 2rem 1.25rem 6rem;
+}
+
+.prepaid-explainer {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 /* Main container: Dark background with a Teal-tinted border */
 .prepaid-card {
-    padding: 10px;
-  background-color: #0d1117;
-  /* This color matches the teal/cyan border in your image */
-  border: 1px solid #4fd1c5;
+  background-color: var(--color-surface-card, #0d1117);
+  border: 1px solid var(--color-brand-accent, #4fd1c5);
   border-radius: 12px;
   padding: 24px;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
   gap: 16px;
-  max-width: 800px;
-  margin: 20px auto;
-  /* Optional: adds a very subtle teal outer glow to match the 'glow' in the image */
   box-shadow: 0 0 15px rgba(79, 209, 197, 0.05);
 }
 
-/* Icon box: Dark teal background with a brighter teal border */
 .prepaid-icon-container {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
   background-color: rgba(22, 44, 44, 0.8);
-  border: 1px solid #4fd1c5; /* Brighter teal border for the icon */
+  border: 1px solid var(--color-brand-accent, #4fd1c5);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -41,19 +43,339 @@
 }
 
 .prepaid-icon {
-  color: #4fd1c5; /* Match the teal color in the icon requirements */
+  color: var(--color-brand-accent, #4fd1c5);
 }
 
 .prepaid-title {
-  color: #ffffff;
+  color: var(--color-text-primary, #ffffff);
   font-weight: 700;
   font-size: 16px;
   margin: 0 0 4px 0;
 }
 
 .prepaid-body {
-  color: #9ca3af;
+  color: var(--color-text-muted, #9ca3af);
   font-size: 14px;
   line-height: 1.6;
   margin: 0;
+}
+
+/* ─── Timeline (tokens shared with PlanStatusTimeline) ─── */
+.prepaid-timeline {
+  background: #0a0a0a;
+  border-radius: 18px;
+  border: 1px solid #1f2937;
+  padding: 1.5rem;
+  font-family: Inter, "DM Sans", sans-serif;
+}
+
+.prepaid-timeline__intro {
+  margin-bottom: 1.5rem;
+}
+
+.prepaid-timeline__heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.prepaid-timeline__sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.prepaid-timeline__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.prepaid-timeline__item {
+  position: relative;
+  padding-left: 2.4rem;
+  padding-bottom: 2rem;
+}
+
+.prepaid-timeline__item:last-child {
+  padding-bottom: 0;
+}
+
+.prepaid-timeline__connector {
+  position: absolute;
+  left: 14px;
+  top: 1.6rem;
+  bottom: 0;
+  width: 2px;
+  background-color: #1e293b;
+}
+
+.prepaid-timeline__icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  background-color: #0a0a0a;
+  border-radius: 50%;
+  transform: translateY(4px);
+}
+
+.prepaid-timeline__body {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.prepaid-timeline__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.prepaid-timeline__title {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.prepaid-timeline__time {
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.prepaid-timeline__badge {
+  display: inline-flex;
+  width: fit-content;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  background: #111827;
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.prepaid-timeline__desc {
+  margin: 0;
+  line-height: 1.7;
+  font-size: 0.92rem;
+  color: #94a3b8;
+}
+
+/* RTL: flip timeline rail */
+[dir="rtl"] .prepaid-timeline__item {
+  padding-left: 0;
+  padding-right: 2.4rem;
+}
+
+[dir="rtl"] .prepaid-timeline__connector {
+  left: auto;
+  right: 14px;
+}
+
+[dir="rtl"] .prepaid-timeline__icon {
+  left: auto;
+  right: 0;
+}
+
+/* ─── FAQ accordion ─── */
+.prepaid-faq {
+  background: var(--color-surface-card, #0a0f16);
+  border: 1px solid var(--color-border-subtle, #1f2937);
+  border-radius: 18px;
+  padding: 1.5rem;
+}
+
+.prepaid-faq__header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.prepaid-faq__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #f8fafc);
+}
+
+.prepaid-faq__search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-default, #334155);
+  background: var(--color-surface-elevated, #111827);
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.prepaid-faq__search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary, #f8fafc);
+  font: inherit;
+  outline: none;
+}
+
+.prepaid-faq__search input::placeholder {
+  color: var(--color-text-subtle, #64748b);
+}
+
+.prepaid-faq__group {
+  margin-bottom: 1.25rem;
+}
+
+.prepaid-faq__group:last-child {
+  margin-bottom: 0;
+}
+
+.prepaid-faq__group-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle, #64748b);
+}
+
+.prepaid-faq__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.prepaid-faq__item {
+  border: 1px solid var(--color-border-subtle, #1e293b);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-surface-elevated, #0f172a);
+}
+
+.prepaid-faq__trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary, #f8fafc);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: start;
+  cursor: pointer;
+}
+
+.prepaid-faq__trigger:focus-visible {
+  outline: 3px solid var(--focus-ring, #22d3ee);
+  outline-offset: -3px;
+}
+
+.prepaid-faq__chevron {
+  flex-shrink: 0;
+  color: var(--color-text-subtle, #64748b);
+  transition: transform 0.2s ease;
+}
+
+.prepaid-faq__chevron--open {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prepaid-faq__chevron {
+    transition: none;
+  }
+}
+
+.prepaid-faq__panel {
+  padding: 0 1rem 1rem;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.prepaid-faq__panel p {
+  margin: 0;
+}
+
+.prepaid-faq__empty {
+  margin: 0;
+  padding: 1.5rem 0;
+  text-align: center;
+  color: var(--color-text-subtle, #64748b);
+  font-size: 0.9rem;
+}
+
+/* ─── Sticky bottom CTA ─── */
+.prepaid-cta {
+  position: sticky;
+  bottom: 1rem;
+  z-index: var(--z-sticky, 200);
+  display: flex;
+  justify-content: center;
+  padding-top: 0.5rem;
+}
+
+.prepaid-cta__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: min(100%, 280px);
+  padding: 0.9rem 1.5rem;
+  border-radius: 999px;
+  border: none;
+  background: var(
+    --color-brand-gradient,
+    linear-gradient(90deg, #22d3ee 0%, #2dd4bf 100%)
+  );
+  color: var(--color-brand-on, #02131a);
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-brand, 0 0 20px rgba(34, 211, 238, 0.3));
+}
+
+.prepaid-cta__button:hover {
+  background: var(
+    --color-brand-gradient-hover,
+    linear-gradient(90deg, #67e8f9 0%, #5eead4 100%)
+  );
+}
+
+.prepaid-cta__button:focus-visible {
+  outline: 3px solid var(--focus-ring, #22d3ee);
+  outline-offset: 3px;
+}
+
+.prepaid-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 640px) {
+  .prepaid-card {
+    flex-direction: column;
+  }
 }

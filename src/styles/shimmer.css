@@ -1,0 +1,87 @@
+@import './tokens.css';
+
+/* ============================================================================
+   Shimmer primitive
+   Token-driven loading placeholder. Sweeps a gradient highlight across
+   `--skeleton-base` using percentage-based background-position, so the
+   animation stays smooth regardless of the element's rendered width.
+   Respects document/ancestor writing direction and falls back to a gentle
+   opacity pulse under prefers-reduced-motion.
+   ========================================================================== */
+
+@keyframes sb-shimmer-sweep {
+  0% {
+    background-position: -135% 0;
+  }
+  100% {
+    background-position: 135% 0;
+  }
+}
+
+@keyframes sb-shimmer-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.sb-shimmer {
+  /*
+   * Intentionally no default border-radius here: a bare "block" shimmer is
+   * meant to be composed into an existing skeleton element (e.g.
+   * `.dashboard-skeleton__button`) that already owns its own radius. Setting
+   * one on this base class would fight that class for specificity. Use the
+   * `radius` prop on <Shimmer/> for standalone usage, or the shape presets
+   * below for circle/text placeholders that are typically used bare.
+   */
+  display: block;
+  background-color: var(--skeleton-base);
+  background-image: linear-gradient(
+    var(--shimmer-angle),
+    var(--skeleton-base) 0%,
+    var(--skeleton-highlight) 50%,
+    var(--skeleton-base) 100%
+  );
+  background-size: 200% 100%;
+  animation: sb-shimmer-sweep var(--shimmer-duration) var(--shimmer-timing) infinite;
+}
+
+.sb-shimmer--circle {
+  border-radius: var(--radius-full);
+}
+
+.sb-shimmer--text {
+  border-radius: var(--radius-sm);
+}
+
+/* Explicit direction override (independent of document direction). */
+.sb-shimmer[data-direction='rtl'] {
+  animation-direction: reverse;
+}
+
+.sb-shimmer[data-direction='ltr'] {
+  animation-direction: normal;
+}
+
+/* Auto-detect ancestor/document direction when no explicit override is set. */
+.sb-shimmer:not([data-direction]):dir(rtl) {
+  animation-direction: reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-shimmer {
+    background-image: none;
+    animation-name: sb-shimmer-pulse;
+    animation-duration: var(--shimmer-reduced-duration);
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+
+  .sb-shimmer[data-direction],
+  .sb-shimmer:dir(rtl) {
+    animation-direction: normal;
+  }
+}

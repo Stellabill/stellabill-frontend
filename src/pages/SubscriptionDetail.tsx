@@ -6,6 +6,8 @@ import PaymentFailedBanner from '../components/Dunning/PaymentFailedBanner';
 import PlanStatusTimeline from '../components/PlanStatusTimeline';
 import ScheduleChangePreview, { type BillingInterval } from '../components/ScheduleChangePreview';
 import ReactivationModal, { type ReactivationPlan } from '../components/ReactivationModal';
+import DowngradeConfirmModal, { type PlanFeature } from '../components/DowngradeConfirmModal';
+import TrialCountdownBanner from '../components/TrialCountdownBanner';
 
 // ── Mock subscription status type ────────────────────────────────────────────
 type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
@@ -25,6 +27,41 @@ export default function SubscriptionDetail() {
     // ── Reactivation state ────────────────────────────────────────────────────
     const [isReactivationModalOpen, setIsReactivationModalOpen] = useState(false);
     const [isReactivating, setIsReactivating] = useState(false);
+
+    // ── Trial banner mock data ────────────────────────────────────────────────
+    // Set this to a real trial end date from the API. Adjust the offset to test
+    // different urgency tiers:
+    //   +10 days → info (blue)
+    //   +5 days  → warning (amber)
+    //   +1 day   → urgent (red)
+    //   today    → expired (red)
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 2); // <3 days → urgent tier
+    const isTrialSubscription = true; // replace with real flag from API
+
+    // ── Downgrade state ───────────────────────────────────────────────────────
+    const [isDowngradeModalOpen, setIsDowngradeModalOpen] = useState(false);
+    const [isDowngrading, setIsDowngrading] = useState(false);
+
+    const downgradeLostFeatures: PlanFeature[] = [
+        { id: 'api-calls',   label: 'Unlimited API calls (limited to 10k/mo on Basic)' },
+        { id: 'support',     label: 'Priority support' },
+        { id: 'analytics',   label: 'Advanced analytics dashboard' },
+        { id: 'webhooks',    label: 'Custom webhooks' },
+    ];
+
+    const handleDowngradeConfirm = async () => {
+        setIsDowngrading(true);
+        try {
+            console.log('Downgrading subscription', id, 'to Basic plan');
+            await new Promise(resolve => setTimeout(resolve, 1200));
+            setIsDowngradeModalOpen(false);
+        } catch (err) {
+            console.error('Downgrade failed:', err);
+        } finally {
+            setIsDowngrading(false);
+        }
+    };
 
     const handleViewFullUsage = () => {
         console.log('Navigate to full usage page');
@@ -149,6 +186,45 @@ export default function SubscriptionDetail() {
                             Reactivate
                         </button>
                     )}
+
+                    {/* Downgrade CTA — shown for active subscriptions */}
+                    {subscriptionStatus === 'active' && (
+                        <button
+                            onClick={() => setIsDowngradeModalOpen(true)}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.625rem 1.25rem',
+                                borderRadius: '12px',
+                                border: '1px solid rgba(245,158,11,0.35)',
+                                background: 'rgba(245,158,11,0.08)',
+                                color: '#f59e0b',
+                                fontWeight: 700,
+                                fontSize: '0.9rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                flexShrink: 0,
+                            }}
+                            aria-label="Downgrade to a lower plan"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                            >
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <polyline points="19 12 12 19 5 12" />
+                            </svg>
+                            Downgrade plan
+                        </button>
+                    )}
                 </div>
 
                 {/* Reactivation window notice */}
@@ -187,6 +263,15 @@ export default function SubscriptionDetail() {
                     </div>
                 )}
             </div>
+
+            {/* ── Trial countdown banner ────────────────────────────────────── */}
+            {isTrialSubscription && (
+                <TrialCountdownBanner
+                    trialEndsAt={trialEndsAt}
+                    upgradeHref="/plans"
+                    onUpgrade={() => console.log('Upgrade clicked from trial banner')}
+                />
+            )}
 
             {/* ── Dunning banner ────────────────────────────────────────────── */}
             <PaymentFailedBanner
@@ -278,6 +363,22 @@ export default function SubscriptionDetail() {
                 windowExpired={!isWithinWindow}
                 billingDay={subscription.billingDay}
                 isLoading={isReactivating}
+            />
+
+            {/* ── Downgrade confirmation modal ──────────────────────────────── */}
+            <DowngradeConfirmModal
+                isOpen={isDowngradeModalOpen}
+                onClose={() => setIsDowngradeModalOpen(false)}
+                onConfirm={handleDowngradeConfirm}
+                currentPlanName="Pro"
+                currentPlanPrice="50 USDC / mo"
+                newPlanName="Basic"
+                newPlanPrice="20 USDC / mo"
+                lostFeatures={downgradeLostFeatures}
+                isDelayed={true}
+                effectiveDate="Aug 1, 2026"
+                comparePlansHref="/plans"
+                isLoading={isDowngrading}
             />
         </div>
     );
