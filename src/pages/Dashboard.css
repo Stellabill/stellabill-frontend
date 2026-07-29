@@ -380,3 +380,108 @@
   color: var(--color-brand-on);
 }
 
+/* Print Styles */
+.dashboard-print-header,
+.dashboard-print-footer {
+  display: none;
+}
+
+@media print {
+  .dashboard-page {
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .dashboard-print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--color-text-primary);
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+
+  .dashboard-print-header h2 {
+    margin: 0;
+    font-size: var(--text-xl);
+    color: var(--color-text-primary);
+  }
+
+  .dashboard-print-header p {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+  }
+
+  .dashboard-print-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--color-border-default);
+    padding-top: var(--space-4);
+    margin-top: var(--space-8);
+    font-size: var(--text-xs);
+    color: var(--color-text-primary);
+  }
+
+  /* Hide non-printable elements */
+  .dashboard-header,
+  .dashboard-filter-bar,
+  .dashboard-actions,
+  .dashboard-activity-column,
+  .dashboard-link,
+  .time-range-selector,
+  .legend-container,
+  .dashboard-muted-button,
+  .dashboard-load-more {
+    display: none !important;
+  }
+
+  /* Reflow layout for print */
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: var(--space-4) !important;
+    margin-bottom: var(--space-6) !important;
+  }
+
+  .dashboard-main-grid {
+    display: block !important;
+  }
+
+  .dashboard-panel {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid var(--color-text-primary) !important;
+    padding: var(--space-4) !important;
+  }
+
+  .dashboard-panel--chart {
+    margin-bottom: var(--space-6);
+  }
+
+  /* High contrast chart tokens for print */
+  .dashboard-page {
+    --chart-series-1: #000000;
+    --chart-series-2: #222222;
+    --chart-series-3: #444444;
+    --chart-series-4: #666666;
+    --chart-series-5: #000000;
+    --chart-series-6: #222222;
+    --chart-series-7: #444444;
+    --chart-series-8: #666666;
+    
+    --color-surface-elevated: transparent;
+    --color-border-subtle: #000000;
+    --color-text-muted: #000000;
+    --color-text-secondary: #000000;
+    --chart-grid: #cccccc;
+    --chart-point-stroke: #ffffff;
+  }
+
+  .revenue-chart-container {
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
