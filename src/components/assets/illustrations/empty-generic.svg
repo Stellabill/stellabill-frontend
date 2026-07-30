@@ -1,9 +1,9 @@
 <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <circle cx="60" cy="60" r="50" fill="var(--illustration-background, #F3F4F6)" />
+  <circle cx="60" cy="60" r="50" fill="var(--illustration-background)" />
   <!-- Open Box -->
-  <path d="M30 50L60 65L90 50L60 35L30 50Z" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="4" stroke-linejoin="round" fill="none" />
-  <path d="M30 50V75L60 90L90 75V50" stroke="var(--illustration-primary, #6366F1)" stroke-width="4" stroke-linejoin="round" fill="none" />
-  <path d="M60 65V90" stroke="var(--illustration-primary, #6366F1)" stroke-width="4" stroke-linejoin="round" />
-  <path d="M30 50L45 40" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="4" stroke-linecap="round" />
-  <path d="M90 50L75 40" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="4" stroke-linecap="round" />
+  <path d="M30 50L60 65L90 50L60 35L30 50Z" stroke="var(--illustration-secondary)" stroke-width="4" stroke-linejoin="round" fill="none" />
+  <path d="M30 50V75L60 90L90 75V50" stroke="var(--illustration-primary)" stroke-width="4" stroke-linejoin="round" fill="none" />
+  <path d="M60 65V90" stroke="var(--illustration-primary)" stroke-width="4" stroke-linejoin="round" />
+  <path d="M30 50L45 40" stroke="var(--illustration-secondary)" stroke-width="4" stroke-linecap="round" />
+  <path d="M90 50L75 40" stroke="var(--illustration-secondary)" stroke-width="4" stroke-linecap="round" />
 </svg>

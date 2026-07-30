@@ -3,6 +3,7 @@
 @import './styles/typography.css';
 @import './styles/layout.css';
 @import './styles/theme.css';
+@import './styles/print.css';
 
 * {
   box-sizing: border-box;

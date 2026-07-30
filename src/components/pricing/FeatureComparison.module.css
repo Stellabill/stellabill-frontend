@@ -437,6 +437,15 @@
    Print stylesheet
    ============================================================================= */
 @media print {
+  @page {
+    size: A4 landscape;
+    margin: 1.5cm;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
   .container {
     max-width: 100%;
     padding: 0;

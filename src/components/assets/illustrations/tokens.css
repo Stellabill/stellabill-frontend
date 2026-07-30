@@ -1,30 +1,23 @@
 /* CSS variables and theme tokens for illustrations */
 
 :root {
-  /* Light mode colors */
-  --illustration-primary: #6366f1;
-  --illustration-secondary: #9ca3af;
-  --illustration-background: #f3f4f6;
+  /* Map illustration tokens to semantic theme tokens */
+  --illustration-primary: var(--color-brand-primary);
+  --illustration-secondary: var(--color-border-strong);
+  --illustration-background: var(--color-surface-subtle);
 
   /* Animation and transition tokens */
   --illustration-transition: all 0.3s ease-in-out;
   --illustration-animation-duration: 2s;
 }
 
-/* Dark mode colors using media query */
+/* Ensure secondary adapts slightly if needed in dark mode */
+[data-theme="dark"],
+.dark,
 @media (prefers-color-scheme: dark) {
-  :root {
-    --illustration-primary: #818cf8;
-    --illustration-secondary: #4b5563;
-    --illustration-background: #1f2937;
+  :root:not([data-theme="light"]) {
+    --illustration-secondary: var(--color-text-muted);
   }
-}
-
-/* Dark mode colors using a global .dark class (common with Tailwind or theme toggles) */
-.dark {
-  --illustration-primary: #818cf8;
-  --illustration-secondary: #4b5563;
-  --illustration-background: #1f2937;
 }
 
 /* Reduced motion preferences */

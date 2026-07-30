@@ -1,6 +1,7 @@
 import type { Meta } from '@storybook/react';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
+import { EmptyState } from '../components/assets/EmptyState';
 
 const meta: Meta = {
   title: 'System/Tokens',
@@ -187,5 +188,29 @@ export const BorderRadius = () => (
         ))}
       </div>
     </Card>
+  </div>
+);
+
+export const Illustrations = () => (
+  <div className="flex flex-col gap-6">
+    <h2 className="text-2xl font-bold text-white">Illustration Tokens</h2>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Card variant="glass">
+        <div className="flex flex-col gap-4 p-4 rounded bg-[#f1f5f9]" data-theme="light">
+          <p className="text-sm font-semibold text-slate-800">Light Theme</p>
+          <div className="flex items-center justify-center p-4">
+            <EmptyState type="subscriptions" title="No Subscriptions" description="You have no active subscriptions." />
+          </div>
+        </div>
+      </Card>
+      <Card variant="glass">
+        <div className="flex flex-col gap-4 p-4 rounded bg-[#020617]" data-theme="dark">
+          <p className="text-sm font-semibold text-white">Dark Theme</p>
+          <div className="flex items-center justify-center p-4">
+            <EmptyState type="subscriptions" title="No Subscriptions" description="You have no active subscriptions." />
+          </div>
+        </div>
+      </Card>
+    </div>
   </div>
 );

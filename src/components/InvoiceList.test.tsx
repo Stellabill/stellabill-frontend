@@ -75,8 +75,41 @@ describe('InvoiceList', () => {
 
   it('renders reissue button for credit notes', () => {
     render(<InvoiceList invoices={mockInvoices} />);
-    
+
+    // Expand the credit note first
+    const toggleButtons = screen.getAllByRole('button', { name: /Toggle details for credit note CN-123/i });
+    if (toggleButtons.length > 0) {
+      fireEvent.click(toggleButtons[0]);
+    }
+
     const reissueButtons = screen.getAllByRole('button', { name: /Reissue credit note CN-123/i });
     expect(reissueButtons.length).toBeGreaterThan(0);
+  });
+
+  it('renders invoice type indicator icon for regular invoices', () => {
+    const { container } = render(<InvoiceList invoices={mockInvoices} />);
+    // ibc-type-icon should appear for each document
+    const icons = container.querySelectorAll('.ibc-type-icon');
+    expect(icons.length).toBeGreaterThan(0);
+  });
+
+  it('applies ibc-wrap--credit-note for credit note rows', () => {
+    const { container } = render(<InvoiceList invoices={mockInvoices} />);
+    const creditNoteWraps = container.querySelectorAll('.ibc-wrap--credit-note');
+    // 2 credit notes × 2 views (desktop + mobile) = 4
+    expect(creditNoteWraps.length).toBeGreaterThan(0);
+  });
+
+  it('renders status text for all statuses', () => {
+    render(<InvoiceList invoices={mockInvoices} />);
+    // paid, adjusted, refunded — each appears at least once
+    expect(screen.getAllByText('paid').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('adjusted').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('refunded').length).toBeGreaterThan(0);
+  });
+
+  it('renders empty list without error', () => {
+    const { container } = render(<InvoiceList invoices={[]} />);
+    expect(container.querySelector('.ibc-wrap')).toBeNull();
   });
 });
