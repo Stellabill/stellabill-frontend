@@ -1,0 +1,48 @@
+/* InvoicePrintRoot — Screen-only styles for the print trigger affordance.
+   All @media print overrides live in src/styles/print.css.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.invoice-print-root {
+  /* No screen-specific layout needed; keep transparent */
+}
+
+/* ── Print trigger bar ───────────────────────────────────────────────────── */
+.invoice-print-trigger {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-4, 1rem);
+}
+
+.invoice-print-trigger__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-md, 0.5rem);
+  border: 1px solid var(--color-border-default, #cbd5e1);
+  background: var(--color-surface-control, #ffffff);
+  color: var(--color-text-secondary, #334155);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--font-medium, 500);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.invoice-print-trigger__btn:hover {
+  background: var(--color-surface-control-hover, #e2e8f0);
+  border-color: var(--color-border-strong, #94a3b8);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.invoice-print-trigger__btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring, #0891b2);
+  outline-offset: 2px;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .invoice-print-trigger__btn {
+    transition: none;
+  }
+}
