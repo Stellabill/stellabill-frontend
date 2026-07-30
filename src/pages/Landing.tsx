@@ -6,6 +6,7 @@ import TechBadges from "../components/landing/TechBadges";
 import CTACards from "../components/CTACards";
 import QuoteCallout from "../components/Landing/QuoteCallout";
 import FAQ from "../components/Landing/FAQ";
+import PricingCalculator from "../components/Landing/PricingCalculator";
 
 export default function Landing() {
 	const handleGetStartedFree = () => {
@@ -33,6 +34,10 @@ export default function Landing() {
 
 				{/* CTA Cards */}
 				<CTACards />
+
+				<section id="calculator" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+					<PricingCalculator />
+				</section>
 
 				{/* Sections for anchor links */}
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
