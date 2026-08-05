@@ -261,3 +261,8 @@ We aim to be respectful and inclusive; please be kind and constructive in issues
 ## License
 
 See the [LICENSE](LICENSE) file in this repository (if present). By contributing, you agree that your contributions will be licensed under the same terms.
+
+
+## Issue #371
+
+Feature in development. Closes #371
