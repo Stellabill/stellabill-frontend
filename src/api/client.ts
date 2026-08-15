@@ -47,6 +47,13 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
     
     return res.json() as Promise<T>
   } catch (e: unknown) {
+    // Report to monitoring (non-blocking). Use dynamic import to avoid potential circular imports.
+    try {
+      import('@/lib/errorHandler')
+        .then(({ default: ErrorHandler }) => ErrorHandler.report(e).catch(() => undefined))
+        .catch(() => undefined);
+    } catch {}
+
     if (e instanceof Error && e.name === 'TypeError' && !navigator.onLine) {
       const error: ApiError = new Error('Network request failed (offline)');
       error.isOffline = true;

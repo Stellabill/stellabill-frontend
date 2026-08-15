@@ -1,71 +1,143 @@
-import { Navigate, Routes, Route } from "react-router-dom";
-import Layout from "./components/Layout";
-import TransitionLayout from "./components/TransitionLayout";
-import Dashboard from "./pages/Dashboard";
-import Subscriptions from "./pages/Subscriptions";
-import SubscriptionDetail from "./pages/SubscriptionDetail"; // Fixed: Added missing import
-import Plans from "./pages/Plans";
-import CreatePlan from "./pages/CreatePlan";
-import UIMockups from "./pages/UIMockups";
-import Landing from "./pages/Landing";
-import BrowsePlans from "./pages/BrowsePlans";
-import OnboardingBusiness from "./pages/OnboardingBusiness";
-import OnboardingPayout from "./pages/OnboardingPayout";
-import OnboardingReviewPage from "./components/OnboardingReview";
-import UsageBilling from "./pages/UsageBilling";
-import OnboardingSuccess from "./pages/OnboardingSuccess";
-import GiftRedeemSuccess from "./pages/GiftRedeemSuccess";
-import AboutPrepaidBalances from "./components/AboutPrepaidBalances";
-import Pricing from "./pages/Pricing";
-import BrandPack from "./pages/BrandPack";
-import Settings from "./pages/Settings";
+import { Navigate, Routes, Route } from 'react-router-dom'
+import Layout from './components/Layout'
+import TransitionLayout from './components/TransitionLayout'
+import Dashboard from './pages/Dashboard'
+import Subscriptions from './pages/Subscriptions'
+import SubscriptionDetail from './pages/SubscriptionDetail' // Fixed: Added missing import
+import Plans from './pages/Plans'
+import CreatePlan from './pages/CreatePlan'
+import UIMockups from './pages/UIMockups'
+import Landing from './pages/Landing'
+import BrowsePlans from './pages/BrowsePlans'
+import OnboardingBusiness from './pages/OnboardingBusiness'
+import OnboardingPayout from './pages/OnboardingPayout'
+import OnboardingReviewPage from './components/OnboardingReview'
+import UsageBilling from './pages/UsageBilling'
+import OnboardingSuccess from './pages/OnboardingSuccess'
+import GiftRedeemSuccess from './pages/GiftRedeemSuccess'
+import AboutPrepaidBalances from './components/AboutPrepaidBalances'
+import Pricing from "./pages/Pricing"
+import BrandPack from "./pages/BrandPack"
+import Settings from "./pages/Settings"
+import ErrorBoundary from './components/ErrorBoundary'
 
 function App() {
   return (
-    <Routes>
-      {/* 1. Public Routes (No Layout) */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/landing" element={<Landing />} />
-      <Route path="/pricing" element={<Pricing />} />
-      <Route
-        path="/about-prepaid-balances"
-        element={<AboutPrepaidBalances />}
-      />
-      <Route
-        path="/onboarding"
-        element={<Navigate to="/onboarding/business" replace />}
-      />
-      <Route path="/onboarding/business" element={<OnboardingBusiness />} />
-      <Route path="/onboarding/payout" element={<OnboardingPayout />} />
-      <Route path="/onboarding/review" element={<OnboardingReviewPage />} />
-      <Route path="/onboarding-success" element={<OnboardingSuccess />} />
-      <Route path="/gift-redeem-success" element={<GiftRedeemSuccess />} />
+    <ErrorBoundary>
+      <Routes>
+        {/* 1. Public Routes (No Layout) */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/landing" element={<Landing />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route
+          path="/about-prepaid-balances"
+          element={<AboutPrepaidBalances />}
+        />
+        <Route path="/onboarding" element={<Navigate to="/onboarding/business" replace />} />
+        <Route path="/onboarding/business" element={<OnboardingBusiness />} />
+        <Route path="/onboarding/payout" element={<OnboardingPayout />} />
+        <Route path="/onboarding/review" element={<OnboardingReviewPage />} />
+        <Route path="/onboarding-success" element={<OnboardingSuccess />} />
+        <Route path="/gift-redeem-success" element={<GiftRedeemSuccess />} />
 
-      {/* 2. Authenticated Routes (Wrapped in Layout) */}
-      <Route element={<Layout />}>
-        <Route element={<TransitionLayout />}>
-          {/* Redirect base dashboard path to specific dashboard component if needed */}
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/browse-plans" element={<BrowsePlans />} />
-          {/* Plans Management */}
-          <Route path="/plans" element={<Plans />} />
-          <Route path="/plans/create" element={<CreatePlan />} />
-          <Route path="/plans/new" element={<CreatePlan />} />{" "}
-          {/* Alias for flexibility */}
-          {/* Subscriptions Management */}
-          <Route path="/subscriptions" element={<Subscriptions />} />
-          <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />
-          <Route path="/subscriptions/:id/usage" element={<UsageBilling />} />
-          <Route path="/settings" element={<Settings />} />
-          {/* Development/UI Kit */}
-          <Route path="/ui-kit" element={<UIMockups />} />
-          <Route path="/brand" element={<BrandPack />} />
+        {/* 2. Authenticated Routes (Wrapped in Layout) */}
+        <Route element={<Layout />}>
+          <Route element={<TransitionLayout />}>
+            {/* Redirect base dashboard path to specific dashboard component if needed */}
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/browse-plans" element={<BrowsePlans />} />
+            {/* Plans Management */}
+            <Route path="/plans" element={<Plans />} />
+            <Route path="/plans/create" element={<CreatePlan />} />
+            <Route path="/plans/new" element={<CreatePlan />} />{" "}
+            {/* Alias for flexibility */}
+            {/* Subscriptions Management */}
+            <Route path="/subscriptions" element={<Subscriptions />} />
+            <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />
+            <Route path="/subscriptions/:id/usage" element={<UsageBilling />} />
+            <Route path="/settings" element={<Settings />} />
+            {/* Development/UI Kit */}
+            <Route path="/ui-kit" element={<UIMockups />} />
+            <Route path="/brand" element={<BrandPack />} />
+          </Route>
         </Route>
-      </Route>
 
-      {/* 3. Catch-all redirect - Sends users back to the dashboard for safety */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+        {/* 3. Catch-all redirect - Sends users back to the dashboard for safety */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </ErrorBoundary>
+  );
+}
+
+export default App;
+
+import { Navigate, Routes, Route } from 'react-router-dom'
+import Layout from './components/Layout'
+import TransitionLayout from './components/TransitionLayout'
+import Dashboard from './pages/Dashboard'
+import Subscriptions from './pages/Subscriptions'
+import SubscriptionDetail from './pages/SubscriptionDetail' // Fixed: Added missing import
+import Plans from './pages/Plans'
+import CreatePlan from './pages/CreatePlan'
+import UIMockups from './pages/UIMockups'
+import Landing from './pages/Landing'
+import BrowsePlans from './pages/BrowsePlans'
+import OnboardingBusiness from './pages/OnboardingBusiness'
+import OnboardingPayout from './pages/OnboardingPayout'
+import OnboardingReviewPage from './components/OnboardingReview'
+import UsageBilling from './pages/UsageBilling'
+import OnboardingSuccess from './pages/OnboardingSuccess'
+import AboutPrepaidBalances from './components/AboutPrepaidBalances'
+import Pricing from "./pages/Pricing"
+import BrandPack from "./pages/BrandPack"
+import Settings from "./pages/Settings"
+import ErrorBoundary from './components/ErrorBoundary'
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <Routes>
+        {/* 1. Public Routes (No Layout) */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/landing" element={<Landing />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route
+          path="/about-prepaid-balances"
+          element={<AboutPrepaidBalances />}
+        />
+        <Route path="/onboarding" element={<Navigate to="/onboarding/business" replace />} />
+        <Route path="/onboarding/business" element={<OnboardingBusiness />} />
+        <Route path="/onboarding/payout" element={<OnboardingPayout />} />
+        <Route path="/onboarding/review" element={<OnboardingReviewPage />} />
+        <Route path="/onboarding-success" element={<OnboardingSuccess />} />
+>>>>>>> Stashed changes
+
+        {/* 2. Authenticated Routes (Wrapped in Layout) */}
+        <Route element={<Layout />}>
+          <Route element={<TransitionLayout />}>
+            {/* Redirect base dashboard path to specific dashboard component if needed */}
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/browse-plans" element={<BrowsePlans />} />
+            {/* Plans Management */}
+            <Route path="/plans" element={<Plans />} />
+            <Route path="/plans/create" element={<CreatePlan />} />
+            <Route path="/plans/new" element={<CreatePlan />} />{" "}
+            {/* Alias for flexibility */}
+            {/* Subscriptions Management */}
+            <Route path="/subscriptions" element={<Subscriptions />} />
+            <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />
+            <Route path="/subscriptions/:id/usage" element={<UsageBilling />} />
+            <Route path="/settings" element={<Settings />} />
+            {/* Development/UI Kit */}
+            <Route path="/ui-kit" element={<UIMockups />} />
+            <Route path="/brand" element={<BrandPack />} />
+          </Route>
+        </Route>
+
+        {/* 3. Catch-all redirect - Sends users back to the dashboard for safety */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }
 
