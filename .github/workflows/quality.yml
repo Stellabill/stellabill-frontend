@@ -1,0 +1,34 @@
+name: Quality Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  lint-typecheck-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Type-check
+        run: |
+          if grep -q '"typecheck"\|"tsc"' package.json; then npm run typecheck 2>/dev/null || npx tsc --noEmit; fi
+
+      - name: Lint
+        run: |
+          if grep -q '"lint"' package.json; then npm run lint; fi
+
+      - name: Test
+        run: |
+          if grep -q '"test"' package.json; then npm test -- --run; fi
