@@ -78,6 +78,30 @@
     }
 }
 
+/*
+ * Stale indicator integration within .card
+ * The indicator sits beneath the stats text and above any action button.
+ * Keep it visually subtle (low-contrast until data is actually stale).
+ */
+.card [data-testid="stale-indicator"] {
+    margin-top: 12px;
+    /* Override dark-theme colour tokens for the card's dark background */
+    --stale-badge-color:       #fbbf24;
+    --stale-badge-bg:          rgba(245, 158, 11, 0.14);
+    --stale-badge-border:      rgba(251, 191, 36, 0.28);
+    --very-stale-badge-color:  #f87171;
+    --very-stale-badge-bg:     rgba(239, 68, 68, 0.14);
+    --very-stale-badge-border: rgba(248, 113, 113, 0.28);
+    --stale-refresh-color:     #38bdf8;
+    --stale-refresh-color-hover: #7dd3fc;
+    --stale-tooltip-bg:        #0f172a;
+    --stale-tooltip-color:     #f8fafc;
+    --stale-tooltip-border:    rgba(148, 163, 184, 0.16);
+    --stale-success-color:     #34d399;
+    --stale-success-bg:        rgba(16, 185, 129, 0.14);
+    --stale-success-border:    rgba(52, 211, 153, 0.28);
+}
+
 @media (min-width: 600px) {
     .dashboard {
         flex-direction: row;

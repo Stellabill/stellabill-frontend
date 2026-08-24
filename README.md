@@ -193,6 +193,20 @@ For detailed documentation, see [DOCS_SHIMMER.md](DOCS_SHIMMER.md).
 
 ---
 
+## Stale-Data Indicator
+
+Merchant Dashboard KPI cards show a `StaleIndicator` badge that communicates
+how long ago cached data was last fetched, with a one-click refresh affordance:
+- Badge shows "Updated N min ago"; updates every 30 seconds.
+- Colour ramp: hidden (fresh) → amber (stale, ≥ 5 min) → red (very-stale, ≥ 15 min).
+- Thresholds are CSS and JS tokens tunable per-environment via `VITE_STALE_THRESHOLD_MS`.
+- Refresh button shows spinner while in-flight, then a green success flash.
+- Fully accessible: `aria-live` region, `aria-busy`, 44 × 44 px touch targets.
+
+For detailed documentation, see [DOCS_STALE_INDICATOR.md](DOCS_STALE_INDICATOR.md).
+
+---
+
 ## Contributing (open source)
 
 We welcome contributions from the community. Following these guidelines helps keep the project consistent and review smooth.

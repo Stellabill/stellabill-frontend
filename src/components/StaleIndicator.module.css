@@ -1,0 +1,269 @@
+@import '../../styles/tokens.css';
+
+/* ============================================================================
+   StaleIndicator
+   A compact badge that communicates how old a dashboard card's cached data is.
+   Shows "updated N min ago" text with a click-to-refresh affordance.
+
+   Freshness states (driven by data-freshness attribute):
+     fresh      – hidden (CSS display:none); nothing shown unless hovered
+     stale      – amber badge + refresh button
+     very-stale – red badge + refresh button
+     unknown    – neutral badge; no refresh button
+     refreshing – spinner + "Refreshing…" text; button disabled
+     success    – green flash, then fades back to stale/fresh
+
+   Accessibility
+   – Root is a <div> with role="status" + aria-live="polite" for live updates
+   – Refresh button carries aria-label and aria-busy during in-flight requests
+   – Spinner is aria-hidden; icon is decorative
+   – Tooltip is role="tooltip" linked via aria-describedby
+   – All interactive targets are ≥ 44×44 px on touch (WCAG 2.5.5)
+   – Reduced-motion: spinner collapses to opacity pulse
+   ========================================================================== */
+
+/* ── Container ─────────────────────────────────────────────────────────────── */
+.stale-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  /* Minimum touch-target height met via padding on the button */
+  position: relative;
+}
+
+/* Hidden when fresh (no staleness signal needed) */
+.stale-indicator[data-freshness="fresh"] {
+  /* Keep in DOM for aria-live updates; visually suppress */
+  visibility: hidden;
+  pointer-events: none;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ── Badge ─────────────────────────────────────────────────────────────────── */
+.stale-indicator__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+  user-select: none;
+  border: 1px solid transparent;
+  /* Smooth colour transitions between freshness states */
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+
+.stale-indicator[data-freshness="stale"] .stale-indicator__badge {
+  color: var(--stale-badge-color, #b45309);
+  background: var(--stale-badge-bg, rgba(217, 119, 6, 0.12));
+  border-color: var(--stale-badge-border, rgba(217, 119, 6, 0.28));
+}
+
+.stale-indicator[data-freshness="very-stale"] .stale-indicator__badge {
+  color: var(--very-stale-badge-color, #b91c1c);
+  background: var(--very-stale-badge-bg, rgba(220, 38, 38, 0.12));
+  border-color: var(--very-stale-badge-border, rgba(220, 38, 38, 0.28));
+}
+
+.stale-indicator[data-freshness="unknown"] .stale-indicator__badge {
+  color: var(--color-text-subtle);
+  background: var(--color-surface-control);
+  border-color: var(--color-border-subtle);
+}
+
+.stale-indicator[data-freshness="refreshing"] .stale-indicator__badge {
+  color: var(--color-text-subtle);
+  background: var(--color-surface-control);
+  border-color: var(--color-border-subtle);
+}
+
+.stale-indicator[data-freshness="success"] .stale-indicator__badge {
+  color: var(--stale-success-color, #15803d);
+  background: var(--stale-success-bg, rgba(22, 163, 74, 0.10));
+  border-color: var(--stale-success-border, rgba(22, 163, 74, 0.20));
+}
+
+/* ── Spinner ───────────────────────────────────────────────────────────────── */
+@keyframes stale-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes stale-success-flash {
+  0%   { opacity: 0; transform: scale(0.7); }
+  30%  { opacity: 1; transform: scale(1.1); }
+  60%  { opacity: 1; transform: scale(1);   }
+  100% { opacity: 0; transform: scale(0.9); }
+}
+
+.stale-indicator__spinner {
+  animation: stale-spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+.stale-indicator__success-icon {
+  animation: stale-success-flash 1.4s ease-in-out forwards;
+  flex-shrink: 0;
+}
+
+/* ── Refresh button ────────────────────────────────────────────────────────── */
+.stale-indicator__refresh {
+  /* Reset */
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-family: inherit;
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  /* Minimum 44×44 touch target (WCAG 2.5.5) */
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--stale-refresh-color, #0369a1);
+  transition: color 150ms ease, background-color 150ms ease, opacity 150ms ease;
+}
+
+.stale-indicator__refresh:hover:not(:disabled) {
+  color: var(--stale-refresh-color-hover, #0284c7);
+  background-color: var(--color-surface-control, rgba(0, 0, 0, 0.04));
+}
+
+.stale-indicator__refresh:focus-visible {
+  outline: 2px solid var(--focus-ring, #0891b2);
+  outline-offset: 2px;
+}
+
+.stale-indicator__refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Tooltip ───────────────────────────────────────────────────────────────── */
+.stale-indicator__tooltip-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.stale-indicator__tooltip {
+  /* Hidden by default */
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+
+  position: absolute;
+  /* Position below the badge */
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-dropdown, 100);
+
+  min-width: 12rem;
+  max-width: 18rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  white-space: normal;
+  word-break: break-word;
+
+  background: var(--stale-tooltip-bg, #1e293b);
+  color: var(--stale-tooltip-color, #f1f5f9);
+  border: 1px solid var(--stale-tooltip-border, rgba(148, 163, 184, 0.20));
+  box-shadow: var(--shadow-md);
+
+  transition: opacity 150ms ease, visibility 150ms ease;
+}
+
+/* Tooltip arrow */
+.stale-indicator__tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: var(--stale-tooltip-border, rgba(148, 163, 184, 0.20));
+}
+
+.stale-indicator__tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: var(--stale-tooltip-bg, #1e293b);
+}
+
+/* Show tooltip on hover and keyboard focus within the anchor */
+.stale-indicator__tooltip-anchor:hover .stale-indicator__tooltip,
+.stale-indicator__tooltip-anchor:focus-within .stale-indicator__tooltip {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Live region (screen-reader only) ─────────────────────────────────────── */
+.stale-indicator__live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ── Responsive — tighten spacing on small viewports ─────────────────────── */
+@media (max-width: 360px) {
+  .stale-indicator__badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.35rem;
+  }
+}
+
+/* RTL support — flip tooltip anchor so it stays on-screen */
+[dir="rtl"] .stale-indicator__tooltip {
+  left: auto;
+  right: 50%;
+  transform: translateX(50%);
+}
+
+[dir="rtl"] .stale-indicator__tooltip::before,
+[dir="rtl"] .stale-indicator__tooltip::after {
+  left: auto;
+  right: 50%;
+  transform: translateX(50%);
+}
+
+/* ── Reduced-motion overrides ─────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .stale-indicator__spinner {
+    animation: none;
+    opacity: 0.8;
+  }
+
+  .stale-indicator__success-icon {
+    animation: none;
+    opacity: 1;
+  }
+
+  .stale-indicator__badge,
+  .stale-indicator__refresh,
+  .stale-indicator__tooltip {
+    transition: none;
+  }
+}

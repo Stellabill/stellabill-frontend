@@ -625,3 +625,104 @@
     --motion-entry-easing:     linear;
   }
 }
+
+/* ============================================================================
+   Stale-data indicator tokens
+   Controls the freshness badge on Merchant Dashboard cards.
+   Support can tune thresholds via env vars (VITE_STALE_THRESHOLD_MS /
+   VITE_VERY_STALE_THRESHOLD_MS) for per-environment tuning.
+
+   CSS custom properties mirror the JS token values in stalenessTokens.ts and
+   drive the badge colour ramp without hard-coding colours in component CSS.
+
+   Thresholds (informational — actual logic lives in stalenessTokens.ts):
+     fresh      : < 5 min   → badge hidden
+     stale      : 5–15 min  → --stale-badge-* (amber)
+     very-stale : ≥ 15 min  → --very-stale-badge-* (red)
+   ========================================================================== */
+:root,
+[data-theme="light"] {
+  /* Fresh state — no badge; token kept for potential future use */
+  --fresh-badge-color:  #16a34a;
+  --fresh-badge-bg:     rgba(22, 163, 74, 0.10);
+  --fresh-badge-border: rgba(22, 163, 74, 0.20);
+
+  /* Stale state — amber */
+  --stale-badge-color:  #b45309;
+  --stale-badge-bg:     rgba(217, 119, 6, 0.12);
+  --stale-badge-border: rgba(217, 119, 6, 0.28);
+
+  /* Very-stale state — red */
+  --very-stale-badge-color:  #b91c1c;
+  --very-stale-badge-bg:     rgba(220, 38, 38, 0.12);
+  --very-stale-badge-border: rgba(220, 38, 38, 0.28);
+
+  /* Refresh button */
+  --stale-refresh-color:       #0369a1;
+  --stale-refresh-color-hover: #0284c7;
+
+  /* Tooltip */
+  --stale-tooltip-bg:     #1e293b;
+  --stale-tooltip-color:  #f1f5f9;
+  --stale-tooltip-border: rgba(148, 163, 184, 0.20);
+
+  /* Success flash (post-refresh) */
+  --stale-success-color:  #15803d;
+  --stale-success-bg:     rgba(22, 163, 74, 0.10);
+  --stale-success-border: rgba(22, 163, 74, 0.20);
+}
+
+[data-theme="dark"],
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    /* Stale state — amber (dark) */
+    --stale-badge-color:  #fbbf24;
+    --stale-badge-bg:     rgba(245, 158, 11, 0.14);
+    --stale-badge-border: rgba(251, 191, 36, 0.28);
+
+    /* Very-stale state — red (dark) */
+    --very-stale-badge-color:  #f87171;
+    --very-stale-badge-bg:     rgba(239, 68, 68, 0.14);
+    --very-stale-badge-border: rgba(248, 113, 113, 0.28);
+
+    /* Refresh button (dark) */
+    --stale-refresh-color:       #38bdf8;
+    --stale-refresh-color-hover: #7dd3fc;
+
+    /* Tooltip (dark) */
+    --stale-tooltip-bg:     #0f172a;
+    --stale-tooltip-color:  #f8fafc;
+    --stale-tooltip-border: rgba(148, 163, 184, 0.16);
+
+    /* Success flash (dark) */
+    --stale-success-color:  #34d399;
+    --stale-success-bg:     rgba(16, 185, 129, 0.14);
+    --stale-success-border: rgba(52, 211, 153, 0.28);
+  }
+}
+
+[data-theme="dark"] {
+  /* Stale state — amber (dark) */
+  --stale-badge-color:  #fbbf24;
+  --stale-badge-bg:     rgba(245, 158, 11, 0.14);
+  --stale-badge-border: rgba(251, 191, 36, 0.28);
+
+  /* Very-stale state — red (dark) */
+  --very-stale-badge-color:  #f87171;
+  --very-stale-badge-bg:     rgba(239, 68, 68, 0.14);
+  --very-stale-badge-border: rgba(248, 113, 113, 0.28);
+
+  /* Refresh button (dark) */
+  --stale-refresh-color:       #38bdf8;
+  --stale-refresh-color-hover: #7dd3fc;
+
+  /* Tooltip (dark) */
+  --stale-tooltip-bg:     #0f172a;
+  --stale-tooltip-color:  #f8fafc;
+  --stale-tooltip-border: rgba(148, 163, 184, 0.16);
+
+  /* Success flash (dark) */
+  --stale-success-color:  #34d399;
+  --stale-success-bg:     rgba(16, 185, 129, 0.14);
+  --stale-success-border: rgba(52, 211, 153, 0.28);
+}
