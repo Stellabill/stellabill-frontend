@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { CreditCard, Key, Settings as SettingsIcon, Shield, SlidersHorizontal, Tags, Users } from 'lucide-react'
+import { CreditCard, Key, Settings as SettingsIcon, Shield, SlidersHorizontal, Tags, Users, Home } from 'lucide-react'
 import OrganizationSettings from '../components/settings/OrganizationSettings'
 import BillingSettings from '../components/settings/BillingSettings'
 import ApiKeysSettings from '../components/settings/ApiKeysSettings'
 import DensityPreview from '../components/settings/DensityPreview'
+import FamilyPlanSettings from '../components/settings/FamilyPlanSettings'
 import './Settings.css'
 
-type SettingsTab = 'organization' | 'billing' | 'api-keys' | 'tags' | 'appearance'
+type SettingsTab = 'organization' | 'billing' | 'api-keys' | 'tags' | 'appearance' | 'family-plan'
 
 // Wrapper component for ManageTagsSettings with state
 function ManageTagsWrapper() {
@@ -81,6 +82,13 @@ const settingsSections: SettingsSection[] = [
     icon: SlidersHorizontal,
     description: 'Customize interface density and visual preferences',
     component: DensityPreview,
+  },
+  {
+    id: 'family-plan',
+    label: 'Family Plan',
+    icon: Home,
+    description: 'Manage family plan members and invitation settings',
+    component: FamilyPlanSettings,
   },
 ]
 

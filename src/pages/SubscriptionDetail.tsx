@@ -1,11 +1,16 @@
-import { useParams, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { useCommandScope } from '../hooks/useCommandScope';
+import type { CommandItem } from '../components/CommandPalette';
 import RecentPayments from '../components/RecentPayments';
 import UsageThisPeriod from '../components/UsageThisPeriod';
 import PaymentFailedBanner from '../components/Dunning/PaymentFailedBanner';
 import PlanStatusTimeline from '../components/PlanStatusTimeline';
 import ScheduleChangePreview, { type BillingInterval } from '../components/ScheduleChangePreview';
 import ReactivationModal, { type ReactivationPlan } from '../components/ReactivationModal';
+import DowngradeConfirmModal, { type PlanFeature } from '../components/DowngradeConfirmModal';
+import TrialCountdownBanner from '../components/TrialCountdownBanner';
+import ProrationPreviewModal from '../components/common/ProrationPreviewModal';
 
 // ── Mock subscription status type ────────────────────────────────────────────
 type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
@@ -25,6 +30,44 @@ export default function SubscriptionDetail() {
     // ── Reactivation state ────────────────────────────────────────────────────
     const [isReactivationModalOpen, setIsReactivationModalOpen] = useState(false);
     const [isReactivating, setIsReactivating] = useState(false);
+
+    // ── Trial banner mock data ────────────────────────────────────────────────
+    // Set this to a real trial end date from the API. Adjust the offset to test
+    // different urgency tiers:
+    //   +10 days → info (blue)
+    //   +5 days  → warning (amber)
+    //   +1 day   → urgent (red)
+    //   today    → expired (red)
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 2); // <3 days → urgent tier
+    const isTrialSubscription = true; // replace with real flag from API
+
+    // ── Proration preview state ────────────────────────────────────────────────
+    const [isProrationModalOpen, setIsProrationModalOpen] = useState(false);
+
+    // ── Downgrade state ───────────────────────────────────────────────────────
+    const [isDowngradeModalOpen, setIsDowngradeModalOpen] = useState(false);
+    const [isDowngrading, setIsDowngrading] = useState(false);
+
+    const downgradeLostFeatures: PlanFeature[] = [
+        { id: 'api-calls',   label: 'Unlimited API calls (limited to 10k/mo on Basic)' },
+        { id: 'support',     label: 'Priority support' },
+        { id: 'analytics',   label: 'Advanced analytics dashboard' },
+        { id: 'webhooks',    label: 'Custom webhooks' },
+    ];
+
+    const handleDowngradeConfirm = async () => {
+        setIsDowngrading(true);
+        try {
+            console.log('Downgrading subscription', id, 'to Basic plan');
+            await new Promise(resolve => setTimeout(resolve, 1200));
+            setIsDowngradeModalOpen(false);
+        } catch (err) {
+            console.error('Downgrade failed:', err);
+        } finally {
+            setIsDowngrading(false);
+        }
+    };
 
     const handleViewFullUsage = () => {
         console.log('Navigate to full usage page');
@@ -90,6 +133,59 @@ export default function SubscriptionDetail() {
         { label: 'Yearly', value: 'yearly' },
     ];
 
+    const navigate = useNavigate();
+
+    const scopedActions = useMemo<CommandItem[]>(() => {
+        const actions: CommandItem[] = [];
+        
+        if (showReactivateCTA) {
+            actions.push({
+                id: 'reactivate-sub',
+                label: 'Reactivate subscription',
+                group: 'Actions',
+                keywords: 'restore resume',
+                perform: () => setIsReactivationModalOpen(true)
+            });
+        }
+        
+        if (subscriptionStatus === 'active') {
+            actions.push({
+                id: 'downgrade-sub',
+                label: 'Downgrade plan',
+                group: 'Actions',
+                keywords: 'lower plan',
+                perform: () => setIsDowngradeModalOpen(true)
+            });
+            actions.push({
+                id: 'preview-proration',
+                label: 'Preview Proration',
+                group: 'Actions',
+                keywords: 'proration calculate',
+                perform: () => setIsProrationModalOpen(true)
+            });
+        }
+        
+        actions.push({
+            id: 'view-usage',
+            label: 'View full usage',
+            group: 'Actions',
+            keywords: 'metrics api calls',
+            perform: handleViewFullUsage
+        });
+        
+        actions.push({
+            id: 'back-to-subs',
+            label: 'Back to Subscriptions',
+            group: 'Pages',
+            keywords: 'list',
+            perform: () => navigate('/subscriptions')
+        });
+
+        return actions;
+    }, [showReactivateCTA, subscriptionStatus, navigate]);
+    
+    useCommandScope(`Subscription ${id || 'Detail'}`, scopedActions);
+
     return (
         <div style={{ padding: '2rem', background: '#0a0a0a', minHeight: '100vh', color: '#f8fafc' }}>
 
@@ -149,6 +245,70 @@ export default function SubscriptionDetail() {
                             Reactivate
                         </button>
                     )}
+
+                    {/* Downgrade CTA — shown for active subscriptions */}
+                    {subscriptionStatus === 'active' && (
+                        <button
+                            onClick={() => setIsDowngradeModalOpen(true)}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.625rem 1.25rem',
+                                borderRadius: '12px',
+                                border: '1px solid rgba(245,158,11,0.35)',
+                                background: 'rgba(245,158,11,0.08)',
+                                color: '#f59e0b',
+                                fontWeight: 700,
+                                fontSize: '0.9rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                flexShrink: 0,
+                            }}
+                            aria-label="Downgrade to a lower plan"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                            >
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <polyline points="19 12 12 19 5 12" />
+                            </svg>
+                            Downgrade plan
+                        </button>
+                    )}
+
+                    {/* ── Proration CTA ──────────────────────────────────────── */}
+                    {subscriptionStatus === 'active' && (
+                        <button
+                            onClick={() => setIsProrationModalOpen(true)}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.625rem 1.25rem',
+                                borderRadius: '12px',
+                                border: '1px solid rgba(34,211,238,0.35)',
+                                background: 'rgba(34,211,238,0.08)',
+                                color: '#22d3ee',
+                                fontWeight: 700,
+                                fontSize: '0.9rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                flexShrink: 0,
+                            }}
+                            aria-label="Preview proration for plan change"
+                        >
+                            Preview Proration
+                        </button>
+                    )}
                 </div>
 
                 {/* Reactivation window notice */}
@@ -187,6 +347,15 @@ export default function SubscriptionDetail() {
                     </div>
                 )}
             </div>
+
+            {/* ── Trial countdown banner ────────────────────────────────────── */}
+            {isTrialSubscription && (
+                <TrialCountdownBanner
+                    trialEndsAt={trialEndsAt}
+                    upgradeHref="/plans"
+                    onUpgrade={() => console.log('Upgrade clicked from trial banner')}
+                />
+            )}
 
             {/* ── Dunning banner ────────────────────────────────────────────── */}
             <PaymentFailedBanner
@@ -278,6 +447,39 @@ export default function SubscriptionDetail() {
                 windowExpired={!isWithinWindow}
                 billingDay={subscription.billingDay}
                 isLoading={isReactivating}
+            />
+
+            {/* ── Proration preview modal ─────────────────────────────────── */}
+            <ProrationPreviewModal
+                isOpen={isProrationModalOpen}
+                onClose={() => setIsProrationModalOpen(false)}
+                onConfirm={() => {
+                    setIsProrationModalOpen(false);
+                }}
+                currentPlan="Pro"
+                newPlan="Basic"
+                effectiveDate="Aug 1, 2026"
+                lineItems={[
+                    { label: 'Unused Pro (15 days)', amount: 2500, type: 'credit' },
+                    { label: 'Basic plan (remaining 15 days)', amount: 1000, type: 'charge' },
+                ]}
+                nextInvoiceTotal={1000}
+            />
+
+            {/* ── Downgrade confirmation modal ──────────────────────────────── */}
+            <DowngradeConfirmModal
+                isOpen={isDowngradeModalOpen}
+                onClose={() => setIsDowngradeModalOpen(false)}
+                onConfirm={handleDowngradeConfirm}
+                currentPlanName="Pro"
+                currentPlanPrice="50 USDC / mo"
+                newPlanName="Basic"
+                newPlanPrice="20 USDC / mo"
+                lostFeatures={downgradeLostFeatures}
+                isDelayed={true}
+                effectiveDate="Aug 1, 2026"
+                comparePlansHref="/plans"
+                isLoading={isDowngrading}
             />
         </div>
     );

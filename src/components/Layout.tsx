@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { CircleHelp } from "lucide-react";
 import LandingNavbar from "./LandingNavbar";
 import CommandPalette, { CommandItem } from "./CommandPalette";
 import KeyboardShortcutsOverlay from "./KeyboardShortcutsOverlay";
-import ContextualHelpOverlay from "./ContextualHelpOverlay";
 import KeyboardChordIndicator from "./KeyboardChordIndicator";
-import TourResumeCheckpoint from "./Dashboard/TourResumeCheckpoint";
+import HelpSidebar from "./help/HelpSidebar";
+import ChangelogPanel from "./changelog/ChangelogPanel";
+import FocusOrderVisualizer from "./FocusOrderVisualizer";
+import { LayoutContextType } from "../hooks/useCommandScope";
 import "../styles/sidebar.css";
 
 const RECENT_COMMANDS_KEY = "sb:recent-commands";
@@ -125,9 +128,28 @@ export default function Layout() {
   const navigate = useNavigate();
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
-  const [isContextualHelpOpen, setIsContextualHelpOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+  const [isQAOverlayOpen, setIsQAOverlayOpen] = useState(false);
   const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => readPinnedCommands());
+  const [scopeName, setScopeName] = useState<string | null>(null);
+  const [scopedItems, setScopedItems] = useState<CommandItem[]>([]);
+  const [paletteMode, setPaletteMode] = useState<'global' | 'scoped'>('global');
+  const [showScopeToast, setShowScopeToast] = useState(false);
+  
+  const registerScope = useMemo(() => (name: string, items: CommandItem[]) => {
+    setScopeName(name);
+    setScopedItems(items);
+  }, []);
+  const clearScope = useMemo(() => () => {
+    setScopeName(null);
+    setScopedItems([]);
+    setPaletteMode('global');
+  }, []);
+  const layoutContext = useMemo<LayoutContextType>(() => ({
+    registerScope, clearScope
+  }), [registerScope, clearScope]);
   
   const [pendingChordKey, setPendingChordKey] = useState<string | null>(null);
   const pendingChordKeyRef = useRef<string | null>(null);
@@ -238,26 +260,54 @@ export default function Layout() {
         }
       }
 
-      // Cmd+K / Ctrl+K: Open command palette
-      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+      // Cmd+Shift+K: Open scoped palette
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setIsPaletteOpen(true);
+        if (scopeName) {
+            setPaletteMode('scoped');
+            const hasSeenToast = localStorage.getItem('sb:seen-scoped-toast');
+            if (!hasSeenToast) {
+                localStorage.setItem('sb:seen-scoped-toast', 'true');
+                setShowScopeToast(true);
+                setTimeout(() => setShowScopeToast(false), 4000);
+            }
+        } else {
+            setPaletteMode('global');
+        }
         return;
       }
 
-      // ?: Show contextual help overlay
-      if (event.key === '?') {
+      // Cmd+K / Ctrl+K: Open command palette
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setIsPaletteOpen(true);
+        setPaletteMode('global');
+        return;
+      }
+
+      // Shift+?: Open help sidebar (outside input fields)
+      // ? alone: Show keyboard shortcuts overlay
+      if (event.key === '?' || event.key === '/') {
         if (!isInputField) {
-          event.preventDefault();
-          setIsContextualHelpOpen(true);
+          if (event.shiftKey && event.key === '?') {
+            event.preventDefault();
+            setIsHelpOpen((open) => !open);
+            return;
+          }
+          if (event.key === '?') {
+            event.preventDefault();
+            setIsShortcutsOverlayOpen(true);
+            return;
+          }
         }
       }
-      
-      // /: Show keyboard shortcuts overlay
-      if (event.key === '/') {
-        if (!isInputField) {
+
+      // QA Shortcut: Ctrl+Shift+F
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'f') {
+        if (import.meta.env.DEV || localStorage.getItem('sb:qa-focus-visualizer') === 'true') {
           event.preventDefault();
-          setIsShortcutsOverlayOpen(true);
+          setIsQAOverlayOpen((prev) => !prev);
         }
       }
     };
@@ -332,13 +382,40 @@ export default function Layout() {
                 </Link>
               ))}
             </div>
+
+            <div className="sb-sidebar__group" style={{ marginTop: 'auto' }}>
+              <p className="sb-sidebar__group-label" aria-hidden="true">Help</p>
+              <button
+                type="button"
+                className="sb-sidebar__link"
+                onClick={() => setIsChangelogOpen((o) => !o)}
+                aria-haspopup="dialog"
+                aria-expanded={isChangelogOpen}
+              >
+                <svg className="sb-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                <span className="sb-sidebar__link-label">What's new</span>
+              </button>
+              <button
+                type="button"
+                className="sb-sidebar__link"
+                onClick={() => setIsHelpOpen(true)}
+                aria-haspopup="dialog"
+                aria-expanded={isHelpOpen}
+                aria-keyshortcuts="Shift+?"
+              >
+                <CircleHelp className="sb-sidebar__icon" aria-hidden="true" />
+                <span className="sb-sidebar__link-label">Help &amp; support</span>
+              </button>
+            </div>
           </nav>
         </aside>
 
         {/* Main Content Area */}
         <main className="app-layout__main">
           <div className="app-layout__content">
-            <Outlet />
+            <Outlet context={layoutContext} />
           </div>
 
           {/* Subtle background glow */}
@@ -367,24 +444,40 @@ export default function Layout() {
       <CommandPalette
         isOpen={isPaletteOpen}
         onClose={() => setIsPaletteOpen(false)}
-        items={paletteItems}
+        items={paletteMode === 'scoped' ? scopedItems : paletteItems}
         onSelect={handleCommandSelect}
         onTogglePin={handleTogglePin}
+        mode={paletteMode}
+        onModeChange={(mode) => setPaletteMode(mode)}
+        scopeName={scopeName}
       />
+
+      {showScopeToast && (
+        <div className="cmdk-toast" role="alert">
+          <p>You've opened the scoped command palette! Press <strong>Backspace</strong> to clear the scope and search globally.</p>
+        </div>
+      )}
 
       <KeyboardShortcutsOverlay
         isOpen={isShortcutsOverlayOpen}
         onClose={() => setIsShortcutsOverlayOpen(false)}
       />
-      
-      <ContextualHelpOverlay
-        isOpen={isContextualHelpOpen}
-        onClose={() => setIsContextualHelpOpen(false)}
+
+
+      <HelpSidebar
+        isOpen={isHelpOpen}
+        onOpenChange={setIsHelpOpen}
+        showTrigger={false}
       />
-      
+
+      <ChangelogPanel
+        isOpen={isChangelogOpen}
+        onOpenChange={setIsChangelogOpen}
+      />
+
       <KeyboardChordIndicator pendingKey={pendingChordKey} />
 
-      <TourResumeCheckpoint />
+      {isQAOverlayOpen && <FocusOrderVisualizer onClose={() => setIsQAOverlayOpen(false)} />}
     </div>
   );
 }

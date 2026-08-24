@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import PricingSection, { validatePricing, type PricingSectionValue } from '../components/PricingSection'
 import BillingTypeSection from '../components/create-plan/BillingTypeSection'
-import AutosaveIndicator from '../components/AutosaveIndicator'
-import AutosaveHistory from '../components/AutosaveHistory'
+import WizardHeader from '../components/create-plan/WizardHeader'
+import ExitConfirmModal from '../components/create-plan/ExitConfirmModal'
 import { useAutosave, type AutosaveEntry } from '../hooks/useAutosave'
+import { useDraftManager } from '../hooks/useDraftManager'
 import styles from './CreatePlan.module.css'
 
 const AUTOSAVE_KEY = 'stellabill-create-plan'
@@ -46,10 +47,28 @@ function deserialiseForm(entry: AutosaveEntry): {
 
 export default function CreatePlan() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { getDraftById } = useDraftManager()
   const [usageEnabled, setUsageEnabled] = useState(false)
   const [trialDays, setTrialDays] = useState('')
   const [pricing, setPricing] = useState<PricingSectionValue>({ price: '', interval: '', priceType: 'currency' })
   const [errors, setErrors] = useState<{ priceError?: string; intervalError?: string }>({})
+  const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
+
+  // Load draft if query param present
+  useEffect(() => {
+    const draftIdParam = searchParams.get('draftId')
+    if (draftIdParam !== null) {
+      const draft = getDraftById(draftIdParam)
+      if (draft) {
+        setUsageEnabled(draft.data.usageEnabled)
+        setTrialDays(draft.data.trialDays)
+        setPricing(draft.data.pricing)
+        setErrors({})
+      }
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Autosave ────────────────────────────────────────────────────────────
 
@@ -57,7 +76,6 @@ export default function CreatePlan() {
 
   const handleSave = useCallback(
     async (data: string) => {
-      // Persist to localStorage. In a real app this would POST to an API.
       localStorage.setItem(AUTOSAVE_KEY, data)
     },
     [],
@@ -92,12 +110,65 @@ export default function CreatePlan() {
     onRestore: handleRestore,
   })
 
-  // Trigger autosave whenever form data changes
   useEffect(() => {
     saveNow()
-    // We intentionally call saveNow on every render where currentData changes.
-    // The hook's internal debounce handles the actual scheduling.
   }, [currentData]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Draft persistence ───────────────────────────────────────────────────
+
+  const { saveDraft } = useDraftManager()
+
+  const defaultFormData = useMemo(
+    () => ({ usageEnabled: false, trialDays: '', pricing: { price: '', interval: '', priceType: 'currency' as const } }),
+    [],
+  )
+
+  const isDirty = useMemo(
+    () =>
+      usageEnabled !== defaultFormData.usageEnabled ||
+      trialDays !== defaultFormData.trialDays ||
+      pricing.price !== defaultFormData.pricing.price ||
+      pricing.interval !== defaultFormData.pricing.interval ||
+      pricing.priceType !== defaultFormData.pricing.priceType,
+    [usageEnabled, trialDays, pricing, defaultFormData],
+  )
+
+  // ── Navigation ──────────────────────────────────────────────────────────
+
+  const handleCancel = useCallback(() => {
+    if (isDirty) {
+      setPendingNavigation('/plans')
+      setShowExitConfirm(true)
+    } else {
+      navigate('/plans')
+    }
+  }, [isDirty, navigate])
+
+  const handleSaveDraft = useCallback(() => {
+    saveDraft({ usageEnabled, trialDays, pricing })
+  }, [saveDraft, usageEnabled, trialDays, pricing])
+
+  const handleExitSaveDraft = useCallback(() => {
+    saveDraft({ usageEnabled, trialDays, pricing })
+    setShowExitConfirm(false)
+    if (pendingNavigation) {
+      navigate(pendingNavigation)
+    }
+  }, [saveDraft, usageEnabled, trialDays, pricing, pendingNavigation, navigate])
+
+  const handleExitDiscard = useCallback(() => {
+    setShowExitConfirm(false)
+    if (pendingNavigation) {
+      navigate(pendingNavigation)
+    }
+  }, [pendingNavigation, navigate])
+
+  const handleKeepEditing = useCallback(() => {
+    setShowExitConfirm(false)
+    setPendingNavigation(null)
+  }, [])
+
+  // ── Submit ──────────────────────────────────────────────────────────────
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -115,7 +186,6 @@ export default function CreatePlan() {
       interval: pricing.interval,
     }
     console.log('Create plan payload:', payload)
-    // Clear autosave after successful submission
     clearHistory()
     localStorage.removeItem(AUTOSAVE_KEY)
   }
@@ -149,29 +219,14 @@ export default function CreatePlan() {
         </div>
       )}
 
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '1.5rem',
-      }}>
-        <h1 style={{ color: '#e2e8f0', fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>
-          Create Plan
-        </h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <AutosaveIndicator
-            status={status}
-            lastSavedAt={lastSavedAt}
-            isOffline={isOffline}
-            onClick={saveNow}
-          />
-          <AutosaveHistory
-            history={history}
-            onRestore={restore}
-            onClear={clearHistory}
-          />
-        </div>
-      </div>
+      <WizardHeader
+        title="Create Plan"
+        currentStep={1}
+        totalSteps={3}
+        isDirty={isDirty}
+        onCancel={handleCancel}
+        onSaveDraft={handleSaveDraft}
+      />
 
       <form onSubmit={handleSubmit} noValidate>
         <BillingTypeSection
@@ -241,7 +296,7 @@ export default function CreatePlan() {
 
           <button
             type="button"
-            onClick={() => navigate('/plans')}
+            onClick={handleCancel}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -265,6 +320,13 @@ export default function CreatePlan() {
           </button>
         </div>
       </form>
+
+      <ExitConfirmModal
+        isOpen={showExitConfirm}
+        onSaveDraft={handleExitSaveDraft}
+        onDiscard={handleExitDiscard}
+        onKeepEditing={handleKeepEditing}
+      />
     </div>
   )
 }

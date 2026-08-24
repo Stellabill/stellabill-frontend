@@ -13,6 +13,7 @@ import { useSavedViews } from '@/hooks/useSavedViews';
 import { SavedViewsDropdown } from '@/components/SavedViewsDropdown';
 import { SaveViewModal } from '@/components/SaveViewModal';
 import { ShareURLModal } from '@/components/ShareURLModal';
+import { useFlip } from "../hooks/useFlip";
 import "./Subscriptions.css";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -24,6 +25,78 @@ interface SubscriptionWithIcon extends Omit<Subscription, "icon"> {
 }
 
 type StatusType = "Active" | "Paused" | "Cancelled";
+
+type SortField = "planName" | "price" | "nextCharge" | "status";
+type SortDirection = "asc" | "desc";
+
+interface SortState {
+	field: SortField;
+	direction: SortDirection;
+}
+
+/* ─── Sort helpers ───────────────────────────────────────────── */
+function compareDates(a: string, b: string): number {
+	if (a === "N/A") return 1;
+	if (b === "N/A") return -1;
+	return new Date(a).getTime() - new Date(b).getTime();
+}
+
+function sortSubscriptions(
+	data: SubscriptionWithIcon[],
+	sort: SortState,
+): SubscriptionWithIcon[] {
+	return [...data].sort((a, b) => {
+		let cmp = 0;
+		switch (sort.field) {
+			case "planName":
+				cmp = a.planName.localeCompare(b.planName);
+				break;
+			case "price":
+				cmp = a.price - b.price;
+				break;
+			case "nextCharge":
+				cmp = compareDates(a.nextCharge ?? "N/A", b.nextCharge ?? "N/A");
+				break;
+			case "status": {
+				const order: Record<StatusType, number> = { Active: 0, Paused: 1, Cancelled: 2 };
+				cmp = (order[a.status as StatusType] ?? 3) - (order[b.status as StatusType] ?? 3);
+				break;
+			}
+		}
+		return sort.direction === "asc" ? cmp : -cmp;
+	});
+}
+
+/* ─── Sort button ────────────────────────────────────────────── */
+const SORT_LABELS: Record<SortField, string> = {
+	planName: "Plan name",
+	price: "Price",
+	nextCharge: "Next charge",
+	status: "Status",
+};
+
+function SortButton({
+	field,
+	sort,
+	onSort,
+}: {
+	field: SortField;
+	sort: SortState;
+	onSort: (f: SortField) => void;
+}) {
+	const isActive = sort.field === field;
+	const indicator = isActive ? (sort.direction === "asc" ? " ↑" : " ↓") : "";
+	return (
+		<button
+			type="button"
+			className={`sort-btn${isActive ? " sort-btn--active" : ""}`}
+			onClick={() => onSort(field)}
+			aria-label={`Sort by ${SORT_LABELS[field]}${isActive ? `, currently ${sort.direction === "asc" ? "ascending" : "descending"}` : ""}`}
+			aria-pressed={isActive}>
+			{SORT_LABELS[field]}{indicator}
+		</button>
+	);
+}
 
 /* ─── Icons ─────────────────────────────────────────────────── */
 const IconNews = () => (
@@ -93,6 +166,27 @@ const IconEmptySubscriptions = () => (
 const IconArrowLeft = () => (
 	<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 		<polyline points="15 18 9 12 15 6" />
+	</svg>
+);
+
+const IconPause = () => (
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<rect x="6" y="4" width="4" height="16" />
+		<rect x="14" y="4" width="4" height="16" />
+	</svg>
+);
+
+const IconX = () => (
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<line x1="18" y1="6" x2="6" y2="18" />
+		<line x1="6" y1="6" x2="18" y2="18" />
+	</svg>
+);
+
+const IconManage = () => (
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<path d="M12 20h9" />
+		<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
 	</svg>
 );
 
@@ -286,6 +380,7 @@ export default function Subscriptions() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<ApiError | null>(null);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [sort, setSort] = useState<SortState>({ field: "planName", direction: "asc" });
 
 	const [saveViewModal, setSaveViewModal] = useState<
 		{ mode: 'save' | 'rename'; viewId?: string } | null
@@ -296,27 +391,39 @@ export default function Subscriptions() {
 	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 	const [isActionLoading, setIsActionLoading] = useState(false);
 
+	const handleSortField = useCallback((field: SortField) => {
+		setSort((prev) =>
+			prev.field === field
+				? { field, direction: prev.direction === "asc" ? "desc" : "asc" }
+				: { field, direction: "asc" },
+		);
+	}, []);
+
 	const fetchSubscriptions = useCallback(() => {
 		setLoading(true);
 		setError(null);
 
-		window.setTimeout(() => {
-			try {
-				if (window.location.search.includes("simulate_error")) {
-					const err: ApiError = new Error("Failed to load subscriptions");
-					err.status = 500;
-					err.technicalDetails =
-						"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
-					setError(err);
-				} else {
-					setData(INITIAL_DATA);
-				}
+		return new Promise<void>((resolve) => {
+			window.setTimeout(() => {
+				try {
+					if (window.location.search.includes("simulate_error")) {
+						const err: ApiError = new Error("Failed to load subscriptions");
+						err.status = 500;
+						err.technicalDetails =
+							"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
+						setError(err);
+					} else {
+						setData(INITIAL_DATA);
+					}
 
-				setLoading(false);
-			} catch (err: unknown) {
-				setError(err as Error);
-				setLoading(false);
-			}
+					setLoading(false);
+					resolve();
+				} catch (err: unknown) {
+					setError(err as Error);
+					setLoading(false);
+					resolve();
+				}
+			}, 800); // Added slight delay to simulate network
 		});
 	}, []);
 
@@ -324,14 +431,35 @@ export default function Subscriptions() {
 		fetchSubscriptions();
 	}, [fetchSubscriptions]);
 
+	const {
+		pullDistance,
+		isRefreshing,
+		triggerRefresh,
+		handlers: refreshHandlers
+	} = useRefresh({
+		onRefresh: fetchSubscriptions
+	});
+
 	const handleViewFullUsage = () => {
 		/* TODO: Navigate to full usage page */
 	};
 
 	const filteredData = useMemo(() => {
-		if (activeFilter === "All") return data;
-		return data.filter((sub) => sub.status === activeFilter);
-	}, [activeFilter, data]);
+		const filtered = activeFilter === "All" ? data : data.filter((sub) => sub.status === activeFilter);
+		return sortSubscriptions(filtered, sort);
+	}, [activeFilter, data, sort]);
+
+	// FLIP animation — keys must match the render order
+	const flipKeys = useMemo(() => filteredData.map((s) => s.id), [filteredData]);
+	const { containerRef: tableBodyRef, getItemProps } = useFlip({
+		keys: flipKeys,
+		enabled: !loading && filteredData.length > 0,
+	});
+	// Mobile cards use a separate FLIP container
+	const { containerRef: cardsContainerRef, getItemProps: getCardItemProps } = useFlip({
+		keys: flipKeys,
+		enabled: !loading && filteredData.length > 0,
+	});
 
 	const selectedSub = useMemo(
 		() => data.find((sub) => sub.id === selectedId),
@@ -676,6 +804,28 @@ export default function Subscriptions() {
 				<EmptyState filter={activeFilter} />
 			) : (
 				<>
+					{/* ── Sort controls ─────────────────────────────────── */}
+					<div
+						className="sort-toolbar"
+						role="toolbar"
+						aria-label="Sort subscriptions"
+						data-testid="sort-toolbar">
+						<span className="sort-toolbar__label" id="sort-toolbar-label">Sort by:</span>
+						<div className="sort-toolbar__buttons" aria-labelledby="sort-toolbar-label">
+							{(["planName", "price", "status", "nextCharge"] as SortField[]).map((f) => (
+								<SortButton key={f} field={f} sort={sort} onSort={handleSortField} />
+							))}
+						</div>
+						{/* Accessible live announcement for sort changes */}
+						<span
+							className="visually-hidden"
+							role="status"
+							aria-live="polite"
+							aria-atomic="true">
+							{`Sorted by ${SORT_LABELS[sort.field]}, ${sort.direction === "asc" ? "ascending" : "descending"}`}
+						</span>
+					</div>
+
 					{/* ── Desktop table ─────────────────────────────────── */}
 					<div className="subs-table-wrapper" role="region" aria-label="Subscriptions list">
 						<table
@@ -694,10 +844,12 @@ export default function Subscriptions() {
 								</th>
 							</tr>
 							</thead>
-							<tbody>
+							{/* FLIP container — tableBodyRef tracks child positions */}
+							<tbody ref={tableBodyRef as React.RefObject<HTMLTableSectionElement>}>
 							{filteredData.map((sub) => (
 								<tr
 									key={sub.id}
+									{...getItemProps(sub.id)}
 									tabIndex={0}
 									aria-label={`${sub.planName} by ${sub.merchantName}, ${sub.status}`}
 									onKeyDown={(e) => {
@@ -791,10 +943,16 @@ export default function Subscriptions() {
 					</div>
 
 					{/* ── Mobile cards ──────────────────────────────────── */}
-					<div className="subs-cards" aria-label="Subscriptions" data-testid="subscriptions-cards">
+					{/* FLIP container for mobile card stack */}
+					<div
+						ref={cardsContainerRef as React.RefObject<HTMLDivElement>}
+						className="subs-cards"
+						aria-label="Subscriptions"
+						data-testid="subscriptions-cards">
 						{filteredData.map((sub) => (
 							<article
 								key={sub.id}
+								{...getCardItemProps(sub.id)}
 								className="subs-card"
 								tabIndex={0}
 								role="button"
@@ -804,78 +962,113 @@ export default function Subscriptions() {
 									if (e.key === "Enter" || e.key === " ") {
 										e.preventDefault();
 										setSelectedId(sub.id);
+										setIsPauseModalOpen(true);
 									}
-								}}>
-								<div className="subs-card__top">
-									<div className="subs-card__plan-info">
-										<div className="subs-card__icon" aria-hidden="true">
-											{sub.icon}
-										</div>
-										<div>
-											<div className="subs-card__name">{sub.planName}</div>
-											<div className="subs-card__merchant">{sub.merchantName}</div>
-											{/* Tags for mobile */}
-											{sub.tags && sub.tags.length > 0 && (
-												<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-													{sub.tags.slice(0, 2).map((tag) => (
-														<Tag
-															key={tag.id}
-															label={tag.label}
-															color={tag.color}
-															size="small"
-														/>
-													))}
-													{sub.tags.length > 2 && (
-														<span style={{ fontSize: 'var(--text-xs)', color: '#64748b', alignSelf: 'center' }}>
-															+{sub.tags.length - 2}
-														</span>
-													)}
-												</div>
-											)}
-										</div>
-									</div>
-									<StatusBadge status={sub.status as StatusType} />
-								</div>
+								});
+							} else if (sub.status === "Paused") {
+								trailingActions.push({
+									id: "resume",
+									label: "Resume",
+									icon: <IconPlay />,
+									backgroundColor: "#10b981", // emerald-500
+									color: "#fff",
+									onClick: () => handleResume(sub.id)
+								});
+							}
 
-								<div className="subs-card__meta">
-									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">{t('subscriptions.table.prepaid')}</span>
-										<span className="subs-card__meta-value">{sub.prepaidBalance}</span>
-									</div>
-									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">{t('subscriptions.table.coverage')}</span>
-										<span className="subs-card__meta-value">{sub.coverage}</span>
-									</div>
-									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">{t('subscriptions.table.nextCharge')}</span>
-										<span className="subs-card__meta-value">{sub.nextCharge}</span>
-									</div>
-									<div className="subs-card__meta-item">
-										<span className="subs-card__meta-label">{t('subscriptions.table.lastPayment')}</span>
-										<span className="subs-card__meta-value">{sub.lastPayment}</span>
-									</div>
-								</div>
+							if (sub.status !== "Cancelled") {
+								trailingActions.push({
+									id: "cancel",
+									label: "Cancel",
+									icon: <IconX />,
+									backgroundColor: "#ef4444", // red-500
+									color: "#fff",
+									onClick: () => {
+										setSelectedId(sub.id);
+										setIsCancelModalOpen(true);
+									}
+								});
+							}
 
-								<div className="subs-card__footer">
-									<span className="subs-card__price">
-										{sub.price} {sub.currency}
-										<span className="subs-card__price-interval">
-											/ {sub.interval}
+							return (
+							<SwipeableRow key={sub.id} leadingActions={leadingActions} trailingActions={trailingActions}>
+								<article
+									className="subs-card"
+									tabIndex={-1}
+									role="button"
+									aria-label={`${sub.planName} – ${sub.status}. Tap to manage.`}
+									onClick={() => setSelectedId(sub.id)}>
+									<div className="subs-card__top">
+										<div className="subs-card__plan-info">
+											<div className="subs-card__icon" aria-hidden="true">
+												{sub.icon}
+											</div>
+											<div>
+												<div className="subs-card__name">{sub.planName}</div>
+												<div className="subs-card__merchant">{sub.merchantName}</div>
+												{/* Tags for mobile */}
+												{sub.tags && sub.tags.length > 0 && (
+													<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+														{sub.tags.slice(0, 2).map((tag) => (
+															<Tag
+																key={tag.id}
+																label={tag.label}
+																color={tag.color}
+																size="small"
+															/>
+														))}
+														{sub.tags.length > 2 && (
+															<span style={{ fontSize: 'var(--text-xs)', color: '#64748b', alignSelf: 'center' }}>
+																+{sub.tags.length - 2}
+															</span>
+														)}
+													</div>
+												)}
+											</div>
+										</div>
+										<StatusBadge status={sub.status as StatusType} />
+									</div>
+
+									<div className="subs-card__meta">
+										<div className="subs-card__meta-item">
+											<span className="subs-card__meta-label">{t('subscriptions.table.prepaid')}</span>
+											<span className="subs-card__meta-value">{sub.prepaidBalance}</span>
+										</div>
+										<div className="subs-card__meta-item">
+											<span className="subs-card__meta-label">{t('subscriptions.table.coverage')}</span>
+											<span className="subs-card__meta-value">{sub.coverage}</span>
+										</div>
+										<div className="subs-card__meta-item">
+											<span className="subs-card__meta-label">{t('subscriptions.table.nextCharge')}</span>
+											<span className="subs-card__meta-value">{sub.nextCharge}</span>
+										</div>
+										<div className="subs-card__meta-item">
+											<span className="subs-card__meta-label">{t('subscriptions.table.lastPayment')}</span>
+											<span className="subs-card__meta-value">{sub.lastPayment}</span>
+										</div>
+									</div>
+
+									<div className="subs-card__footer">
+										<span className="subs-card__price">
+											{sub.price} {sub.currency}
+											<span className="subs-card__price-interval">
+												/ {sub.interval}
+											</span>
 										</span>
-									</span>
-									<button
-										className="subs-table__btn subs-table__btn--primary"
-										id={`manage-card-btn-${sub.id}`}
-										onClick={(e) => {
-											e.stopPropagation();
-											setSelectedId(sub.id);
-										}}
-										aria-label={`Open ${sub.planName} from card`}>
-										Manage
-									</button>
-								</div>
-							</article>
-						))}
+										<button
+											className="subs-table__btn subs-table__btn--primary"
+											id={`manage-card-btn-${sub.id}`}
+											onClick={(e) => {
+												e.stopPropagation();
+												setSelectedId(sub.id);
+											}}
+											aria-label={`Open ${sub.planName} from card`}>
+											Manage
+										</button>
+									</div>
+								</article>
+							</SwipeableRow>
+						)})}
 					</div>
 				</>
 			)}

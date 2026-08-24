@@ -1,5 +1,7 @@
 import { useState, useMemo, useRef } from "react";
+import React from "react";
 import styles from "./CohortRetentionChart.module.css";
+import { resolveHeatmapBand } from "@/tokens/chartPalette";
 
 interface Cohort {
   cohortMonth: string;
@@ -13,19 +15,19 @@ interface CohortRetentionChartProps {
 
 const MAX_MONTHS = 12;
 
-const getHeatmapColor = (percentage: number | null): React.CSSProperties => {
-  if (percentage === null || percentage < 0) {
-    return { backgroundColor: "#f1f5f9" }; // Empty or invalid
-  }
-  const p = Math.min(percentage, 100);
-  // Simple blue scale
-  if (p > 80) return { backgroundColor: "#2563eb" };
-  if (p > 60) return { backgroundColor: "#3b82f6" };
-  if (p > 40) return { backgroundColor: "#60a5fa" };
-  if (p > 20) return { backgroundColor: "#93c5fd" };
-  if (p > 0) return { backgroundColor: "#bfdbfe" };
-  return { backgroundColor: "#eff6ff" };
-};
+/**
+ * Resolve heatmap cell style using the chart palette tokens.
+ * Supports both light and dark surfaces via resolveHeatmapBand from
+ * src/tokens/chartPalette.ts (issue #314).
+ *
+ * @param percentage  Retention % (0–100) or null for empty cells.
+ * @param isDark      Pass true when the [data-theme="dark"] attribute or
+ *                    prefers-color-scheme: dark is active.
+ */
+const getHeatmapColor = (
+  percentage: number | null,
+  isDark = false,
+): React.CSSProperties => resolveHeatmapBand(percentage, isDark);
 
 export default function CohortRetentionChart({
   data,
@@ -37,6 +39,19 @@ export default function CohortRetentionChart({
     rect: DOMRect;
   } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Detect dark mode: honour [data-theme="dark"] attribute OR prefers-color-scheme.
+  const isDark = useMemo(() => {
+    if (typeof document !== "undefined") {
+      const htmlEl = document.documentElement;
+      if (htmlEl.dataset.theme === "dark") return true;
+      if (htmlEl.dataset.theme === "light") return false;
+    }
+    if (typeof window !== "undefined") {
+      return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+    }
+    return false;
+  }, []);
 
   const numMonths = useMemo(
     () =>
@@ -115,7 +130,7 @@ export default function CohortRetentionChart({
               <div
                 key={monthIndex}
                 className={styles.heatmapCell}
-                style={getHeatmapColor(percentage)}
+                style={getHeatmapColor(percentage, isDark)}
                 tabIndex={0}
                 onMouseEnter={(e) => handleCellInteraction(e, cohort, monthIndex)}
                 onMouseLeave={() => setHoveredCell(null)}
@@ -198,23 +213,23 @@ export default function CohortRetentionChart({
           <span>Less</span>
           <div
             className={styles.legendColorBox}
-            style={getHeatmapColor(10)}
+            style={getHeatmapColor(10, isDark)}
           />
           <div
             className={styles.legendColorBox}
-            style={getHeatmapColor(30)}
+            style={getHeatmapColor(30, isDark)}
           />
           <div
             className={styles.legendColorBox}
-            style={getHeatmapColor(50)}
+            style={getHeatmapColor(50, isDark)}
           />
           <div
             className={styles.legendColorBox}
-            style={getHeatmapColor(70)}
+            style={getHeatmapColor(70, isDark)}
           />
           <div
             className={styles.legendColorBox}
-            style={getHeatmapColor(90)}
+            style={getHeatmapColor(90, isDark)}
           />
           <span>More</span>
         </div>

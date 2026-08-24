@@ -1,11 +1,11 @@
 <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <!-- Background shape -->
-  <circle cx="60" cy="60" r="50" fill="var(--illustration-background, #F3F4F6)" />
+  <circle cx="60" cy="60" r="50" fill="var(--illustration-background)" />
   <!-- Back card -->
-  <rect x="35" y="30" width="50" height="60" rx="4" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="4" fill="none" />
+  <rect x="35" y="30" width="50" height="60" rx="4" stroke="var(--illustration-secondary)" stroke-width="4" fill="none" />
   <!-- Middle card -->
-  <rect x="30" y="40" width="60" height="50" rx="4" stroke="var(--illustration-primary, #6366F1)" stroke-width="4" fill="none" />
+  <rect x="30" y="40" width="60" height="50" rx="4" stroke="var(--illustration-primary)" stroke-width="4" fill="none" />
   <!-- Detail lines -->
-  <path d="M40 55H80" stroke="var(--illustration-primary, #6366F1)" stroke-width="4" stroke-linecap="round" />
-  <path d="M40 70H65" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="4" stroke-linecap="round" />
+  <path d="M40 55H80" stroke="var(--illustration-primary)" stroke-width="4" stroke-linecap="round" />
+  <path d="M40 70H65" stroke="var(--illustration-secondary)" stroke-width="4" stroke-linecap="round" />
 </svg>

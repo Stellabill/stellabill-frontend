@@ -161,7 +161,7 @@ export default function PricingCard({
           {/* CTA Button */}
           <button
             onClick={onButtonClick}
-            className={`w-full py-4 px-6 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 group/btn ${
+            className={`w-full py-4 px-6 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 group/btn print:hidden ${
               useGradientButton
                 ? "bg-linear-to-r from-cyan-400 to-teal-500 hover:from-cyan-300 hover:to-teal-400 text-black shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)] transform hover:-translate-y-1"
                 : "bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-white/20 transform hover:-translate-y-1"
@@ -172,6 +172,11 @@ export default function PricingCard({
               <ArrowRight size={18} className="transform group-hover/btn:translate-x-1 transition-transform" />
             )}
           </button>
+
+          {/* Print CTA */}
+          <div className="hidden print:block text-slate-800 text-center mt-4 font-semibold text-sm">
+            stellabill.com/contact
+          </div>
         </div>
       </div>
     </div>

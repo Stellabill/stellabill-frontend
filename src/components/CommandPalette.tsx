@@ -34,6 +34,12 @@ interface CommandPaletteProps {
   isLoading?: boolean;
   /** Placeholder for the search input. */
   placeholder?: string;
+  /** Command palette mode */
+  mode?: 'global' | 'scoped';
+  /** Toggle mode */
+  onModeChange?: (mode: 'global' | 'scoped') => void;
+  /** Name of the current scope */
+  scopeName?: string | null;
 }
 
 /** Render order for result groups. */
@@ -60,6 +66,9 @@ export default function CommandPalette({
   onTogglePin,
   isLoading = false,
   placeholder = 'Search pages and actions…',
+  mode = 'global',
+  onModeChange,
+  scopeName,
 }: CommandPaletteProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -133,6 +142,11 @@ export default function CommandPalette({
   };
 
   const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Backspace' && query === '' && mode === 'scoped' && onModeChange) {
+      onModeChange('global');
+      // Let it fall through, don't prevent default so backspace still works
+    }
+
     if (isLoading || !hasResults) {
       // Let Escape/Tab fall through to the focus-trap handler.
       return;
@@ -185,19 +199,34 @@ export default function CommandPalette({
         aria-label="Command palette"
       >
         <div className="cmdk-search">
-          <svg
-            className="cmdk-search__icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+          {mode === 'scoped' && scopeName ? (
+            <div className="cmdk-scope-badge">
+              <span className="cmdk-scope-badge__label">{scopeName}</span>
+              <button
+                type="button"
+                className="cmdk-scope-badge__clear"
+                onClick={() => onModeChange?.('global')}
+                aria-label="Clear scope and search globally"
+                title="Clear scope (Backspace)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+          ) : (
+            <svg
+              className="cmdk-search__icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          )}
           <input
             ref={inputRef}
             type="text"

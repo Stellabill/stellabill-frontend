@@ -14,25 +14,18 @@
   justify-content: center;
   margin-bottom: 1.5rem;
   
-  /* Light mode default custom properties */
-  --illustration-primary: #6366f1;
-  --illustration-secondary: #9ca3af;
-  --illustration-background: #f3f4f6;
+  /* Map illustration tokens to semantic theme tokens */
+  --illustration-primary: var(--color-brand-primary);
+  --illustration-secondary: var(--color-border-strong);
+  --illustration-background: var(--color-surface-subtle);
 }
 
-/* Dark mode support using standard prefers-color-scheme and common .dark class */
+/* Ensure secondary adapts slightly if needed in dark mode */
+:global([data-theme="dark"]) .illustrationWrapper,
 @media (prefers-color-scheme: dark) {
   .illustrationWrapper {
-    --illustration-primary: #818cf8;
-    --illustration-secondary: #4b5563;
-    --illustration-background: #1f2937;
+    --illustration-secondary: var(--color-text-muted);
   }
-}
-
-:global(.dark) .illustrationWrapper {
-  --illustration-primary: #818cf8;
-  --illustration-secondary: #4b5563;
-  --illustration-background: #1f2937;
 }
 
 /* Responsive handling: Show small icon by default, switch to large on tablet+ */

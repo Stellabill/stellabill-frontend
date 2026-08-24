@@ -1,11 +1,11 @@
 <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <circle cx="60" cy="60" r="50" fill="var(--illustration-background, #F3F4F6)" />
+  <circle cx="60" cy="60" r="50" fill="var(--illustration-background)" />
   <!-- Receipt outline -->
-  <path d="M35 30C35 27.7909 36.7909 26 39 26H81C83.2091 26 85 27.7909 85 30V90L75 85L65 90L55 85L45 90L35 85V30Z" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="4" stroke-linejoin="round" fill="none" />
+  <path d="M35 30C35 27.7909 36.7909 26 39 26H81C83.2091 26 85 27.7909 85 30V90L75 85L65 90L55 85L45 90L35 85V30Z" stroke="var(--illustration-secondary)" stroke-width="4" stroke-linejoin="round" fill="none" />
   <!-- Invoice lines -->
-  <path d="M47 40H73" stroke="var(--illustration-primary, #6366F1)" stroke-width="4" stroke-linecap="round" />
-  <path d="M47 52H73" stroke="var(--illustration-primary, #6366F1)" stroke-width="4" stroke-linecap="round" />
-  <path d="M47 64H60" stroke="var(--illustration-secondary, #9CA3AF)" stroke-width="4" stroke-linecap="round" />
+  <path d="M47 40H73" stroke="var(--illustration-primary)" stroke-width="4" stroke-linecap="round" />
+  <path d="M47 52H73" stroke="var(--illustration-primary)" stroke-width="4" stroke-linecap="round" />
+  <path d="M47 64H60" stroke="var(--illustration-secondary)" stroke-width="4" stroke-linecap="round" />
   <!-- Dollar symbol or total -->
-  <circle cx="70" cy="72" r="4" fill="var(--illustration-secondary, #9CA3AF)" />
+  <circle cx="70" cy="72" r="4" fill="var(--illustration-secondary)" />
 </svg>

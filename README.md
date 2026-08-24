@@ -13,6 +13,7 @@ Web app for **Stellabill** — subscription billing and management. This repo is
 - [Scripts](#scripts)
 - [Accessibility](#accessibility)
 - [Error Handling](#error-handling)
+- [Loading States](#loading-states)
 - [Contributing (open source)](#contributing-open-source)
 - [License](#license)
 
@@ -177,6 +178,18 @@ We use a standardized approach to handle API failures and network issues:
 - **Network Awareness**: Specialized handling for offline scenarios.
 
 For detailed documentation, see [DOCS_ERROR_HANDLING.md](DOCS_ERROR_HANDLING.md).
+
+---
+
+## Loading States
+
+Skeleton placeholders (Dashboard, KPI cards, activity feed) use a shared,
+token-driven `Shimmer` primitive instead of static gradients:
+- Sweep direction, speed, and gradient stops are all CSS custom properties.
+- Auto-flips for RTL layouts; can be forced with an explicit direction.
+- Falls back to a gentle opacity pulse under `prefers-reduced-motion`.
+
+For detailed documentation, see [DOCS_SHIMMER.md](DOCS_SHIMMER.md).
 
 ---
 

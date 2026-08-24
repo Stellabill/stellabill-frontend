@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect, KeyboardEvent } from 'react';
 import './RevenueChart.css';
+import { seriesVar } from '@/tokens/chartPalette';
 
 export type TimeRange = '7D' | '30D' | '90D';
 
@@ -54,14 +55,14 @@ function generateMockSeries(days: number): SeriesData[] {
     {
       id: 'revenue',
       name: 'Total Revenue',
-      color: 'var(--chart-series-1)',
+      color: seriesVar(0),
       visible: true,
       data: baseData
     },
     {
       id: 'subscriptions',
       name: 'Subscriptions',
-      color: 'var(--chart-series-2)', 
+      color: seriesVar(1), 
       visible: true,
       data: baseData.map(d => ({
         ...d,
@@ -71,7 +72,7 @@ function generateMockSeries(days: number): SeriesData[] {
     {
       id: 'oneTime',
       name: 'One-time Payments',
-      color: 'var(--chart-series-3)',
+      color: seriesVar(2),
       visible: true,
       data: baseData.map(d => ({
         ...d,
@@ -90,11 +91,16 @@ export default function RevenueChart({
   const [timeRange, setTimeRange] = useState<TimeRange>(initialTimeRange);
   const [seriesVisibility, setSeriesVisibility] = useState<Record<string, boolean>>({});
   
+  const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
+  
   const data = useMemo(() => {
     if (customData) return customData;
+    // When custom series are supplied without explicit data, use the first
+    // series' data points so the table caption and x-axis dates are consistent.
+    if (customSeries && customSeries.length > 0) return customSeries[0].data;
     const days = timeRange === '7D' ? 7 : timeRange === '30D' ? 30 : 90;
     return generateMockData(days);
-  }, [timeRange, customData]);
+  }, [timeRange, customData, customSeries]);
 
   const series = useMemo(() => {
     if (customSeries) return customSeries;
@@ -136,25 +142,132 @@ export default function RevenueChart({
         <p id="revenue-chart-summary-desc" className="sr-only">
           {summary}
         </p>
-        <div className="time-range-selector" role="group" aria-label="Select time range">
-          {(['7D', '30D', '90D'] as TimeRange[]).map((range) => (
+        <div className="header-controls">
+          <div className="time-range-selector" role="group" aria-label="Select time range">
+            {(['7D', '30D', '90D'] as TimeRange[]).map((range) => (
+              <button
+                key={range}
+                type="button"
+                className={`time-range-btn ${timeRange === range ? 'active' : ''}`}
+                onClick={() => setTimeRange(range)}
+                aria-pressed={timeRange === range}
+              >
+                {range}
+              </button>
+            ))}
+          </div>
+          <div className="view-mode-selector" role="group" aria-label="Select view mode">
             <button
-              key={range}
               type="button"
-              className={`time-range-btn ${timeRange === range ? 'active' : ''}`}
-              onClick={() => setTimeRange(range)}
-              aria-pressed={timeRange === range}
+              className={`view-mode-btn ${viewMode === 'chart' ? 'active' : ''}`}
+              onClick={() => setViewMode('chart')}
+              aria-pressed={viewMode === 'chart'}
             >
-              {range}
+              Chart
             </button>
-          ))}
+            <button
+              type="button"
+              className={`view-mode-btn ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+              aria-pressed={viewMode === 'table'}
+            >
+              Table
+            </button>
+          </div>
         </div>
       </div>
-      <InteractiveLegend 
-        series={visibleSeries}
-        onToggleSeries={toggleSeriesVisibility}
-      />
-      <LineChart data={data} series={visibleSeries} />
+      
+      {viewMode === 'chart' ? (
+        <>
+          <InteractiveLegend 
+            series={visibleSeries}
+            onToggleSeries={toggleSeriesVisibility}
+          />
+          <LineChart data={data} series={visibleSeries} />
+        </>
+      ) : (
+        <RevenueTable data={data} series={series} />
+      )}
+    </div>
+  );
+}
+
+interface RevenueTableProps {
+  data: DataPoint[];
+  series: SeriesData[];
+}
+
+function RevenueTable({ data, series }: RevenueTableProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyCsv = () => {
+    const headers = ['Date', ...series.map(s => `"${s.name.replace(/"/g, '""')}"`)];
+    const rows = data.map((d, i) => {
+      return [
+        `"${d.date.replace(/"/g, '""')}"`,
+        ...series.map(s => {
+          const val = s.data[i]?.revenue;
+          return val !== undefined && val !== null ? val : '';
+        })
+      ];
+    });
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    navigator.clipboard.writeText(csvContent).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(err => {
+      console.error('Failed to copy CSV:', err);
+    });
+  };
+
+  const startDate = data[0]?.date || '';
+  const endDate = data[data.length - 1]?.date || '';
+
+  return (
+    <div className="revenue-table-container">
+      <div className="revenue-table-actions">
+        <button 
+          type="button" 
+          onClick={handleCopyCsv} 
+          className="btn-copy-csv"
+          aria-live="polite"
+        >
+          {copied ? 'Copied!' : 'Copy as CSV'}
+        </button>
+      </div>
+      <div className="revenue-table-wrapper" tabIndex={0} role="region" aria-label="Revenue data table">
+        <table className="revenue-table">
+          <caption>Revenue data from {startDate} to {endDate}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              {series.map(s => (
+                <th key={s.id} scope="col">{s.name}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((d, i) => (
+              <tr key={i}>
+                <th scope="row">{d.date}</th>
+                {series.map(s => {
+                  const val = s.data[i]?.revenue;
+                  return (
+                    <td key={s.id}>
+                      {val !== undefined && val !== null ? `$${val.toLocaleString()}` : '-'}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

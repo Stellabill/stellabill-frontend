@@ -139,6 +139,11 @@ export default function Pricing() {
         <section style={{ marginBottom: "6rem" }}>
           <FeatureComparison />
         </section>
+
+        {/* Print CTA under matrix */}
+        <div className="hidden print:block text-center pt-8 text-black text-lg font-medium">
+          Ready to get started? Visit <strong>stellabill.com/pricing</strong>
+        </div>
       </main>
     </div>
   );

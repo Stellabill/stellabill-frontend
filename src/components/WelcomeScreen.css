@@ -1,82 +1,240 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
 .welcome {
-    background-color: #000000;
-    padding: 20px 24px;
-    width: 100%;
-    position: fixed;
-    left: 50%;
-    top: 80px;
-    transform: translateX(-50%);
-    max-width: 520px;
-    .box {
-        text-align: center;
-        margin-bottom: 30px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        h1 {
-            color: #fff;
-            font-size: 36px;
-            letter-spacing: 0.37px;
-            font-weight: 700;
-            line-height: 1.1;
-            margin-bottom: 5px;
-        }
-        p {
-            font-size: 18px;
-            font-weight: 400;
-            color: #90a1b9;
-        }
-    }
-    .steps {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 30px;
-        justify-content: center;
-        span {
-            border-top: 2px solid #ffffff33;
-            width: 100%;
-            display: block;
-        }
-        div {
-            font-size: 1rem;
-            color: #62748e;
-            border: 2px solid #ffffff33;
-            min-width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: grid;
-            position: relative;
-            place-content: center;
-            &::after {
-                content: "Business";
-                position: absolute;
-                bottom: -30px;
-                left: 50%;
-                transform: translateX(-50%);
-            }
-        }
-        .num-1 {
-            border-color: #00b8db;
-            color: #00b8db;
-            &::after {
-                color: #fff;
-            }
-        }
-        .num-2 {
-            &::after {
-                content: "Payout";
-            }
-        }
-        .num-3 {
-            &::after {
-                content: "Review";
-            }
-        }
-    }
+  background-color: var(--color-surface-canvas, #000000);
+  padding: 28px 24px 36px;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  color: var(--color-text-primary, #fff);
+  font-family: var(--font-family-body, "DM Sans", sans-serif);
+}
+
+.welcome__illustration {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.welcome__orb {
+  width: 88px;
+  height: 88px;
+  border-radius: 28px;
+  display: grid;
+  place-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-brand, 0 0 24px rgba(34, 211, 238, 0.25));
+}
+
+.welcome__orb--merchant {
+  background: linear-gradient(
+    145deg,
+    rgba(34, 211, 238, 0.22),
+    rgba(15, 23, 42, 0.9)
+  );
+  color: var(--color-brand-primary, #22d3ee);
+}
+
+.welcome__orb--subscriber {
+  background: linear-gradient(
+    145deg,
+    rgba(45, 212, 191, 0.22),
+    rgba(15, 23, 42, 0.9)
+  );
+  color: var(--color-brand-accent, #2dd4bf);
+}
+
+.welcome__box {
+  text-align: center;
+  margin-bottom: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.welcome__box h1 {
+  color: var(--color-text-primary, #fff);
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.welcome__box p {
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--color-text-muted, #90a1b9);
+  margin: 0;
+  max-width: 36ch;
+  line-height: 1.55;
+}
+
+.welcome__steps {
+  list-style: none;
+  margin: 0 0 1.75rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.welcome__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.55rem;
+  position: relative;
+}
+
+.welcome__step-num {
+  font-size: 1rem;
+  color: #62748e;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  background: rgba(15, 23, 42, 0.65);
+}
+
+.welcome__step-num--active {
+  border-color: var(--color-brand-primary, #00b8db);
+  color: var(--color-brand-primary, #00b8db);
+}
+
+.welcome__step-rail {
+  display: none;
+}
+
+.welcome__step-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.welcome__step-label {
+  color: var(--color-text-primary, #fff);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.welcome__step-hint {
+  color: var(--color-text-subtle, #64748b);
+  font-size: 0.8rem;
+}
+
+.welcome__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.welcome__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  padding: 0.7rem 1.25rem;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.welcome__btn--primary {
+  background: var(
+    --color-brand-gradient,
+    linear-gradient(90deg, #22d3ee 0%, #2dd4bf 100%)
+  );
+  color: var(--color-brand-on, #02131a);
+  border: none;
+}
+
+.welcome__btn--primary:hover {
+  background: var(
+    --color-brand-gradient-hover,
+    linear-gradient(90deg, #67e8f9 0%, #5eead4 100%)
+  );
+}
+
+.welcome__btn--ghost {
+  background: transparent;
+  color: var(--color-text-secondary, #cbd5e1);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.welcome__btn--ghost:hover {
+  border-color: rgba(148, 163, 184, 0.55);
+  color: var(--color-text-primary, #fff);
+}
+
+.welcome__btn:focus-visible {
+  outline: 3px solid var(--focus-ring, #22d3ee);
+  outline-offset: 2px;
+}
+
+.welcome__role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.welcome__role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 1.1rem 0.85rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.72);
+  color: var(--color-text-primary, #fff);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.welcome__role-card:hover {
+  border-color: var(--color-brand-primary, #22d3ee);
+}
+
+.welcome__role-card:focus-visible {
+  outline: 3px solid var(--focus-ring, #22d3ee);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .welcome__role-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome__steps {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome__step {
+    flex-direction: row;
+    text-align: start;
+    justify-content: flex-start;
+    gap: 0.9rem;
+  }
+
+  .welcome__step-copy {
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome__illustration,
+  .welcome__orb {
+    transition: none !important;
+    animation: none !important;
+  }
 }

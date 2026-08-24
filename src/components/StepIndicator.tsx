@@ -1,17 +1,25 @@
 import React from 'react';
 
+interface Step {
+  id: number;
+  label: string;
+  conditional?: boolean;
+  revealed?: boolean;
+}
+
 interface StepIndicatorProps {
   currentStep: number;
   completedSteps: number[];
+  steps?: Step[];
 }
 
-export default function StepIndicator({ currentStep, completedSteps }: StepIndicatorProps) {
-  const steps = [
-    { id: 1, label: 'Business' },
-    { id: 2, label: 'Payout' },
-    { id: 3, label: 'Review' },
-  ];
+const DEFAULT_STEPS: Step[] = [
+  { id: 1, label: 'Business' },
+  { id: 2, label: 'Payout' },
+  { id: 3, label: 'Review' },
+];
 
+export default function StepIndicator({ currentStep, completedSteps, steps = DEFAULT_STEPS }: StepIndicatorProps) {
   const colors = {
     teal: '#22d3ee',
     darkGrey: '#4b5563',
@@ -19,13 +27,16 @@ export default function StepIndicator({ currentStep, completedSteps }: StepIndic
     white: '#ffffff',
   };
 
+  const visibleSteps = steps.filter(s => s.revealed !== false);
+  const hiddenCount = steps.length - visibleSteps.length;
+
   return (
     <div style={styles.container} aria-label="Onboarding progress">
       <div style={styles.stepsWrapper} role="list">
-        {steps.map((step, index) => {
+        {visibleSteps.map((step, index) => {
           const isCompleted = completedSteps.includes(step.id);
           const isActive = currentStep === step.id;
-          const isLast = index === steps.length - 1;
+          const isLast = index === visibleSteps.length - 1;
 
           return (
             <React.Fragment key={step.id}>
@@ -36,7 +47,8 @@ export default function StepIndicator({ currentStep, completedSteps }: StepIndic
                     backgroundColor: isCompleted ? colors.teal : 'transparent',
                     borderColor: isActive || isCompleted ? colors.teal : colors.darkGrey,
                     borderWidth: isCompleted ? 0 : 2,
-                    borderStyle: 'solid',
+                    borderStyle: step.conditional ? 'dashed' : 'solid',
+                    opacity: step.conditional && !step.revealed ? 0.5 : 1,
                   }}
                 >
                   {isCompleted ? (
@@ -81,16 +93,25 @@ export default function StepIndicator({ currentStep, completedSteps }: StepIndic
                 <div
                   style={{
                     ...styles.line,
-                    backgroundColor:
-                      isCompleted && (completedSteps.includes(steps[index + 1].id) || currentStep === steps[index + 1].id)
+                    borderTop: `2px ${step.conditional ? 'dashed' : 'solid'} ${
+                      isCompleted && (completedSteps.includes(visibleSteps[index + 1].id) || currentStep === visibleSteps[index + 1].id)
                         ? colors.teal
-                        : colors.lineGrey,
+                        : colors.lineGrey
+                    }`,
+                    height: 0,
+                    marginTop: '-20px',
+                    transition: 'all 0.3s ease',
                   }}
                 />
               )}
             </React.Fragment>
           );
         })}
+        {hiddenCount > 0 && (
+          <div style={{ fontSize: '12px', color: colors.lineGrey, marginTop: '-20px' }}>
+            +{hiddenCount} optional step{hiddenCount > 1 ? 's' : ''}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -132,7 +153,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     line: {
         height: '2px',
         width: '60px',
-        marginTop: '-20px', // Align with circles
+        marginTop: '-20px',
         transition: 'all 0.3s ease',
     },
 };

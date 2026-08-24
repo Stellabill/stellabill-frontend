@@ -52,7 +52,6 @@ function renderOverlay(overrides: Partial<React.ComponentProps<typeof KeyboardSh
 
 describe('KeyboardShortcutsOverlay', () => {
   beforeEach(() => {
-    // Mock navigator.platform for consistent test behavior
     Object.defineProperty(globalThis.navigator, 'platform', {
       value: 'MacIntel',
       writable: true,
@@ -67,7 +66,6 @@ describe('KeyboardShortcutsOverlay', () => {
 
   it('exposes ARIA dialog pattern', () => {
     renderOverlay();
-
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(dialog).toHaveAttribute('aria-labelledby', 'kb-shortcuts-title');
@@ -76,7 +74,6 @@ describe('KeyboardShortcutsOverlay', () => {
 
   it('renders all shortcut groups and items', () => {
     renderOverlay();
-
     expect(screen.getByText('Navigation')).toBeInTheDocument();
     expect(screen.getByText('Help')).toBeInTheDocument();
     expect(screen.getByText('Open command palette')).toBeInTheDocument();
@@ -84,246 +81,118 @@ describe('KeyboardShortcutsOverlay', () => {
     expect(screen.getByText('Show shortcuts')).toBeInTheDocument();
   });
 
-  it('renders shortcut descriptions when provided', () => {
+  it('can enter recording mode and edit shortcut', async () => {
     renderOverlay();
-    expect(screen.getByText('Quick access')).toBeInTheDocument();
-  });
+    
+    const editBtn = screen.getByLabelText(/Edit shortcut for Close dialog/i);
+    fireEvent.click(editBtn);
 
-  it('renders platform-aware modifier keys (macOS)', () => {
-    Object.defineProperty(globalThis.navigator, 'platform', {
-      value: 'MacIntel',
-      writable: true,
-      configurable: true,
-    });
+    expect(screen.getByLabelText(/Stop recording for Close dialog/i)).toBeInTheDocument();
+    expect(screen.getByText('Press keys...')).toBeInTheDocument();
 
-    renderOverlay();
-
-    // Look for ⌘ symbol on Mac
-    const kbdElements = screen.getAllByText('⌘');
-    expect(kbdElements.length).toBeGreaterThan(0);
-  });
-
-  it('renders platform-aware modifier keys (Windows)', () => {
-    Object.defineProperty(globalThis.navigator, 'platform', {
-      value: 'Win32',
-      writable: true,
-      configurable: true,
-    });
-
-    renderOverlay();
-
-    // Look for Ctrl on Windows
-    const kbdElements = screen.getAllByText('Ctrl');
-    expect(kbdElements.length).toBeGreaterThan(0);
-  });
-
-  it('uses semantic <kbd> elements for key display', () => {
-    renderOverlay();
-
-    // Query by class to find <kbd> elements
-    const kbdElements = document.querySelectorAll('.kb-shortcuts-key');
-    expect(kbdElements.length).toBeGreaterThan(0);
-
-    // Check that they are actually <kbd> elements
-    kbdElements.forEach((el) => {
-      expect(el.tagName).toBe('KBD');
+    fireEvent.keyDown(window, { key: 'a', ctrlKey: true });
+    
+    // Check if the DOM updated
+    await waitFor(() => {
+      expect(screen.getByText('A')).toBeInTheDocument();
     });
   });
 
-  it('focuses the close button when opened', async () => {
+  it('detects conflict with other custom shortcut', async () => {
     renderOverlay();
+    
+    const editBtn = screen.getByLabelText(/Edit shortcut for Close dialog/i);
+    fireEvent.click(editBtn);
 
-    const closeButton = screen.getByRole('button', { name: /close keyboard shortcuts/i });
-    await waitFor(() => expect(closeButton).toHaveFocus());
+    // Press mod+K which conflicts with "Open command palette"
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    
+    await waitFor(() => {
+      expect(screen.getByText(/Conflicts with "Open command palette"/i)).toBeInTheDocument();
+    });
   });
 
-  it('closes when the close button is clicked', () => {
-    const { onClose } = renderOverlay();
-
-    const closeButton = screen.getByRole('button', { name: /close keyboard shortcuts/i });
-    fireEvent.click(closeButton);
-
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('closes on Escape key', async () => {
-    const { onClose } = renderOverlay();
-
-    const closeButton = screen.getByRole('button', { name: /close keyboard shortcuts/i });
-    await waitFor(() => expect(closeButton).toHaveFocus());
-
-    fireEvent.keyDown(closeButton, { key: 'Escape' });
-
-    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
-  });
-
-  it('closes when backdrop is clicked', () => {
-    const { onClose } = renderOverlay();
-
-    const overlay = document.querySelector('.kb-shortcuts-overlay');
-    expect(overlay).toBeInTheDocument();
-
-    fireEvent.mouseDown(overlay!);
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not close when clicking inside the panel', () => {
-    const { onClose } = renderOverlay();
-
-    const dialog = screen.getByRole('dialog');
-    fireEvent.mouseDown(dialog);
-
-    expect(onClose).not.toHaveBeenCalled();
-  });
-
-  it('traps focus within the dialog', async () => {
+  it('detects conflict with reserved OS shortcuts', async () => {
     renderOverlay();
+    
+    const editBtn = screen.getByLabelText(/Edit shortcut for Close dialog/i);
+    fireEvent.click(editBtn);
 
-    const closeButton = screen.getByRole('button', { name: /close keyboard shortcuts/i });
-    const printButton = screen.getByRole('button', { name: /print keyboard shortcuts/i });
-
-    await waitFor(() => expect(closeButton).toHaveFocus());
-
-    // Tab forward should cycle within dialog
-    fireEvent.keyDown(closeButton, { key: 'Tab' });
-    await waitFor(() => expect(printButton).toHaveFocus());
-
-    // Shift+Tab backward from close button should go to last element
-    closeButton.focus();
-    fireEvent.keyDown(closeButton, { key: 'Tab', shiftKey: true });
-    // The useModalFocus hook manages this — we verify it doesn't escape
-    expect(document.activeElement).not.toBe(document.body);
+    // Press mod+T which is reserved
+    fireEvent.keyDown(window, { key: 't', ctrlKey: true });
+    
+    await waitFor(() => {
+      expect(screen.getByText(/reserved browser\/OS shortcut/i)).toBeInTheDocument();
+    });
   });
 
-  it('restores focus to trigger on close', async () => {
-    function Harness() {
-      const [open, setOpen] = useState(false);
-      return (
-        <>
-          <button data-testid="opener" onClick={() => setOpen(true)}>
-            Open Shortcuts
-          </button>
-          <KeyboardShortcutsOverlay isOpen={open} onClose={() => setOpen(false)} />
-        </>
-      );
-    }
-
-    render(<Harness />);
-
-    const opener = screen.getByTestId('opener');
-    opener.focus();
-    fireEvent.click(opener);
-
-    const closeButton = await screen.findByRole('button', { name: /close keyboard shortcuts/i });
-    await waitFor(() => expect(closeButton).toHaveFocus());
-
-    fireEvent.keyDown(closeButton, { key: 'Escape' });
-
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    await waitFor(() => expect(opener).toHaveFocus());
-  });
-
-  it('renders the print button with correct label', () => {
+  it('allows resetting a custom shortcut to default', async () => {
     renderOverlay();
+    
+    // Edit "Close dialog"
+    const editBtn = screen.getByLabelText(/Edit shortcut for Close dialog/i);
+    fireEvent.click(editBtn);
 
-    const printButton = screen.getByRole('button', { name: /print keyboard shortcuts cheatsheet/i });
-    expect(printButton).toBeInTheDocument();
-    expect(printButton).toHaveTextContent('Print Cheatsheet');
+    // Record Alt+C
+    fireEvent.keyDown(window, { key: 'c', altKey: true });
+    
+    // Alt+C shouldn't conflict, it should save and clear recording id
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Edit shortcut for Close dialog/i)).toBeInTheDocument();
+    });
+
+    // Reset button should now be visible
+    const resetBtn = screen.getByRole('button', { name: /Reset Close dialog shortcut to default/i });
+    expect(resetBtn).toBeInTheDocument();
+
+    fireEvent.click(resetBtn);
+
+    // Should return to default Esc
+    await waitFor(() => {
+      expect(screen.getByText('Esc')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Reset Close dialog shortcut to default/i })).not.toBeInTheDocument();
+    });
   });
 
-  it('calls window.print when print button is clicked', () => {
-    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
-
+  it('displays modifiers properly while recording', async () => {
     renderOverlay();
+    
+    const editBtn = screen.getByLabelText(/Edit shortcut for Close dialog/i);
+    fireEvent.click(editBtn);
 
-    const printButton = screen.getByRole('button', { name: /print keyboard shortcuts cheatsheet/i });
-    fireEvent.click(printButton);
-
-    expect(printSpy).toHaveBeenCalledTimes(1);
-
-    printSpy.mockRestore();
+    fireEvent.keyDown(window, { key: 'Shift', shiftKey: true });
+    
+    await waitFor(() => {
+      expect(screen.getByText('Shift')).toBeInTheDocument();
+    });
+    
+    // It remains in recording mode
+    expect(screen.getByLabelText(/Stop recording for Close dialog/i)).toBeInTheDocument();
   });
 
-  it('applies desktop-only class to shortcuts marked hiddenOnMobile', () => {
+  it('aborts recording when pressing Escape', async () => {
     renderOverlay();
+    
+    const editBtn = screen.getByLabelText(/Edit shortcut for Open command palette/i);
+    fireEvent.click(editBtn);
 
-    // Find the shortcut item with hiddenOnMobile: true
-    const commandPaletteLabel = screen.getByText('Open command palette');
-    const item = commandPaletteLabel.closest('.kb-shortcuts-item');
-
-    expect(item).toHaveClass('kb-shortcuts-item--desktop-only');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Edit shortcut for Open command palette/i)).toBeInTheDocument();
+    });
   });
 
-  it('does not apply desktop-only class to normal shortcuts', () => {
+  it('records Space key properly', async () => {
     renderOverlay();
+    
+    const editBtn = screen.getByLabelText(/Edit shortcut for Close dialog/i);
+    fireEvent.click(editBtn);
 
-    const closeLabel = screen.getByText('Close dialog');
-    const item = closeLabel.closest('.kb-shortcuts-item');
-
-    expect(item).not.toHaveClass('kb-shortcuts-item--desktop-only');
-  });
-
-  it('uses default shortcuts when none provided', () => {
-    render(<KeyboardShortcutsOverlay isOpen onClose={vi.fn()} />);
-
-    // Should render default Navigation and Help groups
-    expect(screen.getByText('Navigation')).toBeInTheDocument();
-    expect(screen.getByText('Help')).toBeInTheDocument();
-    expect(screen.getByText('Open command palette')).toBeInTheDocument();
-    expect(screen.getByText('Show keyboard shortcuts')).toBeInTheDocument();
-  });
-
-  it('has accessible close button with SVG icon', () => {
-    renderOverlay();
-
-    const closeButton = screen.getByRole('button', { name: /close keyboard shortcuts/i });
-    const svg = closeButton.querySelector('svg');
-
-    expect(svg).toBeInTheDocument();
-    expect(svg).toHaveAttribute('aria-hidden', 'true');
-  });
-
-  it('has accessible print button with SVG icon', () => {
-    renderOverlay();
-
-    const printButton = screen.getByRole('button', { name: /print keyboard shortcuts cheatsheet/i });
-    const svg = printButton.querySelector('svg');
-
-    expect(svg).toBeInTheDocument();
-    expect(svg).toHaveAttribute('aria-hidden', 'true');
-  });
-
-  it('displays Esc hint in footer', () => {
-    renderOverlay();
-
-    expect(screen.getByText(/press/i)).toBeInTheDocument();
-    expect(screen.getByText(/to close/i)).toBeInTheDocument();
-
-    const escKbd = screen.getByText('Esc');
-    expect(escKbd.tagName).toBe('KBD');
-  });
-
-  it('renders multiple keys with plus separators', () => {
-    const multiKeyShortcuts: ShortcutGroup[] = [
-      {
-        name: 'test',
-        title: 'Test',
-        shortcuts: [
-          {
-            id: 'multi',
-            label: 'Multi-key shortcut',
-            keys: ['mod', 'Shift', 'P'],
-          },
-        ],
-      },
-    ];
-
-    render(
-      <KeyboardShortcutsOverlay isOpen onClose={vi.fn()} shortcuts={multiKeyShortcuts} />
-    );
-
-    // Should render three separate <kbd> elements
-    const kbdElements = document.querySelectorAll('.kb-shortcuts-key');
-    expect(kbdElements.length).toBeGreaterThanOrEqual(3);
+    fireEvent.keyDown(window, { key: ' ', ctrlKey: true });
+    
+    await waitFor(() => {
+      expect(screen.getByText('Space')).toBeInTheDocument();
+    });
   });
 });

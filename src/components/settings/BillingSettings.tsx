@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Save, CreditCard, Plus, Trash2, Download } from 'lucide-react'
 import ConfirmDialog from '../common/ConfirmDialog'
 import DangerZone, { DangerZoneItem } from '../common/DangerZone'
+import { FieldLabelWithHelp } from '../common/FieldHelpPopover'
 
 interface PaymentMethod {
   id: string
@@ -140,10 +141,16 @@ export default function BillingSettings() {
         <div style={{ background: '#0a0a0a', borderRadius: '6px', padding: '1.5rem', border: '1px solid #2d2d44' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="billing-cycle"
+                helpTitle="Billing cycle"
+                help={<p>Sets the default renewal cadence for this account. Yearly billing uses the annual discount shown in the menu.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Billing Cycle
-              </label>
+              </FieldLabelWithHelp>
               <select
+                id="billing-cycle"
                 value={billingPrefs.billingCycle}
                 onChange={(e) => setBillingPrefs({ ...billingPrefs, billingCycle: e.target.value as 'monthly' | 'yearly' })}
                 disabled={!isEditing}
@@ -164,10 +171,16 @@ export default function BillingSettings() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <FieldLabelWithHelp
+                htmlFor="invoice-email"
+                helpTitle="Invoice email"
+                help={<p>Invoices, receipts, and billing failure notices are sent to this address.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
                 Invoice Email
-              </label>
+              </FieldLabelWithHelp>
               <input
+                id="invoice-email"
                 type="email"
                 value={billingPrefs.invoiceEmail}
                 onChange={(e) => setBillingPrefs({ ...billingPrefs, invoiceEmail: e.target.value })}
@@ -186,10 +199,17 @@ export default function BillingSettings() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
-                Tax ID (Optional)
-              </label>
+              <FieldLabelWithHelp
+                htmlFor="tax-id"
+                optional
+                helpTitle="Tax ID"
+                help={<p>Add a business tax identifier when it needs to appear on invoices for accounting or compliance.</p>}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+              >
+                Tax ID
+              </FieldLabelWithHelp>
               <input
+                id="tax-id"
                 type="text"
                 value={billingPrefs.taxId}
                 onChange={(e) => setBillingPrefs({ ...billingPrefs, taxId: e.target.value })}

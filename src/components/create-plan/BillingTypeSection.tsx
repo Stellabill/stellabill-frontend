@@ -1,3 +1,5 @@
+import { FieldHelpPopover, FieldLabelWithHelp } from "../common/FieldHelpPopover";
+
 // Toggle
 function Toggle({
   checked,
@@ -107,19 +109,28 @@ export default function BillingTypeSection({
           onChange={onUsageEnabledChange}
         />
         <div>
-          <label
-            htmlFor="usage-based-toggle"
+          <span
+            className="field-label-with-help"
             style={{
               color: "#e2e8f0",
               fontSize: "0.925rem",
               fontWeight: 600,
               cursor: "pointer",
-              display: "block",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.375rem",
               marginBottom: "0.25rem",
             }}
           >
-            Usage-based billing
-          </label>
+            <label htmlFor="usage-based-toggle">
+              Usage-based billing
+            </label>
+            <FieldHelpPopover title="Usage-based billing">
+              <p>
+                Turn this on when the plan has metered charges in addition to a recurring base price.
+              </p>
+            </FieldHelpPopover>
+          </span>
           <p
             style={{
               color: "#64748b",
@@ -136,19 +147,24 @@ export default function BillingTypeSection({
 
       {/* Trial period */}
       <div>
-        <label
+        <FieldLabelWithHelp
           htmlFor="trial-period"
+          optional
+          helpTitle="Trial period"
+          help={
+            <p>
+              Customers will not be charged until the trial ends. Use 0 or leave blank for no trial.
+            </p>
+          }
           style={{
             color: "#fff",
             fontSize: "0.825rem",
             fontWeight: 500,
-            display: "block",
             marginBottom: "0.45rem",
           }}
         >
-          Trial period{" "}
-          <span style={{ color: "#64748b", fontWeight: 400 }}>(optional)</span>
-        </label>
+          Trial period
+        </FieldLabelWithHelp>
 
         <div style={{ position: "relative", maxWidth: "320px" }}>
           <input
@@ -188,36 +204,6 @@ export default function BillingTypeSection({
             }}
           >
             days
-          </span>
-        </div>
-
-        {/* Info message */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.45rem",
-            marginTop: "0.6rem",
-          }}
-        >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#64748b"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-            style={{ flexShrink: 0 }}
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="16" x2="12" y2="12" />
-            <line x1="12" y1="8" x2="12.01" y2="8" />
-          </svg>
-          <span style={{ color: "#64748b", fontSize: "0.82rem" }}>
-            Customers won't be charged during the trial period.
           </span>
         </div>
       </div>

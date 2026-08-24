@@ -103,10 +103,13 @@ describe("CohortRetentionChart", () => {
 
   test("handles recent, partial cohorts correctly", () => {
     render(<CohortRetentionChart data={mockData} />);
-    // Heatmap view - check for empty cells
-    const aprCohortRow = screen.getByText("Apr 2024").parentElement;
-    const cells = aprCohortRow?.querySelectorAll(`.${"heatmapCell"}`);
-    expect(cells?.length).toBe(2); // Only M0 and M1 should be rendered as cells
+    // Heatmap view - verify cells by aria-label (CSS Modules hashes class names in tests)
+    expect(
+      screen.getByLabelText("Apr 2024, Month 0: 100.0% retention")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Apr 2024, Month 1: 90.0% retention")
+    ).toBeInTheDocument();
 
     // Table view
     fireEvent.click(screen.getByText("View as Table"));

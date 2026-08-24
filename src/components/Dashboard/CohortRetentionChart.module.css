@@ -1,7 +1,9 @@
+/* CohortRetentionChart.module.css — issue #314 */
+
 .container {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  background-color: var(--color-surface-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
   padding: var(--space-6);
 }
 
@@ -15,25 +17,35 @@
 .title {
   font-size: var(--text-xl);
   font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 .subtitle {
   font-size: var(--text-sm);
-  color: #64748b;
+  color: var(--color-text-subtle);
   margin-top: var(--space-1);
 }
 
 .viewToggle {
   font-size: var(--text-sm);
-  color: #3b82f6;
+  color: var(--color-brand-text);
   background: none;
   border: none;
   cursor: pointer;
   font-weight: 500;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease;
 }
 
 .viewToggle:hover {
+  color: var(--color-brand-text-hover);
   text-decoration: underline;
+}
+
+.viewToggle:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .chartWrapper {
@@ -50,7 +62,7 @@
 .heatmapHeader {
   font-size: var(--text-xs);
   font-weight: 600;
-  color: #475569;
+  color: var(--color-text-muted);
   text-align: center;
   padding: var(--space-2);
 }
@@ -58,7 +70,7 @@
 .cohortLabel {
   font-size: var(--text-xs);
   font-weight: 600;
-  color: #475569;
+  color: var(--color-text-muted);
   padding: var(--space-2);
   text-align: right;
   white-space: nowrap;
@@ -70,10 +82,11 @@
   border-radius: 2px;
   cursor: default;
   transition: transform 0.1s ease-in-out;
+  /* Ensure inline background-color from palette tokens takes precedence */
 }
 
 .heatmapCell:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
   transform: scale(1.1);
   z-index: 10;
@@ -85,23 +98,26 @@
 
 .tooltip {
   position: absolute;
-  background-color: #1e293b;
-  color: white;
+  background-color: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-default);
   padding: var(--space-2) var(--space-3);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   font-size: var(--text-xs);
   z-index: 20;
   pointer-events: none;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .tooltipCohort {
   font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 .tooltipValue {
   font-weight: 700;
+  color: var(--chart-series-1);
 }
 
 .legend {
@@ -110,13 +126,14 @@
   gap: var(--space-2);
   margin-top: var(--space-4);
   font-size: var(--text-xs);
-  color: #64748b;
+  color: var(--color-text-subtle);
 }
 
 .legendColorBox {
   width: 12px;
   height: 12px;
   border-radius: 2px;
+  /* background-color set via inline style from getHeatmapColor() */
 }
 
 /* Accessible Table */
@@ -130,12 +147,14 @@
 .table td {
   padding: var(--space-3);
   text-align: left;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
 }
 
 .table th {
-  background-color: #f8fafc;
+  background-color: var(--color-surface-subtle);
   font-weight: 600;
+  color: var(--color-text-muted);
 }
 
 .table td {
@@ -145,6 +164,7 @@
 .table td:first-child {
   text-align: left;
   font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 .srOnly {

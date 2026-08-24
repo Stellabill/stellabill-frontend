@@ -1,0 +1,336 @@
+/* TrialCountdownBanner.css
+   Three urgency tiers: info (blue) → warning (amber) → urgent/expired (red)
+   Mirrors dunning.css banner structure. */
+
+/* ── Off-screen live region ──────────────────────────────────────────── */
+.trial-banner-live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Base banner ─────────────────────────────────────────────────────── */
+.trial-banner {
+  position: relative;
+  padding: 12px 16px;
+  border-left: 4px solid;
+  color: #f8fafc;
+}
+
+/* ── Urgency tier colours ────────────────────────────────────────────── */
+
+/* Info: >7 days — blue */
+.trial-banner--info {
+  background: linear-gradient(90deg, #0c1a2e, #0a1422);
+  border-left-color: #3b82f6;
+}
+
+/* Warning: 3-7 days — amber */
+.trial-banner--warning {
+  background: linear-gradient(90deg, #1a1100, #120d00);
+  border-left-color: #f59e0b;
+}
+
+/* Urgent / expired: <3 days or 0 — red */
+.trial-banner--urgent,
+.trial-banner--expired {
+  background: linear-gradient(90deg, #1a0a0a, #120606);
+  border-left-color: #ef4444;
+}
+
+/* Pulsing left border on urgent tier */
+.trial-banner--urgent {
+  animation: trial-border-pulse 2s ease-in-out infinite;
+}
+
+@keyframes trial-border-pulse {
+  0%, 100% { border-left-color: #ef4444; }
+  50%       { border-left-color: #fca5a5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trial-banner--urgent { animation: none; }
+}
+
+/* ── Inner layout ────────────────────────────────────────────────────── */
+.trial-banner__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* ── Body: icon + copy ───────────────────────────────────────────────── */
+.trial-banner__body {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.trial-banner__icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.trial-banner--info     .trial-banner__icon { color: #60a5fa; }
+.trial-banner--warning  .trial-banner__icon { color: #fbbf24; }
+.trial-banner--urgent   .trial-banner__icon,
+.trial-banner--expired  .trial-banner__icon { color: #f87171; }
+
+.trial-banner__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.trial-banner__headline {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trial-banner__sub {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+}
+
+/* ── Countdown badge ─────────────────────────────────────────────────── */
+.trial-banner__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.trial-banner--info .trial-banner__badge {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+}
+
+.trial-banner--warning .trial-banner__badge {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+}
+
+.trial-banner--urgent .trial-banner__badge,
+.trial-banner--expired .trial-banner__badge {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
+/* ── Actions ─────────────────────────────────────────────────────────── */
+.trial-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* Upgrade CTA */
+.trial-banner__upgrade-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+  white-space: nowrap;
+  min-height: 36px;
+}
+
+.trial-banner--info .trial-banner__upgrade-btn {
+  background: #3b82f6;
+  color: #ffffff;
+}
+.trial-banner--info .trial-banner__upgrade-btn:hover { background: #2563eb; }
+
+.trial-banner--warning .trial-banner__upgrade-btn {
+  background: #f59e0b;
+  color: #0d0d0d;
+}
+.trial-banner--warning .trial-banner__upgrade-btn:hover { background: #d97706; }
+
+.trial-banner--urgent .trial-banner__upgrade-btn,
+.trial-banner--expired .trial-banner__upgrade-btn {
+  background: #ef4444;
+  color: #ffffff;
+}
+.trial-banner--urgent .trial-banner__upgrade-btn:hover,
+.trial-banner--expired .trial-banner__upgrade-btn:hover { background: #dc2626; }
+
+.trial-banner__upgrade-btn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.trial-banner__upgrade-btn:active { transform: translateY(1px); }
+
+/* Snooze wrapper & button */
+.trial-banner__snooze-wrap {
+  position: relative;
+}
+
+.trial-banner__snooze-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: transparent;
+  border: 1px solid rgba(203, 213, 225, 0.12);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  min-height: 36px;
+}
+
+.trial-banner__snooze-btn:hover {
+  background: rgba(203, 213, 225, 0.06);
+  border-color: rgba(203, 213, 225, 0.22);
+  color: #e2e8f0;
+}
+
+.trial-banner__snooze-btn:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+/* Snooze dropdown menu */
+.trial-banner__snooze-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 200;
+  min-width: 140px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
+  animation: trial-menu-in 0.15s ease-out;
+}
+
+@keyframes trial-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trial-banner__snooze-menu { animation: none; }
+}
+
+.trial-banner__snooze-item {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-size: 0.8125rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.trial-banner__snooze-item:hover { background: rgba(255, 255, 255, 0.05); color: #f1f5f9; }
+.trial-banner__snooze-item:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: -2px;
+}
+
+/* Dismiss button */
+.trial-banner__dismiss-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #64748b;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  min-height: 36px;
+}
+
+.trial-banner__dismiss-btn:hover {
+  background: rgba(203, 213, 225, 0.05);
+  color: #94a3b8;
+}
+
+.trial-banner__dismiss-btn:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+/* On mobile show only the X icon, hide text */
+.trial-banner__dismiss-label { /* visible by default */ }
+.trial-banner__dismiss-x { display: none; }
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .trial-banner__inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .trial-banner__actions {
+    width: 100%;
+  }
+
+  .trial-banner__upgrade-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* Compact dismiss on mobile */
+  .trial-banner__dismiss-label { display: none; }
+  .trial-banner__dismiss-x     { display: inline-flex; }
+
+  /* Snooze menu opens upward on mobile to avoid clipping */
+  .trial-banner__snooze-menu {
+    top: auto;
+    bottom: calc(100% + 6px);
+    right: 0;
+  }
+}
+
+/* ── RTL ─────────────────────────────────────────────────────────────── */
+[dir="rtl"] .trial-banner { border-left: none; border-right: 4px solid; }
+[dir="rtl"] .trial-banner__snooze-menu { right: auto; left: 0; }
+[dir="rtl"] .trial-banner__snooze-item { text-align: right; }
