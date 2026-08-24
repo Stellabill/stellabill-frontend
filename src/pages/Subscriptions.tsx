@@ -9,6 +9,10 @@ import UsageThisPeriod from "../components/UsageThisPeriod";
 import ErrorState from "../components/ErrorState";
 import Tag from "../components/Tag";
 import AddTagPopover, { TagOption } from "../components/AddTagPopover";
+import { useSavedViews } from '@/hooks/useSavedViews';
+import { SavedViewsDropdown } from '@/components/SavedViewsDropdown';
+import { SaveViewModal } from '@/components/SaveViewModal';
+import { ShareURLModal } from '@/components/ShareURLModal';
 import "./Subscriptions.css";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -267,11 +271,26 @@ const INITIAL_DATA: SubscriptionWithIcon[] = [
 /* ─── Main component ─────────────────────────────────────────── */
 export default function Subscriptions() {
 	const { t } = useTranslation();
+	const {
+		views, pinnedViews, recentViews,
+		activeView, currentFilters, isUnsaved,
+		saveView, updateView, renameView, deleteView,
+		setDefault, clearDefault, togglePin, applyView,
+		setFilters, getShareURL, MAX_VIEWS
+	} = useSavedViews();
+
+	// Derive activeFilter from the hook
+	const activeFilter = currentFilters.statusFilter;
+
 	const [data, setData] = useState<SubscriptionWithIcon[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<ApiError | null>(null);
-	const [activeFilter, setActiveFilter] = useState("All");
 	const [selectedId, setSelectedId] = useState<string | null>(null);
+
+	const [saveViewModal, setSaveViewModal] = useState<
+		{ mode: 'save' | 'rename'; viewId?: string } | null
+	>(null);
+	const [shareViewId, setShareViewId] = useState<string | null>(null);
 
 	const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
 	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -615,6 +634,28 @@ export default function Subscriptions() {
 				</button>
 			</div>
 
+			{/* Views toolbar */}
+			<div className="views-toolbar">
+				<SavedViewsDropdown
+					views={views}
+					pinnedViews={pinnedViews}
+					recentViews={recentViews}
+					activeView={activeView}
+					isUnsaved={isUnsaved}
+					currentFilters={currentFilters}
+					onApplyView={applyView}
+					onSaveNew={() => setSaveViewModal({ mode: 'save' })}
+					onRename={(id) => setSaveViewModal({ mode: 'rename', viewId: id })}
+					onDelete={deleteView}
+					onSetDefault={setDefault}
+					onClearDefault={clearDefault}
+					onTogglePin={togglePin}
+					onShare={(id) => setShareViewId(id)}
+					onUpdateCurrent={() => activeView && updateView(activeView.id, currentFilters)}
+					MAX_VIEWS={MAX_VIEWS}
+				/>
+			</div>
+
 			{/* Filter tabs */}
 			<div className="filter-tabs" role="group" aria-label="Filter subscriptions by status">
 				{(["All", "Active", "Paused", "Cancelled"] as const).map((tab) => (
@@ -622,7 +663,7 @@ export default function Subscriptions() {
 						key={tab}
 						id={`filter-tab-${tab.toLowerCase()}`}
 						className={`filter-tab${activeFilter === tab ? " active" : ""}`}
-						onClick={() => setActiveFilter(tab)}
+						onClick={() => setFilters({ statusFilter: tab })}
 						aria-pressed={activeFilter === tab}
 						aria-label={t('subscriptions.tabAriaLabel', { label: tab, count: stats[tab] })}>
 						{t(`subscriptions.tabs.${tab.toLowerCase()}`)} <span>({stats[tab]})</span>
@@ -853,6 +894,41 @@ export default function Subscriptions() {
 					</p>
 				</div>
 			</div>
+
+			{/* Save View Modal */}
+			{saveViewModal && (
+				<SaveViewModal
+					isOpen={true}
+					onClose={() => setSaveViewModal(null)}
+					mode={saveViewModal.mode}
+					initialName={
+						saveViewModal.mode === 'rename' && saveViewModal.viewId
+							? views.find(v => v.id === saveViewModal.viewId)?.name
+							: ''
+					}
+					existingNames={views
+						.filter(v => saveViewModal.mode !== 'rename' || v.id !== saveViewModal.viewId)
+						.map(v => v.name)}
+					onSave={(name) => {
+						if (saveViewModal.mode === 'save') {
+							saveView(name, currentFilters);
+						} else if (saveViewModal.viewId) {
+							renameView(saveViewModal.viewId, name);
+						}
+						setSaveViewModal(null);
+					}}
+				/>
+			)}
+
+			{/* Share URL Modal */}
+			{shareViewId && (
+				<ShareURLModal
+					isOpen={true}
+					onClose={() => setShareViewId(null)}
+					url={getShareURL(shareViewId)}
+					viewName={views.find(v => v.id === shareViewId)?.name ?? 'View'}
+				/>
+			)}
 		</div>
 	);
 }

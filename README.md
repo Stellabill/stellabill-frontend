@@ -245,6 +245,21 @@ We aim to be respectful and inclusive; please be kind and constructive in issues
 
 ---
 
+## Saved Views
+
+The Subscriptions page includes a **saved-views manager** that lets users capture filter states as named views, switch between them instantly, set a default, pin favourites, and share a view with a team-mate via URL.
+
+Key points:
+
+- Views are persisted in `localStorage` under `sb:saved-views` and survive page reloads.
+- The active view is reflected in the URL (`?view=<id>`), making every view directly linkable.
+- The UI is built from `SavedViewsDropdown`, `SaveViewModal`, and `ShareURLModal`, all driven by the `useSavedViews` hook.
+- The feature is fully keyboard-accessible and WCAG 2.1 AA compliant with an ARIA live region for screen-reader announcements.
+
+For full design system documentation — architecture, data model, URL encoding, accessibility checklist, responsive behaviour, edge cases, test strategy, and the developer guide for adding new filter dimensions — see [DOCS_SAVED_VIEWS.md](DOCS_SAVED_VIEWS.md).
+
+---
+
 ## License
 
 See the [LICENSE](LICENSE) file in this repository (if present). By contributing, you agree that your contributions will be licensed under the same terms.
