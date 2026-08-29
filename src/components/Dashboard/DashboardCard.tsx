@@ -1,6 +1,7 @@
 import { ReactNode, HTMLAttributes } from 'react';
 import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import CardErrorSlot from './CardErrorSlot';
+import HelpHint from '../help/HelpHint';
 import './DashboardCard.css';
 
 interface DashboardCardProps extends HTMLAttributes<HTMLDivElement> {
@@ -10,7 +11,16 @@ interface DashboardCardProps extends HTMLAttributes<HTMLDivElement> {
   trend?: 'up' | 'down' | 'neutral';
   loading?: boolean;
   icon?: ReactNode;
+  /** Short definition shown inside the contextual help popover. */
   helpText?: string;
+  /** Popover title; defaults to the card title. */
+  helpTitle?: string;
+  /** Optional worked example shown in the popover. */
+  helpExample?: string;
+  /** Optional "Learn more" destination rendered as an external link. */
+  helpLearnMoreUrl?: string;
+  /** When set, glossary-backed title, example, and link are applied. */
+  helpTermId?: string;
   /** When set the card body is replaced with an in-card error slot. */
   error?: string | null;
   /** True when the error is an offline / no-network condition. */
@@ -29,6 +39,10 @@ export default function DashboardCard({
   loading = false,
   icon,
   helpText,
+  helpTitle,
+  helpExample,
+  helpLearnMoreUrl,
+  helpTermId,
   error,
   isOfflineError = false,
   onRetry,
@@ -64,9 +78,16 @@ export default function DashboardCard({
           <h3 className="dashboard-card__title">
             {title}
             {helpText && (
-              <span className="dashboard-card__help" title={helpText}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              </span>
+              <HelpHint
+                title={helpTitle ?? (helpTermId ? undefined : title)}
+                triggerLabel={
+                  helpTermId && !helpTitle ? `Learn more about ${title}` : undefined
+                }
+                definition={helpText}
+                example={helpExample}
+                learnMoreUrl={helpLearnMoreUrl}
+                termId={helpTermId}
+              />
             )}
           </h3>
         </div>
