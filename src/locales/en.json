@@ -12,7 +12,8 @@
       "failedCharges": "Failed Charges",
       "failedChargesHelp": "Number of charges that failed in the last 30 days.",
       "upcomingRenewals": "Upcoming Renewals",
-      "upcomingRenewalsHelp": "Subscriptions set to renew in the next 7 days."
+      "upcomingRenewalsHelp": "Subscriptions set to renew in the next 7 days.",
+      "targetLabel": "Goal"
     },
     "revenueGrowth": "Revenue Growth",
     "viewDetailedReport": "View Detailed Report",

@@ -36,7 +36,7 @@ describe('Dashboard Page', () => {
         <Dashboard />
       </MemoryRouter>
     );
-    expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(document.querySelector('.dashboard-skeleton')).toBeInTheDocument();
   });
 
   it('renders dashboard content after loading', async () => {
