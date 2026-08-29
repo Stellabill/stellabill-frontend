@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
+import { Gift } from 'lucide-react'
 
 export type PlanCardProps = {
   merchant: string
@@ -8,6 +9,9 @@ export type PlanCardProps = {
   interval: string
   description: string
   usageTag?: string
+  onSubscribe?: () => void
+  onSendGift?: () => void
+  showGiftOption?: boolean
 }
 
 export default function PlanCard({
@@ -18,6 +22,9 @@ export default function PlanCard({
   interval,
   description,
   usageTag,
+  onSubscribe,
+  onSendGift,
+  showGiftOption = true,
 }: PlanCardProps) {
   return (
     <article className="plan-card">
@@ -35,9 +42,26 @@ export default function PlanCard({
       </p>
       <p className="plan-card__description">{description}</p>
 
-      <button type="button" className="plan-card__button">
+      <button 
+        type="button" 
+        className="plan-card__button"
+        onClick={onSubscribe}
+        aria-label={`Subscribe to ${planName} for ${price} USDC per ${interval}`}
+      >
         Subscribe
       </button>
+
+      {showGiftOption && (
+        <button 
+          type="button" 
+          className="plan-card__button plan-card__button--gift"
+          onClick={onSendGift}
+          aria-label={`Send ${planName} as a gift`}
+        >
+          <Gift size={18} aria-hidden="true" />
+          Send as gift
+        </button>
+      )}
     </article>
   )
 }

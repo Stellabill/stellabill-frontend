@@ -363,6 +363,41 @@ textarea {
   font-weight: 700;
   color: #041f2e;
   background: linear-gradient(90deg, #1cb2dc, #19d4bf);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.plan-card__button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.plan-card__button:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}
+
+.plan-card__button--gift {
+  margin-top: 12px;
+  background: transparent;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #c084fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1.2rem;
+}
+
+.plan-card__button--gift:hover {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: rgba(168, 85, 247, 0.6);
+  filter: brightness(1);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+}
+
+.plan-card__button--gift:focus-visible {
+  outline-color: #a855f7;
 }
 
 .site-footer {

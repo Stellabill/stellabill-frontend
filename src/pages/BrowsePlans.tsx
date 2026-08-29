@@ -4,6 +4,7 @@ import { plans as plansAPI, ApiError } from "../api/client";
 import WalletConnectModal from "../components/WalletConnectModal";
 import ErrorState from "../components/ErrorState";
 import SortBySelect from "../components/SortBySelect";
+import GiftPurchaseModal, { type Plan as GiftPlan } from "../components/GiftPurchaseModal";
 
 type PlanInterval = "Monthly" | "Yearly";
 // ... (previous types and icons)
@@ -179,9 +180,10 @@ function getNextChargeDate(interval: PlanInterval) {
 interface PlanCardProps {
 	plan: Plan;
 	onSubscribe: (plan: Plan) => void;
+	onSendGift: (plan: Plan) => void;
 }
 
-function PlanCard({ plan, onSubscribe }: PlanCardProps) {
+function PlanCard({ plan, onSubscribe, onSendGift }: PlanCardProps) {
 	const IconComponent = iconMap[plan.icon];
 	const [isHovered, setIsHovered] = useState(false);
 	const billingCopy = getBillingIntervalCopy(plan.interval);
@@ -308,6 +310,62 @@ function PlanCard({ plan, onSubscribe }: PlanCardProps) {
 				aria-label={`Subscribe to ${plan.name} plan for ${plan.price} ${plan.currency}. ${billingCopy}. Next charge on ${nextChargeDate} from ${plan.merchant}`}>
 				Subscribe
 			</button>
+
+			<button
+				onClick={() => onSendGift(plan)}
+				style={{
+					width: "100%",
+					padding: "14px 20px",
+					background: "transparent",
+					color: "#c084fc",
+					fontSize: "16px",
+					fontWeight: 700,
+					border: "1px solid rgba(168, 85, 247, 0.4)",
+					borderRadius: 12,
+					cursor: "pointer",
+					transition: "all 0.2s ease",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					gap: "8px",
+				}}
+				onMouseEnter={(e) => {
+					e.currentTarget.style.background = "rgba(168, 85, 247, 0.1)";
+					e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.6)";
+					e.currentTarget.style.boxShadow = "0 0 20px rgba(168, 85, 247, 0.2)";
+				}}
+				onMouseLeave={(e) => {
+					e.currentTarget.style.background = "transparent";
+					e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.4)";
+					e.currentTarget.style.boxShadow = "none";
+				}}
+				onFocus={(e) => {
+					e.currentTarget.style.outline = "2px solid #a855f7";
+					e.currentTarget.style.outlineOffset = "2px";
+				}}
+				onBlur={(e) => {
+					e.currentTarget.style.outline = "none";
+				}}
+				aria-label={`Send ${plan.name} as a gift`}>
+				<svg 
+					width="18" 
+					height="18" 
+					viewBox="0 0 24 24" 
+					fill="none" 
+					stroke="currentColor" 
+					strokeWidth="2" 
+					strokeLinecap="round" 
+					strokeLinejoin="round"
+					aria-hidden="true"
+				>
+					<polyline points="20 12 20 22 4 22 4 12" />
+					<rect x="2" y="7" width="20" height="5" />
+					<line x1="12" y1="22" x2="12" y2="7" />
+					<path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+					<path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+				</svg>
+				Send as gift
+			</button>
 		</article>
 	);
 }
@@ -323,6 +381,8 @@ export default function BrowsePlans() {
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 	const [isWalletConnected, setIsWalletConnected] = useState(false);
 	const [walletModalOpen, setWalletModalOpen] = useState(false);
+	const [giftModalOpen, setGiftModalOpen] = useState(false);
+	const [selectedPlanForGift, setSelectedPlanForGift] = useState<Plan | null>(null);
 
 	// Fetch plans from API
 	const fetchPlans = useCallback(async () => {
@@ -400,6 +460,16 @@ export default function BrowsePlans() {
 		}
 
 		navigate(`/checkout/${plan.id}`);
+	};
+
+	const handleSendGift = (plan: Plan) => {
+		setSelectedPlanForGift(plan);
+		setGiftModalOpen(true);
+	};
+
+	const handleGiftPurchaseComplete = (giftCode: string) => {
+		console.log("Gift purchased with code:", giftCode);
+		// Could show a toast notification here
 	};
 
 	const handleWalletConnect = () => {
@@ -593,7 +663,12 @@ export default function BrowsePlans() {
 								gap: "24px 32px",
 							}}>
 							{filteredPlans.map((plan) => (
-								<PlanCard key={plan.id} plan={plan} onSubscribe={handleSubscribe} />
+								<PlanCard 
+									key={plan.id} 
+									plan={plan} 
+									onSubscribe={handleSubscribe} 
+									onSendGift={handleSendGift}
+								/>
 							))}
 						</div>
 					) : (
@@ -634,6 +709,13 @@ export default function BrowsePlans() {
 					isOpen={walletModalOpen}
 					onClose={() => setWalletModalOpen(false)}
 					onConnected={handleWalletConnect}
+				/>
+
+				<GiftPurchaseModal
+					isOpen={giftModalOpen}
+					onClose={() => setGiftModalOpen(false)}
+					plan={selectedPlanForGift}
+					onPurchaseComplete={handleGiftPurchaseComplete}
 				/>
 			</div>
 		</div>

@@ -15,6 +15,7 @@ import OnboardingReviewPage from "./components/OnboardingReview";
 import UsageBilling from "./pages/UsageBilling";
 import OnboardingSuccess from "./pages/OnboardingSuccess";
 import GiftRedeemSuccess from "./pages/GiftRedeemSuccess";
+import RedeemGift from "./pages/RedeemGift";
 import AboutPrepaidBalances from "./components/AboutPrepaidBalances";
 import Pricing from "./pages/Pricing";
 import BrandPack from "./pages/BrandPack";
@@ -39,6 +40,7 @@ function App() {
       <Route path="/onboarding/payout" element={<OnboardingPayout />} />
       <Route path="/onboarding/review" element={<OnboardingReviewPage />} />
       <Route path="/onboarding-success" element={<OnboardingSuccess />} />
+      <Route path="/redeem-gift" element={<RedeemGift />} />
       <Route path="/gift-redeem-success" element={<GiftRedeemSuccess />} />
 
       {/* 2. Authenticated Routes (Wrapped in Layout) */}
