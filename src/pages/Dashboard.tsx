@@ -22,6 +22,10 @@ import DashboardSkeleton from '../components/Dashboard/DashboardSkeleton';
 import RevenueSplitByPlanPanel from '../components/Dashboard/RevenueSplitByPlanPanel';
 import CardErrorSlot from '../components/Dashboard/CardErrorSlot';
 import OnboardingChecklistWidget from '../components/Dashboard/OnboardingChecklistWidget';
+import ProductTour from '../components/ProductTour/ProductTour';
+import TourCompletion from '../components/ProductTour/TourCompletion';
+import { dashboardTourSteps } from '../components/ProductTour/tourSteps';
+import { useProductTour } from '../hooks/useProductTour';
 import type { PlanRevenueSlice } from '../components/Dashboard/revenueSplitUtils';
 import {
   useDashboardWidgets,
@@ -53,6 +57,15 @@ export default function Dashboard() {
 
   const { widgets, loadAll, retryWidget, isInitialLoading, failedWidgetIds } =
     useDashboardWidgets();
+
+  const {
+    isOpen: isTourOpen,
+    showCompletion,
+    closeTour,
+    completeTour,
+    dismissTour,
+    closeCompletion,
+  } = useProductTour();
 
   const [activeFilters, setActiveFilters] = useState([
     { id: 'status', label: 'Status: Active' },
@@ -149,9 +162,10 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="dashboard-page">
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <header className="dashboard-header">
+    <>
+      <div className="dashboard-page">
+        {/* ── Header ─────────────────────────────────────────────────── */}
+        <header className="dashboard-header">
         <div>
           <div className="dashboard-heading-row">
             <LayoutGrid size={20} aria-hidden="true" />
@@ -385,10 +399,29 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Revenue Split By Plan ───────────────────────────────────── */}
-      <div className="dashboard-revenue-split">
-        <RevenueSplitByPlanPanel plans={MOCK_PLAN_REVENUE} />
+        {/* ── Revenue Split By Plan ───────────────────────────────────── */}
+        <div className="dashboard-revenue-split">
+          <RevenueSplitByPlanPanel plans={MOCK_PLAN_REVENUE} />
+        </div>
       </div>
-    </div>
+
+      {/* Product Tour */}
+      <ProductTour
+        steps={dashboardTourSteps}
+        isOpen={isTourOpen}
+        onClose={closeTour}
+        onComplete={completeTour}
+        onDismiss={dismissTour}
+      />
+
+      {/* Tour Completion Celebration */}
+      <TourCompletion
+        isOpen={showCompletion}
+        onClose={closeCompletion}
+        title="You're all set!"
+        message="You've completed the tour. You're ready to start managing your subscriptions and growing your business."
+        actionLabel="Get started"
+      />
+    </>
   );
 }

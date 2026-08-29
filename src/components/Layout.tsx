@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { CircleHelp } from "lucide-react";
+import { CircleHelp, Sparkles } from "lucide-react";
 import LandingNavbar from "./LandingNavbar";
 import CommandPalette, { CommandItem } from "./CommandPalette";
 import KeyboardShortcutsOverlay from "./KeyboardShortcutsOverlay";
@@ -172,6 +172,12 @@ export default function Layout() {
       { id: "action-create-plan", label: "Create plan", group: "Actions", hint: "Start a new billing plan", keywords: "add new plan", perform: () => navigate("/plans/create") },
       { id: "action-refund", label: "Issue refund", group: "Actions", hint: "Refund a subscription payment", keywords: "money back return reverse", perform: () => navigate("/subscriptions") },
       { id: "action-pause", label: "Pause subscription", group: "Actions", hint: "Temporarily stop billing", keywords: "hold suspend freeze", perform: () => navigate("/subscriptions") },
+      { id: "action-tour", label: "Start product tour", group: "Actions", hint: "Take a guided tour of the dashboard", keywords: "help guide tutorial onboarding walkthrough", perform: () => {
+        // Trigger tour restart by clearing localStorage and reloading
+        localStorage.removeItem('sb:tour-completed');
+        localStorage.removeItem('sb:tour-dismissed');
+        window.location.reload();
+      }},
     ];
     return [...pages, ...actions];
   }, [navigate]);
@@ -407,6 +413,20 @@ export default function Layout() {
               >
                 <CircleHelp className="sb-sidebar__icon" aria-hidden="true" />
                 <span className="sb-sidebar__link-label">Help &amp; support</span>
+              </button>
+              <button
+                type="button"
+                className="sb-sidebar__link"
+                onClick={() => {
+                  localStorage.removeItem('sb:tour-completed');
+                  localStorage.removeItem('sb:tour-dismissed');
+                  navigate('/dashboard');
+                  window.location.reload();
+                }}
+                title="Restart product tour"
+              >
+                <Sparkles className="sb-sidebar__icon" aria-hidden="true" />
+                <span className="sb-sidebar__link-label">Product tour</span>
               </button>
             </div>
           </nav>
