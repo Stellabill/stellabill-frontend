@@ -146,6 +146,19 @@
   --sidebar-indicator-color: #6366f1;
   --sidebar-group-label-color: #64748b;
   --sidebar-focus-ring:      #6366f1;
+
+  /* Motion contract */
+  --motion-duration-fast: 120ms;
+  --motion-duration-base: 180ms;
+  --motion-duration-slow: 260ms;
+  --motion-duration-enter: var(--motion-duration-base);
+  --motion-duration-exit: var(--motion-duration-fast);
+  --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-easing-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-reorder-duration: var(--motion-duration-slow);
+  --motion-reorder-easing: var(--motion-easing-emphasized);
+  --motion-entry-duration: var(--motion-duration-base);
+  --motion-entry-easing: var(--motion-easing-standard);
 }
 /* ============================================================================
    Semantic colour theme pairs

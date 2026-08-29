@@ -121,6 +121,16 @@ const devNav = [
       </svg>
     ),
   },
+  {
+    path: "/design-tokens",
+    label: "Design Tokens",
+    icon: (
+      <svg className="sb-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" />
+        <circle cx="8" cy="7" r="2" /><circle cx="14" cy="12" r="2" /><circle cx="10" cy="17" r="2" />
+      </svg>
+    ),
+  },
 ];
 
 export default function Layout() {
@@ -167,6 +177,7 @@ export default function Layout() {
       { id: "page-settings", label: "Settings", group: "Pages", keywords: "preferences account", perform: () => navigate("/settings") },
       { id: "page-ui-kit", label: "UI Kit", group: "Pages", keywords: "components developer", perform: () => navigate("/ui-kit") },
       { id: "page-brand", label: "Brand", group: "Pages", keywords: "design tokens", perform: () => navigate("/brand") },
+      { id: "page-design-tokens", label: "Design Tokens", group: "Pages", keywords: "css variables colors spacing typography motion", perform: () => navigate("/design-tokens") },
     ];
     const actions: CommandItem[] = [
       { id: "action-create-plan", label: "Create plan", group: "Actions", hint: "Start a new billing plan", keywords: "add new plan", perform: () => navigate("/plans/create") },

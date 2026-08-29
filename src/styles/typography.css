@@ -26,6 +26,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Documentation hooks for token consumers */
+.sb-font-display { font-family: var(--font-family-display); }
+.sb-font-body { font-family: var(--font-family-body); }
+.sb-font-mono { font-family: var(--font-family-mono); }
+
 /*  Heading scale  */
 h1, .sb-h1 {
   font-family: var(--font-family-display);
@@ -109,6 +114,13 @@ h6, .sb-h6 {
 .sb-caption {
   font-size: var(--text-xs);
   line-height: var(--leading-relaxed);
+}
+
+.sb-type-sample {
+  color: var(--color-text-primary);
+  font-family: var(--font-family-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
 }
 
 /* Code */

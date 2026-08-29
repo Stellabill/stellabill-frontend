@@ -1,0 +1,282 @@
+.design-tokens {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4) var(--space-12);
+  color: var(--color-text-primary);
+}
+
+.design-tokens__header {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.design-tokens__eyebrow,
+.design-token-card__category {
+  margin: 0;
+  color: var(--color-brand-text);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+}
+
+.design-tokens__header h1 {
+  margin: var(--space-2) 0;
+  color: var(--color-text-primary);
+}
+
+.design-tokens__header p:not(.design-tokens__eyebrow) {
+  max-width: 760px;
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.design-tokens__toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  margin-bottom: var(--space-5);
+}
+
+.design-tokens__search {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+  color: var(--color-text-muted);
+}
+
+.design-tokens__search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.design-tokens__segments {
+  min-height: 48px;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-subtle);
+}
+
+.design-tokens__segments button,
+.design-token-card button {
+  border: 0;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+}
+
+.design-tokens__segments button {
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.design-tokens__segments button[aria-pressed="true"] {
+  background: var(--color-surface-card);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.design-tokens__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.design-tokens__summary div {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+}
+
+.design-tokens__summary strong,
+.design-tokens__summary span {
+  display: block;
+}
+
+.design-tokens__summary strong {
+  color: var(--color-text-primary);
+  font-size: var(--text-xl);
+}
+
+.design-tokens__summary span {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.design-tokens__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.design-token-card {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.design-token-card__preview {
+  display: grid;
+  place-items: center;
+  padding: var(--space-3);
+  background: var(--color-surface-subtle);
+}
+
+.design-token-card__preview span {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-full);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.design-token-card__preview code {
+  writing-mode: vertical-rl;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+}
+
+.design-token-card__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.design-token-card h2 {
+  margin: var(--space-1) 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-lg);
+}
+
+.design-token-card p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.design-token-card dl {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.design-token-card dt {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+}
+
+.design-token-card dd {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.design-token-card button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-control);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-default);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
+}
+
+.design-token-card button:hover {
+  background: var(--color-surface-control-hover);
+}
+
+.design-tokens__empty {
+  padding: var(--space-8);
+  border: 1px dashed var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+  text-align: center;
+}
+
+.design-tokens__empty h2,
+.design-tokens__empty p {
+  margin: 0;
+}
+
+.design-tokens__empty p {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 760px) {
+  .design-tokens {
+    padding-inline: var(--space-3);
+  }
+
+  .design-tokens__toolbar,
+  .design-tokens__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .design-tokens__segments {
+    width: 100%;
+  }
+
+  .design-tokens__segments button {
+    flex: 1 1 auto;
+  }
+
+  .design-token-card {
+    grid-template-columns: 1fr;
+  }
+
+  .design-token-card__preview {
+    min-height: 72px;
+  }
+
+  .design-token-card__preview code {
+    writing-mode: horizontal-tb;
+  }
+}
