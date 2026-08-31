@@ -1,4 +1,4 @@
-import { render, act } from '@testing-library/react';
+import { render, act, fireEvent, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Dashboard from './Dashboard';
@@ -36,7 +36,7 @@ describe('Dashboard Page', () => {
         <Dashboard />
       </MemoryRouter>
     );
-    expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(document.querySelector('.dashboard-skeleton')).toBeInTheDocument();
   });
 
   it('renders dashboard content after loading', async () => {
@@ -54,10 +54,10 @@ describe('Dashboard Page', () => {
     expect(getByText('Dashboard Overview')).toBeInTheDocument();
 
     // Check for KPIs
-    expect(getByText('Active Subscriptions')).toBeInTheDocument();
-    expect(getByText('MRR')).toBeInTheDocument();
-    expect(getByText('Failed Charges')).toBeInTheDocument();
-    expect(getByText('Upcoming Renewals')).toBeInTheDocument();
+    expect(getByText('Active Subscriptions', { selector: '.dashboard-card__title' })).toBeInTheDocument();
+    expect(getByText('MRR', { selector: '.dashboard-card__title' })).toBeInTheDocument();
+    expect(getByText('Failed Charges', { selector: '.dashboard-card__title' })).toBeInTheDocument();
+    expect(getByText('Upcoming Renewals', { selector: '.dashboard-card__title' })).toBeInTheDocument();
 
     // Check for mock data
     expect(getByText('1,284')).toBeInTheDocument();
@@ -88,5 +88,29 @@ describe('Dashboard Page', () => {
     
     expect(viewPlansBtn).toHaveAttribute('href', '/plans');
     expect(createPlanBtn).toHaveAttribute('href', '/plans?create=true');
+  });
+
+  it('renders accessible help hints and opens glossary-backed popovers', async () => {
+    const { getByRole } = render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    const mrrHint = getByRole('button', { name: /learn more about mrr/i });
+    expect(mrrHint).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(mrrHint);
+
+    expect(mrrHint).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(/100 customers pay \$50\/month/i)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Learn more' })).toHaveAttribute(
+      'href',
+      'https://docs.stellarbill.example/glossary/mrr'
+    );
   });
 });
