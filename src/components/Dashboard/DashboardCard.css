@@ -31,15 +31,8 @@
   font-weight: var(--font-medium);
 }
 
-.dashboard-card__help {
-  display: inline-flex;
-  color: var(--color-text-subtle);
-  cursor: help;
-  transition: color 150ms ease;
-}
-
-.dashboard-card__help:hover {
-  color: var(--color-text-secondary);
+.dashboard-card__title .help-hint {
+  margin-left: 0.125rem;
 }
 
 .dashboard-card__icon {

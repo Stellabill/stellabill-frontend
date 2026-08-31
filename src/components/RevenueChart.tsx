@@ -588,11 +588,11 @@ export function LineChart({ data, series }: LineChartProps) {
     const point = seriesItem?.points.find(p => p.pointIndex === activePoint.index);
     if (!point) return null;
     
-    const tooltipWidth = 120;
-    const tooltipHeight = 60;
+    const tooltipWidth = 140;
+    const tooltipHeight = 70;
     
     let x = point.x;
-    let y = point.y - tooltipHeight - 12;
+    let y = point.y - tooltipHeight - 16;
 
     // Boundary clamping
     const minX = padding.left + tooltipWidth / 2;
@@ -601,7 +601,7 @@ export function LineChart({ data, series }: LineChartProps) {
     if (x > maxX) x = maxX;
 
     if (y < padding.top) {
-      y = point.y + 16;
+      y = point.y + 20;
     }
 
     return { 
@@ -677,7 +677,7 @@ export function LineChart({ data, series }: LineChartProps) {
               key={`y-label-${i}`}
               x={padding.left - 10}
               y={y}
-              className="axis-label"
+              className="axis-label axis-label--y"
               textAnchor="end"
               dominantBaseline="middle"
             >
@@ -698,7 +698,7 @@ export function LineChart({ data, series }: LineChartProps) {
               key={`x-label-${i}`}
               x={x}
               y={height - padding.bottom + 22}
-              className="axis-label"
+              className="axis-label axis-label--x"
               textAnchor="middle"
             >
               {data[i].date}
@@ -800,20 +800,20 @@ export function LineChart({ data, series }: LineChartProps) {
         {activePoint && tooltipCoords && (
           <g className="tooltip" id="chart-active-tooltip" role="tooltip">
             <filter id="tooltip-shadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3" />
+              <feDropShadow dx="0" dy="2" stdDeviation="4" floodOpacity="0.2" />
             </filter>
             <rect
               x={tooltipCoords.x - tooltipCoords.width / 2}
               y={tooltipCoords.y}
               width={tooltipCoords.width}
               height={tooltipCoords.height}
-              rx={6}
+              rx={8}
               className="tooltip-bg"
               filter="url(#tooltip-shadow)"
             />
             <text
               x={tooltipCoords.x}
-              y={tooltipCoords.y + 16}
+              y={tooltipCoords.y + 18}
               className="tooltip-text tooltip-series"
               textAnchor="middle"
             >
@@ -821,7 +821,7 @@ export function LineChart({ data, series }: LineChartProps) {
             </text>
             <text
               x={tooltipCoords.x}
-              y={tooltipCoords.y + 32}
+              y={tooltipCoords.y + 40}
               className="tooltip-text"
               textAnchor="middle"
             >
@@ -829,7 +829,7 @@ export function LineChart({ data, series }: LineChartProps) {
             </text>
             <text
               x={tooltipCoords.x}
-              y={tooltipCoords.y + 48}
+              y={tooltipCoords.y + 58}
               className="tooltip-date"
               textAnchor="middle"
             >

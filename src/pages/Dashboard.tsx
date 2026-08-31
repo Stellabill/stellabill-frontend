@@ -22,6 +22,7 @@ import DashboardSkeleton from '../components/Dashboard/DashboardSkeleton';
 import RevenueSplitByPlanPanel from '../components/Dashboard/RevenueSplitByPlanPanel';
 import CardErrorSlot from '../components/Dashboard/CardErrorSlot';
 import OnboardingChecklistWidget from '../components/Dashboard/OnboardingChecklistWidget';
+import HelpHint from '../components/help/HelpHint';
 import ProductTour from '../components/ProductTour/ProductTour';
 import TourCompletion from '../components/ProductTour/TourCompletion';
 import { dashboardTourSteps } from '../components/ProductTour/tourSteps';
@@ -344,6 +345,7 @@ export default function Dashboard() {
           trend="down"
           icon={<AlertCircle size={20} />}
           helpText={t('dashboard.kpis.failedChargesHelp')}
+          helpTermId="dunning"
           loading={w.kpi_failed_charges.status === 'loading'}
           error={kpiError('kpi_failed_charges')}
           isOfflineError={kpiOffline('kpi_failed_charges')}
@@ -369,7 +371,15 @@ export default function Dashboard() {
         {/* Chart Section */}
         <div className="dashboard-panel dashboard-panel--chart">
           <div className="dashboard-panel__header">
-            <h2 className="dashboard-section-title">Revenue Growth</h2>
+            <h2 className="dashboard-section-title">
+              Revenue Growth
+              <HelpHint
+                title="Revenue Growth"
+                definition="Total billed revenue per month across all active subscriptions. Use the trend to spot growth or contraction early."
+                example="A spike in February often reflects annual renewals rather than new customer growth."
+                learnMoreUrl="https://docs.stellarbill.example/reports/revenue-growth"
+              />
+            </h2>
             <Link to="/reports" className="dashboard-link">
               View Detailed Report <ArrowRight size={12} />
             </Link>
