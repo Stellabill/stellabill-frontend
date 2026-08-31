@@ -89,38 +89,70 @@
   stroke: var(--chart-grid);
   stroke-width: 1;
   stroke-dasharray: 4 4;
-  opacity: 0.7;
+  opacity: 0.5;
 }
 
+/* ── Chart axis labels with typography tokens ──────────────────────────────
+   Standardized sizing, color, and weight using design system tokens.
+   Contrast: --color-text-muted guarantees ≥ 4.5:1 against chart surface.
+────────────────────────────────────────────────────────────────────────── */
 .axis-label {
   fill: var(--color-text-muted);
-  font-size: 12px;
-  font-family: var(--font-family-body, sans-serif);
+  font-size: var(--text-sm);
+  font-family: var(--font-family-body);
+  font-weight: var(--font-medium);
+  letter-spacing: var(--tracking-normal);
+}
+
+/* Y-axis currency labels: slightly larger for scanability */
+.axis-label--y {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  fill: var(--color-text-secondary);
+}
+
+/* X-axis date labels: compact but readable */
+.axis-label--x {
+  font-size: var(--text-xs);
+  fill: var(--color-text-muted);
 }
 
 .revenue-line {
   stroke: var(--chart-line);
-  stroke-width: 2.5;
+  stroke-width: 3px;
   stroke-linecap: round;
   stroke-linejoin: round;
+  fill: none;
+  transition: opacity 0.2s ease, stroke-width 0.2s ease;
 }
 
+/* ── Active drop line and pulse indicator ───────────────────────────────────
+   Focused point indicator with consistent brand styling.
+────────────────────────────────────────────────────────────────────────── */
 .active-drop-line {
   stroke: var(--color-focus-ring);
-  stroke-width: 1.5;
-  stroke-dasharray: 3 3;
-  opacity: 0.8;
+  stroke-width: 2px;
+  stroke-dasharray: 4 4;
+  opacity: 0.6;
   pointer-events: none;
+  animation: drop-line-fade-in 0.2s ease-out;
 }
 
-.data-point-group {
-  cursor: pointer;
+@keyframes drop-line-fade-in {
+  from {
+    opacity: 0;
+    stroke-dashoffset: 8;
+  }
+  to {
+    opacity: 0.6;
+    stroke-dashoffset: 0;
+  }
 }
 
 .data-point-pulse {
   fill: var(--color-focus-ring);
-  opacity: 0.25;
-  animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  opacity: 0.3;
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   pointer-events: none;
 }
 
@@ -129,62 +161,98 @@
     r: 6px;
     opacity: 0.5;
   }
+  50% {
+    r: 12px;
+    opacity: 0.2;
+  }
   100% {
-    r: 14px;
+    r: 16px;
     opacity: 0;
   }
 }
 
+.data-point-group {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.data-point-group:hover {
+  transform: scale(1.05);
+}
+
+/* ── Data point focus indicators ───────────────────────────────────────────
+   Enhanced focus states for keyboard navigation.
+   Base: 5px circle; Hover/Active: 7px; Focus: 8px with glow ring.
+   Guarantees ≥ 3px visible indicator for WCAG 2.1 §2.4.7 (AA).
+────────────────────────────────────────────────────────────────────────── */
 .data-point {
   fill: var(--chart-line);
   stroke: var(--chart-point-stroke);
-  stroke-width: 2px;
+  stroke-width: 2.5px;
   cursor: pointer;
-  transition: r 0.2s ease, fill 0.2s ease, stroke 0.2s ease;
+  transition: r 0.2s ease, fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
   outline: none;
 }
 
 .data-point:hover,
 .data-point.active {
-  r: 6.5px;
-  fill: var(--color-surface-card);
-  stroke: var(--color-focus-ring);
-  stroke-width: 3px;
-}
-
-/* Accessible focus ring on data point */
-.data-point:focus-visible,
-.data-point.focused {
   r: 7px;
   fill: var(--color-surface-card);
   stroke: var(--color-focus-ring);
   stroke-width: 3px;
-  filter: drop-shadow(0 0 4px var(--color-focus-ring));
+  filter: drop-shadow(0 0 2px var(--focus-ring-halo));
 }
 
+/* ── Keyboard focus state: enhanced visibility ────────────────────────── */
+.data-point:focus-visible,
+.data-point.focused {
+  r: 8px;
+  fill: var(--color-surface-card);
+  stroke: var(--color-focus-ring);
+  stroke-width: 4px;
+  filter: drop-shadow(0 0 6px var(--focus-ring-halo)) 
+          drop-shadow(0 0 12px var(--focus-ring-halo));
+}
+
+/* ── Unified tooltip styling with typography tokens ─────────────────────────
+   Consistent sizing and hierarchy for all tooltip text elements.
+────────────────────────────────────────────────────────────────────────── */
 .tooltip {
   pointer-events: none;
-  transition: transform 0.15s ease-out;
+  transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+  opacity: 1;
 }
 
 .tooltip-bg {
   fill: var(--chart-tooltip-bg);
   stroke: var(--color-focus-ring);
-  stroke-width: 1.5px;
+  stroke-width: 2px;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
 }
 
+/* Series name: small, muted, uppercase for hierarchy */
+.tooltip-series {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  fill: var(--color-text-muted);
+}
+
+/* Revenue value: large, bold, primary emphasis */
 .tooltip-text {
   fill: var(--color-text-primary);
-  font-size: 13px;
-  font-weight: 700;
-  font-family: var(--font-family-body, sans-serif);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  font-family: var(--font-family-body);
 }
 
+/* Date: small, muted, supporting detail */
 .tooltip-date {
   fill: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 500;
-  font-family: var(--font-family-body, sans-serif);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  font-family: var(--font-family-body);
 }
 
 /* Reduced Motion Support */
@@ -331,9 +399,42 @@
 
 /* Enhanced tooltip styles for multi-series */
 .tooltip-series {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
   fill: var(--color-text-muted);
+}
+
+/* ── Responsive axis label handling ────────────────────────────────────────
+   Prevent label collisions on narrow viewports and dense data.
+────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .axis-label--y {
+    font-size: var(--text-sm);
+  }
+  
+  .axis-label--x {
+    font-size: 10px;
+  }
+  
+  /* Truncate long currency values on mobile */
+  .axis-label--y {
+    max-width: 45px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 480px) {
+  .axis-label--x {
+    font-size: 9px;
+  }
+  
+  .tooltip {
+    transform: scale(0.9);
+    transform-origin: center top;
+  }
 }
 
 /* Enhanced line styles */
@@ -351,6 +452,28 @@
 
 .data-point--hidden {
   cursor: default;
+}
+
+/* ── Comparison period overlay (for future enhancement) ─────────────────────
+   Ready for displaying comparison periods with shaded background.
+────────────────────────────────────────────────────────────────────────── */
+.comparison-overlay {
+  fill: var(--color-brand-glow);
+  opacity: 0.12;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.comparison-overlay--active {
+  opacity: 0.24;
+}
+
+.comparison-label {
+  fill: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
 }
 
 /* Reduced Motion Support for Legend */
