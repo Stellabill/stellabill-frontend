@@ -42,6 +42,19 @@ const MOCK_PLAN_REVENUE: PlanRevenueSlice[] = [
   { planId: 'enterprise', planName: 'Enterprise', revenue: 5000, previousRevenue: 4200 },
 ];
 
+/** Mock 30-day series for KPI sparklines until /api/merchant/metrics is wired. */
+const MOCK_MRR_SERIES = [
+  39.1, 39.4, 39.2, 39.8, 40.1, 40.0, 40.5, 40.3, 40.9, 41.2, 41.0, 41.6,
+  41.4, 41.9, 42.2, 42.0, 42.5, 42.3, 42.8, 42.6, 43.1, 42.9, 43.4, 43.2,
+  43.7, 43.5, 44.0, 44.2, 44.0, 44.5,
+].map((k) => Math.round(k * 1000));
+
+const MOCK_ACTIVE_SUBS_SERIES = [
+  1.18, 1.19, 1.19, 1.2, 1.21, 1.2, 1.22, 1.22, 1.23, 1.24, 1.23, 1.25,
+  1.25, 1.26, 1.26, 1.27, 1.28, 1.27, 1.28, 1.29, 1.29, 1.3, 1.3, 1.31,
+  1.31, 1.32, 1.32, 1.33, 1.33, 1.34,
+].map((k) => Math.round(k * 1000));
+
 /** Human-readable widget labels for the live-region summary banner. */
 const WIDGET_LABELS: Record<WidgetId, string> = {
   kpi_active_subscriptions: 'Active Subscriptions',
@@ -298,6 +311,10 @@ export default function Dashboard() {
           trend="up"
           icon={<Users size={20} />}
           helpText={t('dashboard.kpis.activeSubscriptionsHelp')}
+          sparklineData={MOCK_ACTIVE_SUBS_SERIES}
+          target={1500}
+          targetLabel={t('dashboard.kpis.targetLabel')}
+          targetProgress={86}
           loading={w.kpi_active_subscriptions.status === 'loading'}
           error={kpiError('kpi_active_subscriptions')}
           isOfflineError={kpiOffline('kpi_active_subscriptions')}
@@ -311,7 +328,10 @@ export default function Dashboard() {
           trend="up"
           icon={<TrendingUp size={20} />}
           helpText={t('dashboard.kpis.mrrHelp')}
-          helpTermId="mrr"
+          sparklineData={MOCK_MRR_SERIES}
+          target={50000}
+          targetLabel={t('dashboard.kpis.targetLabel')}
+          targetProgress={85}
           loading={w.kpi_mrr.status === 'loading'}
           error={kpiError('kpi_mrr')}
           isOfflineError={kpiOffline('kpi_mrr')}
