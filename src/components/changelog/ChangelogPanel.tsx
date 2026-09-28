@@ -263,4 +263,51 @@ export default function ChangelogPanel({ isOpen, onOpenChange }: ChangelogPanelP
           ))}
         </div>
 
-    
+        {/* Entry list, grouped by date */}
+        <div className="changelog-entries">
+          {sortedDates.length === 0 ? (
+            <div className="changelog-empty">
+              <Sparkles size={20} className="changelog-empty__icon" aria-hidden="true" />
+              <p className="changelog-empty__text">No entries for this area yet.</p>
+            </div>
+          ) : (
+            sortedDates.map((date) => (
+              <section key={date} className="changelog-group">
+                <h3 className="changelog-group__date">{formatDate(date)}</h3>
+                {(groupedEntries.get(date) ?? []).map((entry) => (
+                  <article
+                    key={entry.id}
+                    className={`changelog-entry${
+                      unreadIds.includes(entry.id) ? ' changelog-entry--unread' : ''
+                    }`}
+                  >
+                    <div className="changelog-entry__top">
+                      <h4 className="changelog-entry__title">{entry.title}</h4>
+                      <span
+                        className={`changelog-entry__area changelog-entry__area--${entry.area}`}
+                      >
+                        {AREA_LABELS[entry.area]}
+                      </span>
+                    </div>
+                    <p className="changelog-entry__desc">{entry.description}</p>
+                  </article>
+                ))}
+              </section>
+            ))
+          )}
+        </div>
+
+        {/* Subscribe-to-email footer */}
+        <div className="changelog-footer">
+          <p className="changelog-footer__text">Prefer updates in your inbox?</p>
+          <a
+            className="changelog-footer__link"
+            href="mailto:updates@stellabill.io?subject=Subscribe%20to%20email%20updates"
+          >
+            <Mail size={12} aria-hidden="true" /> Subscribe to email updates
+          </a>
+        </div>
+      </div>
+    </>
+  );
+}

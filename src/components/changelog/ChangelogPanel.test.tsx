@@ -22,7 +22,7 @@ describe("ChangelogPanel", () => {
 
   it("shows an unread badge with count", () => {
     render(<ChangelogPanel isOpen={true} onOpenChange={vi.fn()} />);
-    expect(screen.getByText(/unread updates/i)).toBeTruthy();
+    expect(screen.getByLabelText(/unread updates/i)).toBeTruthy();
   });
 
   it("renders changelog entries grouped by date", () => {
