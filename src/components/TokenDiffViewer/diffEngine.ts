@@ -271,3 +271,25 @@ export function formatChangelog(
 export function isColor(value: string): boolean {
   return parseHex(value) !== null;
 }
+
+/**
+ * Narrowing helper: returns the `AddedToken` payload when the diff result
+ * contains exactly one added token, otherwise `null`.
+ *
+ * This makes the "added token" success/failure contract explicit and
+ * deterministic for callers that previously had to inspect `diff.added`
+ * manually (and could silently mis-handle the empty case).
+ */
+export function getSingleAddedToken(diff: DiffResult): AddedToken | null {
+  if (diff.added.length !== 1) return null;
+  return diff.added[0];
+}
+
+/**
+ * Narrowing helper: returns the `AddedToken` with the given name when it
+ * exists in the diff result, otherwise `null`.
+ */
+export function findAddedToken(diff: DiffResult, name: string): AddedToken | null {
+  const match = diff.added.find((t) => t.name === name);
+  return match ?? null;
+}

@@ -111,6 +111,21 @@ describe('parseHex', () => {
   it('returns null for a hex string that is too long (9 chars)', () => {
     expect(parseHex('#aabbccdde')).toBeNull();
   });
+
+  it('regression: failure path returns null (not undefined) for invalid input', () => {
+    // Guards the `if (!m) return null;` branch at diffEngine.ts:65
+    const result = parseHex('not-a-color');
+    expect(result).toBeNull();
+    expect(result).not.toBeUndefined();
+  });
+
+  it('regression: boundary — exactly 5 hex digits is rejected', () => {
+    expect(parseHex('#abcde')).toBeNull();
+  });
+
+  it('regression: boundary — exactly 7 hex digits is rejected', () => {
+    expect(parseHex('#aabbccd')).toBeNull();
+  });
 });
 
 /* ════════════════════════════════════════════
