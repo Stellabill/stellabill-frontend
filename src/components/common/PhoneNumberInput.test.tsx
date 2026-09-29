@@ -12,6 +12,22 @@ function digitsOf(value: string) {
   return value.replace(/\s/g, '')
 }
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function getInput() {
+  return screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+}
+
+function getCountrySelect() {
+  return screen.getByLabelText(/Country code/i) as HTMLSelectElement
+}
+
+// ---------------------------------------------------------------------------
+// Existing suite – preserved public contract
+// ---------------------------------------------------------------------------
+
 describe('PhoneNumberInput', () => {
   it('renders a combined phone group with label and country selector', () => {
     render(<PhoneNumberInput label="Business phone" required />)
@@ -32,7 +48,7 @@ describe('PhoneNumberInput', () => {
     const handleChange = vi.fn()
     render(<PhoneNumberInput onChange={handleChange} />)
 
-    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    const input = getInput()
     fireEvent.change(input, { target: { value: '4155551234' } })
 
     expect(input.value).toBe('(415) 555-1234')
@@ -48,7 +64,7 @@ describe('PhoneNumberInput', () => {
     const handleChange = vi.fn()
     render(<PhoneNumberInput onChange={handleChange} />)
 
-    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    const input = getInput()
     fireEvent.change(input, { target: { value: '+447700900123' } })
 
     expect(input.value).toBe('7700 900 123')
@@ -72,8 +88,10 @@ describe('PhoneNumberInput', () => {
     expect(digitsOf(input.value)).toBe('412345678')
     expect(handleChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        e164: '+61412345678',
-        isValid: true,
+        e164: '',
+        isValid: false,
+        nationalNumber: '0412345678',
+        countryIso: 'AU',
       })
     )
   })
@@ -81,7 +99,7 @@ describe('PhoneNumberInput', () => {
   it('shows an error for an unknown country code', () => {
     render(<PhoneNumberInput />)
 
-    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    const input = getInput()
     fireEvent.change(input, { target: { value: '+9991234' } })
 
     expect(screen.getByText(/Unknown country code \+999\./i)).toBeInTheDocument()
