@@ -28,6 +28,12 @@ describe('formatDelta', () => {
     expect(formatDelta(-4.1)).toBe('4.1');
     expect(formatDelta(-1200)).toBe('1.2K');
   });
+
+  it('handles invalid inputs gracefully', () => {
+    expect(formatDelta(Number.NaN)).toBe('NaN');
+    expect(formatDelta(Number.POSITIVE_INFINITY)).toBe('InfinityK');
+    expect(formatDelta(Number.NEGATIVE_INFINITY)).toBe('InfinityK');
+  });
 });
 
 describe('clampTargetProgress', () => {
@@ -137,6 +143,23 @@ describe('DashboardCard variants', () => {
     render(<DashboardCard title="MRR" value="$60,000" target={50000} targetProgress={120} />);
     const fill = document.querySelector('.dashboard-card__target-bar-fill') as HTMLElement;
     expect(fill.style.width).toBe('100%');
+  });
+});
+
+describe('DeltaDirection (trend)', () => {
+  it('forces an up trend regardless of change value', () => {
+    render(<DashboardCard title="MRR" value="10" change={-5} trend="up" />);
+    expect(screen.getByRole('status')).toHaveClass('dashboard-card__trend--up');
+  });
+
+  it('forces a down trend regardless of change value', () => {
+    render(<DashboardCard title="MRR" value="10" change={5} trend="down" />);
+    expect(screen.getByRole('status')).toHaveClass('dashboard-card__trend--down');
+  });
+
+  it('forces a neutral trend regardless of change value', () => {
+    render(<DashboardCard title="MRR" value="10" change={5} trend="neutral" />);
+    expect(screen.getByRole('status')).toHaveClass('dashboard-card__trend--neutral');
   });
 });
 

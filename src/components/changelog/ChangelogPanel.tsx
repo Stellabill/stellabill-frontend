@@ -264,3 +264,40 @@ export default function ChangelogPanel({ isOpen, onOpenChange }: ChangelogPanelP
         </div>
 
     
+
+        {/* Entries */}
+        <div className="changelog-entries">
+          {sortedDates.length === 0 ? (
+            <p className="changelog-empty">No entries for this area.</p>
+          ) : (
+            sortedDates.map((date) => (
+              <section key={date} className="changelog-group">
+                <h3 className="changelog-group__date">{formatDate(date)}</h3>
+                {groupedEntries.get(date)!.map((entry) => (
+                  <article
+                    key={entry.id}
+                    className={`changelog-entry${unreadIds.includes(entry.id) ? ' changelog-entry--unread' : ''}`}
+                  >
+                    <span className={`changelog-entry__area-badge changelog-entry__area-badge--${entry.area}`}>
+                      {AREA_LABELS[entry.area]}
+                    </span>
+                    <h4 className="changelog-entry__title">{entry.title}</h4>
+                    <p className="changelog-entry__description">{entry.description}</p>
+                  </article>
+                ))}
+              </section>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="changelog-footer">
+          <Mail size={14} aria-hidden="true" />
+          <a href="mailto:updates@stellarbill.com" className="changelog-footer__link">
+            Subscribe to email updates
+          </a>
+        </div>
+      </div>
+    </>
+  );
+}

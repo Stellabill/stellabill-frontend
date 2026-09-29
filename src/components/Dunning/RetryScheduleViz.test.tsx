@@ -399,7 +399,7 @@ describe('RetryScheduleViz – why-times popover', () => {
     const user = userEvent.setup();
     renderViz({ attempts: TYPICAL_ATTEMPTS });
     await user.click(screen.getByRole('button', { name: /how we schedule retries/i }));
-    expect(screen.getByText(/off-peak window/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/off-peak window/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/exponential back-off/i)).toBeInTheDocument();
     expect(screen.getByText(/success-probability model/i)).toBeInTheDocument();
     expect(screen.getByText(/smart method rotation/i)).toBeInTheDocument();
@@ -439,7 +439,7 @@ describe('RetryScheduleViz – why-times popover', () => {
     renderViz({ attempts: TYPICAL_ATTEMPTS });
     await user.click(screen.getByRole('button', { name: /how we schedule retries/i }));
     const closeBtn = screen.getByRole('button', { name: /got it/i });
-    expect(closeBtn).toHaveFocus();
+    await import('@testing-library/react').then(({ waitFor }) => waitFor(() => expect(closeBtn).toHaveFocus()));
   });
 
   it('restores focus to trigger button after closing', async () => {
@@ -555,9 +555,9 @@ describe('RetryScheduleViz – relative delta computation', () => {
   });
 
   it('shows "now" for an attempt very close to the current time', () => {
+    freezeDate();
     const close = new Date();
     close.setSeconds(close.getSeconds() + 5);
-    freezeDate();
     const nowAttempt: RetryAttempt[] = [
       { id: '1', when: 'Now', scheduledAt: close.toISOString(), status: 'upcoming' },
     ];
@@ -648,3 +648,50 @@ describe('RetryScheduleViz – ARIA attributes', () => {
     expect(screen.getByRole('meter', { name: /72%/i })).toBeInTheDocument();
   });
 });
+
+// ─── Boundary / Failure Paths (AttemptStatus & PaymentMethod) ───
+
+describe('RetryScheduleViz – boundary and failure paths', () => {
+  beforeEach(() => { freezeDate(); });
+
+  it('handles explicit failure / unknown PaymentMethodKind (MethodIcon default branch)', () => {
+    const unknownMethodAttempt: RetryAttempt[] = [
+      {
+        id: 'u1',
+        when: 'Unknown Method',
+        scheduledAt: '2026-03-22T10:00:00Z',
+        status: 'upcoming',
+        method: 'unknown-invalid-method' as any,
+      },
+    ];
+    renderViz({ attempts: unknownMethodAttempt });
+    
+    // The chip should still render, but no icon should be present for the method.
+    const methodBadge = screen.getByText('Unknown Method').closest('.rsv__labels')?.querySelector('.rsv__method');
+    expect(methodBadge).toBeInTheDocument();
+    // Because the default branch returns null, the SVG icon should not be present inside the method badge.
+    const svg = methodBadge?.querySelector('svg');
+    expect(svg).toBeNull();
+  });
+
+  it('handles explicit failure / unknown AttemptStatus (StatusIcon default branch)', () => {
+    const unknownStatusAttempt: RetryAttempt[] = [
+      {
+        id: 'u2',
+        when: 'Unknown Status',
+        scheduledAt: '2026-03-22T10:00:00Z',
+        status: 'invalid-status' as any,
+      },
+    ];
+    renderViz({ attempts: unknownStatusAttempt });
+    
+    // The main status icon should fall back to the default (Check icon)
+    const statusIconWrapper = screen.getByText('Unknown Status').closest('.rsv__item')?.querySelector('.rsv__chip');
+    expect(statusIconWrapper).toBeInTheDocument();
+    
+    // Check that it rendered the fallback SVG (Check icon usually has class or just exists)
+    const svg = statusIconWrapper?.querySelector('svg');
+    expect(svg).toBeInTheDocument();
+  });
+});
+

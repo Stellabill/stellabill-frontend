@@ -247,4 +247,50 @@ describe("RevenueSplitByPlanPanel", () => {
       screen.getByLabelText(/pro: 50 percent of revenue/i),
     ).toBeInTheDocument();
   });
+
+  describe("RevenueSplitView and RevenueSplitByPlanPanelProps edge cases", () => {
+    it("handles invalid inputs robustly (negative revenue, missing currency)", () => {
+      const invalidPlans = [
+        { planId: "p1", planName: "P1", revenue: -100, previousRevenue: 0 },
+        { planId: "p2", planName: "P2", revenue: 200, previousRevenue: 0, currency: undefined as any },
+      ];
+      render(<RevenueSplitByPlanPanel plans={invalidPlans} defaultView="table" />);
+      expect(screen.getByText("P2")).toBeInTheDocument();
+      // Uses USDC fallback
+      expect(screen.getAllByText(/USDC/i).length).toBeGreaterThan(0);
+    });
+
+    it("verifies RevenueSplitView state transitions explicitly", () => {
+      const props = { plans: fourPlans };
+      
+      render(<RevenueSplitByPlanPanel {...props} defaultView="stacked" />);
+      expect(screen.getByTestId("revenue-split-by-plan")).toHaveAttribute("data-effective-view", "stacked");
+      
+      fireEvent.click(screen.getByRole("button", { name: /ranked list/i }));
+      expect(screen.getByTestId("revenue-split-by-plan")).toHaveAttribute("data-effective-view", "ranked");
+      
+      fireEvent.click(screen.getByRole("button", { name: /data table/i }));
+      expect(screen.getByTestId("revenue-split-by-plan")).toHaveAttribute("data-effective-view", "table");
+    });
+
+    it("handles matchMedia absence gracefully (SSR/server environment)", () => {
+      const originalMatchMedia = window.matchMedia;
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        configurable: true,
+        value: undefined
+      });
+      
+      const { unmount } = render(<RevenueSplitByPlanPanel plans={fourPlans} />);
+      // Should render without crashing, defaulting to false for isNarrow
+      expect(screen.getByTestId("revenue-split-by-plan")).toHaveAttribute("data-effective-view", "stacked");
+      unmount();
+      
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        configurable: true,
+        value: originalMatchMedia
+      });
+    });
+  });
 });

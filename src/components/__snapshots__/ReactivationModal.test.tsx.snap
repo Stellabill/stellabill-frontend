@@ -177,9 +177,9 @@ exports[`ReactivationModal – snapshot > matches snapshot for deleted plan 1`] 
             class="reactivation-date-opt-sub"
           >
             <time
-              datetime="2026-07-28"
+              datetime="2026-09-29"
             >
-              Jul 28, 2026
+              Sep 29, 2026
             </time>
           </span>
         </button>
@@ -201,9 +201,9 @@ exports[`ReactivationModal – snapshot > matches snapshot for deleted plan 1`] 
              ·
              
             <time
-              datetime="2026-08-01"
+              datetime="2026-10-01"
             >
-              Aug 1, 2026
+              Oct 1, 2026
             </time>
           </span>
         </button>
@@ -258,7 +258,7 @@ exports[`ReactivationModal – snapshot > matches snapshot for deleted plan 1`] 
           />
         </svg>
         <p>
-          Access and billing begin today, Jul 28, 2026.
+          Access and billing begin today, Sep 29, 2026.
         </p>
       </div>
     </div>
@@ -471,9 +471,9 @@ exports[`ReactivationModal – snapshot > matches snapshot for expired window 1`
             class="reactivation-date-opt-sub"
           >
             <time
-              datetime="2026-07-28"
+              datetime="2026-09-29"
             >
-              Jul 28, 2026
+              Sep 29, 2026
             </time>
           </span>
         </button>
@@ -495,9 +495,9 @@ exports[`ReactivationModal – snapshot > matches snapshot for expired window 1`
              ·
              
             <time
-              datetime="2026-08-01"
+              datetime="2026-10-01"
             >
-              Aug 1, 2026
+              Oct 1, 2026
             </time>
           </span>
         </button>
@@ -552,7 +552,7 @@ exports[`ReactivationModal – snapshot > matches snapshot for expired window 1`
           />
         </svg>
         <p>
-          Access and billing begin today, Jul 28, 2026.
+          Access and billing begin today, Sep 29, 2026.
         </p>
       </div>
     </div>
@@ -719,9 +719,9 @@ exports[`ReactivationModal – snapshot > matches snapshot for standard open sta
             class="reactivation-date-opt-sub"
           >
             <time
-              datetime="2026-07-28"
+              datetime="2026-09-29"
             >
-              Jul 28, 2026
+              Sep 29, 2026
             </time>
           </span>
         </button>
@@ -742,9 +742,9 @@ exports[`ReactivationModal – snapshot > matches snapshot for standard open sta
              ·
              
             <time
-              datetime="2026-08-15"
+              datetime="2026-10-15"
             >
-              Aug 15, 2026
+              Oct 15, 2026
             </time>
           </span>
         </button>
@@ -798,7 +798,7 @@ exports[`ReactivationModal – snapshot > matches snapshot for standard open sta
           />
         </svg>
         <p>
-          Access and billing begin today, Jul 28, 2026.
+          Access and billing begin today, Sep 29, 2026.
         </p>
       </div>
     </div>

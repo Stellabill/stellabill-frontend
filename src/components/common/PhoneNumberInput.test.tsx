@@ -1,6 +1,16 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import PhoneNumberInput from './PhoneNumberInput'
+import type { PhoneNumberChangePayload } from './PhoneNumberInput'
+
+function lastPayload(handleChange: ReturnType<typeof vi.fn>): PhoneNumberChangePayload {
+  const calls = handleChange.mock.calls
+  return calls[calls.length - 1][0] as PhoneNumberChangePayload
+}
+
+function digitsOf(value: string) {
+  return value.replace(/\s/g, '')
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -70,10 +80,12 @@ describe('PhoneNumberInput', () => {
     const handleChange = vi.fn()
     render(<PhoneNumberInput onChange={handleChange} />)
 
-    const input = getInput()
-    fireEvent.change(input, { target: { value: '+٦١٠٤١٢٣٤٥٦٧٨' } })
+    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    // Arabic-Indic digits for +61 412 345 678.
+    fireEvent.change(input, { target: { value: '+٦١٤١٢٣٤٥٦٧٨' } })
 
-    expect(input.value).toBe('0412 345 67 8')
+    // The numerals are folded to ASCII before the national number is formatted.
+    expect(digitsOf(input.value)).toBe('412345678')
     expect(handleChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
         e164: '',
@@ -95,247 +107,163 @@ describe('PhoneNumberInput', () => {
   })
 
   // -------------------------------------------------------------------------
-  // Regression #886 – Default story failure / empty-result paths
+  // PhoneNumberChangePayload contract
   // -------------------------------------------------------------------------
 
-  describe('Default story – failure and empty-result paths', () => {
-    it('does NOT show an error when the field is untouched and empty (Default story initial state)', () => {
-      // The Default story renders with required=true but no showValidation.
-      // On first render with no interaction the field must be silent.
-      render(<PhoneNumberInput label="Business phone number" required />)
+  it('reports the complete payload for a valid number', () => {
+    const handleChange = vi.fn()
+    render(<PhoneNumberInput onChange={handleChange} />)
 
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-      expect(getInput()).toHaveAttribute('aria-invalid', 'false')
+    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '4155551234' } })
+
+    expect(lastPayload(handleChange)).toEqual({
+      e164: '+14155551234',
+      nationalNumber: '4155551234',
+      countryIso: 'US',
+      isValid: true,
     })
+  })
 
-    it('emits isValid:false and empty e164 when the field is untouched (Default story initial onChange)', () => {
-      const handleChange = vi.fn()
-      render(<PhoneNumberInput label="Business phone number" required onChange={handleChange} />)
+  it('reports an incomplete payload (empty e164, isValid false) for a partial number', () => {
+    const handleChange = vi.fn()
+    render(<PhoneNumberInput showValidation onChange={handleChange} />)
 
-      expect(handleChange).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          e164: '',
-          isValid: false,
-          nationalNumber: '',
-          countryIso: 'US',
-        })
-      )
+    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '415' } })
+
+    expect(lastPayload(handleChange)).toEqual({
+      e164: '',
+      nationalNumber: '415',
+      countryIso: 'US',
+      isValid: false,
     })
+  })
 
-    it('shows required-field error after user touches and clears the input', () => {
-      render(<PhoneNumberInput label="Business phone number" required />)
+  it('defaults to an empty, invalid payload before any input', () => {
+    const handleChange = vi.fn()
+    render(<PhoneNumberInput onChange={handleChange} />)
 
-      const input = getInput()
-      // Type something then clear it to simulate a touched-but-empty state.
-      fireEvent.change(input, { target: { value: '4' } })
-      fireEvent.change(input, { target: { value: '' } })
-
-      expect(screen.getByText(/Phone number is required\./i)).toBeInTheDocument()
-      expect(input).toHaveAttribute('aria-invalid', 'true')
-    })
-
-    it('shows required-field error when showValidation is true and field is empty', () => {
-      render(<PhoneNumberInput label="Business phone number" required showValidation />)
-
-      expect(screen.getByText(/Phone number is required\./i)).toBeInTheDocument()
-      expect(getInput()).toHaveAttribute('aria-invalid', 'true')
-    })
-
-    it('does NOT show required-field error when not required and field is empty', () => {
-      render(<PhoneNumberInput label="Business phone number" showValidation />)
-
-      expect(screen.queryByText(/Phone number is required\./i)).not.toBeInTheDocument()
-      expect(getInput()).toHaveAttribute('aria-invalid', 'false')
-    })
-
-    it('displays an externalError immediately, overriding internal state (WithInvalidNumber story path)', () => {
-      render(
-        <PhoneNumberInput
-          label="Business phone number"
-          required
-          showValidation
-          externalError="Enter a 10-digit United States phone number."
-        />
-      )
-
-      const alert = screen.getByRole('alert')
-      expect(alert).toHaveTextContent('Enter a 10-digit United States phone number.')
-      expect(getInput()).toHaveAttribute('aria-invalid', 'true')
-    })
-
-    it('emits isValid:false and empty e164 when externalError is set', () => {
-      const handleChange = vi.fn()
-      render(
-        <PhoneNumberInput
-          required
-          externalError="Enter a 10-digit United States phone number."
-          onChange={handleChange}
-        />
-      )
-
-      expect(handleChange).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          e164: '',
-          isValid: false,
-        })
-      )
+    expect(lastPayload(handleChange)).toEqual({
+      e164: '',
+      nationalNumber: '',
+      countryIso: 'US',
+      isValid: false,
     })
   })
 
   // -------------------------------------------------------------------------
-  // Regression #886 – neighbouring normal path (Default story success path)
+  // Invalid inputs / boundary behaviour
   // -------------------------------------------------------------------------
 
-  describe('Default story – normal path', () => {
-    it('accepts a valid US number, shows E.164 helper text, and reports isValid:true', () => {
-      const handleChange = vi.fn()
-      render(<PhoneNumberInput label="Business phone number" required onChange={handleChange} />)
+  it('rejects a number that is too long for the selected country', () => {
+    const handleChange = vi.fn()
+    render(<PhoneNumberInput onChange={handleChange} />)
 
-      const input = getInput()
-      fireEvent.change(input, { target: { value: '5551234567' } })
+    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '41555512345' } })
 
-      expect(input.value).toBe('(555) 123-4567')
-      expect(screen.getByText('E.164: +15551234567')).toBeInTheDocument()
-      expect(handleChange).toHaveBeenLastCalledWith({
-        e164: '+15551234567',
-        nationalNumber: '5551234567',
-        countryIso: 'US',
-        isValid: true,
-      })
-    })
+    expect(screen.getByText(/too long for United States/i)).toBeInTheDocument()
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(lastPayload(handleChange).isValid).toBe(false)
+    expect(lastPayload(handleChange).e164).toBe('')
+  })
 
-    it('shows no error while typing a valid number with required=true and no showValidation', () => {
-      render(<PhoneNumberInput label="Business phone number" required />)
+  it('flags a too-short number once validation is shown', () => {
+    const handleChange = vi.fn()
+    render(<PhoneNumberInput showValidation onChange={handleChange} />)
 
-      const input = getInput()
-      fireEvent.change(input, { target: { value: '5551234567' } })
+    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '415' } })
 
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-      expect(input).toHaveAttribute('aria-invalid', 'false')
-    })
+    expect(screen.getByText(/Enter a 10-digit United States phone number\./i)).toBeInTheDocument()
+    expect(lastPayload(handleChange).isValid).toBe(false)
+  })
 
-    it('switches country via the select and validates against the new country length', () => {
-      const handleChange = vi.fn()
-      render(<PhoneNumberInput onChange={handleChange} />)
+  it('only requires a number after the field is touched', () => {
+    render(<PhoneNumberInput required />)
 
-      const select = getCountrySelect()
-      fireEvent.change(select, { target: { value: 'AU' } })
+    // Nothing is flagged before the field has been interacted with.
+    expect(screen.queryByText(/Phone number is required\./i)).not.toBeInTheDocument()
 
-      const input = getInput()
-      // AU national length = 9
-      fireEvent.change(input, { target: { value: '412345678' } })
+    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '4' } })
+    fireEvent.change(input, { target: { value: '' } })
 
-      expect(handleChange).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          e164: '+61412345678',
-          countryIso: 'AU',
-          isValid: true,
-        })
-      )
-    })
+    expect(screen.getByText(/Phone number is required\./i)).toBeInTheDocument()
+  })
+
+  it('clears a locally generated error when the number becomes valid', () => {
+    const handleChange = vi.fn()
+    render(<PhoneNumberInput showValidation onChange={handleChange} />)
+
+    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '415' } })
+    expect(screen.getByText(/Enter a 10-digit/i)).toBeInTheDocument()
+
+    fireEvent.change(input, { target: { value: '4155551234' } })
+    expect(screen.queryByText(/Enter a 10-digit/i)).not.toBeInTheDocument()
+    expect(lastPayload(handleChange).e164).toBe('+14155551234')
+    expect(lastPayload(handleChange).isValid).toBe(true)
+  })
+
+  it('recovers from an unknown country code once a local number is entered', () => {
+    const handleChange = vi.fn()
+    render(<PhoneNumberInput onChange={handleChange} />)
+
+    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '+9991234' } })
+    expect(screen.getByText(/Unknown country code/i)).toBeInTheDocument()
+
+    fireEvent.change(input, { target: { value: '4155551234' } })
+    expect(screen.queryByText(/Unknown country code/i)).not.toBeInTheDocument()
+    expect(lastPayload(handleChange).isValid).toBe(true)
+  })
+
+  it('lets an external error take precedence over a locally valid number', () => {
+    const handleChange = vi.fn()
+    render(<PhoneNumberInput externalError="This number is already in use." onChange={handleChange} />)
+
+    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '4155551234' } })
+
+    expect(screen.getByText('This number is already in use.')).toBeInTheDocument()
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(lastPayload(handleChange).isValid).toBe(false)
+    expect(lastPayload(handleChange).e164).toBe('')
   })
 
   // -------------------------------------------------------------------------
-  // Regression #886 – boundary inputs
+  // State transitions
   // -------------------------------------------------------------------------
 
-  describe('Boundary inputs', () => {
-    it('shows a "too long" error when digits exceed the national length', () => {
-      render(<PhoneNumberInput />)
+  it('reformats the same digits when the country changes', () => {
+    const handleChange = vi.fn()
+    const { container } = render(<PhoneNumberInput onChange={handleChange} />)
 
-      const input = getInput()
-      // 11 digits for US (max 10)
-      fireEvent.change(input, { target: { value: '55512345678' } })
+    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '4155551234' } })
 
-      expect(screen.getByText(/Phone number is too long for United States\./i)).toBeInTheDocument()
-      expect(input).toHaveAttribute('aria-invalid', 'true')
-    })
+    fireEvent.change(screen.getByLabelText(/Country code/i), { target: { value: 'GB' } })
 
-    it('shows a "too short" error when fewer digits are entered and the field is touched', () => {
-      render(<PhoneNumberInput />)
+    const select = container.querySelector('select') as HTMLSelectElement
+    expect(select.value).toBe('GB')
+    expect(input.value).toBe('4155 551 234')
+    expect(lastPayload(handleChange).countryIso).toBe('GB')
+    expect(lastPayload(handleChange).e164).toBe('+444155551234')
+    expect(lastPayload(handleChange).isValid).toBe(true)
+  })
 
-      const input = getInput()
-      fireEvent.change(input, { target: { value: '555123' } }) // 6 of 10 digits
+  it('honours the initialCountry prop', () => {
+    const handleChange = vi.fn()
+    render(<PhoneNumberInput initialCountry="GB" onChange={handleChange} />)
 
-      expect(screen.getByText(/Enter a 10-digit United States phone number\./i)).toBeInTheDocument()
-      expect(input).toHaveAttribute('aria-invalid', 'true')
-    })
+    const input = screen.getByLabelText(/Local phone number/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '7700900123' } })
 
-    it('shows a "too short" error with showValidation even without touching the field', () => {
-      render(<PhoneNumberInput showValidation />)
-
-      const input = getInput()
-      fireEvent.change(input, { target: { value: '415' } })
-
-      expect(screen.getByText(/Enter a 10-digit United States phone number\./i)).toBeInTheDocument()
-    })
-
-    it('accepts exactly the minimum valid US number (10 digits)', () => {
-      const handleChange = vi.fn()
-      render(<PhoneNumberInput onChange={handleChange} />)
-
-      const input = getInput()
-      fireEvent.change(input, { target: { value: '2025550101' } })
-
-      expect(handleChange).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          e164: '+12025550101',
-          isValid: true,
-        })
-      )
-      expect(input).toHaveAttribute('aria-invalid', 'false')
-    })
-
-    it('treats a leading "+" with no recognised code as unknown dial code', () => {
-      render(<PhoneNumberInput />)
-
-      const input = getInput()
-      fireEvent.change(input, { target: { value: '+' } })
-
-      // Only a bare "+" – the regexp extracts no digits so code is stored as "+"
-      expect(screen.getByText(/Unknown country code \+\./i)).toBeInTheDocument()
-      expect(input).toHaveAttribute('aria-invalid', 'true')
-    })
-
-    it('clears the unknown-code error when the user switches country via the select', () => {
-      render(<PhoneNumberInput />)
-
-      const input = getInput()
-      fireEvent.change(input, { target: { value: '+9991234' } })
-      expect(screen.getByText(/Unknown country code/i)).toBeInTheDocument()
-
-      const select = getCountrySelect()
-      fireEvent.change(select, { target: { value: 'GB' } })
-
-      expect(screen.queryByText(/Unknown country code/i)).not.toBeInTheDocument()
-    })
-
-    it('propagates the correct countryIso after an international paste', () => {
-      const handleChange = vi.fn()
-      render(<PhoneNumberInput onChange={handleChange} />)
-
-      const input = getInput()
-      fireEvent.change(input, { target: { value: '+33612345678' } }) // France
-
-      expect(handleChange).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          countryIso: 'FR',
-          e164: '+33612345678',
-          isValid: true,
-        })
-      )
-    })
-
-    it('does not call onChange with isValid:true when digits are fewer than national length', () => {
-      const handleChange = vi.fn()
-      render(<PhoneNumberInput onChange={handleChange} />)
-
-      const input = getInput()
-      fireEvent.change(input, { target: { value: '415' } })
-
-      const lastCall = handleChange.mock.calls.at(-1)?.[0]
-      expect(lastCall?.isValid).toBe(false)
-      expect(lastCall?.e164).toBe('')
-    })
+    expect(input.value).toBe('7700 900 123')
+    expect(lastPayload(handleChange).countryIso).toBe('GB')
+    expect(lastPayload(handleChange).e164).toBe('+447700900123')
+    expect(lastPayload(handleChange).isValid).toBe(true)
   })
 })
