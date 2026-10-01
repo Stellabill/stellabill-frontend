@@ -263,26 +263,33 @@ export default function ChangelogPanel({ isOpen, onOpenChange }: ChangelogPanelP
           ))}
         </div>
 
-    
-
-        {/* Entries */}
+{/* Entry list, grouped by date */}
         <div className="changelog-entries">
           {sortedDates.length === 0 ? (
-            <p className="changelog-empty">No entries for this area.</p>
+            <div className="changelog-empty">
+              <Sparkles size={20} className="changelog-empty__icon" aria-hidden="true" />
+              <p className="changelog-empty__text">No entries for this area yet.</p>
+            </div>
           ) : (
             sortedDates.map((date) => (
               <section key={date} className="changelog-group">
                 <h3 className="changelog-group__date">{formatDate(date)}</h3>
-                {groupedEntries.get(date)!.map((entry) => (
+                {(groupedEntries.get(date) ?? []).map((entry) => (
                   <article
                     key={entry.id}
-                    className={`changelog-entry${unreadIds.includes(entry.id) ? ' changelog-entry--unread' : ''}`}
+                    className={`changelog-entry${
+                      unreadIds.includes(entry.id) ? ' changelog-entry--unread' : ''
+                    }`}
                   >
-                    <span className={`changelog-entry__area-badge changelog-entry__area-badge--${entry.area}`}>
-                      {AREA_LABELS[entry.area]}
-                    </span>
-                    <h4 className="changelog-entry__title">{entry.title}</h4>
-                    <p className="changelog-entry__description">{entry.description}</p>
+                    <div className="changelog-entry__top">
+                      <h4 className="changelog-entry__title">{entry.title}</h4>
+                      <span
+                        className={`changelog-entry__area changelog-entry__area--${entry.area}`}
+                      >
+                        {AREA_LABELS[entry.area]}
+                      </span>
+                    </div>
+                    <p className="changelog-entry__desc">{entry.description}</p>
                   </article>
                 ))}
               </section>
@@ -290,11 +297,14 @@ export default function ChangelogPanel({ isOpen, onOpenChange }: ChangelogPanelP
           )}
         </div>
 
-        {/* Footer */}
+        {/* Subscribe-to-email footer */}
         <div className="changelog-footer">
-          <Mail size={14} aria-hidden="true" />
-          <a href="mailto:updates@stellarbill.com" className="changelog-footer__link">
-            Subscribe to email updates
+          <p className="changelog-footer__text">Prefer updates in your inbox?</p>
+          <a
+            className="changelog-footer__link"
+            href="mailto:updates@stellabill.io?subject=Subscribe%20to%20email%20updates"
+          >
+            <Mail size={12} aria-hidden="true" /> Subscribe to email updates
           </a>
         </div>
       </div>

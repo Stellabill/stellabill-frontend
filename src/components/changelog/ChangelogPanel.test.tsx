@@ -22,7 +22,7 @@ describe("ChangelogPanel", () => {
 
   it("shows an unread badge with count", () => {
     render(<ChangelogPanel isOpen={true} onOpenChange={vi.fn()} />);
-    // Badge text is a number; its aria-label carries "unread updates"
+// Badge text is a number; its aria-label carries "unread updates"
     expect(screen.getByLabelText(/unread updates/i)).toBeTruthy();
   });
 
