@@ -1,12 +1,21 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ErrorState from './ErrorState';
 
 describe('ErrorState Component', () => {
   const onRetry = vi.fn();
+  let originalNavigatorLine: boolean;
 
   beforeEach(() => {
     onRetry.mockClear();
+    originalNavigatorLine = navigator.onLine;
+  });
+
+  afterEach(() => {
+    Object.defineProperty(navigator, 'onLine', {
+      value: originalNavigatorLine,
+      configurable: true,
+    });
   });
 
   it('renders title and message correctly', () => {
@@ -60,6 +69,18 @@ describe('ErrorState Component', () => {
 
   it('shows offline messaging when type is offline', () => {
     render(<ErrorState message="Error" type="offline" />);
+    
+    expect(screen.getByText(/no internet connection/i)).toBeInTheDocument();
+    expect(screen.getByText(/please check your network settings/i)).toBeInTheDocument();
+  });
+
+  it('shows offline messaging when navigator.onLine is false', () => {
+    Object.defineProperty(navigator, 'onLine', {
+      value: false,
+      configurable: true,
+    });
+    
+    render(<ErrorState message="Error" />);
     
     expect(screen.getByText(/no internet connection/i)).toBeInTheDocument();
     expect(screen.getByText(/please check your network settings/i)).toBeInTheDocument();

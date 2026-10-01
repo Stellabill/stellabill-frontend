@@ -7,11 +7,13 @@ describe('WalletConnectModal', () => {
   const onClose = vi.fn();
   const onConnectFreighter = vi.fn();
   const onRetry = vi.fn();
+  const onConnected = vi.fn();
 
   beforeEach(() => {
     onClose.mockClear();
     onConnectFreighter.mockClear();
     onRetry.mockClear();
+    onConnected.mockClear();
     document.body.innerHTML = '';
   });
 
@@ -360,6 +362,168 @@ describe('WalletConnectModal', () => {
 
       const retryButton = screen.getByText('Try Again');
       expect(() => fireEvent.click(retryButton)).not.toThrow();
+    });
+  });
+
+  describe('Failure handling regression (issue #845)', () => {
+    it('renders nothing when isOpen is false, even with failure props (empty-result contract)', () => {
+      const { container } = render(
+        <WalletConnectModal 
+          isOpen={false} 
+          onClose={onClose} 
+          initialState="failed"
+          errorMessage="Connection rejected by user"
+          onRetry={onRetry}
+        />
+      );
+
+      // The component must return null: nothing mounts, and no error UI leaks out.
+      expect(container.childElementCount).toBe(0);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByText('Connection Failed')).not.toBeInTheDocument();
+      expect(screen.queryByText('Try Again')).not.toBeInTheDocument();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('maps initialState="failed" to the error state and renders the failure UI', () => {
+      render(
+        <WalletConnectModal 
+          isOpen={true} 
+          onClose={onClose} 
+          initialState="failed"
+          errorMessage="Connection rejected by user"
+          onRetry={onRetry}
+        />
+      );
+
+      const modal = screen.getByRole('dialog');
+      expect(screen.getByRole('heading', { name: 'Connection Failed' })).toBeInTheDocument();
+      expect(screen.getByText('Connection rejected by user')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /get help/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+      expect(modal).toHaveAttribute('aria-modal', 'true');
+      expect(modal).not.toHaveAttribute('aria-describedby');
+      expect(modal).not.toHaveAttribute('aria-busy');
+    });
+
+    it('shows the default failure message when initialState="failed" without errorMessage', () => {
+      render(
+        <WalletConnectModal 
+          isOpen={true} 
+          onClose={onClose} 
+          initialState="failed"
+        />
+      );
+
+      expect(screen.getByText(/the connection request was rejected or failed/i)).toBeInTheDocument();
+    });
+
+    it('falls back to the default failure message when errorMessage is an empty string (boundary)', () => {
+      render(
+        <WalletConnectModal 
+          isOpen={true} 
+          onClose={onClose} 
+          connectionState="error"
+          errorMessage=""
+        />
+      );
+
+      expect(screen.getByRole('heading', { name: 'Connection Failed' })).toBeInTheDocument();
+      expect(screen.getByText(/the connection request was rejected or failed/i)).toBeInTheDocument();
+    });
+
+    it('maps initialState="list" to the disconnected wallet-list state (normal path)', () => {
+      render(
+        <WalletConnectModal 
+          isOpen={true} 
+          onClose={onClose} 
+          initialState="list"
+        />
+      );
+
+      const modal = screen.getByRole('dialog');
+      expect(screen.getByRole('heading', { name: /connect your wallet/i })).toBeInTheDocument();
+      expect(screen.getByText(/sign in with your wallet/i)).toBeInTheDocument();
+      expect(modal).toHaveAttribute('aria-describedby', 'modal-description');
+      expect(modal).not.toHaveAttribute('aria-busy');
+    });
+
+    it('defaults to the disconnected state when no state props are provided (normal path)', () => {
+      render(
+        <WalletConnectModal 
+          isOpen={true} 
+          onClose={onClose} 
+        />
+      );
+
+      const modal = screen.getByRole('dialog');
+      expect(screen.getByRole('heading', { name: /connect your wallet/i })).toBeInTheDocument();
+      expect(modal).toHaveAttribute('aria-describedby', 'modal-description');
+    });
+
+    it('prefers connectionState over initialState when both are provided', () => {
+      render(
+        <WalletConnectModal 
+          isOpen={true} 
+          onClose={onClose} 
+          connectionState="error"
+          initialState="list"
+          errorMessage="state precedence check"
+        />
+      );
+
+      expect(screen.getByRole('heading', { name: 'Connection Failed' })).toBeInTheDocument();
+      expect(screen.getByText('state precedence check')).toBeInTheDocument();
+    });
+
+    it('keeps the failure UI deterministic across retry and cancel actions', () => {
+      const { rerender } = render(
+        <WalletConnectModal 
+          isOpen={true} 
+          onClose={onClose} 
+          initialState="failed"
+          onRetry={onRetry}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+      expect(onRetry).toHaveBeenCalledTimes(1);
+
+      // Failure UI remains stable (no crash, no state mutation) after retry.
+      expect(screen.getByRole('heading', { name: 'Connection Failed' })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+
+      // Once the parent closes the modal, the empty-result contract holds again.
+      rerender(
+        <WalletConnectModal 
+          isOpen={false} 
+          onClose={onClose} 
+          initialState="failed"
+          onRetry={onRetry}
+        />
+      );
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('calls onConnected alongside onConnectFreighter on the success path', () => {
+      render(
+        <WalletConnectModal 
+          isOpen={true} 
+          onClose={onClose} 
+          connectionState="disconnected"
+          onConnectFreighter={onConnectFreighter}
+          onConnected={onConnected}
+        />
+      );
+      const connectButton = screen.getAllByText('Connect').find(
+        (button) => !(button as HTMLButtonElement).disabled
+      ) as HTMLButtonElement;
+      fireEvent.click(connectButton);
+
+      expect(onConnectFreighter).toHaveBeenCalledTimes(1);
+      expect(onConnected).toHaveBeenCalledTimes(1);
     });
   });
 });

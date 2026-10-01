@@ -24,7 +24,7 @@ describe("GiftPurchaseModal", () => {
 
   describe("Rendering", () => {
     it("does not render when isOpen is false", () => {
-      render(
+      const { container } = render(
         <GiftPurchaseModal
           isOpen={false}
           onClose={mockOnClose}
@@ -34,6 +34,21 @@ describe("GiftPurchaseModal", () => {
       );
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(container.firstChild).toBeNull();
+    });
+
+    it("does not render when plan is null", () => {
+      const { container } = render(
+        <GiftPurchaseModal
+          isOpen={true}
+          onClose={mockOnClose}
+          plan={null}
+          onPurchaseComplete={mockOnPurchaseComplete}
+        />
+      );
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(container.firstChild).toBeNull();
     });
 
     it("renders when isOpen is true", () => {
