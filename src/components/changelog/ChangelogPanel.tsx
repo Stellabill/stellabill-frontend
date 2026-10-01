@@ -263,7 +263,7 @@ export default function ChangelogPanel({ isOpen, onOpenChange }: ChangelogPanelP
           ))}
         </div>
 
-        {/* Entry list, grouped by date */}
+{/* Entry list, grouped by date */}
         <div className="changelog-entries">
           {sortedDates.length === 0 ? (
             <div className="changelog-empty">

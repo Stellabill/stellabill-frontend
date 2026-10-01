@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import PaymentFailedBanner from './PaymentFailedBanner';
 
 describe('PaymentFailedBanner', () => {
@@ -11,7 +11,7 @@ describe('PaymentFailedBanner', () => {
       />
     );
 
-    expect(screen.getByRole('region')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /Payment failed/i })).toBeInTheDocument();
     expect(screen.getByText(/Payment failed/i)).toBeInTheDocument();
     expect(screen.getByText(/Fix payment method/i)).toBeInTheDocument();
   });
@@ -20,6 +20,21 @@ describe('PaymentFailedBanner', () => {
     const { container } = render(
       <PaymentFailedBanner subscriptionId="sub_123" failedAttempts={0} retrySchedule={[]} />
     );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('uses the subscriptions fallback and renders nothing after dismissal', () => {
+    const { container } = render(
+      <PaymentFailedBanner subscriptionId={undefined} failedAttempts={1} retrySchedule={[]} />
+    );
+
+    expect(screen.getByRole('link', { name: /Fix payment method/i })).toHaveAttribute(
+      'href',
+      '/subscriptions'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Dismiss/i }));
 
     expect(container).toBeEmptyDOMElement();
   });

@@ -28,7 +28,13 @@ export const Card: React.FC<CardProps> = ({
     lg: 'p-[var(--space-8)]'
   };
 
-  const combinedClassName = `${baseStyles} ${variants[variant]} ${paddings[padding]} ${className}`.trim();
+  const selectedVariant = variants[variant as keyof typeof variants] ?? variants.default;
+  const selectedPadding = paddings[padding as keyof typeof paddings] ?? paddings.md;
+
+  const combinedClassName = [baseStyles, selectedVariant, selectedPadding, className]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
 
   return (
     <div className={combinedClassName} {...props}>

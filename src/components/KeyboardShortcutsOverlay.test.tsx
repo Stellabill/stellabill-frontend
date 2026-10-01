@@ -59,9 +59,29 @@ describe('KeyboardShortcutsOverlay', () => {
     });
   });
 
-  it('renders nothing when closed', () => {
-    render(<KeyboardShortcutsOverlay isOpen={false} onClose={vi.fn()} />);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  describe('failure and empty-result paths', () => {
+    it('returns null (renders nothing) when isOpen is false', () => {
+      const { container } = render(<KeyboardShortcutsOverlay isOpen={false} onClose={vi.fn()} />);
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it('returns null (no conflict message) when recording a non-conflicting shortcut', async () => {
+      renderOverlay();
+      
+      const editBtn = screen.getByLabelText(/Edit shortcut for Close dialog/i);
+      fireEvent.click(editBtn);
+
+      // Press a unique key combination that won't conflict with anything
+      fireEvent.keyDown(window, { key: 'z', altKey: true });
+      
+      // Wait to ensure no conflict error is displayed
+      await waitFor(() => {
+        expect(screen.getByLabelText(/Edit shortcut for Close dialog/i)).toBeInTheDocument();
+      });
+
+      // Assert that there's no error message shown
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
   });
 
   it('exposes ARIA dialog pattern', () => {
