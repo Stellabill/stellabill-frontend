@@ -1,0 +1,42 @@
+diff --git a/src/components/help/HelpSidebar.tsx b/src/components/help/HelpSidebar.tsx
+index 0f3a097..ad0dd3f 100644
+--- a/src/components/help/HelpSidebar.tsx
++++ b/src/components/help/HelpSidebar.tsx
+@@ -459,20 +459,23 @@ export default function HelpSidebar({
+               <span className="help-sidebar__detail-actions-label">
+                 Related articles
+               </span>
+-              {similar.map((s) => (
+-                <button
+-                  key={s.id}
+-                  type="button"
+-                  className="help-sidebar__article-button"
+-                  onClick={() => openArticle(s)}
+-                >
+-                  <div className="help-sidebar__article-meta">
+-                    <CATEGORY_ICONS[s.category] size={12} aria-hidden="true" />
+-                    <span>{s.category}</span>
+-                  </div>
+-                  <h3 className="help-sidebar__article-title">{s.title}</h3>
+-                </button>
+-              ))}
++              {similar.map((s) => {
++                const SimilarIcon = CATEGORY_ICONS[s.category];
++                return (
++                  <button
++                    key={s.id}
++                    type="button"
++                    className="help-sidebar__article-button"
++                    onClick={() => openArticle(s)}
++                  >
++                    <div className="help-sidebar__article-meta">
++                      <SimilarIcon size={12} aria-hidden="true" />
++                      <span>{s.category}</span>
++                    </div>
++                    <h3 className="help-sidebar__article-title">{s.title}</h3>
++                  </button>
++                );
++              })}
+             </div>
+           )}
+         </article>
