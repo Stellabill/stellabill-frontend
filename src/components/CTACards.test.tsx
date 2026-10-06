@@ -55,4 +55,10 @@ describe('CTACards', () => {
       screen.getByRole('link', { name: /get started: become a merchant/i })
     ).toHaveAttribute('href', '/dashboard')
   })
+
+  it('applies the correct responsive grid container class', () => {
+    const { container } = render(<CTACards />)
+    const grid = container.querySelector('.cta-cards-grid')
+    expect(grid).toBeInTheDocument()
+  })
 })

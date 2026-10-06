@@ -9,6 +9,7 @@ import UsageThisPeriod from "../components/UsageThisPeriod";
 import ErrorState from "../components/ErrorState";
 import Tag from "../components/Tag";
 import AddTagPopover, { TagOption } from "../components/AddTagPopover";
+import { useRefresh } from "../hooks/useRefresh";
 import { useFlip } from "../hooks/useFlip";
 import "./Subscriptions.css";
 
@@ -907,19 +908,56 @@ export default function Subscriptions() {
 						ref={cardsContainerRef as React.RefObject<HTMLDivElement>}
 						className="subs-cards"
 						aria-label="Subscriptions"
-						data-testid="subscriptions-cards">
-						{filteredData.map((sub) => (
-							<article
-								key={sub.id}
-								{...getCardItemProps(sub.id)}
-								className="subs-card"
-								tabIndex={0}
-								role="button"
-								aria-label={`${sub.planName} – ${sub.status}. Tap to manage.`}
-								onClick={() => setSelectedId(sub.id)}
-								onKeyDown={(e) => {
-									if (e.key === "Enter" || e.key === " ") {
-										e.preventDefault();
+						data-testid="subscriptions-cards"
+						{...refreshHandlers}
+					>
+						{/* Polite live region for accessibility announcements */}
+						<div className="visually-hidden" aria-live="polite">
+							{isRefreshing ? t('subscriptions.refreshing', 'Refreshing subscriptions...') : ''}
+						</div>
+						
+						{/* Fallback Refresh Button for keyboard users and screen readers */}
+						<button 
+							className="ptr-fallback-btn"
+							onClick={triggerRefresh}
+							aria-label="Refresh subscriptions"
+						>
+							<IconPlay />
+							<span className="visually-hidden">Refresh</span>
+						</button>
+
+						{/* Pull-to-refresh visual indicator */}
+						<div 
+							className="ptr-indicator"
+							style={{ 
+								height: `${Math.min(pullDistance, 100)}px`,
+								opacity: pullDistance > 10 ? 1 : 0
+							}}
+							aria-hidden="true"
+						>
+							{isRefreshing || pullDistance > 0 ? (
+								<div className={`ptr-spinner ${isRefreshing ? 'spinning' : ''}`} style={{ transform: `rotate(${pullDistance * 3}deg)` }}>
+									<IconCog />
+								</div>
+							) : null}
+						</div>
+
+						<div 
+							className="subs-cards-inner"
+							style={{ transform: `translateY(${pullDistance}px)` }}
+						>
+						{filteredData.map((sub) => {
+							const leadingActions: any[] = [];
+							const trailingActions: any[] = [];
+
+							if (sub.status === "Active") {
+								trailingActions.push({
+									id: "pause",
+									label: "Pause",
+									icon: <IconPause />,
+									backgroundColor: "#f59e0b", // amber-500
+									color: "#fff",
+									onClick: () => {
 										setSelectedId(sub.id);
 										setIsPauseModalOpen(true);
 									}
@@ -1028,6 +1066,7 @@ export default function Subscriptions() {
 								</article>
 							</SwipeableRow>
 						)})}
+						</div>
 					</div>
 				</>
 			)}
@@ -1049,3 +1088,4 @@ export default function Subscriptions() {
 		</div>
 	);
 }
+

@@ -1,133 +1,133 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import Modal from './Modal';
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { Modal } from './Modal'
 
 describe('Modal', () => {
-  const defaultProps = {
-    isOpen: true,
-    onClose: vi.fn(),
-    title: 'Test Modal',
-    children: <span>Modal Content</span>,
-  };
-
-  it('returns null when isOpen is false (failure/empty path)', () => {
+  it('renders nothing while closed', () => {
     const { container } = render(
-      <Modal {...defaultProps} isOpen={false} />
-    );
-    expect(container.firstChild).toBeNull();
-    expect(screen.queryByText('Test Modal')).not.toBeInTheDocument();
-  });
-
-  it('renders the modal when isOpen is true', () => {
-    render(<Modal {...defaultProps} />);
-    expect(screen.getByText('Test Modal')).toBeInTheDocument();
-    expect(screen.getByText('Modal Content')).toBeInTheDocument();
-  });
-
-  it('renders with description when provided', () => {
-    render(
-      <Modal {...defaultProps} description="A description" />
-    );
-    expect(screen.getByText('A description')).toBeInTheDocument();
-  });
-
-  it('does not render description element when description is omitted', () => {
-    render(<Modal {...defaultProps} />);
-    expect(screen.queryByText('A description')).not.toBeInTheDocument();
-  });
-
-  it('renders footer when provided', () => {
-    render(
-      <Modal {...defaultProps} footer={<button>Footer Action</button>} />
-    );
-    expect(screen.getByText('Footer Action')).toBeInTheDocument();
-  });
-
-  it('does not render footer when omitted', () => {
-    render(<Modal {...defaultProps} />);
-    expect(screen.queryByText('Footer Action')).not.toBeInTheDocument();
-  });
-
-  it('calls onClose when the close button is clicked', () => {
-    const onClose = vi.fn();
-    render(<Modal {...defaultProps} onClose={onClose} />);
-    fireEvent.click(screen.getByLabelText('Close'));
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls onClose when the overlay background is clicked', () => {
-    const onClose = vi.fn();
-    render(<Modal {...defaultProps} onClose={onClose} />);
-    const overlay = screen.getByRole('dialog');
-    fireEvent.click(overlay);
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not call onClose when the modal content is clicked', () => {
-    const onClose = vi.fn();
-    render(<Modal {...defaultProps} onClose={onClose} />);
-    fireEvent.click(screen.getByText('Modal Content'));
-    expect(onClose).not.toHaveBeenCalled();
-  });
-
-  it('applies maxWidth class based on prop value', () => {
-    const { rerender, container } = render(
-      <Modal {...defaultProps} maxWidth="sm" />
-    );
-    expect(container.querySelector('[class*="max-w-sm"]')).toBeInTheDocument();
-
-    rerender(<Modal {...defaultProps} maxWidth="lg" />);
-    expect(container.querySelector('[class*="max-w-lg"]')).toBeInTheDocument();
-  });
-
-  it('defaults maxWidth to md', () => {
-    const { container } = render(<Modal {...defaultProps} />);
-    expect(container.querySelector('[class*="max-w-md"]')).toBeInTheDocument();
-  });
-
-  it('has accessible dialog role and aria attributes', () => {
-    render(<Modal {...defaultProps} />);
-    const dialog = screen.getByRole('dialog');
-    expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(dialog).toHaveAttribute('aria-labelledby', 'modal-title');
-  });
-
-  it('has aria-describedby when description is provided', () => {
-    render(
-      <Modal {...defaultProps} description="Test desc" />
-    );
-    const dialog = screen.getByRole('dialog');
-    expect(dialog).toHaveAttribute('aria-describedby', 'modal-description');
-  });
-
-  it('does not have aria-describedby when description is omitted', () => {
-    render(<Modal {...defaultProps} />);
-    const dialog = screen.getByRole('dialog');
-    expect(dialog).not.toHaveAttribute('aria-describedby');
-  });
-
-  it('renders title with correct id for aria-labelledby', () => {
-    render(<Modal {...defaultProps} />);
-    expect(screen.getByText('Test Modal')).toHaveAttribute('id', 'modal-title');
-  });
-
-  it('renders children inside the modal body', () => {
-    render(
-      <Modal {...defaultProps}>
-        <span data-testid="child-element">Child</span>
+      <Modal isOpen={false} onClose={vi.fn()} title="Hidden">
+        <p>Content</p>
       </Modal>
-    );
-    expect(screen.getByTestId('child-element')).toBeInTheDocument();
-  });
+    )
 
-  it('is deterministic: returns null consistently when isOpen is false', () => {
-    const { container } = render(
-      <Modal {...defaultProps} isOpen={false} />
-    );
-    expect(container.firstChild).toBeNull();
-    const { container: container2 } = render(
-      <Modal {...defaultProps} isOpen={false} />
-    );
-    expect(container2.firstChild).toBeNull();
-  });
-});
+    expect(container).toBeEmptyDOMElement()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  // Regression coverage for the `Default` story in Modal.stories.tsx: every
+  // slot the story passes (title, description, children, footer) must render,
+  // and the modal must announce itself as a labelled, modal dialog.
+  it('renders the Default story contract with title, description, body and footer', () => {
+    render(
+      <Modal
+        isOpen={true}
+        onClose={vi.fn()}
+        title="Example Modal"
+        description="This is a description of what this modal does."
+        footer={
+          <>
+            <button>Cancel</button>
+            <button>Confirm</button>
+          </>
+        }
+      >
+        <p>Modal content goes here.</p>
+      </Modal>
+    )
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog).toHaveAttribute('aria-labelledby', 'modal-title')
+    expect(dialog).toHaveAttribute('aria-describedby', 'modal-description')
+    expect(screen.getByText('Example Modal')).toBeInTheDocument()
+    expect(screen.getByText('This is a description of what this modal does.')).toBeInTheDocument()
+    expect(screen.getByText('Modal content goes here.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument()
+  })
+
+  it('omits the description slot and its aria wiring when no description is given', () => {
+    render(
+      <Modal isOpen={true} onClose={vi.fn()} title="No description">
+        <p>Body</p>
+      </Modal>
+    )
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).not.toHaveAttribute('aria-describedby')
+    expect(document.getElementById('modal-description')).toBeNull()
+  })
+
+  it('renders a footer only when one is provided', () => {
+    const { rerender } = render(
+      <Modal isOpen={true} onClose={vi.fn()} title="With footer" footer={<button>Save</button>}>
+        <p>Body</p>
+      </Modal>
+    )
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
+
+    rerender(
+      <Modal isOpen={true} onClose={vi.fn()} title="Without footer">
+        <p>Body</p>
+      </Modal>
+    )
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+  })
+
+  it('applies the requested max width and defaults to md', () => {
+    const { container, rerender } = render(
+      <Modal isOpen={true} onClose={vi.fn()} title="Width">
+        <p>Body</p>
+      </Modal>
+    )
+    expect(container.querySelector('.max-w-md')).toBeInTheDocument()
+
+    for (const size of ['sm', 'lg', 'xl'] as const) {
+      rerender(
+        <Modal isOpen={true} onClose={vi.fn()} title="Width" maxWidth={size}>
+          <p>Body</p>
+        </Modal>
+      )
+      expect(container.querySelector(`.max-w-${size}`)).toBeInTheDocument()
+    }
+  })
+
+  it('closes when the close button is clicked', () => {
+    const onClose = vi.fn()
+    render(
+      <Modal isOpen={true} onClose={onClose} title="Closable">
+        <p>Body</p>
+      </Modal>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes when Escape is pressed', () => {
+    const onClose = vi.fn()
+    render(
+      <Modal isOpen={true} onClose={onClose} title="Escapable">
+        <p>Body</p>
+      </Modal>
+    )
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes on a backdrop click but not on a click inside the content', () => {
+    const onClose = vi.fn()
+    render(
+      <Modal isOpen={true} onClose={onClose} title="Backdrop">
+        <p>Inner content</p>
+      </Modal>
+    )
+
+    fireEvent.click(screen.getByText('Inner content'))
+    expect(onClose).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('dialog'))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+})

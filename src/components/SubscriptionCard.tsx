@@ -213,7 +213,7 @@ export default function SubscriptionCard({ subscription }: SubscriptionCardProps
     cancelled: { label: 'Cancelled', icon: '✕', className: 'cancelled' }
   };
 
-  const currentStatus = statusConfig[status];
+  const currentStatus = statusConfig[status] || { label: 'Unknown', icon: '?', className: 'unknown' };
 
   /* ── Compute inline popover styles based on position ───────── */
   const getPopoverStyle = (): React.CSSProperties => {

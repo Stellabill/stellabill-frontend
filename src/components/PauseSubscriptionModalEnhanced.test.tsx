@@ -12,28 +12,75 @@ describe('PauseSubscriptionModalEnhanced', () => {
     mockOnConfirm.mockClear();
   });
 
-  it('returns null when not open', () => {
-    const { container } = render(
-      <PauseSubscriptionModalEnhanced
-        isOpen={false}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
-    
-    expect(container.firstChild).toBeNull();
-  });
+  describe('isOpen boundary behavior', () => {
+    it('returns null when isOpen is false (failure/empty-result path)', () => {
+      const { container } = render(
+        <PauseSubscriptionModalEnhanced
+          isOpen={false}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+        />
+      );
+      
+      expect(container.firstChild).toBeNull();
+    });
 
-  it('renders modal when open', () => {
-    render(
-      <PauseSubscriptionModalEnhanced
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
-    
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    it('renders modal when isOpen is true (normal path)', () => {
+      render(
+        <PauseSubscriptionModalEnhanced
+          isOpen={true}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+        />
+      );
+      
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('handles dynamic transition from true to false gracefully (boundary input)', () => {
+      const { container, rerender } = render(
+        <PauseSubscriptionModalEnhanced
+          isOpen={true}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+        />
+      );
+      
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      
+      rerender(
+        <PauseSubscriptionModalEnhanced
+          isOpen={false}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+        />
+      );
+      
+      expect(container.firstChild).toBeNull();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('handles dynamic transition from false to true gracefully (boundary input)', () => {
+      const { container, rerender } = render(
+        <PauseSubscriptionModalEnhanced
+          isOpen={false}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+        />
+      );
+      
+      expect(container.firstChild).toBeNull();
+      
+      rerender(
+        <PauseSubscriptionModalEnhanced
+          isOpen={true}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+        />
+      );
+      
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
   });
 
   it('displays title', () => {

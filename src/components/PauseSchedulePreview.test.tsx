@@ -48,9 +48,8 @@ describe('PauseSchedulePreview', () => {
     expect(screen.getByText('April 15, 2026')).toBeInTheDocument();
   });
 
-  it('displays new next charge date', () => {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + 7);
+  it('displays new next charge date (exactly +30 days)', () => {
+    const futureDate = new Date(2026, 3, 15); // April 15, 2026
     
     render(
       <PauseSchedulePreview
@@ -62,6 +61,8 @@ describe('PauseSchedulePreview', () => {
     );
     
     expect(screen.getByText('New next charge')).toBeInTheDocument();
+    // 30 days after April 15 is May 15
+    expect(screen.getByText('May 15, 2026')).toBeInTheDocument();
   });
 
   it('displays estimated charge amount', () => {
@@ -272,8 +273,10 @@ describe('PauseSchedulePreview', () => {
   });
 
   it('shows correct pause duration for different date ranges', () => {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + 30);
+    // We will set up a specific distance from 'today' to avoid flakiness
+    const today = new Date();
+    const futureDate = new Date(today.getTime());
+    futureDate.setDate(today.getDate() + 30);
     
     render(
       <PauseSchedulePreview
@@ -284,7 +287,7 @@ describe('PauseSchedulePreview', () => {
       />
     );
     
-    expect(screen.getByText(/days/)).toBeInTheDocument();
+    expect(screen.getByText('30 days')).toBeInTheDocument();
   });
 
   it('has proper notice styling with icon', () => {
