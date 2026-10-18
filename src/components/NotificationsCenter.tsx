@@ -474,6 +474,19 @@ export default function NotificationsCenter({
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState(initialNotifications);
 
+  const fetchNotifications = async () => {
+    // Simulate fetching new notifications
+    return new Promise<void>((resolve) => {
+      setTimeout(() => {
+        resolve();
+      }, 800);
+    });
+  };
+
+  const { pullDistance, isRefreshing, triggerRefresh, handlers: refreshHandlers } = useRefresh({
+    onRefresh: fetchNotifications,
+  });
+
   /**
    * Maps notification ID → silence state.
    *  expiresAt = number  → snoozed until that timestamp
@@ -1094,12 +1107,47 @@ export default function NotificationsCenter({
               <p>{t("notifications.allReadDescription")}</p>
             </div>
           ) : (
-            <ul
-              className="notifications-list"
-              aria-label={t("notifications.listLabel")}
+            <div
+              className="notifications-scroll-area"
+              {...refreshHandlers}
+              style={{ position: 'relative', overflowY: 'auto', flex: 1 }}
             >
-              {activeDigestRows.map((row) => renderDigestRow(row, false))}
-            </ul>
+              <div className="visually-hidden" aria-live="polite">
+                {isRefreshing ? t('notifications.refreshing', 'Refreshing notifications...') : ''}
+              </div>
+              
+              <button 
+                className="ptr-fallback-btn"
+                onClick={triggerRefresh}
+                aria-label="Refresh notifications"
+              >
+                <RefreshCcw size={16} />
+                <span className="visually-hidden">Refresh</span>
+              </button>
+
+              <div 
+                className="ptr-indicator"
+                style={{ 
+                  height: `${Math.min(pullDistance, 100)}px`,
+                  opacity: pullDistance > 10 ? 1 : 0
+                }}
+                aria-hidden="true"
+              >
+                {isRefreshing || pullDistance > 0 ? (
+                  <div className={`ptr-spinner ${isRefreshing ? 'spinning' : ''}`} style={{ transform: `rotate(${pullDistance * 3}deg)` }}>
+                    <RefreshCcw size={20} />
+                  </div>
+                ) : null}
+              </div>
+              
+              <ul 
+                className="notifications-list" 
+                aria-label={t("notifications.listLabel")}
+                style={{ transform: `translateY(${pullDistance}px)`, transition: pullDistance === 0 ? 'transform 0.2s cubic-bezier(0.25, 1, 0.5, 1)' : 'none' }}
+              >
+                {activeDigestRows.map((row) => renderDigestRow(row, false))}
+              </ul>
+            </div>
           )}
 
           {/* Muted / snoozed section footer */}

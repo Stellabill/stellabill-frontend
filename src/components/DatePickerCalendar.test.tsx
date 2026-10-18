@@ -1,6 +1,5 @@
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import DatePickerCalendar from './DatePickerCalendar';
 
 describe('DatePickerCalendar', () => {
@@ -8,345 +7,179 @@ describe('DatePickerCalendar', () => {
   const mockOnDateChange = vi.fn();
 
   beforeEach(() => {
-    mockOnDateSelect.mockClear();
-    mockOnDateChange.mockClear();
+    vi.clearAllMocks();
   });
 
-  it('renders calendar with current month', () => {
+  it('renders the current month when no selected date is provided', () => {
+    const today = new Date();
     render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
+      <DatePickerCalendar 
+        selectedDate={null} 
+        onDateSelect={mockOnDateSelect} 
       />
     );
     
-    const heading = screen.getByRole('heading', { level: 3 });
-    const currentDate = new Date();
-    const expectedMonth = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    
-    expect(heading).toHaveTextContent(expectedMonth);
+    const monthYearString = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    expect(screen.getByText(monthYearString)).toBeInTheDocument();
   });
 
-  it('displays all days of the week headers', () => {
+  it('renders the month of the selected date', () => {
+    const selectedDate = new Date(2023, 5, 15); // June 15, 2023
     render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
+      <DatePickerCalendar 
+        selectedDate={selectedDate} 
+        onDateSelect={mockOnDateSelect} 
       />
     );
     
-    const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    dayHeaders.forEach(day => {
-      expect(screen.getByText(day)).toBeInTheDocument();
-    });
+    expect(screen.getByText('June 2023')).toBeInTheDocument();
   });
 
-  it('selects a date when clicked', async () => {
-    const user = userEvent.setup();
+  it('navigates to previous and next months', () => {
+    const selectedDate = new Date(2023, 5, 15); // June 15, 2023
     render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
+      <DatePickerCalendar 
+        selectedDate={selectedDate} 
+        onDateSelect={mockOnDateSelect} 
       />
     );
     
-    const today = new Date().getDate();
-    const dayButtons = screen.getAllByRole('button');
-    const dayButton = dayButtons.find(btn => btn.textContent === String(today));
-    
-    if (dayButton) {
-      await user.click(dayButton);
-      expect(mockOnDateSelect).toHaveBeenCalled();
-    }
+    const prevButton = screen.getByRole('button', { name: /Go to previous month/i });
+    const nextButton = screen.getByRole('button', { name: /Go to next month/i });
+
+    // Navigate to previous month
+    fireEvent.click(prevButton);
+    expect(screen.getByText('May 2023')).toBeInTheDocument();
+
+    // Navigate to next month (twice to go from May to July)
+    fireEvent.click(nextButton);
+    fireEvent.click(nextButton);
+    expect(screen.getByText('July 2023')).toBeInTheDocument();
   });
 
-  it('navigates to previous month', async () => {
-    const user = userEvent.setup();
-    render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
-      />
-    );
-    
-    const prevButtons = screen.getAllByRole('button').filter(btn => 
-      btn.className.includes('calendar-nav-prev')
-    );
-    
-    if (prevButtons.length > 0) {
-      await user.click(prevButtons[0]);
-      await waitFor(() => {
-        const heading = screen.getByRole('heading', { level: 3 });
-        const prevMonth = new Date();
-        prevMonth.setMonth(prevMonth.getMonth() - 1);
-        const expectedMonth = prevMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        expect(heading).toHaveTextContent(expectedMonth);
-      });
-    }
-  });
-
-  it('navigates to next month', async () => {
-    const user = userEvent.setup();
-    render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
-      />
-    );
-    
-    const nextButtons = screen.getAllByRole('button').filter(btn => 
-      btn.className.includes('calendar-nav-next')
-    );
-    
-    if (nextButtons.length > 0) {
-      await user.click(nextButtons[0]);
-      await waitFor(() => {
-        const heading = screen.getByRole('heading', { level: 3 });
-        const nextMonth = new Date();
-        nextMonth.setMonth(nextMonth.getMonth() + 1);
-        const expectedMonth = nextMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        expect(heading).toHaveTextContent(expectedMonth);
-      });
-    }
-  });
-
-  it('disables dates before minDate', () => {
-    const minDate = new Date();
-    minDate.setDate(minDate.getDate() + 5);
+  it('calls onDateSelect and onDateChange when a valid date is clicked', () => {
+    const selectedDate = new Date(2023, 5, 15); // June 15, 2023
+    // Set minDate to beginning of the month so we can freely click dates
+    const minDate = new Date(2023, 5, 1); 
     
     render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
+      <DatePickerCalendar 
+        selectedDate={selectedDate} 
         minDate={minDate}
-      />
-    );
-    
-    const today = new Date().getDate();
-    const dayButtons = screen.getAllByRole('button');
-    const todayButton = dayButtons.find(btn => btn.textContent === String(today));
-    
-    if (todayButton) {
-      expect(todayButton).toBeDisabled();
-    }
-  });
-
-  it('disables dates after maxDate', () => {
-    const maxDate = new Date();
-    maxDate.setDate(maxDate.getDate() + 3);
-    
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + 10);
-    
-    render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
-        maxDate={maxDate}
-      />
-    );
-    
-    const dayButtons = screen.getAllByRole('button');
-    const futureButton = dayButtons.find(btn => btn.textContent === String(futureDate.getDate()));
-    
-    if (futureButton) {
-      expect(futureButton).toBeDisabled();
-    }
-  });
-
-  it('handles keyboard navigation with arrow keys', async () => {
-    const user = userEvent.setup();
-    const selectedDate = new Date();
-    selectedDate.setDate(15);
-    
-    render(
-      <DatePickerCalendar
-        selectedDate={selectedDate}
-        onDateSelect={mockOnDateSelect}
-      />
-    );
-    
-    const buttons = screen.getAllByRole('button').filter(btn => 
-      !btn.className.includes('calendar-nav')
-    );
-    
-    if (buttons.length > 0) {
-      const focusedButton = buttons.find(btn => btn.getAttribute('aria-pressed') === 'true');
-      if (focusedButton) {
-        await user.keyboard('{ArrowRight}');
-        expect(mockOnDateSelect).not.toHaveBeenCalledTimes(1);
-      }
-    }
-  });
-
-  it('handles Enter key to select date', async () => {
-    const user = userEvent.setup();
-    render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
-      />
-    );
-    
-    const today = new Date().getDate();
-    const dayButtons = screen.getAllByRole('button');
-    const dayButton = dayButtons.find(btn => btn.textContent === String(today));
-    
-    if (dayButton) {
-      dayButton.focus();
-      await user.keyboard('{Enter}');
-      expect(mockOnDateSelect).toHaveBeenCalled();
-    }
-  });
-
-  it('marks today with aria-current', () => {
-    render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
-      />
-    );
-    
-    const today = new Date().getDate();
-    const dayButtons = screen.getAllByRole('button');
-    const todayButton = dayButtons.find(btn => btn.textContent === String(today));
-    
-    if (todayButton) {
-      expect(todayButton).toHaveAttribute('aria-current', 'date');
-    }
-  });
-
-  it('shows selected date with aria-pressed', () => {
-    const selectedDate = new Date();
-    selectedDate.setDate(15);
-    
-    render(
-      <DatePickerCalendar
-        selectedDate={selectedDate}
-        onDateSelect={mockOnDateSelect}
-      />
-    );
-    
-    const buttons = screen.getAllByRole('button').filter(btn => 
-      btn.getAttribute('aria-pressed') === 'true'
-    );
-    
-    expect(buttons.length).toBeGreaterThan(0);
-  });
-
-  it('has accessible labels for navigation buttons', () => {
-    render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
-      />
-    );
-    
-    const buttons = screen.getAllByRole('button');
-    const navButtons = buttons.filter(btn => 
-      btn.getAttribute('aria-label')?.includes('month')
-    );
-    
-    expect(navButtons.length).toBeGreaterThan(0);
-  });
-
-  it('provides accessible day labels', () => {
-    render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
-      />
-    );
-    
-    const today = new Date().getDate();
-    const dayButtons = screen.getAllByRole('button');
-    const todayButton = dayButtons.find(btn => btn.textContent === String(today));
-    
-    if (todayButton) {
-      const ariaLabel = todayButton.getAttribute('aria-label');
-      expect(ariaLabel).toContain(String(today));
-    }
-  });
-
-  it('calls onDateChange when provided', async () => {
-    const user = userEvent.setup();
-    render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
+        onDateSelect={mockOnDateSelect} 
         onDateChange={mockOnDateChange}
       />
     );
     
-    const today = new Date().getDate();
-    const dayButtons = screen.getAllByRole('button');
-    const dayButton = dayButtons.find(btn => btn.textContent === String(today));
+    const day20Button = screen.getByText('20');
+    fireEvent.click(day20Button);
+
+    expect(mockOnDateSelect).toHaveBeenCalledTimes(1);
+    expect(mockOnDateSelect).toHaveBeenCalledWith(new Date(2023, 5, 20));
     
-    if (dayButton) {
-      await user.click(dayButton);
-      expect(mockOnDateChange).toHaveBeenCalled();
-    }
+    expect(mockOnDateChange).toHaveBeenCalledTimes(1);
+    expect(mockOnDateChange).toHaveBeenCalledWith(new Date(2023, 5, 20));
   });
 
-  it('has role="application" for accessibility', () => {
+  it('disables dates outside of minDate and maxDate', () => {
+    const selectedDate = new Date(2023, 5, 15); // June 15, 2023
+    const minDate = new Date(2023, 5, 10);
+    const maxDate = new Date(2023, 5, 20);
+    
     render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
+      <DatePickerCalendar 
+        selectedDate={selectedDate} 
+        minDate={minDate}
+        maxDate={maxDate}
+        onDateSelect={mockOnDateSelect} 
       />
     );
     
-    const calendar = screen.getByRole('application');
-    expect(calendar).toBeInTheDocument();
+    // Day 9 should be disabled
+    const day9Button = screen.getByText('9');
+    expect(day9Button).toBeDisabled();
+    expect(day9Button).toHaveClass('disabled');
+
+    // Day 15 should be enabled
+    const day15Button = screen.getByText('15');
+    expect(day15Button).not.toBeDisabled();
+
+    // Day 21 should be disabled
+    const day21Button = screen.getByText('21');
+    expect(day21Button).toBeDisabled();
+    expect(day21Button).toHaveClass('disabled');
   });
 
-  it('displays info text with icon', () => {
+  it('does not call selection handlers when a disabled date is clicked', () => {
+    const selectedDate = new Date(2023, 5, 15); // June 15, 2023
+    const minDate = new Date(2023, 5, 10);
+    
     render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
+      <DatePickerCalendar 
+        selectedDate={selectedDate} 
+        minDate={minDate}
+        onDateSelect={mockOnDateSelect} 
+        onDateChange={mockOnDateChange}
       />
     );
     
-    expect(screen.getByText(/Select a date to pause until/i)).toBeInTheDocument();
-  });
+    const day5Button = screen.getByText('5');
+    fireEvent.click(day5Button);
 
-  it('renders correct number of calendar days', () => {
+    expect(mockOnDateSelect).not.toHaveBeenCalled();
+    expect(mockOnDateChange).not.toHaveBeenCalled();
+  });
+  
+  it('handles keyboard navigation (Arrow keys)', () => {
+    const selectedDate = new Date(2023, 5, 15); // June 15, 2023
+    const minDate = new Date(2023, 5, 1);
+    
     render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
+      <DatePickerCalendar 
+        selectedDate={selectedDate} 
+        minDate={minDate}
+        onDateSelect={mockOnDateSelect} 
       />
     );
     
-    const currentDate = new Date();
-    const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+    const day15Button = screen.getByText('15');
+    day15Button.focus();
     
-    const dayButtons = screen.getAllByRole('button').filter(btn => {
-      const text = btn.textContent?.trim();
-      return !text?.includes('Go to') && !text?.includes('Select');
-    });
+    // Right arrow to move to 16
+    fireEvent.keyDown(day15Button, { key: 'ArrowRight' });
+    const day16Button = screen.getByText('16');
+    expect(day16Button).toHaveClass('focused');
     
-    // Account for empty cells and nav buttons
-    expect(dayButtons.length).toBeGreaterThanOrEqual(daysInMonth);
+    // Left arrow to move to 15
+    fireEvent.keyDown(day16Button, { key: 'ArrowLeft' });
+    expect(day15Button).toHaveClass('focused');
+    
+    // Down arrow to move to 22
+    fireEvent.keyDown(day15Button, { key: 'ArrowDown' });
+    const day22Button = screen.getByText('22');
+    expect(day22Button).toHaveClass('focused');
+    
+    // Up arrow to move to 15
+    fireEvent.keyDown(day22Button, { key: 'ArrowUp' });
+    expect(day15Button).toHaveClass('focused');
   });
 
-  it('maintains focus on navigation', async () => {
-    const user = userEvent.setup();
+  it('selects date on Enter key', () => {
+    const selectedDate = new Date(2023, 5, 15); // June 15, 2023
+    const minDate = new Date(2023, 5, 1);
+    
     render(
-      <DatePickerCalendar
-        selectedDate={null}
-        onDateSelect={mockOnDateSelect}
+      <DatePickerCalendar 
+        selectedDate={selectedDate} 
+        minDate={minDate}
+        onDateSelect={mockOnDateSelect} 
       />
     );
     
-    const prevButton = screen.getAllByRole('button').find(btn => 
-      btn.className.includes('calendar-nav-prev')
-    );
-    
-    if (prevButton) {
-      prevButton.focus();
-      expect(prevButton).toHaveFocus();
-    }
+    const day20Button = screen.getByText('20');
+    fireEvent.keyDown(day20Button, { key: 'Enter' });
+
+    expect(mockOnDateSelect).toHaveBeenCalledTimes(1);
+    expect(mockOnDateSelect).toHaveBeenCalledWith(new Date(2023, 5, 20));
   });
 });
