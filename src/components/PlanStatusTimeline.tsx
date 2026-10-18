@@ -229,6 +229,21 @@ const TimelineItem = ({
     );
 };
 
+export function getVisibleEvents(events: TimelineEvent[], filter: string, isExpanded: boolean, initialCount = 3): TimelineEvent[] {
+    const sortedEvents = [...events].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const filteredEvents = sortedEvents.filter((event) => isEventVisible(event, filter));
+    return isExpanded ? filteredEvents : filteredEvents.slice(0, initialCount);
+}
+
+export function groupEventsByDay(events: TimelineEvent[]): Record<string, TimelineEvent[]> {
+    return events.reduce<Record<string, TimelineEvent[]>>((groups, event) => {
+        const day = formatDay(event.timestamp);
+        if (!groups[day]) groups[day] = [];
+        groups[day].push(event);
+        return groups;
+    }, {});
+}
+
 function formatDay(timestamp: string) {
     const date = new Date(timestamp);
     return date.toLocaleDateString('en-US', {
@@ -255,21 +270,11 @@ export default function PlanStatusTimeline({
     const [isExpanded, setIsExpanded] = useState(false);
     const INITIAL_COUNT = 3;
 
-    const filteredEvents = useMemo(() => {
-        const sortedEvents = [...events].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        return sortedEvents.filter((event) => isEventVisible(event, filter));
-    }, [events, filter]);
+    const filteredEvents = useMemo(() => getVisibleEvents(events, filter, true, INITIAL_COUNT), [events, filter]);
 
-    const visibleEvents = isExpanded ? filteredEvents : filteredEvents.slice(0, INITIAL_COUNT);
+    const visibleEvents = useMemo(() => getVisibleEvents(events, filter, isExpanded, INITIAL_COUNT), [events, filter, isExpanded]);
 
-    const groupedEvents = useMemo(() => {
-        return visibleEvents.reduce<Record<string, TimelineEvent[]>>((groups, event) => {
-            const day = formatDay(event.timestamp);
-            if (!groups[day]) groups[day] = [];
-            groups[day].push(event);
-            return groups;
-        }, {});
-    }, [visibleEvents]);
+    const groupedEvents = useMemo(() => groupEventsByDay(visibleEvents), [visibleEvents]);
 
     const groupKeys = Object.keys(groupedEvents);
     const hasMore = !isExpanded && filteredEvents.length > INITIAL_COUNT;

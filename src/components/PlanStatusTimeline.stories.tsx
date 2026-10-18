@@ -8,7 +8,7 @@ const meta: Meta<typeof PlanStatusTimeline> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof PlanStatusTimeline>;
+type Story = StoryObj<Events>;
 
 const events: TimelineEvent[] = [
   {
@@ -69,5 +69,11 @@ const events: TimelineEvent[] = [
 export const Default: Story = {
   args: {
     events,
+  },
+};
+
+export const Empty: Story = {
+  args: {
+    events: [],
   },
 };
