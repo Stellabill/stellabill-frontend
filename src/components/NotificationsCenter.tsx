@@ -642,24 +642,6 @@ export default function NotificationsCenter({
     return merged;
   };
 
-  const activeDigestRows = useMemo(
-    () => buildDigestRows(activeNotifications),
-    [activeNotifications],
-  );
-
-  const mutedDigestRows = useMemo(
-    () => buildDigestRows([...mutedNotifications, ...snoozedNotifications]),
-    [mutedNotifications, snoozedNotifications],
-  );
-
-  const toggleDigestExpanded = (key: string) => {
-    setDigestExpanded((prev) => {
-      const next = new Map(prev);
-      next.set(key, !next.get(key));
-      return next;
-    });
-  };
-
   // ---------------------------------------------------------------------------
   // Derived state
   // ---------------------------------------------------------------------------
@@ -699,9 +681,30 @@ export default function NotificationsCenter({
     [notifications, silenceMap, now],
   );
 
-  const unreadCount = useMemo(
-    () => activeNotifications.filter((n) => !n.isRead).length,
+  const activeDigestRows = useMemo(
+    () => buildDigestRows(activeNotifications),
     [activeNotifications],
+  );
+
+  const mutedDigestRows = useMemo(
+    () => buildDigestRows([...mutedNotifications, ...snoozedNotifications]),
+    [mutedNotifications, snoozedNotifications],
+  );
+
+  const toggleDigestExpanded = (key: string) => {
+    setDigestExpanded((prev) => {
+      const next = new Map(prev);
+      next.set(key, !next.get(key));
+      return next;
+    });
+  };
+
+  const unreadCount = useMemo(
+    () =>
+      activeDigestRows.filter((row) =>
+        row.kind === "digest" ? row.group.hasUnread : !row.notification.isRead,
+      ).length,
+    [activeDigestRows],
   );
 
   const hasActiveNotifications = activeNotifications.length > 0;
