@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useContext, useRef, useState } from 'react';
+import { UNSAFE_NavigationContext } from 'react-router-dom';
 import WalletConnectModal from './WalletConnectModal';
 import WalletDropdown from './WalletDropdown';
 import { Loader2, AlertCircle, ChevronDown } from 'lucide-react';
@@ -8,6 +9,7 @@ export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'err
 interface ConnectButtonProps {
   onConnect?: (address: string) => void;
   onDisconnect?: () => void;
+  onOpenHistory?: () => void;
   connectDelayMs?: number;
   randomFn?: () => number;
 }
@@ -15,6 +17,7 @@ interface ConnectButtonProps {
 const ConnectButton: React.FC<ConnectButtonProps> = ({
   onConnect,
   onDisconnect,
+  onOpenHistory,
   connectDelayMs = 1500,
   randomFn = Math.random,
 }) => {
@@ -24,6 +27,7 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const activeConnectionId = useRef(0);
+  const navigationContext = useContext(UNSAFE_NavigationContext);
 
   const handleConnectClick = () => {
     setConnectionState('disconnected');
@@ -77,6 +81,22 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
     setWalletAddress('');
     setIsDropdownOpen(false);
     onDisconnect?.();
+  };
+
+  const handleSwitchWallet = () => {
+    handleDisconnect();
+    setErrorMessage('');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenHistory = () => {
+    if (onOpenHistory) {
+      onOpenHistory();
+    } else if (navigationContext?.navigator) {
+      navigationContext.navigator.push('/wallet');
+    } else {
+      window.location.assign('/wallet');
+    }
   };
 
   const handleRetry = () => {
@@ -142,6 +162,8 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
             address={walletAddress}
             onClose={() => setIsDropdownOpen(false)}
             onDisconnect={handleDisconnect}
+            onSwitchWallet={handleSwitchWallet}
+            onOpenHistory={handleOpenHistory}
           />
         )}
       </div>

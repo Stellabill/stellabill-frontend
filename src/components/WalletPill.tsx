@@ -1,21 +1,42 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
+import { UNSAFE_NavigationContext } from 'react-router-dom';
 import WalletDropdown from './WalletDropdown';
+import WalletConnectModal from './WalletConnectModal';
+import type { ConnectionState } from './ConnectButton';
 import { ChevronDown, Globe } from 'lucide-react';
 
 interface WalletPillProps {
   address: string;
   onDisconnect: () => void;
+  onSwitchWallet?: () => void;
+  onOpenHistory?: () => void;
+  onConnect?: (address: string) => void;
   network?: 'Mainnet' | 'Testnet';
 }
 
-const WalletPill: React.FC<WalletPillProps> = ({ address, onDisconnect, network = 'Testnet' }) => {
+const WalletPill: React.FC<WalletPillProps> = ({
+  address,
+  onDisconnect,
+  onSwitchWallet,
+  onOpenHistory,
+  onConnect,
+  network = 'Testnet',
+}) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [currentAddress, setCurrentAddress] = useState(address);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const containerRef = useRef<HTMLDivElement>(null);
+  const navigationContext = useContext(UNSAFE_NavigationContext);
+
+  useEffect(() => {
+    setCurrentAddress(address);
+  }, [address]);
 
   // Truncate address: GABC...XYZ9
-  const truncatedAddress = address.length > 10 
-    ? `${address.slice(0, 4)}...${address.slice(-4)}`
-    : address;
+  const truncatedAddress = currentAddress.length > 10 
+    ? `${currentAddress.slice(0, 4)}...${currentAddress.slice(-4)}`
+    : currentAddress;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -40,6 +61,43 @@ const WalletPill: React.FC<WalletPillProps> = ({ address, onDisconnect, network 
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
+
+  const handleSwitchWallet = () => {
+    setIsOpen(false);
+    setCurrentAddress('');
+    setConnectionState('disconnected');
+    if (onSwitchWallet) {
+      onDisconnect();
+      onSwitchWallet();
+    } else {
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleFreighterConnect = () => {
+    const newAddress = 'GB3K4Y5QYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQ';
+    setCurrentAddress(newAddress);
+    setConnectionState('connected');
+    setIsModalOpen(false);
+    onConnect?.(newAddress);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    if (!currentAddress) {
+      onDisconnect();
+    }
+  };
+
+  const handleOpenHistory = () => {
+    if (onOpenHistory) {
+      onOpenHistory();
+    } else if (navigationContext?.navigator) {
+      navigationContext.navigator.push('/wallet');
+    } else {
+      window.location.assign('/wallet');
+    }
+  };
 
   return (
     <div className="relative inline-block" ref={containerRef}>
@@ -69,9 +127,18 @@ const WalletPill: React.FC<WalletPillProps> = ({ address, onDisconnect, network 
 
       <WalletDropdown 
         isOpen={isOpen} 
-        address={address} 
+        address={currentAddress} 
         onClose={() => setIsOpen(false)} 
         onDisconnect={onDisconnect}
+        onSwitchWallet={handleSwitchWallet}
+        onOpenHistory={handleOpenHistory}
+      />
+
+      <WalletConnectModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        onConnectFreighter={handleFreighterConnect}
+        connectionState={connectionState}
       />
     </div>
   );

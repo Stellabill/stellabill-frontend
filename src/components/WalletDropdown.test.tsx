@@ -9,6 +9,7 @@ type Overrides = Partial<{
   address: string;
   onClose: ReturnType<typeof vi.fn>;
   onDisconnect: ReturnType<typeof vi.fn>;
+  onSwitchWallet: ReturnType<typeof vi.fn>;
   onOpenHistory: ReturnType<typeof vi.fn>;
 }>;
 
@@ -20,6 +21,7 @@ function renderDropdown(overrides: Overrides = {}) {
     address: overrides.address ?? ADDRESS,
     onClose,
     onDisconnect,
+    ...(overrides.onSwitchWallet ? { onSwitchWallet: overrides.onSwitchWallet } : {}),
     ...(overrides.onOpenHistory ? { onOpenHistory: overrides.onOpenHistory } : {}),
   };
   const utils = render(<WalletDropdown {...props} />);
@@ -88,6 +90,17 @@ describe('WalletDropdown', () => {
       expect(screen.getByText(/switch wallet/i)).toBeInTheDocument();
       expect(screen.getByText(/wallet history/i)).toBeInTheDocument();
       expect(screen.getByText(/disconnect/i)).toBeInTheDocument();
+    });
+
+    it('uses distinct icons for Switch wallet and Wallet History', () => {
+      renderDropdown();
+      const switchBtn = screen.getByRole('button', { name: /switch wallet/i });
+      const historyBtn = screen.getByRole('button', { name: /wallet history/i });
+      const switchSvg = switchBtn.querySelector('svg');
+      const historySvg = historyBtn.querySelector('svg');
+      expect(switchSvg).not.toBeNull();
+      expect(historySvg).not.toBeNull();
+      expect(switchSvg?.innerHTML).not.toEqual(historySvg?.innerHTML);
     });
 
     it('renders an address with a copy control', () => {
@@ -185,12 +198,22 @@ describe('WalletDropdown', () => {
     });
   });
 
-  // ── Switch wallet closes the dropdown ─────────────────────────────────────
+  // ── Switch wallet ─────────────────────────────────────────────────────────
   describe('switch wallet', () => {
-    it('calls onClose when switch wallet is clicked', () => {
-      const { onClose } = renderDropdown();
+    it('calls onClose and onSwitchWallet when provided', () => {
+      const onSwitchWallet = vi.fn();
+      const { onClose, onDisconnect } = renderDropdown({ onSwitchWallet });
       fireEvent.click(screen.getByText(/switch wallet/i));
       expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onSwitchWallet).toHaveBeenCalledTimes(1);
+      expect(onDisconnect).not.toHaveBeenCalled();
+    });
+
+    it('falls back to onDisconnect and onClose when onSwitchWallet is not provided', () => {
+      const { onClose, onDisconnect } = renderDropdown();
+      fireEvent.click(screen.getByText(/switch wallet/i));
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onDisconnect).toHaveBeenCalledTimes(1);
     });
   });
 });

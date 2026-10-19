@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConnectButton, { ConnectionState } from '../components/ConnectButton';
 
@@ -176,6 +177,67 @@ describe('ConnectButton', () => {
       expect(resetButton).toBeInTheDocument();
       expect(resetButton.className).toMatch(/disconnected/);
     });
+  });
+
+  it('navigates to /wallet when Wallet History is clicked in dropdown', async () => {
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Routes>
+          <Route
+            path="/dashboard"
+            element={
+              <ConnectButton
+                onConnect={onConnect}
+                connectDelayMs={0}
+                randomFn={() => 0.9}
+              />
+            }
+          />
+          <Route path="/wallet" element={<div data-testid="wallet-page">Wallet Page</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /connect wallet/i }));
+    fireEvent.click(getModalConnectButton());
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /wallet connected:/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /wallet connected:/i }));
+    fireEvent.click(screen.getByRole('button', { name: /wallet history/i }));
+
+    expect(screen.getByTestId('wallet-page')).toBeInTheDocument();
+  });
+
+  it('disconnects current session and reopens connect modal in disconnected state when Switch wallet is clicked', async () => {
+    render(
+      <ConnectButton
+        onConnect={onConnect}
+        onDisconnect={onDisconnect}
+        connectDelayMs={0}
+        randomFn={() => 0.9}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /connect wallet/i }));
+    fireEvent.click(getModalConnectButton());
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /wallet connected:/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /wallet connected:/i }));
+    fireEvent.click(screen.getByRole('button', { name: /switch wallet/i }));
+
+    expect(onDisconnect).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /wallet connected:/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/GB3K4Y\.\.\.YQYQ/)).not.toBeInTheDocument();
+
+    const modal = screen.getByRole('dialog');
+    expect(modal).toBeInTheDocument();
+    expect(within(modal).getByRole('heading', { name: /connect your wallet/i })).toBeInTheDocument();
   });
 
   it('has proper accessibility attributes', () => {
