@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useDraftManager } from '../hooks/useDraftManager'
 import './Plans.css'
 
@@ -25,10 +26,41 @@ function pricePreview(data: { pricing: { price: string; interval: string; priceT
 
 export default function Plans() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { drafts, deleteDraft } = useDraftManager()
+  const [toast, setToast] = useState<string | null>(() => {
+    const state = location.state as { toast?: unknown } | null
+    return typeof state?.toast === 'string' ? state.toast : null
+  })
+
+  useEffect(() => {
+    if (!toast) return
+    // Clear router state so the toast doesn't reappear on refresh / back.
+    navigate(location.pathname, { replace: true, state: null })
+    const timer = setTimeout(() => setToast(null), 4000)
+    return () => clearTimeout(timer)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="plans-page">
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            marginBottom: '1rem',
+            padding: '0.75rem 1rem',
+            background: 'rgba(34, 197, 94, 0.1)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            borderRadius: '8px',
+            color: '#22c55e',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+          }}
+        >
+          {toast}
+        </div>
+      )}
       <h1>Plans</h1>
       <p className="plans-page__description">
         Define billing plans and pricing. Sync with the backend and on-chain

@@ -1,15 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import { flushSync } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import PricingSection, { validatePricing, type PricingSectionValue } from '../components/PricingSection'
 import BillingTypeSection from '../components/create-plan/BillingTypeSection'
 import WizardHeader from '../components/create-plan/WizardHeader'
 import ExitConfirmModal from '../components/create-plan/ExitConfirmModal'
+import ErrorState from '../components/ErrorState'
+import { plans, type ApiError, type CreatePlanPayload } from '../api/client'
 import { useAutosave, type AutosaveEntry } from '../hooks/useAutosave'
 import { useDraftManager } from '../hooks/useDraftManager'
 import styles from './CreatePlan.module.css'
 
 const AUTOSAVE_KEY = 'stellabill-create-plan'
+
+/** Message passed via router state so the Plans page can show a success toast. */
+const PLAN_CREATED_TOAST = 'Plan created successfully.'
 
 function serialiseForm(usageEnabled: boolean, trialDays: string, pricing: PricingSectionValue): string {
   return JSON.stringify({ usageEnabled, trialDays, pricing })
@@ -48,13 +54,18 @@ function deserialiseForm(entry: AutosaveEntry): {
 export default function CreatePlan() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { getDraftById } = useDraftManager()
+  const { getDraftById, deleteDraft } = useDraftManager()
   const [usageEnabled, setUsageEnabled] = useState(false)
   const [trialDays, setTrialDays] = useState('')
   const [pricing, setPricing] = useState<PricingSectionValue>({ price: '', interval: '', priceType: 'currency' })
   const [errors, setErrors] = useState<{ priceError?: string; intervalError?: string }>({})
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<ApiError | null>(null)
+  // Synchronous guard: state updates are async, so two rapid submits could
+  // both observe `isSubmitting === false`. The ref closes that window.
+  const submittingRef = useRef(false)
 
   // Load draft if query param present
   useEffect(() => {
@@ -170,24 +181,52 @@ export default function CreatePlan() {
 
   // ── Submit ──────────────────────────────────────────────────────────────
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    // Ignore re-submits while a request is already in flight.
+    if (submittingRef.current) {
+      return
+    }
+
     const nextErrors = validatePricing(pricing)
     setErrors(nextErrors)
     if (nextErrors.priceError || nextErrors.intervalError) {
       return
     }
 
-    const payload = {
+    const payload: CreatePlanPayload = {
       usage_enabled: usageEnabled,
       trial_period_days: trialDays === '' ? 0 : Number(trialDays),
       price: Number(pricing.price),
       price_type: pricing.priceType,
       interval: pricing.interval,
     }
-    console.log('Create plan payload:', payload)
+
+    submittingRef.current = true
+    setIsSubmitting(true)
+    setSubmitError(null)
+
+    try {
+      await plans.create(payload)
+    } catch (err) {
+      // Keep all entered values; surface the failure inline.
+      const apiError: ApiError =
+        err instanceof Error ? (err as ApiError) : new Error(String(err))
+      setSubmitError(apiError)
+      submittingRef.current = false
+      setIsSubmitting(false)
+      return
+    }
+
     clearHistory()
     localStorage.removeItem(AUTOSAVE_KEY)
+    const draftIdParam = searchParams.get('draftId')
+    if (draftIdParam !== null) {
+      // deleteDraft persists inside a state updater; flush it before
+      // navigating, otherwise the unmount drops the update.
+      flushSync(() => deleteDraft(draftIdParam))
+    }
+    navigate('/plans', { state: { toast: PLAN_CREATED_TOAST } })
   }
 
   return (
@@ -255,6 +294,8 @@ export default function CreatePlan() {
         >
           <button
             type="submit"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -266,13 +307,14 @@ export default function CreatePlan() {
               color: '#000',
               fontSize: '0.925rem',
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              opacity: isSubmitting ? 0.6 : 1,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.88'
+              if (!e.currentTarget.disabled) e.currentTarget.style.opacity = '0.88'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1'
+              if (!e.currentTarget.disabled) e.currentTarget.style.opacity = '1'
             }}
           >
             <svg
@@ -291,7 +333,7 @@ export default function CreatePlan() {
               <line x1="16" y1="13" x2="8" y2="13" />
               <line x1="16" y1="17" x2="8" y2="17" />
             </svg>
-            Create plan
+            {isSubmitting ? 'Creating plan…' : 'Create plan'}
           </button>
 
           <button
@@ -320,6 +362,18 @@ export default function CreatePlan() {
           </button>
         </div>
       </form>
+
+      {/* Rendered outside <form>: ErrorState's buttons default to type="submit". */}
+      {submitError && (
+        <div style={{ marginTop: '1.5rem' }}>
+          <ErrorState
+            title="Couldn't create plan"
+            message="Your plan was not saved. Your changes are still here — please review them and try again."
+            technicalDetails={submitError.technicalDetails ?? submitError.message}
+            type={submitError.isOffline ? 'offline' : 'error'}
+          />
+        </div>
+      )}
 
       <ExitConfirmModal
         isOpen={showExitConfirm}

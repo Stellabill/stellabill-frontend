@@ -87,6 +87,20 @@ export const subscriptions = {
   },
 }
 
+/** Request body accepted by `POST /api/plans`. */
+export interface CreatePlanPayload {
+  usage_enabled: boolean
+  trial_period_days: number
+  price: number
+  price_type: 'currency' | 'percent'
+  interval: string
+}
+
 export const plans = {
   list: () => api<{ plans: unknown[] }>('/plans'),
+  create: (payload: CreatePlanPayload) =>
+    api<unknown>('/plans', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 }
