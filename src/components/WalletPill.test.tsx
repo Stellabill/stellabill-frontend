@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import WalletPill from './WalletPill';
 
 const LONG_ADDRESS = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890XYZ9';
@@ -13,6 +13,11 @@ describe('WalletPill', () => {
 
   beforeEach(() => {
     onDisconnect.mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   describe('address truncation', () => {
@@ -60,6 +65,71 @@ describe('WalletPill', () => {
 
       expect(container.querySelector('.bg-green-400')).not.toBeNull();
       expect(container.querySelector('.bg-orange-400')).toBeNull();
+    });
+  });
+
+  describe('explorer link and network mismatch', () => {
+    it('opens the Testnet explorer URL when on Testnet by default', () => {
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      render(<WalletPill address={LONG_ADDRESS} onDisconnect={onDisconnect} />);
+
+      openPill();
+      fireEvent.click(screen.getByRole('button', { name: /view in explorer/i }));
+
+      expect(openSpy).toHaveBeenCalledWith(
+        `https://stellar.expert/explorer/testnet/account/${LONG_ADDRESS}`,
+        '_blank',
+      );
+    });
+
+    it('opens the public explorer URL when network is Mainnet', () => {
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      render(
+        <WalletPill
+          address={LONG_ADDRESS}
+          network="Mainnet"
+          expectedNetwork="Mainnet"
+          onDisconnect={onDisconnect}
+        />,
+      );
+
+      openPill();
+      fireEvent.click(screen.getByRole('button', { name: /view in explorer/i }));
+
+      expect(openSpy).toHaveBeenCalledWith(
+        `https://stellar.expert/explorer/public/account/${LONG_ADDRESS}`,
+        '_blank',
+      );
+    });
+
+    it('renders an accessible network mismatch warning in pill and dropdown when wallet network differs from expected', () => {
+      render(
+        <WalletPill
+          address={LONG_ADDRESS}
+          network="Mainnet"
+          expectedNetwork="Testnet"
+          onDisconnect={onDisconnect}
+        />,
+      );
+
+      const pillStatus = screen.getByRole('status');
+      expect(pillStatus).toHaveAccessibleName(
+        /network mismatch: wallet is on mainnet, expected testnet/i,
+      );
+      expect(pillStatus).toHaveTextContent(/wrong network/i);
+
+      openPill();
+      const dropdownAlert = screen.getByRole('alert');
+      expect(dropdownAlert).toHaveTextContent(/network mismatch/i);
+      expect(dropdownAlert).toHaveTextContent(/wallet is on mainnet, but expected testnet/i);
+    });
+
+    it('does not render a mismatch warning when wallet network matches expected network', () => {
+      render(<WalletPill address={LONG_ADDRESS} network="Testnet" onDisconnect={onDisconnect} />);
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      openPill();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
   });
 

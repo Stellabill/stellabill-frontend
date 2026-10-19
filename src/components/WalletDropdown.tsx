@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { Copy, ExternalLink, LogOut, Check, CreditCard } from 'lucide-react';
+import { Copy, ExternalLink, LogOut, Check, CreditCard, AlertTriangle } from 'lucide-react';
+import {
+  explorerAccountUrl,
+  getExpectedNetwork,
+  isNetworkMismatch,
+  normalizeNetwork,
+  type StellarNetwork,
+} from '../config/network';
 
 interface WalletDropdownProps {
   isOpen: boolean;
@@ -7,12 +14,30 @@ interface WalletDropdownProps {
   onClose: () => void;
   onDisconnect: () => void;
   onOpenHistory?: () => void;
+  network?: StellarNetwork | 'testnet' | 'mainnet' | 'public' | (string & {});
+  expectedNetwork?: StellarNetwork | 'testnet' | 'mainnet' | 'public' | (string & {});
 }
 
-const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClose, onDisconnect, onOpenHistory }) => {
+const WalletDropdown: React.FC<WalletDropdownProps> = ({
+  isOpen,
+  address,
+  onClose,
+  onDisconnect,
+  onOpenHistory,
+  network,
+  expectedNetwork,
+}) => {
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
+
+  const resolvedExpectedNetwork = expectedNetwork
+    ? normalizeNetwork(expectedNetwork)
+    : getExpectedNetwork();
+  const resolvedWalletNetwork = network
+    ? normalizeNetwork(network)
+    : resolvedExpectedNetwork;
+  const hasMismatch = isNetworkMismatch(resolvedWalletNetwork, resolvedExpectedNetwork);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(address);
@@ -38,6 +63,21 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClos
              <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider">Connected</span>
           </div>
         </div>
+
+        {hasMismatch && (
+          <div
+            role="alert"
+            className="flex items-start gap-2.5 p-3 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs"
+          >
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <div className="font-bold text-amber-300">Network mismatch</div>
+              <div className="text-[11px] text-amber-200/90 leading-snug">
+                Wallet is on {resolvedWalletNetwork}, but expected {resolvedExpectedNetwork}. Please switch your wallet network.
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="bg-slate-950/50 rounded-2xl p-4 border border-white/5 mb-6 group relative">
           <div className="text-[10px] font-medium text-slate-500 mb-1">Stellar Address</div>
@@ -57,7 +97,7 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClos
         <div className="space-y-1">
           <button 
             className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all group"
-            onClick={() => window.open(`https://stellar.expert/explorer/public/account/${address}`, '_blank')}
+            onClick={() => window.open(explorerAccountUrl(resolvedWalletNetwork, address), '_blank')}
           >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-slate-800 rounded-lg group-hover:bg-cyan-500/10 transition-colors">

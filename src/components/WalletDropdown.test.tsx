@@ -10,6 +10,8 @@ type Overrides = Partial<{
   onClose: ReturnType<typeof vi.fn>;
   onDisconnect: ReturnType<typeof vi.fn>;
   onOpenHistory: ReturnType<typeof vi.fn>;
+  network: string;
+  expectedNetwork: string;
 }>;
 
 function renderDropdown(overrides: Overrides = {}) {
@@ -21,6 +23,8 @@ function renderDropdown(overrides: Overrides = {}) {
     onClose,
     onDisconnect,
     ...(overrides.onOpenHistory ? { onOpenHistory: overrides.onOpenHistory } : {}),
+    ...(overrides.network ? { network: overrides.network } : {}),
+    ...(overrides.expectedNetwork ? { expectedNetwork: overrides.expectedNetwork } : {}),
   };
   const utils = render(<WalletDropdown {...props} />);
   return { ...utils, props, onClose, onDisconnect };
@@ -41,6 +45,7 @@ describe('WalletDropdown', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
     openSpy.mockRestore();
   });
 
@@ -175,13 +180,46 @@ describe('WalletDropdown', () => {
 
   // ── Explorer link ─────────────────────────────────────────────────────────
   describe('view in explorer', () => {
-    it('opens the Stellar expert page for the wallet address in a new tab', () => {
+    it('defaults to the Testnet Stellar Expert page for the wallet address in a new tab', () => {
       renderDropdown();
+      fireEvent.click(screen.getByText(/view in explorer/i));
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      const [url, target] = openSpy.mock.calls[0];
+      expect(url).toBe(`https://stellar.expert/explorer/testnet/account/${ADDRESS}`);
+      expect(target).toBe('_blank');
+    });
+
+    it('opens the public (Mainnet) Stellar Expert page when network is Mainnet', () => {
+      renderDropdown({ network: 'Mainnet' });
       fireEvent.click(screen.getByText(/view in explorer/i));
       expect(openSpy).toHaveBeenCalledTimes(1);
       const [url, target] = openSpy.mock.calls[0];
       expect(url).toBe(`https://stellar.expert/explorer/public/account/${ADDRESS}`);
       expect(target).toBe('_blank');
+    });
+  });
+
+  // ── Network mismatch warning ──────────────────────────────────────────────
+  describe('network mismatch warning', () => {
+    it('does not show a warning when wallet network matches expected network', () => {
+      renderDropdown({ network: 'Testnet' });
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('renders an accessible alert warning when wallet network differs from expected network', () => {
+      renderDropdown({ network: 'Mainnet', expectedNetwork: 'Testnet' });
+      const alert = screen.getByRole('alert');
+      expect(alert).toBeInTheDocument();
+      expect(alert).toHaveTextContent(/network mismatch/i);
+      expect(alert).toHaveTextContent(/wallet is on mainnet, but expected testnet/i);
+    });
+
+    it('detects mismatch against VITE_STELLAR_NETWORK env configuration', () => {
+      vi.stubEnv('VITE_STELLAR_NETWORK', 'mainnet');
+      renderDropdown({ network: 'Testnet' });
+      const alert = screen.getByRole('alert');
+      expect(alert).toBeInTheDocument();
+      expect(alert).toHaveTextContent(/wallet is on testnet, but expected mainnet/i);
     });
   });
 
