@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import OnboardingShell from './Onboarding/OnboardingShell';
 import { ReviewStep } from './common/ReviewStep';
+import { openExternal } from '../utils/openExternal';
+import { SUPPORT_URL } from '../config/links';
 import './Onboarding/OnboardingShell.css';
 
 export default function OnboardingReview() {
@@ -96,7 +98,7 @@ export default function OnboardingReview() {
         }}
         footerHelp={{
           label: 'Questions? Contact support',
-          onClick: () => window.open('/support', '_blank'),
+          onClick: () => openExternal(SUPPORT_URL),
         }}
       />
     </OnboardingShell>

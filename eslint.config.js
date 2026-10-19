@@ -37,6 +37,12 @@ export default tseslint.config({
           'Avoid interpolating counts directly into template strings. ' +
           'Use ICU MessageFormat via t() instead — see docs/ICU_PLURALIZATION_GUIDE.md.',
       },
+      {
+        selector:
+          "CallExpression[callee.object.name='window'][callee.property.name='open']:not([arguments.2.value=/noopener/])",
+        message:
+          'window.open must include "noopener" in windowFeatures to mitigate reverse tabnabbing. Use openExternal() from "@/utils/openExternal" instead.',
+      },
     ],
   },
 });
