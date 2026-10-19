@@ -2,32 +2,38 @@ import React, { useRef, useState } from 'react';
 import WalletConnectModal from './WalletConnectModal';
 import WalletDropdown from './WalletDropdown';
 import { Loader2, AlertCircle, ChevronDown } from 'lucide-react';
+import {
+  connectFreighter,
+  FreighterConnectionError,
+  type FreighterAdapter,
+  type FreighterConnectionErrorType,
+} from '../wallet/freighter';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 interface ConnectButtonProps {
   onConnect?: (address: string) => void;
   onDisconnect?: () => void;
-  connectDelayMs?: number;
-  randomFn?: () => number;
+  freighterAdapter?: FreighterAdapter;
 }
 
 const ConnectButton: React.FC<ConnectButtonProps> = ({
   onConnect,
   onDisconnect,
-  connectDelayMs = 1500,
-  randomFn = Math.random,
+  freighterAdapter,
 }) => {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [connectionErrorType, setConnectionErrorType] = useState<FreighterConnectionErrorType>();
   const activeConnectionId = useRef(0);
 
   const handleConnectClick = () => {
     setConnectionState('disconnected');
     setErrorMessage('');
+    setConnectionErrorType(undefined);
     setIsModalOpen(true);
   };
 
@@ -38,37 +44,34 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
       activeConnectionId.current += 1;
       setConnectionState('disconnected');
       setErrorMessage('');
+      setConnectionErrorType(undefined);
     }
   };
 
-  const handleConnectFreighter = () => {
+  const handleConnectFreighter = async () => {
     const connectionId = ++activeConnectionId.current;
     setConnectionState('connecting');
     setErrorMessage('');
+    setConnectionErrorType(undefined);
 
-    // Simulate wallet connection process. Keep non-zero delays visible long enough for assistive UI/tests.
-    const effectiveDelay = connectDelayMs > 0 ? Math.max(connectDelayMs, 500) : 0;
-
-    window.setTimeout(() => {
+    try {
+      const { address } = await connectFreighter(freighterAdapter);
       if (connectionId !== activeConnectionId.current) return;
-
-      try {
-        if (randomFn() < 0.2) {
-          throw new Error('Connection rejected by user');
-        }
-        
-        // Simulate success for demo
-        const mockAddress = 'GB3K4Y5QYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQ';
-        setWalletAddress(mockAddress);
-        setConnectionState('connected');
-        setIsModalOpen(false);
-        onConnect?.(mockAddress);
-      } catch (error) {
-        if (connectionId !== activeConnectionId.current) return;
-        setConnectionState('error');
-        setErrorMessage(error instanceof Error ? error.message : 'Connection failed');
-      }
-    }, effectiveDelay);
+      setWalletAddress(address);
+      setConnectionState('connected');
+      setIsModalOpen(false);
+      onConnect?.(address);
+    } catch (error) {
+      if (connectionId !== activeConnectionId.current) return;
+      const errorType = error instanceof FreighterConnectionError ? error.type : 'unknown';
+      setConnectionState('error');
+      setConnectionErrorType(errorType);
+      setErrorMessage(
+        error instanceof FreighterConnectionError
+          ? error.message
+          : 'Connection failed. Please try again.'
+      );
+    }
   };
 
   const handleDisconnect = () => {
@@ -76,12 +79,14 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
     setConnectionState('disconnected');
     setWalletAddress('');
     setIsDropdownOpen(false);
+    setConnectionErrorType(undefined);
     onDisconnect?.();
   };
 
   const handleRetry = () => {
     setConnectionState('disconnected');
     setErrorMessage('');
+    setConnectionErrorType(undefined);
     setIsModalOpen(true);
   };
 
@@ -152,6 +157,7 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
         onConnectFreighter={handleConnectFreighter}
         connectionState={connectionState}
         errorMessage={errorMessage}
+        errorType={connectionErrorType}
         onRetry={handleRetry}
       />
     </>
