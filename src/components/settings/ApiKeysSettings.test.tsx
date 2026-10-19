@@ -1,16 +1,20 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import '@testing-library/jest-dom'
 import ApiKeysSettings from './ApiKeysSettings'
+import { copyToClipboard } from '../../utils/clipboard'
+
+vi.mock('../../utils/clipboard', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../utils/clipboard')>()
+  return { ...actual, copyToClipboard: vi.fn(actual.copyToClipboard) }
+})
+
+const mockedCopyToClipboard = vi.mocked(copyToClipboard)
 
 describe('ApiKeysSettings', () => {
   beforeEach(() => {
-    // Reset any clipboard mocks if necessary, we can mock it here
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: vitest.fn(),
-      },
-    })
+    mockedCopyToClipboard.mockClear()
+    mockedCopyToClipboard.mockResolvedValue(true)
   })
 
   it('renders the api keys list with columns', () => {
@@ -37,7 +41,7 @@ describe('ApiKeysSettings', () => {
     expect(screen.queryByRole('heading', { name: 'Create API Key' })).not.toBeInTheDocument()
   })
 
-  it('can toggle key visibility and copy to clipboard', () => {
+  it('can toggle key visibility and copy to clipboard', async () => {
     render(<ApiKeysSettings />)
     
     // Hide initially -> Show
@@ -48,7 +52,24 @@ describe('ApiKeysSettings', () => {
     // Copy
     const copyBtns = screen.getAllByText('Copy')
     fireEvent.click(copyBtns[0])
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('sk_live_51H2K3a...')
+    await waitFor(() => {
+      expect(mockedCopyToClipboard).toHaveBeenCalledWith('sk_live_51H2K3a...')
+    })
+    expect(await screen.findByText('Copied!')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/api key copied to clipboard/i)
+  })
+
+  it('shows failure feedback without success when copying fails', async () => {
+    mockedCopyToClipboard.mockResolvedValueOnce(false)
+    render(<ApiKeysSettings />)
+
+    fireEvent.click(screen.getAllByText('Copy')[0])
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(/copy failed — select and copy manually/i)
+    })
+    expect(screen.queryByText('Copied!')).not.toBeInTheDocument()
+    expect(screen.getAllByText(/copy failed — select and copy manually/i).length).toBeGreaterThan(0)
   })
 
   it('handles the revocation flow with typed confirmation', () => {
