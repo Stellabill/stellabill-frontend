@@ -5,13 +5,23 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from './Branding/Logo';
 import LocaleSwitcher from './LocaleSwitcher';
 import { Menu, X, Github, Rocket, Zap, BookOpen, MessageSquare, ChevronRight } from 'lucide-react';
+import { useWallet } from '../wallet/WalletContext';
+import { FreighterConnectionError } from '../wallet/freighter';
 
 export default function LandingNavbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isConnected, setIsConnected] = useState(false)
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
-  const [address] = useState("GABCDEFGHIJK1234567890ABCDEFGHIJK1234567890ABCDEXYZ9")
+  const {
+    status,
+    address,
+    error,
+    connect,
+    disconnect,
+    clearError,
+    cancelConnect,
+  } = useWallet()
+  const isConnected = status === 'connected'
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -37,13 +47,14 @@ export default function LandingNavbar() {
     setIsWalletModalOpen(true);
   }
 
-  const handleFreighterConnect = () => {
-    setIsConnected(true);
-    console.log("Freighter connected successfully");
-  }
-
-  const handleDisconnect = () => {
-    setIsConnected(false);
+  const handleFreighterConnect = async () => {
+    try {
+      const result = await connect()
+      if (!result) return
+      setIsWalletModalOpen(false)
+    } catch {
+      // The provider exposes the error to the modal.
+    }
   }
 
   const handleSubscribe = () => {
@@ -105,8 +116,8 @@ export default function LandingNavbar() {
 
                 {isConnected ? (
                     <WalletPill
-                        address={address}
-                        onDisconnect={handleDisconnect}
+                        address={address ?? ''}
+                        onDisconnect={disconnect}
                     />
                 ) : (
                     <button
@@ -122,7 +133,7 @@ export default function LandingNavbar() {
               <div className="md:hidden flex items-center gap-3">
                 {isConnected && (
                     <div className="scale-90 origin-right">
-                      <WalletPill address={address} onDisconnect={handleDisconnect} />
+                      <WalletPill address={address ?? ''} onDisconnect={disconnect} />
                     </div>
                 )}
                 <button
@@ -228,7 +239,7 @@ export default function LandingNavbar() {
                 {isConnected && (
                     <button
                         onClick={() => {
-                          handleDisconnect();
+                          disconnect();
                           setIsMobileMenuOpen(false);
                         }}
                         className="w-full py-4 px-6 text-center text-red-400 bg-red-400/5 hover:bg-red-400/10 border border-red-400/20 rounded-xl font-medium transition-all"
@@ -244,9 +255,15 @@ export default function LandingNavbar() {
         {/* Wallet Connect Modal */}
         <WalletConnectModal
             isOpen={isWalletModalOpen}
-            onClose={() => setIsWalletModalOpen(false)}
+            onClose={() => {
+              cancelConnect()
+              setIsWalletModalOpen(false)
+            }}
             onConnectFreighter={handleFreighterConnect}
-            connectionState="disconnected"
+            connectionState={status}
+            errorMessage={error?.message}
+            errorType={error instanceof FreighterConnectionError ? error.type : undefined}
+            onRetry={clearError}
         />
       </>
   );

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as freighterApi from '@stellar/freighter-api';
 import ConnectButton from '../components/ConnectButton';
+import { WalletProvider } from '../wallet/WalletContext';
 
 vi.mock('@stellar/freighter-api', () => ({
   isConnected: vi.fn(),
@@ -13,6 +14,7 @@ vi.mock('@stellar/freighter-api', () => ({
 describe('ConnectButton failure regression', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     vi.mocked(freighterApi.isConnected).mockResolvedValue({ isConnected: true });
     vi.mocked(freighterApi.requestAccess).mockResolvedValue({ address: 'GTEST' });
     vi.mocked(freighterApi.getAddress).mockResolvedValue({ address: 'GTEST' });
@@ -29,7 +31,7 @@ describe('ConnectButton failure regression', () => {
       error: { code: 500, message: 'Wallet API unavailable' },
     });
     const onConnect = vi.fn();
-    render(<ConnectButton onConnect={onConnect} />);
+    render(<WalletProvider adapter={freighterApi}><ConnectButton onConnect={onConnect} /></WalletProvider>);
 
     fireEvent.click(screen.getByRole('button', { name: /connect wallet/i }));
     fireEvent.click(
@@ -46,7 +48,7 @@ describe('ConnectButton failure regression', () => {
   it('retries the wallet connection after a failure', async () => {
     vi.mocked(freighterApi.getAddress).mockResolvedValueOnce({ address: '' });
     const onConnect = vi.fn();
-    render(<ConnectButton onConnect={onConnect} />);
+    render(<WalletProvider adapter={freighterApi}><ConnectButton onConnect={onConnect} /></WalletProvider>);
 
     fireEvent.click(screen.getByRole('button', { name: /connect wallet/i }));
     fireEvent.click(

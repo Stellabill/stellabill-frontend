@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ApiError } from "../api/client";
 import WalletConnectModal from "../components/WalletConnectModal";
+import { useWallet } from "../wallet/WalletContext";
+import { FreighterConnectionError } from "../wallet/freighter";
 import ErrorState from "../components/ErrorState";
 import SortBySelect from "../components/SortBySelect";
 import GiftPurchaseModal, { type Plan as GiftPlan } from "../components/GiftPurchaseModal";
@@ -379,10 +381,16 @@ export default function BrowsePlans() {
 	const [intervalFilter, setIntervalFilter] = useState<PlanInterval | "All">("All");
 	const [sortField, setSortField] = useState<SortField>("name");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-	const [isWalletConnected, setIsWalletConnected] = useState(false);
 	const [walletModalOpen, setWalletModalOpen] = useState(false);
 	const [giftModalOpen, setGiftModalOpen] = useState(false);
 	const [selectedPlanForGift, setSelectedPlanForGift] = useState<Plan | null>(null);
+	const {
+		status,
+		error: walletError,
+		connect,
+		clearError,
+		cancelConnect,
+	} = useWallet();
 
 	// Fetch plans from API
 	const fetchPlans = useCallback(async () => {
@@ -454,7 +462,7 @@ export default function BrowsePlans() {
 	};
 
 	const handleSubscribe = (plan: Plan) => {
-		if (!isWalletConnected) {
+		if (status !== "connected") {
 			setWalletModalOpen(true);
 			return;
 		}
@@ -472,9 +480,14 @@ export default function BrowsePlans() {
 		// Could show a toast notification here
 	};
 
-	const handleWalletConnect = () => {
-		setIsWalletConnected(true);
-		setWalletModalOpen(false);
+	const handleWalletConnect = async () => {
+		try {
+			const result = await connect();
+			if (!result) return;
+			setWalletModalOpen(false);
+		} catch {
+			// The provider exposes the error to the modal.
+		}
 	};
 
 	const clearFilters = () => {
@@ -707,8 +720,19 @@ export default function BrowsePlans() {
 
 				<WalletConnectModal
 					isOpen={walletModalOpen}
-					onClose={() => setWalletModalOpen(false)}
-					onConnected={handleWalletConnect}
+					onClose={() => {
+						cancelConnect();
+						setWalletModalOpen(false);
+					}}
+					onConnectFreighter={handleWalletConnect}
+					connectionState={status}
+					errorMessage={walletError?.message}
+					errorType={
+						walletError instanceof FreighterConnectionError
+							? walletError.type
+							: undefined
+					}
+					onRetry={clearError}
 				/>
 
 				<GiftPurchaseModal

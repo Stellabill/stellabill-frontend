@@ -41,19 +41,7 @@ export async function connectFreighter(
     const access = await adapter.requestAccess();
     throwForApiError(access.error);
 
-    const account = await adapter.getAddress();
-    throwForApiError(account.error);
-    if (!account.address) {
-      throw new FreighterConnectionError('unknown');
-    }
-
-    const network = await adapter.getNetwork();
-    throwForApiError(network.error);
-    if (!network.network) {
-      throw new FreighterConnectionError('unknown');
-    }
-
-    return { address: account.address, network: network.network };
+    return await readFreighterAccount(adapter);
   } catch (error) {
     if (error instanceof FreighterConnectionError) throw error;
     if (
@@ -70,4 +58,39 @@ export async function connectFreighter(
     }
     throw new FreighterConnectionError('unknown');
   }
+}
+
+export async function getFreighterConnection(
+  adapter: FreighterAdapter = freighterApi
+): Promise<{ address: string; network: string }> {
+  try {
+    const connection = await adapter.isConnected();
+    throwForApiError(connection.error);
+    if (!connection.isConnected) {
+      throw new FreighterConnectionError('not-installed');
+    }
+
+    return await readFreighterAccount(adapter);
+  } catch (error) {
+    if (error instanceof FreighterConnectionError) throw error;
+    throw new FreighterConnectionError('unknown');
+  }
+}
+
+async function readFreighterAccount(
+  adapter: FreighterAdapter
+): Promise<{ address: string; network: string }> {
+  const account = await adapter.getAddress();
+  throwForApiError(account.error);
+  if (!account.address) {
+    throw new FreighterConnectionError('unknown');
+  }
+
+  const network = await adapter.getNetwork();
+  throwForApiError(network.error);
+  if (!network.network) {
+    throw new FreighterConnectionError('unknown');
+  }
+
+  return { address: account.address, network: network.network };
 }

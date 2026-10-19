@@ -1,92 +1,69 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import WalletConnectModal from './WalletConnectModal';
 import WalletDropdown from './WalletDropdown';
 import { Loader2, AlertCircle, ChevronDown } from 'lucide-react';
 import {
-  connectFreighter,
   FreighterConnectionError,
-  type FreighterAdapter,
-  type FreighterConnectionErrorType,
 } from '../wallet/freighter';
+import { useWallet } from '../wallet/WalletContext';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 interface ConnectButtonProps {
   onConnect?: (address: string) => void;
   onDisconnect?: () => void;
-  freighterAdapter?: FreighterAdapter;
 }
 
 const ConnectButton: React.FC<ConnectButtonProps> = ({
   onConnect,
   onDisconnect,
-  freighterAdapter,
 }) => {
-  const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string>('');
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [connectionErrorType, setConnectionErrorType] = useState<FreighterConnectionErrorType>();
-  const activeConnectionId = useRef(0);
+  const {
+    status,
+    address,
+    error,
+    connect,
+    disconnect: disconnectWallet,
+    clearError,
+    cancelConnect,
+  } = useWallet();
+  const connectionState: ConnectionState = status;
+  const walletAddress = address ?? '';
+  const errorMessage = error?.message ?? '';
+  const connectionErrorType =
+    error instanceof FreighterConnectionError ? error.type : undefined;
 
   const handleConnectClick = () => {
-    setConnectionState('disconnected');
-    setErrorMessage('');
-    setConnectionErrorType(undefined);
+    clearError();
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
+    cancelConnect();
     setIsModalOpen(false);
-
-    if (connectionState === 'connecting') {
-      activeConnectionId.current += 1;
-      setConnectionState('disconnected');
-      setErrorMessage('');
-      setConnectionErrorType(undefined);
-    }
   };
 
   const handleConnectFreighter = async () => {
-    const connectionId = ++activeConnectionId.current;
-    setConnectionState('connecting');
-    setErrorMessage('');
-    setConnectionErrorType(undefined);
-
     try {
-      const { address } = await connectFreighter(freighterAdapter);
-      if (connectionId !== activeConnectionId.current) return;
-      setWalletAddress(address);
-      setConnectionState('connected');
+      const result = await connect();
+      if (!result) return;
       setIsModalOpen(false);
-      onConnect?.(address);
-    } catch (error) {
-      if (connectionId !== activeConnectionId.current) return;
-      const errorType = error instanceof FreighterConnectionError ? error.type : 'unknown';
-      setConnectionState('error');
-      setConnectionErrorType(errorType);
-      setErrorMessage(
-        error instanceof FreighterConnectionError
-          ? error.message
-          : 'Connection failed. Please try again.'
-      );
+      onConnect?.(result.address);
+    } catch {
+      // The provider exposes the connection error to this button and modal.
     }
   };
 
   const handleDisconnect = () => {
-    activeConnectionId.current += 1;
-    setConnectionState('disconnected');
-    setWalletAddress('');
+    disconnectWallet();
     setIsDropdownOpen(false);
-    setConnectionErrorType(undefined);
     onDisconnect?.();
   };
 
   const handleRetry = () => {
-    setConnectionState('disconnected');
-    setErrorMessage('');
-    setConnectionErrorType(undefined);
+    clearError();
     setIsModalOpen(true);
   };
 

@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as freighterApi from '@stellar/freighter-api';
 import ConnectButton from '../components/ConnectButton';
+import { WalletProvider } from '../wallet/WalletContext';
 
 vi.mock('@stellar/freighter-api', () => ({
   isConnected: vi.fn(),
@@ -24,6 +25,7 @@ describe('ConnectButton', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     onConnect.mockClear();
     vi.mocked(freighterApi.isConnected).mockResolvedValue({ isConnected: true });
     vi.mocked(freighterApi.requestAccess).mockResolvedValue({ address: publicKey });
@@ -35,7 +37,7 @@ describe('ConnectButton', () => {
   });
 
   it('starts disconnected and opens the wallet modal', () => {
-    render(<ConnectButton />);
+    render(<WalletProvider adapter={freighterApi}><ConnectButton /></WalletProvider>);
 
     const button = screen.getByRole('button', { name: /connect wallet/i });
     expect(button).toBeInTheDocument();
@@ -47,7 +49,7 @@ describe('ConnectButton', () => {
   });
 
   it("connects using Freighter's public key", async () => {
-    render(<ConnectButton onConnect={onConnect} />);
+    render(<WalletProvider adapter={freighterApi}><ConnectButton onConnect={onConnect} /></WalletProvider>);
 
     clickConnect();
 
@@ -62,7 +64,7 @@ describe('ConnectButton', () => {
 
   it('shows an install prompt when Freighter is not installed', async () => {
     vi.mocked(freighterApi.isConnected).mockResolvedValue({ isConnected: false });
-    render(<ConnectButton onConnect={onConnect} />);
+    render(<WalletProvider adapter={freighterApi}><ConnectButton onConnect={onConnect} /></WalletProvider>);
 
     clickConnect();
 
@@ -79,7 +81,7 @@ describe('ConnectButton', () => {
       address: '',
       error: { code: 4001, message: 'User declined access' },
     });
-    render(<ConnectButton onConnect={onConnect} />);
+    render(<WalletProvider adapter={freighterApi}><ConnectButton onConnect={onConnect} /></WalletProvider>);
 
     clickConnect();
 
@@ -97,7 +99,7 @@ describe('ConnectButton', () => {
         resolveAddress = resolve;
       })
     );
-    render(<ConnectButton onConnect={onConnect} />);
+    render(<WalletProvider adapter={freighterApi}><ConnectButton onConnect={onConnect} /></WalletProvider>);
 
     clickConnect();
     await waitFor(() => expect(freighterApi.getAddress).toHaveBeenCalledOnce());
@@ -113,7 +115,7 @@ describe('ConnectButton', () => {
 
   it('disconnects a successfully connected wallet', async () => {
     const onDisconnect = vi.fn();
-    render(<ConnectButton onConnect={onConnect} onDisconnect={onDisconnect} />);
+    render(<WalletProvider adapter={freighterApi}><ConnectButton onConnect={onConnect} onDisconnect={onDisconnect} /></WalletProvider>);
     clickConnect();
 
     const connectedButton = await screen.findByRole('button', { name: /wallet connected:/i });
