@@ -167,6 +167,35 @@ describe('Settings Navigation', () => {
     expect(billingTab).toHaveStyle('background: transparent')
   })
 
+  it('renders seeded tags in the Tags tab and supports rename and delete', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    renderWithRouter(<Settings />)
+
+    fireEvent.click(screen.getByRole('button', { name: /tags/i }))
+
+    expect(await screen.findByRole('heading', { name: /manage tags/i })).toBeInTheDocument()
+    expect(screen.getByText('Enterprise', { selector: '.manage-tags-label' })).toBeInTheDocument()
+    expect(screen.getByText('Popular', { selector: '.manage-tags-label' })).toBeInTheDocument()
+    expect(screen.getByText('Beta', { selector: '.manage-tags-label' })).toBeInTheDocument()
+
+    // Rename
+    fireEvent.click(screen.getByRole('button', { name: /edit enterprise tag/i }))
+    fireEvent.change(screen.getByLabelText(/edit tag label/i), { target: { value: 'Premium' } })
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Premium', { selector: '.manage-tags-label' })).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Enterprise', { selector: '.manage-tags-label' })).not.toBeInTheDocument()
+
+    // Delete
+    fireEvent.click(screen.getByRole('button', { name: /delete beta tag/i }))
+    await waitFor(() => {
+      expect(screen.queryByText('Beta', { selector: '.manage-tags-label' })).not.toBeInTheDocument()
+    })
+    expect(screen.getByText('Popular', { selector: '.manage-tags-label' })).toBeInTheDocument()
+  })
+
   it('switches to appearance settings when appearance tab is clicked', async () => {
     renderWithRouter(<Settings />)
     
