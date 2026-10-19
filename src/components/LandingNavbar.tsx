@@ -5,13 +5,26 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from './Branding/Logo';
 import LocaleSwitcher from './LocaleSwitcher';
 import { Menu, X, Github, Rocket, Zap, BookOpen, MessageSquare, ChevronRight } from 'lucide-react';
+import { useWalletConnection, type UseWalletConnectionOptions } from '../hooks/useWalletConnection';
 
-export default function LandingNavbar() {
+export interface LandingNavbarProps extends UseWalletConnectionOptions {}
+
+export default function LandingNavbar(props: LandingNavbarProps = {}) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isConnected, setIsConnected] = useState(false)
-  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
-  const [address] = useState("GABCDEFGHIJK1234567890ABCDEFGHIJK1234567890ABCDEXYZ9")
+
+  const {
+    connectionState,
+    isConnected,
+    address,
+    errorMessage,
+    isModalOpen: isWalletModalOpen,
+    openModal: handleConnectWallet,
+    closeModal: handleCloseModal,
+    connectFreighter: handleFreighterConnect,
+    disconnect: handleDisconnect,
+    retry: handleRetry,
+  } = useWalletConnection(props);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -32,19 +45,6 @@ export default function LandingNavbar() {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
-
-  const handleConnectWallet = () => {
-    setIsWalletModalOpen(true);
-  }
-
-  const handleFreighterConnect = () => {
-    setIsConnected(true);
-    console.log("Freighter connected successfully");
-  }
-
-  const handleDisconnect = () => {
-    setIsConnected(false);
-  }
 
   const handleSubscribe = () => {
     navigate("/browse-plans");
@@ -244,9 +244,11 @@ export default function LandingNavbar() {
         {/* Wallet Connect Modal */}
         <WalletConnectModal
             isOpen={isWalletModalOpen}
-            onClose={() => setIsWalletModalOpen(false)}
+            onClose={handleCloseModal}
             onConnectFreighter={handleFreighterConnect}
-            connectionState="disconnected"
+            connectionState={connectionState}
+            errorMessage={errorMessage}
+            onRetry={handleRetry}
         />
       </>
   );
