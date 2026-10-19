@@ -11,6 +11,7 @@ interface CancelSubscriptionModalProps {
     isLoading?: boolean;
     balance: string;
     endDate: string;
+    error?: { message: string; technicalDetails?: string } | null;
 }
 
 type CancelStep = 'offer' | 'confirm';
@@ -22,7 +23,8 @@ export default function CancelSubscriptionModal({
     onOfferSelected,
     isLoading = false,
     balance,
-    endDate
+    endDate,
+    error
 }: CancelSubscriptionModalProps) {
     const [step, setStep] = useState<CancelStep>('offer');
     const modalRef = useRef<HTMLDivElement>(null);
@@ -102,6 +104,18 @@ export default function CancelSubscriptionModal({
                         <p id="cancel-modal-description" className="cancel-description">
                             You will no longer be charged. Your remaining prepaid balance ({balance} USDC) can be withdrawn to your wallet.
                         </p>
+
+                        {error && (
+                            <div className="cancel-action-error" role="alert">
+                                <p>{error.message}</p>
+                                {error.technicalDetails && (
+                                    <details>
+                                        <summary>Technical details</summary>
+                                        <p>{error.technicalDetails}</p>
+                                    </details>
+                                )}
+                            </div>
+                        )}
 
                         <div className="cancel-checklist-container">
                             <div className="cancel-checklist-item">

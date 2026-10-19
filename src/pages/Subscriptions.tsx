@@ -1,5 +1,5 @@
 import SwipeableRow from "../components/SwipeableRow";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import PauseSubscriptionModal from "../components/PauseSubscriptionModal";
@@ -10,6 +10,7 @@ import UsageThisPeriod from "../components/UsageThisPeriod";
 import ErrorState from "../components/ErrorState";
 import Tag from "../components/Tag";
 import AddTagPopover, { TagOption } from "../components/AddTagPopover";
+import { ToastContainer, type ToastOptions } from "../components/TransactionToast";
 import { useRefresh } from "../hooks/useRefresh";
 import { useFlip } from "../hooks/useFlip";
 import "./Subscriptions.css";
@@ -30,6 +31,21 @@ type SortDirection = "asc" | "desc";
 interface SortState {
 	field: SortField;
 	direction: SortDirection;
+}
+
+interface SubscriptionActionError {
+	message: string;
+	technicalDetails?: string;
+}
+
+function getActionError(error: unknown, fallbackMessage: string): SubscriptionActionError {
+	if (!(error instanceof Error)) return { message: fallbackMessage };
+
+	const technicalDetails =
+		"technicalDetails" in error && typeof error.technicalDetails === "string"
+			? error.technicalDetails
+			: undefined;
+	return { message: error.message || fallbackMessage, technicalDetails };
 }
 
 /* ─── Sort helpers ───────────────────────────────────────────── */
@@ -373,6 +389,28 @@ export default function Subscriptions() {
 	const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
 	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 	const [isActionLoading, setIsActionLoading] = useState(false);
+	const [pauseError, setPauseError] = useState<SubscriptionActionError | null>(null);
+	const [cancelError, setCancelError] = useState<SubscriptionActionError | null>(null);
+	const [resumeLoadingId, setResumeLoadingId] = useState<string | null>(null);
+	const [toasts, setToasts] = useState<ToastOptions[]>([]);
+	const toastId = useRef(0);
+
+	const addToast = (status: ToastOptions["status"], title: string, message?: string) => {
+		toastId.current += 1;
+		const id = `subscription-${toastId.current}`;
+		setToasts((prev) => [...prev, { id, status, title, message }]);
+		return id;
+	};
+
+	const updateToast = (id: string, status: ToastOptions["status"], title: string, message?: string) => {
+		setToasts((prev) =>
+			prev.map((toast) => toast.id === id ? { ...toast, status, title, message } : toast),
+		);
+	};
+
+	const removeToast = (id: string) => {
+		setToasts((prev) => prev.filter((toast) => toast.id !== id));
+	};
 
 	const handleSortField = useCallback((field: SortField) => {
 		setSort((prev) =>
@@ -481,6 +519,7 @@ export default function Subscriptions() {
 	const handlePauseConfirm = async () => {
 		if (!selectedId) return;
 		setIsActionLoading(true);
+		setPauseError(null);
 		try {
 			await subscriptions.pause(selectedId);
 			setData((prev) =>
@@ -488,10 +527,10 @@ export default function Subscriptions() {
 					sub.id === selectedId ? { ...sub, status: "Paused" as const } : sub,
 				),
 			);
+			addToast("success", "Subscription paused", "Your subscription has been paused.");
 			setIsPauseModalOpen(false);
 		} catch (err) {
-			console.error("Failed to pause:", err);
-			setIsPauseModalOpen(false);
+			setPauseError(getActionError(err, "Failed to pause subscription. Please try again."));
 		} finally {
 			setIsActionLoading(false);
 		}
@@ -500,6 +539,7 @@ export default function Subscriptions() {
 	const handleCancelConfirm = async () => {
 		if (!selectedId) return;
 		setIsActionLoading(true);
+		setCancelError(null);
 		try {
 			await subscriptions.cancel(selectedId);
 			setData((prev) =>
@@ -509,10 +549,10 @@ export default function Subscriptions() {
 						: sub,
 				),
 			);
+			addToast("success", "Subscription cancelled", "Your subscription has been cancelled.");
 			setIsCancelModalOpen(false);
 		} catch (err) {
-			console.error("Failed to cancel:", err);
-			setIsCancelModalOpen(false);
+			setCancelError(getActionError(err, "Failed to cancel subscription. Please try again."));
 		} finally {
 			setIsActionLoading(false);
 		}
@@ -520,6 +560,7 @@ export default function Subscriptions() {
 
 	const handleOfferSelected = (offerId: string) => {
 		if (offerId === "pause") {
+			setPauseError(null);
 			setIsCancelModalOpen(false);
 			setIsPauseModalOpen(true);
 		} else {
@@ -530,11 +571,23 @@ export default function Subscriptions() {
 	};
 
 	const handleResume = async (id: string) => {
-		setData((prev) =>
-			prev.map((sub) =>
-				sub.id === id ? { ...sub, status: "Active" as const } : sub,
-			),
-		);
+		if (resumeLoadingId !== null) return;
+		setResumeLoadingId(id);
+		const pendingToastId = addToast("pending", "Resuming subscription", "Please wait while we resume your subscription.");
+		try {
+			await subscriptions.resume(id);
+			setData((prev) =>
+				prev.map((sub) =>
+					sub.id === id ? { ...sub, status: "Active" as const } : sub,
+				),
+			);
+			updateToast(pendingToastId, "success", "Subscription resumed", "Your subscription is active again.");
+		} catch (err) {
+			const actionError = getActionError(err, "Failed to resume subscription. Please try again.");
+			updateToast(pendingToastId, "error", actionError.message, actionError.technicalDetails);
+		} finally {
+			setResumeLoadingId(null);
+		}
 	};
 
 	/* ── Loading state ─────────────────────────────────────────── */
@@ -687,7 +740,10 @@ export default function Subscriptions() {
 								{selectedSub.status === "Active" && (
 									<button
 										className="detail-action-btn detail-action-btn--pause"
-										onClick={() => setIsPauseModalOpen(true)}
+										onClick={() => {
+											setPauseError(null);
+											setIsPauseModalOpen(true);
+										}}
 										aria-label={`Pause ${selectedSub.planName} subscription`}>
 										Pause subscription
 									</button>
@@ -696,14 +752,18 @@ export default function Subscriptions() {
 									<button
 										className="detail-action-btn detail-action-btn--resume"
 										onClick={() => handleResume(selectedSub.id)}
+										disabled={resumeLoadingId !== null}
 										aria-label={`Resume ${selectedSub.planName} subscription`}>
-										Resume subscription
+										{resumeLoadingId === selectedSub.id ? "Resuming..." : "Resume subscription"}
 									</button>
 								)}
 								{selectedSub.status !== "Cancelled" && (
 									<button
 										className="detail-action-btn"
-										onClick={() => setIsCancelModalOpen(true)}
+										onClick={() => {
+											setCancelError(null);
+											setIsCancelModalOpen(true);
+										}}
 										aria-label={`Cancel ${selectedSub.planName} subscription`}>
 										Cancel billing
 									</button>
@@ -724,19 +784,28 @@ export default function Subscriptions() {
 
 				<PauseSubscriptionModal
 					isOpen={isPauseModalOpen}
-					onClose={() => setIsPauseModalOpen(false)}
+					onClose={() => {
+						setIsPauseModalOpen(false);
+						setPauseError(null);
+					}}
 					onConfirm={handlePauseConfirm}
 					isLoading={isActionLoading}
+					error={pauseError}
 				/>
 				<CancelSubscriptionModal
 					isOpen={isCancelModalOpen}
-					onClose={() => setIsCancelModalOpen(false)}
+					onClose={() => {
+						setIsCancelModalOpen(false);
+						setCancelError(null);
+					}}
 					onConfirm={handleCancelConfirm}
 					onOfferSelected={handleOfferSelected}
 					isLoading={isActionLoading}
 					balance={selectedSub.prepaidBalance.replace(" USDC", "") || "0"}
 					endDate={selectedSub.nextCharge || "N/A"}
+					error={cancelError}
 				/>
+				<ToastContainer toasts={toasts} removeToast={removeToast} />
 			</div>
 		);
 	}
@@ -982,13 +1051,14 @@ export default function Subscriptions() {
 									color: "#fff",
 									onClick: () => {
 										setSelectedId(sub.id);
+										setPauseError(null);
 										setIsPauseModalOpen(true);
 									}
 								});
 							} else if (sub.status === "Paused") {
 								trailingActions.push({
 									id: "resume",
-									label: "Resume",
+									label: resumeLoadingId === sub.id ? "Resuming..." : "Resume",
 									icon: <IconPlay />,
 									backgroundColor: "#10b981", // emerald-500
 									color: "#fff",
@@ -1005,6 +1075,7 @@ export default function Subscriptions() {
 									color: "#fff",
 									onClick: () => {
 										setSelectedId(sub.id);
+										setCancelError(null);
 										setIsCancelModalOpen(true);
 									}
 								});
@@ -1108,7 +1179,7 @@ export default function Subscriptions() {
 					</p>
 				</div>
 			</div>
+			<ToastContainer toasts={toasts} removeToast={removeToast} />
 		</div>
 	);
 }
-

@@ -15,10 +15,18 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+vi.mock('../hooks/useFlip', () => ({
+  useFlip: () => ({
+    containerRef: { current: null },
+    getItemProps: (id: string) => ({ 'data-flip-id': id }),
+  }),
+}));
+
 vi.mock('../api/client', () => ({
   subscriptions: {
     pause: vi.fn().mockResolvedValue({ success: true }),
     cancel: vi.fn().mockResolvedValue({ success: true }),
+    resume: vi.fn().mockResolvedValue({ success: true }),
     list: vi.fn().mockResolvedValue({ subscriptions: [] }),
   },
   ApiError: class ApiError extends Error {
@@ -29,9 +37,20 @@ vi.mock('../api/client', () => ({
 }));
 
 vi.mock('../components/PauseSubscriptionModal', () => ({
-  default: ({ isOpen, onClose, onConfirm, isLoading }: Record<string, unknown>) =>
+  default: ({ isOpen, onClose, onConfirm, isLoading, error }: Record<string, unknown>) =>
     isOpen ? (
       <div role="dialog" aria-label="Pause subscription">
+        {Boolean(error) && (
+          <div role="alert">
+            {(error as { message: string }).message}
+            {(error as { technicalDetails?: string }).technicalDetails && (
+              <details>
+                <summary>Technical details</summary>
+                {(error as { technicalDetails?: string }).technicalDetails}
+              </details>
+            )}
+          </div>
+        )}
         <button onClick={onClose}>Cancel</button>
         <button onClick={onConfirm} disabled={isLoading}>
           {isLoading ? 'Loading…' : 'Confirm Pause'}
@@ -41,9 +60,20 @@ vi.mock('../components/PauseSubscriptionModal', () => ({
 }));
 
 vi.mock('../components/CancelSubscriptionModal', () => ({
-  default: ({ isOpen, onClose, onConfirm, isLoading }: Record<string, unknown>) =>
+  default: ({ isOpen, onClose, onConfirm, isLoading, error }: Record<string, unknown>) =>
     isOpen ? (
       <div role="dialog" aria-label="Cancel subscription">
+        {Boolean(error) && (
+          <div role="alert">
+            {(error as { message: string }).message}
+            {(error as { technicalDetails?: string }).technicalDetails && (
+              <details>
+                <summary>Technical details</summary>
+                {(error as { technicalDetails?: string }).technicalDetails}
+              </details>
+            )}
+          </div>
+        )}
         <button onClick={onClose}>Keep subscription</button>
         <button onClick={onConfirm} disabled={isLoading}>
           {isLoading ? 'Loading…' : 'Confirm Cancel'}
@@ -511,6 +541,23 @@ describe('Subscriptions page', () => {
         expect(screen.getByRole('status', { name: /status: paused/i })).toBeInTheDocument(),
       );
     });
+
+    it('keeps the modal open and shows the error when pausing fails', async () => {
+      const { subscriptions: apiSubs } = await import('../api/client');
+      vi.mocked(apiSubs.pause).mockRejectedValueOnce(
+        Object.assign(new Error('Action Failed'), {
+          technicalDetails: 'Pause could not be completed.',
+        }),
+      );
+      await openPauseModal();
+      fireEvent.click(screen.getByRole('button', { name: /confirm pause/i }));
+
+      expect(await screen.findByText('Action Failed')).toBeInTheDocument();
+      expect(screen.getByText('Technical details')).toBeInTheDocument();
+      expect(screen.getByText('Pause could not be completed.')).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: /pause subscription/i })).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument();
+    });
   });
 
   /* ── Cancel flow ──────────────────────────────────────────── */
@@ -554,11 +601,35 @@ describe('Subscriptions page', () => {
         expect(screen.getByRole('status', { name: /status: cancelled/i })).toBeInTheDocument(),
       );
     });
+
+    it('keeps the modal open and shows the error when cancelling fails', async () => {
+      const { subscriptions: apiSubs } = await import('../api/client');
+      vi.mocked(apiSubs.cancel).mockRejectedValueOnce(
+        Object.assign(new Error('Action Failed'), {
+          technicalDetails: 'Cancellation could not be completed.',
+        }),
+      );
+      await openCancelModal();
+      fireEvent.click(screen.getByRole('button', { name: /confirm cancel/i }));
+
+      expect(await screen.findByText('Action Failed')).toBeInTheDocument();
+      expect(screen.getByText('Technical details')).toBeInTheDocument();
+      expect(screen.getByText('Cancellation could not be completed.')).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: /cancel subscription/i })).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument();
+    });
   });
 
   /* ── Resume flow ──────────────────────────────────────────── */
   describe('Resume subscription flow', () => {
-    it('Resume button updates Paused status badge to Active', async () => {
+    it('calls the API, shows pending state, and announces a successful resume', async () => {
+      const { subscriptions: apiSubs } = await import('../api/client');
+      let resolveResume!: (value: { success: boolean }) => void;
+      vi.mocked(apiSubs.resume).mockImplementationOnce(
+        () => new Promise((resolve) => {
+          resolveResume = resolve;
+        }),
+      );
       await renderAndLoad();
       const manageBtn = screen.getAllByRole('button', { name: /manage basic/i })[0];
       fireEvent.click(manageBtn);
@@ -568,9 +639,67 @@ describe('Subscriptions page', () => {
       fireEvent.click(
         screen.getByRole('button', { name: /resume basic stream subscription/i }),
       );
+      expect(screen.getByText('Resuming...')).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: /status: paused/i })).toBeInTheDocument();
+
+      await act(async () => {
+        resolveResume({ success: true });
+      });
+
+      expect(apiSubs.resume).toHaveBeenCalledWith('SUB-003');
       await waitFor(() =>
         expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument(),
       );
+      expect(screen.getByText('Subscription resumed')).toBeInTheDocument();
+    });
+
+    it('leaves the status paused and shows an error when resuming fails', async () => {
+      const { subscriptions: apiSubs } = await import('../api/client');
+      vi.mocked(apiSubs.resume).mockRejectedValueOnce(
+        Object.assign(new Error('Resume failed'), {
+          technicalDetails: 'Resume could not be completed.',
+        }),
+      );
+      await renderAndLoad();
+      fireEvent.click(screen.getAllByRole('button', { name: /manage basic/i })[0]);
+      await waitFor(() =>
+        expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
+      );
+      fireEvent.click(screen.getByRole('button', { name: /resume basic stream subscription/i }));
+
+      expect(await screen.findByText('Resume failed')).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: /status: paused/i })).toBeInTheDocument();
+      expect(apiSubs.resume).toHaveBeenCalledWith('SUB-003');
+    });
+
+    it('shows pending state for a resume started from the swipe action', async () => {
+      const { subscriptions: apiSubs } = await import('../api/client');
+      let resolveResume!: (value: { success: boolean }) => void;
+      vi.mocked(apiSubs.resume).mockImplementationOnce(
+        () => new Promise((resolve) => {
+          resolveResume = resolve;
+        }),
+      );
+      await renderAndLoad();
+      fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+
+      expect(screen.getByText('Resuming subscription')).toBeInTheDocument();
+      expect(screen.getAllByRole('status', { name: /status: paused/i }).length).toBeGreaterThan(0);
+      await act(async () => {
+        resolveResume({ success: true });
+      });
+      expect(await screen.findByText('Subscription resumed')).toBeInTheDocument();
+    });
+
+    it('handles resume failures from the swipe action', async () => {
+      const { subscriptions: apiSubs } = await import('../api/client');
+      vi.mocked(apiSubs.resume).mockRejectedValueOnce(new Error('Swipe resume failed'));
+      await renderAndLoad();
+      fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+
+      expect(await screen.findByText('Swipe resume failed')).toBeInTheDocument();
+      expect(screen.getAllByRole('status', { name: /status: paused/i }).length).toBeGreaterThan(0);
+      expect(apiSubs.resume).toHaveBeenCalledWith('SUB-003');
     });
   });
 

@@ -7,13 +7,15 @@ interface PauseSubscriptionModalProps {
     onClose: () => void;
     onConfirm: () => void;
     isLoading?: boolean;
+    error?: { message: string; technicalDetails?: string } | null;
 }
 
 export default function PauseSubscriptionModal({
     isOpen,
     onClose,
     onConfirm,
-    isLoading = false
+    isLoading = false,
+    error
 }: PauseSubscriptionModalProps) {
     const modalRef = useRef<HTMLDivElement>(null);
     const initialFocusRef = useRef<HTMLButtonElement>(null);
@@ -55,6 +57,18 @@ export default function PauseSubscriptionModal({
                 <p id="pause-modal-description" className="pause-description">
                     You won't be charged until you resume. You can resume anytime.
                 </p>
+
+                {error && (
+                    <div className="pause-action-error" role="alert">
+                        <p>{error.message}</p>
+                        {error.technicalDetails && (
+                            <details>
+                                <summary>Technical details</summary>
+                                <p>{error.technicalDetails}</p>
+                            </details>
+                        )}
+                    </div>
+                )}
 
                 <div className="pause-checklist-container">
                     <div className="pause-checklist-item">

@@ -80,9 +80,38 @@ export const subscriptions = {
   },
   cancel: (id: string) => {
     // Simulating API call for development/demonstration
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       console.log(`Simulating cancel for subscription: ${id}`);
+
+      if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
+        setTimeout(() => {
+          const error: ApiError = new Error('Action Failed');
+          error.status = 400;
+          error.technicalDetails = 'The subscription is already in the requested state or pending a transaction.';
+          reject(error);
+        }, 1000);
+        return;
+      }
+
       setTimeout(() => resolve({ success: true }), 1000);
+    });
+  },
+  resume: (id: string) => {
+    // Simulating API call for development/demonstration
+    return new Promise((resolve, reject) => {
+      console.log(`Simulating resume for subscription: ${id}`);
+
+      if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
+        setTimeout(() => {
+          const error: ApiError = new Error('Action Failed');
+          error.status = 400;
+          error.technicalDetails = 'The subscription is already in the requested state or pending a transaction.';
+          reject(error);
+        }, 800);
+        return;
+      }
+
+      setTimeout(() => resolve({ success: true }), 800);
     });
   },
 }
