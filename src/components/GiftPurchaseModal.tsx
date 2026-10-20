@@ -63,7 +63,7 @@ export default function GiftPurchaseModal({
   const [giftCode, setGiftCode] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
 
-  useModalFocus(modalRef, { isOpen, onClose, initialFocusRef: emailInputRef });
+  useModalFocus(modalRef, { isOpen, onClose, initialFocusRef: emailInputRef, closeOnEscape: !isProcessing });
 
   useEffect(() => {
     if (!isOpen) {
@@ -178,6 +178,7 @@ export default function GiftPurchaseModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="gift-modal-title"
+      aria-busy={isProcessing}
     >
       <div className="gift-modal-backdrop" />
 
@@ -197,7 +198,7 @@ export default function GiftPurchaseModal({
           </div>
           <button
             className="gift-modal-close"
-            onClick={onClose}
+            onClick={() => !isProcessing && onClose()}
             aria-label="Close modal"
             disabled={isProcessing}
           >

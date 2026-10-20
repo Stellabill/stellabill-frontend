@@ -4,26 +4,32 @@ interface UseModalFocusOptions {
   isOpen: boolean;
   onClose: () => void;
   initialFocusRef?: RefObject<HTMLElement>;
+  /**
+   * Whether the Escape key should trigger `onClose`. Defaults to `true`.
+   * Set to `false` to prevent dismissal while an action is in flight.
+   */
+  closeOnEscape?: boolean;
 }
 
 /**
  * A reusable hook to manage accessibility for modals.
- * 
+ *
  * Features:
  * - Focus Trapping: Keeps focus within the modal during tabbing.
  * - Focus Restoration: Returns focus to the previously active element on close.
  * - Escape Key Support: Automatically calls the onClose handler when Escape is pressed.
  * - Initial Focus: Focuses a specific element or the first focusable element when opened.
- * 
+ *
  * @param modalRef Reference to the modal's container element.
  * @param options Configuration options for focus management.
  * @param options.isOpen Boolean indicating if the modal is currently open.
  * @param options.onClose Callback function to close the modal (triggered by Escape).
  * @param options.initialFocusRef Optional reference to an element that should be focused first.
+ * @param options.closeOnEscape Whether Escape should close the modal (default true).
  */
 export function useModalFocus(
   modalRef: RefObject<HTMLElement>,
-  { isOpen, onClose, initialFocusRef }: UseModalFocusOptions
+  { isOpen, onClose, initialFocusRef, closeOnEscape = true }: UseModalFocusOptions
 ) {
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -56,7 +62,9 @@ export function useModalFocus(
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        if (closeOnEscape) {
+          onClose();
+        }
         return;
       }
 
@@ -81,5 +89,5 @@ export function useModalFocus(
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, modalRef]);
+  }, [isOpen, onClose, modalRef, closeOnEscape]);
 }

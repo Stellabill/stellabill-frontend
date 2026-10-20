@@ -136,7 +136,12 @@ export default function ReactivationModal({
     }
   }, [isOpen]);
 
-  useModalFocus(modalRef, { isOpen, onClose, initialFocusRef });
+  useModalFocus(modalRef, {
+    isOpen,
+    onClose,
+    initialFocusRef,
+    closeOnEscape: !isLoading,
+  });
 
   if (!isOpen) return null;
 
@@ -169,6 +174,11 @@ export default function ReactivationModal({
     onConfirm(resolvedStartDate);
   };
 
+  const handleDismiss = () => {
+    if (isLoading) return;
+    onClose();
+  };
+
   // ── Microcopy ──────────────────────────────────────────────────────────────
 
   const dateNotice =
@@ -184,18 +194,23 @@ export default function ReactivationModal({
     <div
       className="reactivation-modal-overlay"
       onClick={(e: MouseEvent<HTMLDivElement>) =>
-        e.target === e.currentTarget && onClose()
+        e.target === e.currentTarget && handleDismiss()
       }
       role="dialog"
       aria-modal="true"
       aria-labelledby="reactivation-modal-title"
       aria-describedby="reactivation-modal-description"
     >
-      <div className="reactivation-modal-content" ref={modalRef}>
+      <div
+        className="reactivation-modal-content"
+        ref={modalRef}
+        aria-busy={isLoading}
+      >
         {/* Close */}
         <button
           className="reactivation-close-btn"
-          onClick={onClose}
+          onClick={handleDismiss}
+          disabled={isLoading}
           aria-label="Close reactivation dialog"
         >
           <svg
@@ -409,7 +424,7 @@ export default function ReactivationModal({
           <button
             ref={initialFocusRef}
             className="reactivation-btn reactivation-btn-cancel"
-            onClick={onClose}
+            onClick={handleDismiss}
             disabled={isLoading}
           >
             Keep cancelled

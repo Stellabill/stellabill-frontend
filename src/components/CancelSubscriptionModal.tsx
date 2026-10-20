@@ -45,7 +45,7 @@ export default function CancelSubscriptionModal({
         }
     }, [step, isOpen]);
 
-    useModalFocus(modalRef, { isOpen, onClose, initialFocusRef });
+    useModalFocus(modalRef, { isOpen, onClose, initialFocusRef, closeOnEscape: !isLoading });
 
     if (!isOpen) return null;
 
@@ -59,7 +59,7 @@ export default function CancelSubscriptionModal({
     return (
         <div
             className="cancel-modal-overlay"
-            onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose()}
+            onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && !isLoading && onClose()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="cancel-modal-title"
@@ -68,11 +68,13 @@ export default function CancelSubscriptionModal({
             <div 
                 className={`cancel-modal-content ${isOfferStep ? 'cancel-modal-content-wide' : ''}`} 
                 ref={modalRef}
+                aria-busy={isLoading}
             >
                 <button
                     className="cancel-close-btn"
-                    onClick={onClose}
+                    onClick={() => !isLoading && onClose()}
                     aria-label="Close"
+                    disabled={isLoading}
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -146,7 +148,7 @@ export default function CancelSubscriptionModal({
                             <button
                                 ref={initialFocusRef}
                                 className="cancel-btn cancel-btn-keep"
-                                onClick={onClose}
+                                onClick={() => !isLoading && onClose()}
                                 disabled={isLoading}
                             >
                                 Keep subscription

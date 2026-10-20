@@ -18,23 +18,25 @@ export default function PauseSubscriptionModal({
     const modalRef = useRef<HTMLDivElement>(null);
     const initialFocusRef = useRef<HTMLButtonElement>(null);
 
-    useModalFocus(modalRef, { isOpen, onClose, initialFocusRef });
+    useModalFocus(modalRef, { isOpen, onClose, initialFocusRef, closeOnEscape: !isLoading });
 
     if (!isOpen) return null;
 
     return (
         <div
             className="pause-modal-overlay"
-            onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose()}
+            onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && !isLoading && onClose()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="pause-modal-title"
             aria-describedby="pause-modal-description"
+            aria-busy={isLoading}
         >
             <div className="pause-modal-content" ref={modalRef}>
                 <button
                     className="pause-close-btn"
                     onClick={onClose}
+                    disabled={isLoading}
                     aria-label="Close"
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
