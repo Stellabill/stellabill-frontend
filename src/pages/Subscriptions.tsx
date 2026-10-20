@@ -12,12 +12,13 @@ import Tag from "../components/Tag";
 import AddTagPopover, { TagOption } from "../components/AddTagPopover";
 import { useRefresh } from "../hooks/useRefresh";
 import { useFlip } from "../hooks/useFlip";
+import { formatAmount } from "../utils/amount";
 import "./Subscriptions.css";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface SubscriptionWithIcon extends Omit<Subscription, "icon"> {
 	icon: React.ReactNode;
-	prepaidBalance: string;
+	prepaidBalance: number;
 	coverage: string;
 	tags?: TagOption[];
 }
@@ -297,7 +298,7 @@ function EmptyState({ filter }: { filter: string }) {
 }
 
 /* ─── Seed data ─────────────────────────────────────────────── */
-const INITIAL_DATA: SubscriptionWithIcon[] = [
+const FIXTURE_DATA: SubscriptionWithIcon[] = [
 	{
 		id: "SUB-001",
 		planName: "Premium Access",
@@ -306,7 +307,7 @@ const INITIAL_DATA: SubscriptionWithIcon[] = [
 		price: 10,
 		currency: "USDC",
 		interval: "month",
-		prepaidBalance: "30 USDC",
+		prepaidBalance: 30,
 		coverage: "~3 payments",
 		nextCharge: "Mar 15, 2026",
 		lastPayment: "Feb 15, 2026",
@@ -321,7 +322,7 @@ const INITIAL_DATA: SubscriptionWithIcon[] = [
 		price: 25,
 		currency: "USDC",
 		interval: "month",
-		prepaidBalance: "75 USDC",
+		prepaidBalance: 75,
 		coverage: "~3 payments",
 		nextCharge: "Mar 20, 2026",
 		lastPayment: "Feb 20, 2026",
@@ -336,7 +337,7 @@ const INITIAL_DATA: SubscriptionWithIcon[] = [
 		price: 5,
 		currency: "USDC",
 		interval: "month",
-		prepaidBalance: "5 USDC",
+		prepaidBalance: 5,
 		coverage: "~1 payment",
 		nextCharge: "Apr 01, 2026",
 		lastPayment: "Mar 01, 2026",
@@ -351,7 +352,7 @@ const INITIAL_DATA: SubscriptionWithIcon[] = [
 		price: 50,
 		currency: "USDC",
 		interval: "month",
-		prepaidBalance: "0 USDC",
+		prepaidBalance: 0,
 		coverage: "0 payments",
 		nextCharge: "N/A",
 		lastPayment: "Feb 28, 2026",
@@ -382,36 +383,66 @@ export default function Subscriptions() {
 		);
 	}, []);
 
+	const abortRef = useRef<AbortController | null>(null);
+
+	const mapSubscription = useCallback((sub: Subscription): SubscriptionWithIcon => {
+		const balance = typeof sub.prepaidBalance === "number" ? sub.prepaidBalance : 0;
+		const payments = sub.price > 0 ? Math.floor(balance / sub.price) : 0;
+		return {
+			...sub,
+			icon: <IconCloud />,
+			prepaidBalance: balance,
+			coverage: payments === 1 ? "~1 payment" : `~${payments} payments`,
+		};
+	}, []);
+
 	const fetchSubscriptions = useCallback(() => {
+		abortRef.current?.abort();
+		const controller = new AbortController();
+		abortRef.current = controller;
+
 		setLoading(true);
 		setError(null);
 
-		return new Promise<void>((resolve) => {
-			window.setTimeout(() => {
-				try {
-					if (window.location.search.includes("simulate_error")) {
-						const err: ApiError = new Error("Failed to load subscriptions");
-						err.status = 500;
-						err.technicalDetails =
-							"The subscription service returned a malformed response. [Error Code: SUB-FETCH-ERR]";
-						setError(err);
-					} else {
-						setData(INITIAL_DATA);
-					}
-
-					setLoading(false);
-					resolve();
-				} catch (err: unknown) {
-					setError(err as Error);
-					setLoading(false);
-					resolve();
+		return (async () => {
+			try {
+				let mapped: SubscriptionWithIcon[];
+				if (import.meta.env.VITE_USE_FIXTURES) {
+					mapped = FIXTURE_DATA;
+				} else {
+					const res = await subscriptions.list();
+					mapped = res.subscriptions.map(mapSubscription);
 				}
-			}, 800); // Added slight delay to simulate network
-		});
-	}, []);
+
+				if (controller.signal.aborted) return;
+
+				setData((prev) => {
+					// Merge server data with pending optimistic updates
+					const pending = new Map(prev.map((s) => [s.id, s]));
+					return mapped.map((server) => {
+						const local = pending.get(server.id);
+						if (local && local.status !== server.status) {
+							return { ...server, status: local.status };
+						}
+						return server;
+					});
+				});
+			} catch (err: unknown) {
+				if (controller.signal.aborted) return;
+				setError(err as ApiError);
+			} finally {
+				if (!controller.signal.aborted) {
+					setLoading(false);
+				}
+			}
+		})();
+	}, [mapSubscription]);
 
 	useEffect(() => {
 		fetchSubscriptions();
+		return () => {
+			abortRef.current?.abort();
+		};
 	}, [fetchSubscriptions]);
 
 	const {
@@ -734,7 +765,7 @@ export default function Subscriptions() {
 					onConfirm={handleCancelConfirm}
 					onOfferSelected={handleOfferSelected}
 					isLoading={isActionLoading}
-					balance={selectedSub.prepaidBalance.replace(" USDC", "") || "0"}
+					balance={formatAmount(selectedSub.prepaidBalance)}
 					endDate={selectedSub.nextCharge || "N/A"}
 				/>
 			</div>
@@ -900,7 +931,7 @@ export default function Subscriptions() {
 									<td>
 											<span className="subs-table__meta-cell">
 												<IconWallet />
-												{sub.prepaidBalance}
+												{formatAmount(sub.prepaidBalance)} {sub.currency}
 											</span>
 									</td>
 
@@ -1052,7 +1083,7 @@ export default function Subscriptions() {
 									<div className="subs-card__meta">
 										<div className="subs-card__meta-item">
 											<span className="subs-card__meta-label">{t('subscriptions.table.prepaid')}</span>
-											<span className="subs-card__meta-value">{sub.prepaidBalance}</span>
+											<span className="subs-card__meta-value">{formatAmount(sub.prepaidBalance)} {sub.currency}</span>
 										</div>
 										<div className="subs-card__meta-item">
 											<span className="subs-card__meta-label">{t('subscriptions.table.coverage')}</span>

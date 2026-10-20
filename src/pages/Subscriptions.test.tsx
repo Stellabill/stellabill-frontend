@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import type { Subscription } from '../api/client';
 import Subscriptions from './Subscriptions';
 
 /* ─── Module mocks ──────────────────────────────────────────── */
@@ -26,6 +27,10 @@ vi.mock('../api/client', () => ({
     technicalDetails?: string;
     isOffline?: boolean;
   },
+}));
+
+vi.mock('../utils/amount', () => ({
+  formatAmount: (value: number) => `${value} USDC`,
 }));
 
 vi.mock('../components/PauseSubscriptionModal', () => ({
@@ -67,6 +72,53 @@ vi.mock('../components/ErrorState', () => ({
 
 /* ─── Helpers ───────────────────────────────────────────────── */
 
+const FIXTURE_SUBSCRIPTIONS: Subscription[] = [
+  {
+    id: 'SUB-001',
+    planName: 'Premium Access',
+    merchantName: 'Stellar News',
+    status: 'active',
+    price: 10,
+    interval: 'month',
+    nextCharge: '2025-02-01',
+    prepaidBalance: 30,
+    lastPayment: '2025-01-01',
+  },
+  {
+    id: 'SUB-002',
+    planName: 'Pro Plan',
+    merchantName: 'CloudFlow',
+    status: 'active',
+    price: 25,
+    interval: 'month',
+    nextCharge: '2025-02-05',
+    prepaidBalance: 50,
+    lastPayment: '2025-01-05',
+  },
+  {
+    id: 'SUB-003',
+    planName: 'Basic Stream',
+    merchantName: 'Stellar News',
+    status: 'paused',
+    price: 5,
+    interval: 'month',
+    nextCharge: '2025-02-10',
+    prepaidBalance: 15,
+    lastPayment: '2025-01-10',
+  },
+  {
+    id: 'SUB-004',
+    planName: 'Enterprise AI',
+    merchantName: 'CloudFlow',
+    status: 'cancelled',
+    price: 100,
+    interval: 'month',
+    nextCharge: '2025-02-15',
+    prepaidBalance: 0,
+    lastPayment: '2025-01-15',
+  },
+];
+
 function renderSubscriptions() {
   return render(
     <MemoryRouter>
@@ -101,6 +153,7 @@ async function renderAndLoad() {
 describe('Subscriptions page', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(subscriptions.list).mockResolvedValue({ subscriptions: FIXTURE_SUBSCRIPTIONS });
     Object.defineProperty(window, 'location', {
       value: { search: '', href: 'http://localhost/' },
       writable: true,
@@ -134,6 +187,12 @@ describe('Subscriptions page', () => {
   /* ── Error state ──────────────────────────────────────────── */
   describe('Error state', () => {
     beforeEach(() => {
+      vi.mocked(subscriptions.list).mockRejectedValue(
+        Object.assign(new Error('boom'), {
+          status: 500,
+          technicalDetails: 'Internal server error',
+        }),
+      );
       Object.defineProperty(window, 'location', {
         value: {
           search: '?simulate_error',
@@ -161,6 +220,7 @@ describe('Subscriptions page', () => {
       });
 
       // Switch location to success mode so next fetch resolves
+      vi.mocked(subscriptions.list).mockResolvedValue({ subscriptions: FIXTURE_SUBSCRIPTIONS });
       Object.defineProperty(window, 'location', {
         value: { search: '', href: 'http://localhost/' },
         writable: true,
@@ -172,6 +232,86 @@ describe('Subscriptions page', () => {
         () => expect(screen.queryByRole('alert')).not.toBeInTheDocument(),
         { timeout: 3000 },
       );
+    });
+  });
+
+  /* ── API wiring ───────────────────────────────────────────── */
+  describe('API wiring', () => {
+    it('renders data returned by the mocked subscriptions.list()', async () => {
+      await renderAndLoad();
+      expect(subscriptions.list).toHaveBeenCalled();
+      expect(screen.getAllByText('Premium Access').length).toBeGreaterThan(0);
+    });
+
+    it('renders ErrorState with technicalDetails on 500', async () => {
+      vi.mocked(subscriptions.list).mockRejectedValue(
+        Object.assign(new Error('boom'), {
+          status: 500,
+          technicalDetails: 'Internal server error',
+        }),
+      );
+      renderSubscriptions();
+      await advanceTimersAndFlush();
+      await waitFor(
+        () => expect(screen.getByRole('alert')).toBeInTheDocument(),
+        { timeout: 3000 },
+      );
+      expect(screen.getByText('Subscriptions Unavailable')).toBeInTheDocument();
+    });
+
+    it('shows offline variant when the API reports offline', async () => {
+      vi.mocked(subscriptions.list).mockRejectedValue(
+        Object.assign(new Error('offline'), {
+          isOffline: true,
+          technicalDetails: 'Network unavailable',
+        }),
+      );
+      renderSubscriptions();
+      await advanceTimersAndFlush();
+      await waitFor(
+        () => expect(screen.getByRole('alert')).toBeInTheDocument(),
+        { timeout: 3000 },
+      );
+    });
+
+    it('ignores a late response from a superseded refresh (race)', async () => {
+      let resolveFirst: (value: { subscriptions: Subscription[] }) => void = () => {};
+      const firstPromise = new Promise<{ subscriptions: Subscription[] }>(res => {
+        resolveFirst = res;
+      });
+      vi.mocked(subscriptions.list)
+        .mockReturnValueOnce(firstPromise)
+        .mockResolvedValueOnce({ subscriptions: FIXTURE_SUBSCRIPTIONS });
+
+      renderSubscriptions();
+      await advanceTimersAndFlush();
+
+      // Trigger a refresh which supersedes the first in-flight request.
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+        await Promise.resolve();
+      });
+      await advanceTimersAndFlush();
+
+      // Now resolve the stale first request with different data.
+      await act(async () => {
+        resolveFirst({
+          subscriptions: [
+            {
+              ...FIXTURE_SUBSCRIPTIONS[0],
+              planName: 'Stale Plan',
+            },
+          ],
+        });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(
+        () => expect(screen.getByTestId('subscriptions-table')).toBeInTheDocument(),
+        { timeout: 3000 },
+      );
+      expect(screen.queryByText('Stale Plan')).not.toBeInTheDocument();
     });
   });
 
