@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useCommandScope } from '../hooks/useCommandScope';
 import type { CommandItem } from '../components/CommandPalette';
 import RecentPayments from '../components/RecentPayments';
@@ -11,6 +11,9 @@ import ReactivationModal, { type ReactivationPlan } from '../components/Reactiva
 import DowngradeConfirmModal, { type PlanFeature } from '../components/DowngradeConfirmModal';
 import TrialCountdownBanner from '../components/TrialCountdownBanner';
 import ProrationPreviewModal from '../components/common/ProrationPreviewModal';
+import ErrorState from '../components/common/ErrorState';
+import { subscriptions } from '../api/client';
+import type { Subscription } from '../types/subscription';
 
 // ── Mock subscription status type ────────────────────────────────────────────
 type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
@@ -24,23 +27,18 @@ const REACTIVATION_WINDOW_DAYS = 30;
 export default function SubscriptionDetail() {
     const { id } = useParams();
 
+    // ── Subscription fetch state ──────────────────────────────────────────────
+    const [subscriptionData, setSubscriptionData] = useState<Subscription | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<{ status?: number; message: string } | null>(null);
+    const [notFound, setNotFound] = useState(false);
+
     // ── Schedule-change preview state ─────────────────────────────────────────
     const [pendingInterval, setPendingInterval] = useState<BillingInterval | null>(null);
 
     // ── Reactivation state ────────────────────────────────────────────────────
     const [isReactivationModalOpen, setIsReactivationModalOpen] = useState(false);
     const [isReactivating, setIsReactivating] = useState(false);
-
-    // ── Trial banner mock data ────────────────────────────────────────────────
-    // Set this to a real trial end date from the API. Adjust the offset to test
-    // different urgency tiers:
-    //   +10 days → info (blue)
-    //   +5 days  → warning (amber)
-    //   +1 day   → urgent (red)
-    //   today    → expired (red)
-    const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + 2); // <3 days → urgent tier
-    const isTrialSubscription = true; // replace with real flag from API
 
     // ── Proration preview state ────────────────────────────────────────────────
     const [isProrationModalOpen, setIsProrationModalOpen] = useState(false);
@@ -73,42 +71,6 @@ export default function SubscriptionDetail() {
         navigate(`/subscriptions/${id}/usage`);
     };
 
-    // ── Mock data — replace with actual API responses ─────────────────────────
-    const isUsageBased = true;
-    const usageData = {
-        billingPeriod: 'Mar 1 — Mar 31',
-        usage: '32450 API calls',
-        estimatedCharge: '10 USDC',
-    };
-
-    // Mock subscription metadata
-    const subscriptionStatus: SubscriptionStatus = 'cancelled';
-    const cancelledAt = new Date();
-    cancelledAt.setDate(cancelledAt.getDate() - 7); // cancelled 7 days ago
-
-    const subscription = {
-        currentInterval: 'weekly' as BillingInterval,
-        nextCharge: '2026-08-05',
-        amount: 50,
-        currency: 'USDC',
-        billingDay: 15, // subscriber's original billing day of month
-    };
-
-    // Plan data for the reactivation modal
-    const reactivationPlan: ReactivationPlan = {
-        name: 'Pro Monthly',
-        interval: 'Monthly',
-        price: '50 USDC',
-        deleted: false,
-    };
-
-    // Only surface the CTA when reactivation is within the support window
-    const daysSinceCancellation = Math.floor(
-        (Date.now() - cancelledAt.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const isWithinWindow = daysSinceCancellation <= REACTIVATION_WINDOW_DAYS;
-    const showReactivateCTA = subscriptionStatus === 'cancelled' && isWithinWindow;
-
     // Reactivation handler — swap out the console.log for your API call
     const handleReactivateConfirm = async (startDate: Date) => {
         setIsReactivating(true);
@@ -133,6 +95,95 @@ export default function SubscriptionDetail() {
     ];
 
     const navigate = useNavigate();
+
+    // ── Fetch subscription on mount / id change ───────────────────────────────
+    useEffect(() => {
+        if (!id) {
+            setNotFound(true);
+            setIsLoading(false);
+            return;
+        }
+
+        const controller = new AbortController();
+        let cancelled = false;
+
+        setIsLoading(true);
+        setLoadError(null);
+        setNotFound(false);
+        setSubscriptionData(null);
+
+        subscriptions
+            .get(id, { signal: controller.signal })
+            .then((data) => {
+                if (cancelled) return;
+                setSubscriptionData(data);
+            })
+            .catch((err: unknown) => {
+                if (cancelled) return;
+                const status =
+                    typeof err === 'object' && err !== null && 'status' in err
+                        ? (err as { status?: number }).status
+                        : undefined;
+                if (status === 404) {
+                    setNotFound(true);
+                } else {
+                    setLoadError({
+                        status,
+                        message:
+                            err instanceof Error ? err.message : 'Failed to load subscription.',
+                    });
+                }
+            })
+            .finally(() => {
+                if (cancelled) return;
+                setIsLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+            controller.abort();
+        };
+    }, [id]);
+
+    // ── Derived data from fetched subscription ────────────────────────────────
+    const subscriptionStatus: SubscriptionStatus = subscriptionData?.status ?? 'active';
+    const trialEndsAt = subscriptionData?.trialEndsAt
+        ? new Date(subscriptionData.trialEndsAt)
+        : null;
+    const isTrialSubscription = Boolean(trialEndsAt);
+    const cancelledAt = subscriptionData?.cancelledAt
+        ? new Date(subscriptionData.cancelledAt)
+        : null;
+    const failedAttempts = subscriptionData?.failedAttempts ?? 0;
+    const showDunningBanner = failedAttempts > 0;
+
+    const subscription = {
+        currentInterval: (subscriptionData?.interval ?? 'monthly') as BillingInterval,
+        nextCharge: subscriptionData?.nextCharge ?? '',
+        amount: subscriptionData?.amount ?? 0,
+        currency: subscriptionData?.currency ?? 'USDC',
+        billingDay: subscriptionData?.billingDay ?? 1,
+    };
+
+    const isUsageBased = Boolean(subscriptionData?.usageBased);
+    const usageData = subscriptionData?.usage ?? null;
+
+    // Plan data for the reactivation modal
+    const reactivationPlan: ReactivationPlan = {
+        name: subscriptionData?.planName ?? 'Pro Monthly',
+        interval: subscriptionData?.interval ?? 'Monthly',
+        price: `${subscription.amount} ${subscription.currency}`,
+        deleted: false,
+    };
+
+    // Only surface the CTA when reactivation is within the support window
+    const daysSinceCancellation = cancelledAt
+        ? Math.floor((Date.now() - cancelledAt.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+    const isWithinWindow = cancelledAt
+        ? daysSinceCancellation <= REACTIVATION_WINDOW_DAYS
+        : false;
+    const showReactivateCTA = subscriptionStatus === 'cancelled' && isWithinWindow;
 
     const scopedActions = useMemo<CommandItem[]>(() => {
         const actions: CommandItem[] = [];
@@ -184,6 +235,102 @@ export default function SubscriptionDetail() {
     }, [showReactivateCTA, subscriptionStatus, navigate]);
     
     useCommandScope(`Subscription ${id || 'Detail'}`, scopedActions);
+
+    // ── Loading state ─────────────────────────────────────────────────────────
+    if (isLoading) {
+        return (
+            <div style={{ padding: '2rem', background: '#0a0a0a', minHeight: '100vh', color: '#f8fafc' }}>
+                <div
+                    role="status"
+                    aria-label="Loading subscription"
+                    style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+                >
+                    <div style={{ height: '1rem', width: '180px', background: '#1a1a1a', borderRadius: '6px' }} />
+                    <div style={{ height: '2rem', width: '320px', background: '#1a1a1a', borderRadius: '8px' }} />
+                    <div style={{ height: '120px', width: '100%', background: '#111', borderRadius: '12px' }} />
+                    <div style={{ height: '120px', width: '100%', background: '#111', borderRadius: '12px' }} />
+                </div>
+            </div>
+        );
+    }
+
+    // ── Not-found state ───────────────────────────────────────────────────────
+    if (notFound) {
+        return (
+            <div style={{ padding: '2rem', background: '#0a0a0a', minHeight: '100vh', color: '#f8fafc' }}>
+                <div
+                    role="alert"
+                    style={{
+                        maxWidth: '480px',
+                        margin: '4rem auto',
+                        padding: '2rem',
+                        borderRadius: '16px',
+                        border: '1px solid #2a2a2a',
+                        background: '#111',
+                        textAlign: 'center',
+                    }}
+                >
+                    <h1 style={{ margin: '0 0 0.75rem', fontSize: '1.5rem' }}>Subscription not found</h1>
+                    <p style={{ color: '#94a3b8', margin: '0 0 1.5rem' }}>
+                        We couldn&apos;t find a subscription with id <strong>{id}</strong>.
+                    </p>
+                    <Link
+                        to="/subscriptions"
+                        style={{
+                            display: 'inline-block',
+                            padding: '0.625rem 1.25rem',
+                            borderRadius: '12px',
+                            border: '1px solid rgba(0,204,255,0.45)',
+                            background: 'rgba(0,204,255,0.1)',
+                            color: '#00ccff',
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                        }}
+                    >
+                        Back to Subscriptions
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    // ── Error state ───────────────────────────────────────────────────────────
+    if (loadError) {
+        return (
+            <div style={{ padding: '2rem', background: '#0a0a0a', minHeight: '100vh', color: '#f8fafc' }}>
+                <ErrorState
+                    title="Failed to load subscription"
+                    message={loadError.message}
+                    onRetry={() => {
+                        if (!id) return;
+                        setIsLoading(true);
+                        setLoadError(null);
+                        subscriptions
+                            .get(id)
+                            .then((data) => setSubscriptionData(data))
+                            .catch((err: unknown) => {
+                                const status =
+                                    typeof err === 'object' && err !== null && 'status' in err
+                                        ? (err as { status?: number }).status
+                                        : undefined;
+                                if (status === 404) {
+                                    setNotFound(true);
+                                } else {
+                                    setLoadError({
+                                        status,
+                                        message:
+                                            err instanceof Error
+                                                ? err.message
+                                                : 'Failed to load subscription.',
+                                    });
+                                }
+                            })
+                            .finally(() => setIsLoading(false));
+                    }}
+                />
+            </div>
+        );
+    }
 
     return (
         <div style={{ padding: '2rem', background: '#0a0a0a', minHeight: '100vh', color: '#f8fafc' }}>
@@ -348,7 +495,7 @@ export default function SubscriptionDetail() {
             </div>
 
             {/* ── Trial countdown banner ────────────────────────────────────── */}
-            {isTrialSubscription && (
+            {isTrialSubscription && trialEndsAt && (
                 <TrialCountdownBanner
                     trialEndsAt={trialEndsAt}
                     upgradeHref="/plans"
@@ -357,18 +504,20 @@ export default function SubscriptionDetail() {
             )}
 
             {/* ── Dunning banner ────────────────────────────────────────────── */}
-            <PaymentFailedBanner
-                subscriptionId={id}
-                failedAttempts={1}
-                retrySchedule={[
-                    { id: 'r1', when: 'Mar 24 — Attempted', status: 'past' },
-                    { id: 'r2', when: 'Mar 26 — Next retry', status: 'upcoming' },
-                    { id: 'r3', when: 'Mar 30 — Final retry', status: 'upcoming' },
-                ]}
-                onFixPayment={() => {
-                    navigate('/settings');
-                }}
-            />
+            {showDunningBanner && (
+                <PaymentFailedBanner
+                    subscriptionId={id}
+                    failedAttempts={failedAttempts}
+                    retrySchedule={[
+                        { id: 'r1', when: 'Mar 24 — Attempted', status: 'past' },
+                        { id: 'r2', when: 'Mar 26 — Next retry', status: 'upcoming' },
+                        { id: 'r3', when: 'Mar 30 — Final retry', status: 'upcoming' },
+                    ]}
+                    onFixPayment={() => {
+                        navigate('/settings');
+                    }}
+                />
+            )}
 
             {/* ── Usage this period ─────────────────────────────────────────── */}
             {isUsageBased && (

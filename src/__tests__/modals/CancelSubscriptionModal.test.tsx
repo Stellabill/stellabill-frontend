@@ -28,7 +28,7 @@ describe('CancelSubscriptionModal Accessibility', () => {
 
     // Wait for initial focus (First offer action button)
     await waitFor(() => {
-      const pauseBtn = screen.getByRole('button', { name: /pause instead: pause subscription/i });
+      const pauseBtn = screen.getBultRole('button', { name: /pause instead: pause subscription/i });
       expect(document.activeElement).toBe(pauseBtn);
     });
 
