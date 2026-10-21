@@ -135,6 +135,8 @@ export default function Layout() {
   const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => readPinnedCommands());
   const [scopeName, setScopeName] = useState<string | null>(null);
+  const scopeNameRef = useRef<string | null>(null);
+  scopeNameRef.current = scopeName;
   const [scopedItems, setScopedItems] = useState<CommandItem[]>([]);
   const [paletteMode, setPaletteMode] = useState<'global' | 'scoped'>('global');
   const [showScopeToast, setShowScopeToast] = useState(false);
@@ -196,7 +198,8 @@ export default function Layout() {
     });
   };
 
-  const handleTogglePin = (itemId: string) => {
+  const handleTogglePin = (rawId: string) => {
+    const itemId = rawId.replace(/^recent-/, "");
     setPinnedIds((prev) => {
       const isPinned = prev.includes(itemId);
       const next = isPinned ? prev.filter((id) => id !== itemId) : [itemId, ...prev].slice(0, PINNED_COMMANDS_LIMIT);
@@ -242,20 +245,21 @@ export default function Layout() {
           const chord = pendingChordKeyRef.current;
           const key = event.key.toLowerCase();
           
-          if (chord === 'g' && key === 's') {
-            event.preventDefault();
-            navigate('/subscriptions');
-          }
-          
           // Clear chord regardless of match
           setPendingChordKey(null);
           pendingChordKeyRef.current = null;
           if (chordTimeoutId) clearTimeout(chordTimeoutId);
-          return;
+
+          if (chord === 'g' && key === 's') {
+            event.preventDefault();
+            navigate('/subscriptions');
+            return;
+          }
+          // Not a known chord: fall through and process the key normally
         }
 
         // Check for chord start
-        if (event.key === 'g') {
+        if (event.key === 'g' && !event.metaKey && !event.ctrlKey && !event.altKey) {
           event.preventDefault();
           setPendingChordKey('g');
           pendingChordKeyRef.current = 'g';
@@ -271,7 +275,7 @@ export default function Layout() {
       if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setIsPaletteOpen(true);
-        if (scopeName) {
+        if (scopeNameRef.current) {
             setPaletteMode('scoped');
             const hasSeenToast = localStorage.getItem('sb:seen-scoped-toast');
             if (!hasSeenToast) {
