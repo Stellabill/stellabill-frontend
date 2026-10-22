@@ -242,7 +242,7 @@ describe('WalletConnectModal', () => {
     });
 
     it('opens help documentation when help button is clicked', () => {
-      const mockOpen = vi.spyOn(window, 'open').mockImplementation();
+      const mockOpen = vi.spyOn(window, 'open').mockImplementation(() => null);
       
       render(
         <WalletConnectModal 
@@ -255,7 +255,7 @@ describe('WalletConnectModal', () => {
       const helpButton = screen.getByText('Get Help');
       fireEvent.click(helpButton);
       
-      expect(mockOpen).toHaveBeenCalledWith('https://docs.stellar.org/wallets', '_blank');
+      expect(mockOpen).toHaveBeenCalledWith('https://docs.stellar.org/wallets', '_blank', 'noopener,noreferrer');
       
       mockOpen.mockRestore();
     });

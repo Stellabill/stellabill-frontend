@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useContext, useRef, useState } from 'react';
+import { UNSAFE_NavigationContext } from 'react-router-dom';
 import WalletConnectModal from './WalletConnectModal';
 import WalletDropdown from './WalletDropdown';
 import { Loader2, AlertCircle, ChevronDown } from 'lucide-react';
@@ -29,6 +30,7 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [connectionErrorType, setConnectionErrorType] = useState<FreighterConnectionErrorType>();
   const activeConnectionId = useRef(0);
+  const navigationContext = useContext(UNSAFE_NavigationContext);
 
   const handleConnectClick = () => {
     setConnectionState('disconnected');
@@ -81,6 +83,22 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
     setIsDropdownOpen(false);
     setConnectionErrorType(undefined);
     onDisconnect?.();
+  };
+
+  const handleSwitchWallet = () => {
+    handleDisconnect();
+    setErrorMessage('');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenHistory = () => {
+    if (onOpenHistory) {
+      onOpenHistory();
+    } else if (navigationContext?.navigator) {
+      navigationContext.navigator.push('/wallet');
+    } else {
+      window.location.assign('/wallet');
+    }
   };
 
   const handleRetry = () => {
@@ -147,6 +165,8 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
             address={walletAddress}
             onClose={() => setIsDropdownOpen(false)}
             onDisconnect={handleDisconnect}
+            onSwitchWallet={handleSwitchWallet}
+            onOpenHistory={handleOpenHistory}
           />
         )}
       </div>

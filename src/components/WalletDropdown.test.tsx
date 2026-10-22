@@ -1,6 +1,14 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import WalletDropdown from './WalletDropdown';
+import { copyToClipboard } from '../utils/clipboard';
+
+vi.mock('../utils/clipboard', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils/clipboard')>();
+  return { ...actual, copyToClipboard: vi.fn(actual.copyToClipboard) };
+});
+
+const mockedCopyToClipboard = vi.mocked(copyToClipboard);
 
 const ADDRESS = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
 
@@ -9,7 +17,10 @@ type Overrides = Partial<{
   address: string;
   onClose: ReturnType<typeof vi.fn>;
   onDisconnect: ReturnType<typeof vi.fn>;
+  onSwitchWallet: ReturnType<typeof vi.fn>;
   onOpenHistory: ReturnType<typeof vi.fn>;
+  network: string;
+  expectedNetwork: string;
 }>;
 
 function renderDropdown(overrides: Overrides = {}) {
@@ -20,27 +31,27 @@ function renderDropdown(overrides: Overrides = {}) {
     address: overrides.address ?? ADDRESS,
     onClose,
     onDisconnect,
+    ...(overrides.onSwitchWallet ? { onSwitchWallet: overrides.onSwitchWallet } : {}),
     ...(overrides.onOpenHistory ? { onOpenHistory: overrides.onOpenHistory } : {}),
+    ...(overrides.network ? { network: overrides.network } : {}),
+    ...(overrides.expectedNetwork ? { expectedNetwork: overrides.expectedNetwork } : {}),
   };
   const utils = render(<WalletDropdown {...props} />);
   return { ...utils, props, onClose, onDisconnect };
 }
 
 describe('WalletDropdown', () => {
-  const writeText = vi.fn().mockResolvedValue(undefined);
   let openSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    writeText.mockClear();
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText },
-    });
+    mockedCopyToClipboard.mockClear();
+    mockedCopyToClipboard.mockResolvedValue(true);
     openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
     openSpy.mockRestore();
   });
 
@@ -90,6 +101,17 @@ describe('WalletDropdown', () => {
       expect(screen.getByText(/disconnect/i)).toBeInTheDocument();
     });
 
+    it('uses distinct icons for Switch wallet and Wallet History', () => {
+      renderDropdown();
+      const switchBtn = screen.getByRole('button', { name: /switch wallet/i });
+      const historyBtn = screen.getByRole('button', { name: /wallet history/i });
+      const switchSvg = switchBtn.querySelector('svg');
+      const historySvg = historyBtn.querySelector('svg');
+      expect(switchSvg).not.toBeNull();
+      expect(historySvg).not.toBeNull();
+      expect(switchSvg?.innerHTML).not.toEqual(historySvg?.innerHTML);
+    });
+
     it('renders an address with a copy control', () => {
       renderDropdown();
       expect(screen.getByTitle('Copy address')).toBeInTheDocument();
@@ -98,41 +120,58 @@ describe('WalletDropdown', () => {
 
   // ── Clipboard / copied-toast lifecycle ─────────────────────────────────────
   describe('copy address', () => {
-    it('writes the address to the clipboard', () => {
+    it('writes the address through copyToClipboard', () => {
       renderDropdown();
       fireEvent.click(screen.getByTitle('Copy address'));
-      expect(writeText).toHaveBeenCalledTimes(1);
-      expect(writeText).toHaveBeenCalledWith(ADDRESS);
+      expect(mockedCopyToClipboard).toHaveBeenCalledTimes(1);
+      expect(mockedCopyToClipboard).toHaveBeenCalledWith(ADDRESS);
     });
 
-    it('shows the copied toast immediately after a copy', () => {
+    it('shows the copied toast after a successful copy', async () => {
       renderDropdown();
+      expect(screen.queryAllByText(/copied to clipboard/i)).toHaveLength(0);
+      fireEvent.click(screen.getByTitle('Copy address'));
+      expect((await screen.findAllByText(/copied to clipboard/i)).length).toBeGreaterThan(0);
+      expect(screen.getByRole('status')).toHaveTextContent(/wallet address copied to clipboard/i);
+    });
+
+    it('does not show success and announces failure when copy fails', async () => {
+      mockedCopyToClipboard.mockResolvedValueOnce(false);
+      renderDropdown();
+      fireEvent.click(screen.getByTitle('Copy address'));
+
+      await waitFor(() => {
+        expect(screen.getByRole('status')).toHaveTextContent(/copy failed — select and copy manually/i);
+      });
       expect(screen.queryByText(/copied to clipboard/i)).not.toBeInTheDocument();
-      fireEvent.click(screen.getByTitle('Copy address'));
-      expect(screen.getByText(/copied to clipboard/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/copy failed — select and copy manually/i).length).toBeGreaterThan(0);
     });
 
-    it('hides the copied toast after the 2s window elapses', () => {
+    it('hides the copied toast after the 2s window elapses', async () => {
       vi.useFakeTimers();
       renderDropdown();
-      fireEvent.click(screen.getByTitle('Copy address'));
-      expect(screen.getByText(/copied to clipboard/i)).toBeInTheDocument();
+      await act(async () => {
+        fireEvent.click(screen.getByTitle('Copy address'));
+      });
+      expect(screen.getAllByText(/copied to clipboard/i).length).toBeGreaterThan(0);
 
       act(() => {
         vi.advanceTimersByTime(2000);
       });
-      expect(screen.queryByText(/copied to clipboard/i)).not.toBeInTheDocument();
+      expect(screen.queryAllByText(/copied to clipboard/i)).toHaveLength(0);
     });
 
-    it('keeps the toast visible before the 2s window elapses', () => {
+    it('keeps the toast visible before the 2s window elapses', async () => {
       vi.useFakeTimers();
       renderDropdown();
-      fireEvent.click(screen.getByTitle('Copy address'));
+      await act(async () => {
+        fireEvent.click(screen.getByTitle('Copy address'));
+      });
 
       act(() => {
         vi.advanceTimersByTime(1999);
       });
-      expect(screen.getByText(/copied to clipboard/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/copied to clipboard/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -175,22 +214,66 @@ describe('WalletDropdown', () => {
 
   // ── Explorer link ─────────────────────────────────────────────────────────
   describe('view in explorer', () => {
-    it('opens the Stellar expert page for the wallet address in a new tab', () => {
+    it('defaults to the Testnet Stellar Expert page for the wallet address in a new tab', () => {
       renderDropdown();
+      fireEvent.click(screen.getByText(/view in explorer/i));
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      const [url, target] = openSpy.mock.calls[0];
+      expect(url).toBe(`https://stellar.expert/explorer/testnet/account/${ADDRESS}`);
+      expect(target).toBe('_blank');
+    });
+
+    it('opens the public (Mainnet) Stellar Expert page when network is Mainnet', () => {
+      renderDropdown({ network: 'Mainnet' });
       fireEvent.click(screen.getByText(/view in explorer/i));
       expect(openSpy).toHaveBeenCalledTimes(1);
       const [url, target] = openSpy.mock.calls[0];
       expect(url).toBe(`https://stellar.expert/explorer/public/account/${ADDRESS}`);
       expect(target).toBe('_blank');
+      expect(features).toBe('noopener,noreferrer');
+    });
+  });
+
+  // ── Network mismatch warning ──────────────────────────────────────────────
+  describe('network mismatch warning', () => {
+    it('does not show a warning when wallet network matches expected network', () => {
+      renderDropdown({ network: 'Testnet' });
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('renders an accessible alert warning when wallet network differs from expected network', () => {
+      renderDropdown({ network: 'Mainnet', expectedNetwork: 'Testnet' });
+      const alert = screen.getByRole('alert');
+      expect(alert).toBeInTheDocument();
+      expect(alert).toHaveTextContent(/network mismatch/i);
+      expect(alert).toHaveTextContent(/wallet is on mainnet, but expected testnet/i);
+    });
+
+    it('detects mismatch against VITE_STELLAR_NETWORK env configuration', () => {
+      vi.stubEnv('VITE_STELLAR_NETWORK', 'mainnet');
+      renderDropdown({ network: 'Testnet' });
+      const alert = screen.getByRole('alert');
+      expect(alert).toBeInTheDocument();
+      expect(alert).toHaveTextContent(/wallet is on testnet, but expected mainnet/i);
     });
   });
 
   // ── Switch wallet closes the dropdown ─────────────────────────────────────
   describe('switch wallet', () => {
-    it('calls onClose when switch wallet is clicked', () => {
-      const { onClose } = renderDropdown();
+    it('calls onClose and onSwitchWallet when provided', () => {
+      const onSwitchWallet = vi.fn();
+      const { onClose, onDisconnect } = renderDropdown({ onSwitchWallet });
       fireEvent.click(screen.getByText(/switch wallet/i));
       expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onSwitchWallet).toHaveBeenCalledTimes(1);
+      expect(onDisconnect).not.toHaveBeenCalled();
+    });
+
+    it('falls back to onDisconnect and onClose when onSwitchWallet is not provided', () => {
+      const { onClose, onDisconnect } = renderDropdown();
+      fireEvent.click(screen.getByText(/switch wallet/i));
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onDisconnect).toHaveBeenCalledTimes(1);
     });
   });
 });
