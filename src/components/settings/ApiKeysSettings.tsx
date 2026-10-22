@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Key, Plus, Eye, EyeOff, Copy, RotateCcw, Trash2, AlertTriangle, Shield, Calendar, User } from 'lucide-react'
+import Modal from '../common/Modal'
 
 interface ApiKey {
   id: string
@@ -42,6 +43,18 @@ export default function ApiKeysSettings() {
   const [showRevokeConfirmation, setShowRevokeConfirmation] = useState<string | null>(null)
   const [revokeConfirmationText, setRevokeConfirmationText] = useState('')
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())
+  const [copyFeedback, setCopyFeedback] = useState<{ keyId: string; success: boolean } | null>(null)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    }
+  }, [])
+
+  const createTriggerRef = useRef<HTMLButtonElement>(null)
+  const revokeTriggerRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const createNameInputRef = useRef<HTMLInputElement>(null)
 
   const toggleKeyVisibility = (keyId: string) => {
     const newVisibleKeys = new Set(visibleKeys)
@@ -53,8 +66,14 @@ export default function ApiKeysSettings() {
     setVisibleKeys(newVisibleKeys)
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
+  const handleCopyKey = async (keyId: string, text: string) => {
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    const success = await copyToClipboard(text)
+    setCopyFeedback({ keyId, success })
+    copyTimerRef.current = setTimeout(() => {
+      setCopyFeedback(null)
+      copyTimerRef.current = null
+    }, 2000)
   }
 
   const handleRevokeKey = (keyId: string) => {
@@ -87,6 +106,27 @@ export default function ApiKeysSettings() {
 
   return (
     <div>
+      <div
+        role="status"
+        aria-live="polite"
+        style={{
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          padding: 0,
+          margin: '-1px',
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: 0,
+        }}
+      >
+        {copyFeedback
+          ? copyFeedback.success
+            ? 'API key copied to clipboard'
+            : 'Copy failed — select and copy manually'
+          : ''}
+      </div>
       <div style={{ marginBottom: '2rem' }}>
         <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '0.5rem' }}>
           API Keys & Security
@@ -126,6 +166,7 @@ export default function ApiKeysSettings() {
           </span>
         </div>
         <button
+          ref={createTriggerRef}
           onClick={() => setShowCreateModal(true)}
           style={{
             display: 'flex',
@@ -191,7 +232,7 @@ export default function ApiKeysSettings() {
                   }}>
                     {visibleKeys.has(key.id) ? key.key : '•'.repeat(16) + key.key.slice(-4)}
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
                     <button
                       onClick={() => toggleKeyVisibility(key.id)}
                       style={{
@@ -210,7 +251,7 @@ export default function ApiKeysSettings() {
                       {visibleKeys.has(key.id) ? 'Hide' : 'Show'}
                     </button>
                     <button
-                      onClick={() => copyToClipboard(key.key)}
+                      onClick={() => handleCopyKey(key.id, key.key)}
                       style={{
                         background: 'transparent',
                         border: 'none',
@@ -226,6 +267,16 @@ export default function ApiKeysSettings() {
                       <Copy size={12} />
                       Copy
                     </button>
+                    {copyFeedback?.keyId === key.id && (
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          color: copyFeedback.success ? '#10b981' : '#ef4444',
+                        }}
+                      >
+                        {copyFeedback.success ? 'Copied!' : 'Copy failed — select and copy manually'}
+                      </span>
+                    )}
                   </div>
                 </td>
 
@@ -270,6 +321,7 @@ export default function ApiKeysSettings() {
 
                 <td style={{ padding: '1rem 1.5rem', verticalAlign: 'top', textAlign: 'right' }}>
                   <button
+                    ref={(el) => { if (el) revokeTriggerRefs.current.set(key.id, el) }}
                     onClick={() => setShowRevokeConfirmation(key.id)}
                     style={{
                       display: 'inline-flex',
@@ -301,31 +353,36 @@ export default function ApiKeysSettings() {
         </table>
       </div>
 
-      {/* Create API Key Modal - Minimally changed just retaining structure */}
-      {showCreateModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-        }}>
-          <div style={{
-            background: '#1a1a2e',
-            borderRadius: '8px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            border: '1px solid #2d2d44',
-          }}>
-            <h3 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0' }}>
-              Create API Key
-            </h3>
+      {/* Create API Key Modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create API Key"
+        description="Create a new API key for your organization."
+        initialFocusRef={createNameInputRef}
+        restoreFocusRef={createTriggerRef}
+      >
+        <div>
+          <label htmlFor="create-key-name-input" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#e2e8f0' }}>
+            Key name
+          </label>
+          <input
+            id="create-key-name-input"
+            ref={createNameInputRef}
+            type="text"
+            dir="auto"
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              borderRadius: '4px',
+              border: '1px solid #2d2d44',
+              background: '#0a0a0a',
+              color: '#e2e8f0',
+              fontSize: '0.875rem',
+              boxSizing: 'border-box',
+            }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button
                 onClick={() => setShowCreateModal(false)}
@@ -363,43 +420,23 @@ export default function ApiKeysSettings() {
             </div>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Revoke Confirmation Modal */}
-      {showRevokeConfirmation && keyToRevoke && (
-        <div
-          role="dialog"
-          aria-labelledby="revoke-modal-title"
-          aria-describedby="revoke-modal-desc"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-        >
-          <div style={{
-            background: '#1a1a2e',
-            borderRadius: '8px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            border: '1px solid #2d2d44',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-              <AlertTriangle size={24} style={{ color: '#ef4444' }} />
-              <h3 id="revoke-modal-title" style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0' }}>
-                Revoke API Key
-              </h3>
-            </div>
-
-            <div id="revoke-modal-desc" style={{ margin: '0 0 1.5rem', color: '#94a3b8', lineHeight: '1.5', fontSize: '0.875rem' }}>
+      <Modal
+        isOpen={showRevokeConfirmation !== null && !!keyToRevoke}
+        onClose={() => {
+          setShowRevokeConfirmation(null)
+          setRevokeConfirmationText('')
+        }}
+        title="Revoke API Key"
+        description="Confirm revocation of this API key."
+        initialFocusRef={revokeConfirmInputRef}
+        restoreFocusRef={showRevokeConfirmation ? revokeTriggerRefs.current.get(showRevokeConfirmation) : null}
+      >
+        {keyToRevoke && (
+          <div>
+            <div style={{ margin: '0 0 1.5rem', color: '#94a3b8', lineHeight: '1.5', fontSize: '0.875rem' }}>
               <p style={{ margin: '0 0 1rem' }}>
                 Are you sure you want to revoke <strong>{keyToRevoke.name}</strong>? This action cannot be undone.
               </p>
@@ -421,6 +458,7 @@ export default function ApiKeysSettings() {
                 </label>
                 <input
                   id="revoke-confirm-input"
+                  ref={revokeConfirmInputRef}
                   type="text"
                   dir="auto"
                   value={revokeConfirmationText}
@@ -498,8 +536,8 @@ export default function ApiKeysSettings() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   )
 }

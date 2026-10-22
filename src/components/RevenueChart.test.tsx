@@ -1,6 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import RevenueChart, { LineChart, SeriesData } from './RevenueChart';
+import { copyToClipboard } from '../utils/clipboard';
+
+vi.mock('../utils/clipboard', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils/clipboard')>();
+  return { ...actual, copyToClipboard: vi.fn(actual.copyToClipboard) };
+});
+
+const mockedCopyToClipboard = vi.mocked(copyToClipboard);
 
 const mockSampleData = [
   { date: 'Jan 1', revenue: 500 },
@@ -930,12 +938,7 @@ describe('RevenueChart — Table View Mode', () => {
   });
 
   it('handles copy as CSV functionality', async () => {
-    // Mock clipboard
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: vi.fn().mockImplementation(() => Promise.resolve()),
-      },
-    });
+    mockedCopyToClipboard.mockResolvedValueOnce(true);
 
     render(<RevenueChart series={mockSeriesData} />);
     fireEvent.click(screen.getByRole('button', { name: 'Table' }));
@@ -943,11 +946,24 @@ describe('RevenueChart — Table View Mode', () => {
     const copyBtn = screen.getByRole('button', { name: 'Copy as CSV' });
     fireEvent.click(copyBtn);
     
-    expect(navigator.clipboard.writeText).toHaveBeenCalled();
-    
-    // Button text changes
     await waitFor(() => {
+      expect(mockedCopyToClipboard).toHaveBeenCalledWith(expect.stringContaining('Date,'));
       expect(screen.getByRole('button', { name: 'Copied!' })).toBeInTheDocument();
     });
+    expect(screen.getByTestId('csv-copy-live-region')).toHaveTextContent(/csv copied to clipboard/i);
+  });
+
+  it('shows failure feedback without success when copy fails', async () => {
+    mockedCopyToClipboard.mockResolvedValueOnce(false);
+
+    render(<RevenueChart series={mockSeriesData} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Table' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy as CSV' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('csv-copy-live-region')).toHaveTextContent(/copy failed — select and copy manually/i);
+    });
+    expect(screen.queryByRole('button', { name: 'Copied!' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy failed' })).toBeInTheDocument();
   });
 });

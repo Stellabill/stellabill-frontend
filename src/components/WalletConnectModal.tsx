@@ -1,7 +1,10 @@
 import { useRef } from "react";
 import { useModalFocus } from "../hooks/useModalFocus";
 import type { ConnectionState } from "./ConnectButton";
+import type { FreighterConnectionErrorType } from "../wallet/freighter";
 import { X, ShieldCheck, Info, RotateCcw, HelpCircle, AlertCircle, Loader2 } from "lucide-react";
+import { openExternal } from "../utils/openExternal";
+import { STELLAR_WALLETS_DOCS_URL } from "../config/links";
 
 interface WalletConnectModalProps {
   isOpen: boolean;
@@ -11,6 +14,7 @@ interface WalletConnectModalProps {
   connectionState?: ConnectionState;
   initialState?: ConnectionState | "list" | "failed";
   errorMessage?: string;
+  errorType?: FreighterConnectionErrorType;
   onRetry?: () => void;
 }
 
@@ -22,6 +26,7 @@ export default function WalletConnectModal({
   connectionState,
   initialState,
   errorMessage,
+  errorType,
   onRetry,
 }: WalletConnectModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
@@ -100,7 +105,7 @@ export default function WalletConnectModal({
             className="text-slate-400 text-sm leading-relaxed max-w-[280px] mx-auto"
           >
             {resolvedConnectionState === 'disconnected' && "Sign in with your wallet to manage Stellar wallet subscriptions and payments securely."}
-            {resolvedConnectionState === 'connecting' && "Confirm in Freighter and accept the signature request to continue."}
+            {resolvedConnectionState === 'connecting' && "Approve the connection request in Freighter to continue."}
             {resolvedConnectionState === 'error' && (errorMessage || "The connection request was rejected or failed. Please try again.")}
           </p>
         </div>
@@ -170,6 +175,16 @@ export default function WalletConnectModal({
               <AlertCircle className="w-8 h-8 text-red-400" />
             </div>
             <div className="flex flex-col gap-3 w-full max-w-[280px]">
+              {errorType === 'not-installed' && (
+                <a
+                  href="https://www.freighter.app/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-4 bg-cyan-400/10 hover:bg-cyan-400/20 text-cyan-300 rounded-2xl font-bold transition-all border border-cyan-400/20"
+                >
+                  Install Freighter
+                </a>
+              )}
               <button 
                 onClick={onRetry}
                 className="w-full flex items-center justify-center gap-2 py-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold transition-all border border-white/5 hover:border-white/10"
@@ -178,7 +193,7 @@ export default function WalletConnectModal({
                 Try Again
               </button>
               <button 
-                onClick={() => window.open('https://docs.stellar.org/wallets', '_blank')}
+                onClick={() => openExternal(STELLAR_WALLETS_DOCS_URL)}
                 className="w-full flex items-center justify-center gap-2 py-4 text-slate-400 hover:text-white transition-colors text-sm font-medium"
               >
                 <HelpCircle className="w-4 h-4" />

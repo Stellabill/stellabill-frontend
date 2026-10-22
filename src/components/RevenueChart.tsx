@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, KeyboardEvent } from 'react';
 import './RevenueChart.css';
 import { seriesVar } from '@/tokens/chartPalette';
+import { copyToClipboard } from '../utils/clipboard';
 
 export type TimeRange = '7D' | '30D' | '90D';
 
@@ -198,9 +199,16 @@ interface RevenueTableProps {
 }
 
 function RevenueTable({ data, series }: RevenueTableProps) {
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleCopyCsv = () => {
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  const handleCopyCsv = async () => {
     const headers = ['Date', ...series.map(s => `"${s.name.replace(/"/g, '""')}"`)];
     const rows = data.map((d, i) => {
       return [
@@ -217,12 +225,13 @@ function RevenueTable({ data, series }: RevenueTableProps) {
       ...rows.map(row => row.join(','))
     ].join('\n');
     
-    navigator.clipboard.writeText(csvContent).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(err => {
-      console.error('Failed to copy CSV:', err);
-    });
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    const succeeded = await copyToClipboard(csvContent);
+    setCopyStatus(succeeded ? 'success' : 'error');
+    copyTimerRef.current = setTimeout(() => {
+      setCopyStatus('idle');
+      copyTimerRef.current = null;
+    }, 2000);
   };
 
   const startDate = data[0]?.date || '';
@@ -231,14 +240,20 @@ function RevenueTable({ data, series }: RevenueTableProps) {
   return (
     <div className="revenue-table-container">
       <div className="revenue-table-actions">
-        <button 
-          type="button" 
-          onClick={handleCopyCsv} 
+        <button
+          type="button"
+          onClick={handleCopyCsv}
           className="btn-copy-csv"
-          aria-live="polite"
         >
-          {copied ? 'Copied!' : 'Copy as CSV'}
+          {copyStatus === 'success' ? 'Copied!' : copyStatus === 'error' ? 'Copy failed' : 'Copy as CSV'}
         </button>
+        <span className="sr-only" role="status" aria-live="polite" data-testid="csv-copy-live-region">
+          {copyStatus === 'success'
+            ? 'CSV copied to clipboard'
+            : copyStatus === 'error'
+              ? 'Copy failed — select and copy manually'
+              : ''}
+        </span>
       </div>
       <div className="revenue-table-wrapper" tabIndex={0} role="region" aria-label="Revenue data table">
         <table className="revenue-table">

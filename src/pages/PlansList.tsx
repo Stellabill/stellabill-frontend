@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Tag from "../components/Tag";
 import type { TagOption } from "../components/AddTagPopover";
 import AddTagPopover from "../components/AddTagPopover";
@@ -47,6 +47,25 @@ export default function PlansList({
   onCreateTag,
 }: Props) {
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [sort, setSort] = useState("Newest");
+
+  useEffect(() => {
+    onSearch(search);
+  }, [search, onSearch]);
+
+  useEffect(() => {
+    onFilterStatus(statusFilter);
+  }, [statusFilter, onFilterStatus]);
+
+  useEffect(() => {
+    onFilterType(typeFilter);
+  }, [typeFilter, onFilterType]);
+
+  useEffect(() => {
+    onSort(sort);
+  }, [sort, onSort]);
 
   const handleAddTag = (planId: string, tag: TagOption) => {
     onAddTagToPlan?.(planId, tag);
@@ -86,7 +105,6 @@ export default function PlansList({
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
-              onSearch(e.target.value);
             }}
             aria-label="Search plans"
           />
@@ -96,7 +114,6 @@ export default function PlansList({
               aria-label="Clear search"
               onClick={() => {
                 setSearch("");
-                onSearch("");
               }}
             >
               ✕
@@ -110,8 +127,8 @@ export default function PlansList({
             <button
               key={s}
               className="plans-list__filter-btn"
-              aria-pressed={s === "All"}
-              onClick={() => onFilterStatus(s.toLowerCase())}
+              aria-pressed={statusFilter === s.toLowerCase()}
+              onClick={() => setStatusFilter(s.toLowerCase())}
             >
               {s}
             </button>
@@ -124,8 +141,8 @@ export default function PlansList({
             <button
               key={t}
               className="plans-list__filter-btn"
-              aria-pressed={t === "All"}
-              onClick={() => onFilterType(t.toLowerCase())}
+              aria-pressed={typeFilter === t.toLowerCase()}
+              onClick={() => setTypeFilter(t.toLowerCase())}
             >
               {t}
             </button>
@@ -135,7 +152,8 @@ export default function PlansList({
         {/* Sort */}
         <select
           className="plans-list__sort"
-          onChange={(e) => onSort(e.target.value)}
+          value={sort}
+          onChange={(e) => setSort(e.target.value)}
           aria-label="Sort plans">
           <option>Newest</option>
           <option>Name (A-Z)</option>
@@ -194,7 +212,7 @@ export default function PlansList({
 
                     <td className="dt__col--numeric">
                       <span className="plans-table__price">
-                        ${(p.price / 100).toFixed(2)}{" "}
+                        {(p.price / 100).toFixed(2)}{" "}
                         <span style={{ color: "var(--color-text-subtle)", fontSize: "var(--text-xs)" }}>
                           {p.currency}
                         </span>
@@ -285,7 +303,7 @@ export default function PlansList({
                   <div className="plans-card__field">
                     <span className="plans-card__label">Price</span>
                     <span className="plans-card__value">
-                      ${(p.price / 100).toFixed(2)} {p.currency}
+                      {(p.price / 100).toFixed(2)} {p.currency}
                     </span>
                   </div>
                 </div>

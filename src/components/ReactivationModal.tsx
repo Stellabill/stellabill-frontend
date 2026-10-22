@@ -58,7 +58,7 @@ export interface ReactivationModalProps {
    */
   windowExpired?: boolean;
   /**
-   * The subscriber's original monthly billing day (1–28).
+   * The subscriber's original monthly billing day (1–31).
    * Used to compute the "Same billing day" option.
    * Defaults to the 1st if omitted.
    */
@@ -83,16 +83,24 @@ function today(): Date {
 
 /**
  * Next occurrence of `billingDay` at or after today.
- * Clamps to day 28 to avoid month-length edge cases.
+ * Clamps to the last day of the target month so days 29–31 are respected
+ * (e.g. day 31 in February resolves to Feb 28/29).
  */
 function nextBillingDayDate(billingDay: number): Date {
-  const day = Math.min(Math.max(billingDay, 1), 28);
+  const day = Math.min(Math.max(billingDay, 1), 31);
   const now = today();
-  const candidate = new Date(now.getFullYear(), now.getMonth(), day);
+  const candidate = clampToMonth(now.getFullYear(), now.getMonth(), day);
   if (candidate < now) {
-    candidate.setMonth(candidate.getMonth() + 1);
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return clampToMonth(next.getFullYear(), next.getMonth(), day);
   }
   return candidate;
+}
+
+/** Build a date clamped to the last day of the given month. */
+function clampToMonth(year: number, month: number, day: number): Date {
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, lastDay));
 }
 
 function formatDate(date: Date): string {
@@ -173,7 +181,7 @@ export default function ReactivationModal({
 
   const dateNotice =
     mode === 'billing-day'
-      ? `Your billing cycle will reset to day ${billingDay} of each month. Any gap from today is unpaid — access starts on ${formatDate(billingDayDate)}.`
+      ? `Your billing cycle will reset to day ${billingDay} of each month (clamped to the last day of shorter months). Any gap from today is unpaid — access starts on ${formatDate(billingDayDate)}.`
       : mode === 'custom' && customDate
       ? `Access and billing begin on ${formatDate(customDate)}.`
       : `Access and billing begin today, ${formatDate(todayDate)}.`;

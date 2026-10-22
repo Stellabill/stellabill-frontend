@@ -8,8 +8,18 @@ interface PayoutStepProps {
 }
 
 export default function PayoutStep({ onBack, onNext }: PayoutStepProps) {
+  const navigate = useNavigate();
   const [walletAddress, setWalletAddress] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!hasBusinessData()) {
+      navigate('/onboarding/business', {
+        replace: true,
+        state: { notice: 'Please complete the business step before adding payout details.' },
+      });
+    }
+  }, [navigate]);
 
   const handleNext = () => {
     const normalized = walletAddress.trim().toUpperCase();
