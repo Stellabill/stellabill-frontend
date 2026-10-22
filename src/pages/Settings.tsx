@@ -5,6 +5,8 @@ import BillingSettings from '../components/settings/BillingSettings'
 import ApiKeysSettings from '../components/settings/ApiKeysSettings'
 import DensityPreview from '../components/settings/DensityPreview'
 import FamilyPlanSettings from '../components/settings/FamilyPlanSettings'
+import ManageTagsSettings, { type TagData } from '../components/settings/ManageTagsSettings'
+import type { TagProps } from '../components/Tag'
 import './Settings.css'
 
 type SettingsTab = 'organization' | 'billing' | 'api-keys' | 'tags' | 'appearance' | 'family-plan'
