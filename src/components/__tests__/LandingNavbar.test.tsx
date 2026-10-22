@@ -5,15 +5,20 @@ import LandingNavbar from '../LandingNavbar';
 import { BrowserRouter } from 'react-router-dom';
 import { WalletProvider } from '../../wallet/WalletContext';
 
-// Mock useLocation to simulate non-dashboard path
-jest.mock('react-router-dom', () => {
-  const original = jest.requireActual('react-router-dom');
-  return {
-    ...original,
-    useLocation: () => ({ pathname: '/' }),
-    Link: original.Link,
-  };
-});
+// Helper to find the enabled Freighter "Connect" button in the modal
+const getModalConnectButton = () => {
+  const modal = screen.getByRole('dialog');
+  return within(modal)
+    .getAllByRole('button', { name: /^connect$/i })
+    .find((button) => !(button as HTMLButtonElement).disabled) as HTMLButtonElement;
+};
+
+const renderNavbar = () =>
+  render(
+    <BrowserRouter>
+      <LandingNavbar />
+    </BrowserRouter>
+  );
 
 describe('LandingNavbar', () => {
   beforeEach(() => {
@@ -53,7 +58,7 @@ describe('LandingNavbar', () => {
     });
   });
 
-  test('shows connect wallet button when not connected', () => {
+  it('shows connect wallet button when not connected', () => {
     render(
       <BrowserRouter>
         <WalletProvider><LandingNavbar /></WalletProvider>
