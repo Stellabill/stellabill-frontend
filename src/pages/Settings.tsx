@@ -5,33 +5,40 @@ import BillingSettings from '../components/settings/BillingSettings'
 import ApiKeysSettings from '../components/settings/ApiKeysSettings'
 import DensityPreview from '../components/settings/DensityPreview'
 import FamilyPlanSettings from '../components/settings/FamilyPlanSettings'
+import ManageTagsSettings, { TagData } from '../components/settings/ManageTagsSettings'
+import { useTags } from '../hooks/useTags'
+import type { TagProps } from '../components/Tag'
 import './Settings.css'
 
 type SettingsTab = 'organization' | 'billing' | 'api-keys' | 'tags' | 'appearance' | 'family-plan'
 
-// Wrapper component for ManageTagsSettings with state
+// Wrapper component for ManageTagsSettings with state using useTags hook
 function ManageTagsWrapper() {
-  const [tags, setTags] = useState<TagData[]>([
-    { id: '1', label: 'Enterprise', color: 'blue', usageCount: 5 },
-    { id: '2', label: 'Popular', color: 'green', usageCount: 12 },
-    { id: '3', label: 'Beta', color: 'yellow', usageCount: 3 },
-  ]);
+  const tagsHook = useTags();
+
+  // Convert hook data to TagData format for ManageTagsSettings component
+  const tagsData: TagData[] = tagsHook.getAllTags().map((tag) => ({
+    id: tag.id,
+    label: tag.label,
+    color: tag.color,
+    usageCount: tagsHook.getTagUsageCount(tag.id),
+  }));
 
   const handleRenameTag = (id: string, newLabel: string) => {
-    setTags(prev => prev.map(t => t.id === id ? { ...t, label: newLabel } : t));
+    tagsHook.renameTag(id, newLabel);
   };
 
   const handleDeleteTag = (id: string) => {
-    setTags(prev => prev.filter(t => t.id !== id));
+    tagsHook.deleteTag(id);
   };
 
   const handleChangeColor = (id: string, newColor: TagProps['color']) => {
-    setTags(prev => prev.map(t => t.id === id ? { ...t, color: newColor } : t));
+    tagsHook.changeTagColor(id, newColor as Exclude<TagProps['color'], undefined>);
   };
 
   return (
     <ManageTagsSettings
-      tags={tags}
+      tags={tagsData}
       onRenameTag={handleRenameTag}
       onDeleteTag={handleDeleteTag}
       onChangeColor={handleChangeColor}

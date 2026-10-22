@@ -12,6 +12,7 @@ import Tag from "../components/Tag";
 import AddTagPopover, { TagOption } from "../components/AddTagPopover";
 import { useRefresh } from "../hooks/useRefresh";
 import { useFlip } from "../hooks/useFlip";
+import { useTags } from "../hooks/useTags";
 import "./Subscriptions.css";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -19,7 +20,7 @@ interface SubscriptionWithIcon extends Omit<Subscription, "icon"> {
 	icon: React.ReactNode;
 	prepaidBalance: string;
 	coverage: string;
-	tags?: TagOption[];
+	tags?: TagOption[]; // Tags are managed separately via the useTags hook
 }
 
 type StatusType = "Active" | "Paused" | "Cancelled";
@@ -178,13 +179,6 @@ const IconX = () => (
 	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 		<line x1="18" y1="6" x2="6" y2="18" />
 		<line x1="6" y1="6" x2="18" y2="18" />
-	</svg>
-);
-
-const IconManage = () => (
-	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-		<path d="M12 20h9" />
-		<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
 	</svg>
 );
 
@@ -439,31 +433,48 @@ export default function Subscriptions() {
 		enabled: !loading && filteredData.length > 0,
 	});
 	// Mobile cards use a separate FLIP container
-	const { containerRef: cardsContainerRef, getItemProps: getCardItemProps } = useFlip({
+	const { containerRef: cardsContainerRef } = useFlip({
 		keys: flipKeys,
 		enabled: !loading && filteredData.length > 0,
 	});
 
-	const [customTags, setCustomTags] = useState<TagOption[]>([
-		{ id: "t-priority", label: "Priority", color: "red" },
-		{ id: "t-team", label: "Team", color: "blue" },
-		{ id: "t-trial", label: "Trial", color: "yellow" },
-	]);
-	const availableTags = customTags;
+	// Use the shared tags hook for persistence and synchronization
+	const tagsHook = useTags();
+	const availableTags = tagsHook.getAllTags();
 
-	const updateTags = (subId: string, fn: (tags: TagOption[]) => TagOption[]) =>
-		setData((prev) => prev.map((sub) => (sub.id === subId ? { ...sub, tags: fn(sub.tags ?? []) } : sub)));
+	// Rebuild data with tags from the hook
+	useEffect(() => {
+		setData((prev) =>
+			prev.map((sub) => ({
+				...sub,
+				tags: tagsHook.getSubscriptionTags(sub.id),
+			}))
+		);
+	}, [tagsHook.subscriptionTags, tagsHook.tags]);
 
-	const handleAddTag = (subId: string, tag: TagOption) =>
-		updateTags(subId, (tags) => (tags.some((t) => t.id === tag.id) ? tags : [...tags, tag]));
+	const handleAddTag = (subId: string, tag: TagOption) => {
+		tagsHook.addTagToSubscription(subId, tag.id);
+	};
 
-	const handleRemoveTag = (subId: string, tagId: string) =>
-		updateTags(subId, (tags) => tags.filter((t) => t.id !== tagId));
+	const handleRemoveTag = (subId: string, tagId: string) => {
+		tagsHook.removeTagFromSubscription(subId, tagId);
+	};
 
 	const handleCreateTag = (label: string, color: TagOption["color"]) => {
-		const tag: TagOption = { id: `t-${Date.now()}`, label, color };
-		setCustomTags((prev) => [...prev, tag]);
-		if (selectedId) handleAddTag(selectedId, tag);
+		// Check if tag already exists using the hook's normalized matching
+		const existingTag = tagsHook.findTagByNormalizedLabel(label);
+		if (existingTag) {
+			// Tag already exists, just add it to the subscription
+			if (selectedId) {
+				tagsHook.addTagToSubscription(selectedId, existingTag.id);
+			}
+		} else {
+			// Create new tag and add to subscription
+			const newTag = tagsHook.createTag(label, color);
+			if (selectedId) {
+				tagsHook.addTagToSubscription(selectedId, newTag.id);
+			}
+		}
 	};
 
 	const selectedSub = useMemo(

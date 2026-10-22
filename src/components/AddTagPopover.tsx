@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Plus, Search } from 'lucide-react';
 import Tag from './Tag';
 import BottomSheet from './common/BottomSheet';
+import { normalizeLabelForComparison } from '../hooks/useTags';
 import './AddTagPopover.css';
 
 export interface TagOption {
@@ -48,7 +49,13 @@ export default function AddTagPopover({
   );
 
   const canAddMore = selectedTags.length < maxTags;
-  const exactMatch = filteredTags.some((t) => t.label.toLowerCase() === search.toLowerCase());
+  
+  // Check for exact normalized match against ALL available tags (not just filtered/unselected)
+  // This prevents creating " priority" when "Priority" already exists
+  const normalizedSearch = normalizeLabelForComparison(search);
+  const exactMatch = availableTags.some(
+    (t) => normalizeLabelForComparison(t.label) === normalizedSearch
+  );
 
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
