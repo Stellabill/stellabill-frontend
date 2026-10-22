@@ -76,7 +76,7 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClos
         <div className="space-y-1">
           <button 
             className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all group"
-            onClick={() => window.open(`https://stellar.expert/explorer/public/account/${address}`, '_blank')}
+            onClick={() => openExternal(getExplorerAccountUrl(address))}
           >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-slate-800 rounded-lg group-hover:bg-cyan-500/10 transition-colors">
