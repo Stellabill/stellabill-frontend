@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi} from 'vitest'
 import Settings from '../pages/Settings'
 
 // Mock the settings components
@@ -36,26 +36,26 @@ describe('Settings Page', () => {
   it('renders the settings page with correct title', () => {
     renderWithRouter(<Settings />)
     
-    expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument()
-    expect(screen.getByText(/manage your organization, billing, and security preferences/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /settings/i })).toBeInDocument()
+    expect(screen.getByText(/manage your organization, billing, and security preferences/i)).toBeInDocument()
   })
 
   it('displays all sections in navigation', () => {
     renderWithRouter(<Settings />)
     
-    expect(screen.getByRole('button', { name: /organization/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /billing/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /api keys/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /tags/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /appearance/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /organization/i })).toBeInDocument()
+    expect(screen.getByRole('button', { name: /billing/i })).toBeInDocument()
+    expect(screen.getByRole('button', { name: /api keys/i })).toBeInDocument()
+    expect(screen.getByRole('button', { name: /tags/i })).toBeInDocument()
+    expect(screen.getByRole('button', { name: /appearance/i })).toBeInDocument()
   })
 
   it('shows organization settings by default', () => {
     renderWithRouter(<Settings />)
     
     expect(screen.getByTestId('organization-settings')).toBeInTheDocument()
-    expect(screen.queryByTestId('billing-settings')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('api-keys-settings')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('billing-settings')).not.toBeInDocument()
+    expect(screen.queryByTestId('api-keys-settings')).not.toBeInDocument()
   })
 
   it('switches to billing settings when billing tab is clicked', async () => {
@@ -65,9 +65,9 @@ describe('Settings Page', () => {
     fireEvent.click(billingTab)
     
     await waitFor(() => {
-      expect(screen.getByTestId('billing-settings')).toBeInTheDocument()
-      expect(screen.queryByTestId('organization-settings')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('api-keys-settings')).not.toBeInTheDocument()
+      expect(screen.getByTestId('billing-settings')).toBeInDocument()
+      expect(screen.queryByTestId('organization-settings')).not.toBeInDocument()
+      expect(screen.queryByTestId('api-keys-settings')).not.toBeInDocument()
     })
   })
 
@@ -80,23 +80,23 @@ describe('Settings Page', () => {
     await waitFor(() => {
       expect(screen.getByTestId('api-keys-settings')).toBeInTheDocument()
       expect(screen.queryByTestId('organization-settings')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('billing-settings')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('billing-settings')).not.toBeInDocument()
     })
   })
 
   it('displays security notice in navigation', () => {
     renderWithRouter(<Settings />)
     
-    expect(screen.getByText(/security notice/i)).toBeInTheDocument()
+    expect(screen.getByText(/security notice/i)).toBeInDocument()
     expect(screen.getByText(/some actions in these settings are irreversible/i)).toBeInTheDocument()
   })
 
   it('shows descriptions for each settings section', () => {
     renderWithRouter(<Settings />)
     
-    expect(screen.getByText(/manage your organization profile, team members, and preferences/i)).toBeInTheDocument()
+    expect(screen.getByText(/manage your organization profile, team members, and preferences/i)).toBeInDocument()
     expect(screen.getByText(/configure payment methods, billing cycles, and invoices/i)).toBeInTheDocument()
-    expect(screen.getByText(/manage api keys, tokens, and security settings/i)).toBeInTheDocument()
+    expect(screen.getByText(/manage api keys, tokens, and security settings/i)).toBeInDocument()
   })
 
   it('highlights active tab correctly', () => {
@@ -120,7 +120,7 @@ describe('Settings Page', () => {
     
     // Check for proper heading hierarchy
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /settings/i })).toBeInDocument()
     
     // Check for button roles
     expect(screen.getAllByRole('button')).toHaveLength(5) // Five navigation tabs
@@ -175,7 +175,7 @@ describe('Settings Navigation', () => {
     
     await waitFor(() => {
       expect(screen.getByTestId('density-preview')).toBeInTheDocument()
-      expect(screen.queryByTestId('organization-settings')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('organization-settings')).not.toBeInDocument()
     })
   })
 })

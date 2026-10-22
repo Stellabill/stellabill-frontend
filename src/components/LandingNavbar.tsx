@@ -1,17 +1,29 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useId, RefObject } from 'react'
 import WalletPill from './WalletPill'
 import WalletConnectModal from './WalletConnectModal'
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from './Branding/Logo';
 import LocaleSwitcher from './LocaleSwitcher';
 import { Menu, X, Github, Rocket, Zap, BookOpen, MessageSquare, ChevronRight } from 'lucide-react';
+import { useWallet } from '../wallet/WalletContext';
+import { FreighterConnectionError } from '../wallet/freighter';
 
-export default function LandingNavbar() {
+export interface LandingNavbarProps extends UseWalletConnectionOptions {}
+
+export default function LandingNavbar(props: LandingNavbarProps = {}) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isConnected, setIsConnected] = useState(false)
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
-  const [address] = useState("GABCDEFGHIJK1234567890ABCDEFGHIJK1234567890ABCDEXYZ9")
+  const {
+    status,
+    address,
+    error,
+    connect,
+    disconnect,
+    clearError,
+    cancelConnect,
+  } = useWallet()
+  const isConnected = status === 'connected'
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -37,13 +49,14 @@ export default function LandingNavbar() {
     setIsWalletModalOpen(true);
   }
 
-  const handleFreighterConnect = () => {
-    setIsConnected(true);
-    console.log("Freighter connected successfully");
-  }
-
-  const handleDisconnect = () => {
-    setIsConnected(false);
+  const handleFreighterConnect = async () => {
+    try {
+      const result = await connect()
+      if (!result) return
+      setIsWalletModalOpen(false)
+    } catch {
+      // The provider exposes the error to the modal.
+    }
   }
 
   const handleSubscribe = () => {
@@ -105,8 +118,8 @@ export default function LandingNavbar() {
 
                 {isConnected ? (
                     <WalletPill
-                        address={address}
-                        onDisconnect={handleDisconnect}
+                        address={address ?? ''}
+                        onDisconnect={disconnect}
                     />
                 ) : (
                     <button
@@ -122,13 +135,15 @@ export default function LandingNavbar() {
               <div className="md:hidden flex items-center gap-3">
                 {isConnected && (
                     <div className="scale-90 origin-right">
-                      <WalletPill address={address} onDisconnect={handleDisconnect} />
+                      <WalletPill address={address ?? ''} onDisconnect={disconnect} />
                     </div>
                 )}
                 <button
+                    ref={toggleButtonRef}
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                     className="site-navbar__mobile-toggle p-2 rounded-lg transition-colors"
                     aria-expanded={isMobileMenuOpen}
+                    aria-controls={drawerId}
                     aria-label="Main menu"
                 >
                   {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -141,22 +156,32 @@ export default function LandingNavbar() {
           {isMobileMenuOpen && (
               <div
                   className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={closeDrawer}
+                  aria-hidden="true"
               />
           )}
 
           {/* Mobile Menu Drawer */}
           <div
+              ref={drawerRef}
+              id={drawerId}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Main menu"
               className={`site-navbar__mobile-drawer fixed inset-y-0 right-0 w-full max-w-xs z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
                   isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
               }`}
+              inert={isMobileMenuOpen ? undefined : ''}
+              aria-hidden={!isMobileMenuOpen}
           >
             <div className="flex flex-col h-full">
               <div className="site-navbar__mobile-section flex items-center justify-between p-5 border-b">
                 <Logo size="sm" />
                 <button
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    ref={closeButtonRef}
+                    onClick={closeDrawer}
                     className="site-navbar__drawer-close site-navbar__mobile-toggle p-2 rounded-lg transition-colors"
+                    aria-label="Close menu"
                 >
                   <X size={20} />
                 </button>
@@ -228,7 +253,7 @@ export default function LandingNavbar() {
                 {isConnected && (
                     <button
                         onClick={() => {
-                          handleDisconnect();
+                          disconnect();
                           setIsMobileMenuOpen(false);
                         }}
                         className="w-full py-4 px-6 text-center text-red-400 bg-red-400/5 hover:bg-red-400/10 border border-red-400/20 rounded-xl font-medium transition-all"
@@ -244,9 +269,15 @@ export default function LandingNavbar() {
         {/* Wallet Connect Modal */}
         <WalletConnectModal
             isOpen={isWalletModalOpen}
-            onClose={() => setIsWalletModalOpen(false)}
+            onClose={() => {
+              cancelConnect()
+              setIsWalletModalOpen(false)
+            }}
             onConnectFreighter={handleFreighterConnect}
-            connectionState="disconnected"
+            connectionState={status}
+            errorMessage={error?.message}
+            errorType={error instanceof FreighterConnectionError ? error.type : undefined}
+            onRetry={clearError}
         />
       </>
   );

@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, type ChangeEvent } from "react";
 import { useModalFocus } from "../hooks/useModalFocus";
 import { X, Gift, ArrowRight, ArrowLeft, Check, Copy, Share2, Mail, MessageSquare, Link as LinkIcon, Loader2 } from "lucide-react";
+import { copyToClipboard } from "../utils/clipboard";
 import "./GiftPurchaseModal.css";
 
 export interface Plan {
@@ -61,9 +62,16 @@ export default function GiftPurchaseModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [giftCode, setGiftCode] = useState("");
-  const [copySuccess, setCopySuccess] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useModalFocus(modalRef, { isOpen, onClose, initialFocusRef: emailInputRef });
+  useModalFocus(modalRef, { isOpen, onClose, initialFocusRef: emailInputRef, closeOnEscape: !isProcessing });
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen) {
@@ -78,7 +86,7 @@ export default function GiftPurchaseModal({
         setErrors({});
         setIsProcessing(false);
         setGiftCode("");
-        setCopySuccess(false);
+        setCopyStatus("idle");
       }, 300);
     }
   }, [isOpen]);
@@ -138,13 +146,13 @@ export default function GiftPurchaseModal({
   };
 
   const handleCopyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(giftCode);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy:", error);
-    }
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    const succeeded = await copyToClipboard(giftCode);
+    setCopyStatus(succeeded ? "success" : "error");
+    copyTimerRef.current = setTimeout(() => {
+      setCopyStatus("idle");
+      copyTimerRef.current = null;
+    }, 2000);
   };
 
   const handleShare = async () => {
@@ -178,10 +186,32 @@ export default function GiftPurchaseModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="gift-modal-title"
+      aria-busy={isProcessing}
     >
       <div className="gift-modal-backdrop" />
 
       <div ref={modalRef} className="gift-modal-content">
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "absolute",
+            width: "1px",
+            height: "1px",
+            padding: 0,
+            margin: "-1px",
+            overflow: "hidden",
+            clip: "rect(0, 0, 0, 0)",
+            whiteSpace: "nowrap",
+            border: 0,
+          }}
+        >
+          {copyStatus === "success"
+            ? "Gift code copied to clipboard"
+            : copyStatus === "error"
+              ? "Copy failed — select and copy manually"
+              : ""}
+        </div>
         {/* Header */}
         <div className="gift-modal-header">
           <div className="gift-modal-header-icon">
@@ -197,7 +227,7 @@ export default function GiftPurchaseModal({
           </div>
           <button
             className="gift-modal-close"
-            onClick={onClose}
+            onClick={() => !isProcessing && onClose()}
             aria-label="Close modal"
             disabled={isProcessing}
           >
@@ -398,7 +428,7 @@ export default function GiftPurchaseModal({
                     aria-label="Copy gift code to clipboard"
                   >
                     <Copy size={16} />
-                    {copySuccess ? "Copied!" : "Copy"}
+                    {copyStatus === "success" ? "Copied!" : copyStatus === "error" ? "Copy failed" : "Copy"}
                   </button>
                   <button
                     className="gift-code-btn gift-code-btn-primary"
@@ -409,6 +439,9 @@ export default function GiftPurchaseModal({
                     Share
                   </button>
                 </div>
+                {copyStatus === "error" && (
+                  <p className="gift-form-error">Copy failed — select and copy manually</p>
+                )}
               </div>
 
               <div className="gift-delivery-notice">
