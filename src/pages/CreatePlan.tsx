@@ -5,6 +5,8 @@ import PricingSection, { validatePricing, type PricingSectionValue } from '../co
 import BillingTypeSection from '../components/create-plan/BillingTypeSection'
 import WizardHeader from '../components/create-plan/WizardHeader'
 import ExitConfirmModal from '../components/create-plan/ExitConfirmModal'
+import AutosaveIndicator from '../components/AutosaveIndicator'
+import AutosaveHistory from '../components/AutosaveHistory'
 import { useAutosave, type AutosaveEntry } from '../hooks/useAutosave'
 import { useDraftManager } from '../hooks/useDraftManager'
 import styles from './CreatePlan.module.css'
@@ -49,14 +51,46 @@ export default function CreatePlan() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { getDraftById } = useDraftManager()
-  const [usageEnabled, setUsageEnabled] = useState(false)
-  const [trialDays, setTrialDays] = useState('')
-  const [pricing, setPricing] = useState<PricingSectionValue>({ price: '', interval: '', priceType: 'currency' })
+
+  // Load draft or restore autosaved snapshot on initial mount
+  const initialSnapshot = useMemo(() => {
+    const draftIdParam = searchParams.get('draftId')
+    if (draftIdParam !== null) {
+      const draft = getDraftById(draftIdParam)
+      if (draft) return draft.data
+    } else {
+      let savedData = localStorage.getItem(AUTOSAVE_KEY)
+      if (!savedData) {
+        try {
+          const rawHistory = localStorage.getItem(`${AUTOSAVE_KEY}:history`)
+          if (rawHistory) {
+            const parsed = JSON.parse(rawHistory)
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.data) {
+              savedData = parsed[0].data
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+      if (savedData) {
+        const restored = deserialiseForm({ data: savedData, savedAt: '', label: '' })
+        if (restored) return restored
+      }
+    }
+    return null
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [usageEnabled, setUsageEnabled] = useState(() => initialSnapshot?.usageEnabled ?? false)
+  const [trialDays, setTrialDays] = useState(() => initialSnapshot?.trialDays ?? '')
+  const [pricing, setPricing] = useState<PricingSectionValue>(
+    () => initialSnapshot?.pricing ?? { price: '', interval: '', priceType: 'currency' },
+  )
   const [errors, setErrors] = useState<{ priceError?: string; intervalError?: string }>({})
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
 
-  // Load draft if query param present
+  // Load draft if query param present or re-sync
   useEffect(() => {
     const draftIdParam = searchParams.get('draftId')
     if (draftIdParam !== null) {
@@ -67,8 +101,32 @@ export default function CreatePlan() {
         setPricing(draft.data.pricing)
         setErrors({})
       }
+    } else {
+      let savedData = localStorage.getItem(AUTOSAVE_KEY)
+      if (!savedData) {
+        try {
+          const rawHistory = localStorage.getItem(`${AUTOSAVE_KEY}:history`)
+          if (rawHistory) {
+            const parsed = JSON.parse(rawHistory)
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.data) {
+              savedData = parsed[0].data
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+      if (savedData) {
+        const restored = deserialiseForm({ data: savedData, savedAt: '', label: '' })
+        if (restored) {
+          setUsageEnabled(restored.usageEnabled)
+          setTrialDays(restored.trialDays)
+          setPricing(restored.pricing)
+          setErrors({})
+        }
+      }
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Autosave ────────────────────────────────────────────────────────────
 
@@ -98,21 +156,17 @@ export default function CreatePlan() {
     status,
     lastSavedAt,
     history,
-    saveNow,
     clearHistory,
     restore,
     isOffline,
   } = useAutosave({
+    value: currentData,
     storageKey: AUTOSAVE_KEY,
     delay: 2_000,
     maxHistory: 10,
     onSave: handleSave,
     onRestore: handleRestore,
   })
-
-  useEffect(() => {
-    saveNow()
-  }, [currentData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Draft persistence ───────────────────────────────────────────────────
 
@@ -226,7 +280,18 @@ export default function CreatePlan() {
         isDirty={isDirty}
         onCancel={handleCancel}
         onSaveDraft={handleSaveDraft}
-      />
+      >
+        <AutosaveIndicator
+          status={status}
+          lastSavedAt={lastSavedAt}
+          isOffline={isOffline}
+        />
+        <AutosaveHistory
+          history={history}
+          onRestore={restore}
+          onClear={clearHistory}
+        />
+      </WizardHeader>
 
       <form onSubmit={handleSubmit} noValidate>
         <BillingTypeSection

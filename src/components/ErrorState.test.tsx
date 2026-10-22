@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ErrorState from './ErrorState';
+import { SUPPORT_URL } from '../config/links';
 
 describe('ErrorState Component', () => {
   const onRetry = vi.fn();
@@ -95,7 +96,7 @@ describe('ErrorState Component', () => {
     // Mock window.open
     const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
     fireEvent.click(supportButton);
-    expect(windowOpenSpy).toHaveBeenCalledWith('https://support.stellarbill.com', '_blank');
+    expect(windowOpenSpy).toHaveBeenCalledWith(SUPPORT_URL, '_blank', 'noopener,noreferrer');
     windowOpenSpy.mockRestore();
   });
 });

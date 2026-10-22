@@ -113,6 +113,28 @@
     margin-right: auto;
 }
 
+.cancel-action-error {
+    margin: -1.5rem 0 2rem;
+    padding: 1rem;
+    color: #fecaca;
+    background: #2a1414;
+    border: 1px solid #7f1d1d;
+    border-radius: 12px;
+}
+
+.cancel-action-error p {
+    margin: 0;
+}
+
+.cancel-action-error details {
+    margin-top: 0.75rem;
+    color: #fca5a5;
+}
+
+.cancel-action-error summary {
+    cursor: pointer;
+}
+
 .cancel-checklist-container {
     background-color: #121415;
     border-radius: 20px;

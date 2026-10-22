@@ -1,87 +1,85 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import WalletConnectModal from './WalletConnectModal';
 import WalletDropdown from './WalletDropdown';
 import { Loader2, AlertCircle, ChevronDown } from 'lucide-react';
+import {
+  FreighterConnectionError,
+} from '../wallet/freighter';
+import { useWallet } from '../wallet/WalletContext';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 interface ConnectButtonProps {
   onConnect?: (address: string) => void;
   onDisconnect?: () => void;
-  connectDelayMs?: number;
-  randomFn?: () => number;
 }
 
 const ConnectButton: React.FC<ConnectButtonProps> = ({
   onConnect,
   onDisconnect,
-  connectDelayMs = 1500,
-  randomFn = Math.random,
 }) => {
-  const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string>('');
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const activeConnectionId = useRef(0);
+  const {
+    status,
+    address,
+    error,
+    connect,
+    disconnect: disconnectWallet,
+    clearError,
+    cancelConnect,
+  } = useWallet();
+  const connectionState: ConnectionState = status;
+  const walletAddress = address ?? '';
+  const errorMessage = error?.message ?? '';
+  const connectionErrorType =
+    error instanceof FreighterConnectionError ? error.type : undefined;
 
   const handleConnectClick = () => {
-    setConnectionState('disconnected');
-    setErrorMessage('');
+    clearError();
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
+    cancelConnect();
     setIsModalOpen(false);
+  };
 
-    if (connectionState === 'connecting') {
-      activeConnectionId.current += 1;
-      setConnectionState('disconnected');
-      setErrorMessage('');
+  const handleConnectFreighter = async () => {
+    try {
+      const result = await connect();
+      if (!result) return;
+      setIsModalOpen(false);
+      onConnect?.(result.address);
+    } catch {
+      // The provider exposes the connection error to this button and modal.
     }
   };
 
-  const handleConnectFreighter = () => {
-    const connectionId = ++activeConnectionId.current;
-    setConnectionState('connecting');
-    setErrorMessage('');
-
-    // Simulate wallet connection process. Keep non-zero delays visible long enough for assistive UI/tests.
-    const effectiveDelay = connectDelayMs > 0 ? Math.max(connectDelayMs, 500) : 0;
-
-    window.setTimeout(() => {
-      if (connectionId !== activeConnectionId.current) return;
-
-      try {
-        if (randomFn() < 0.2) {
-          throw new Error('Connection rejected by user');
-        }
-        
-        // Simulate success for demo
-        const mockAddress = 'GB3K4Y5QYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQ';
-        setWalletAddress(mockAddress);
-        setConnectionState('connected');
-        setIsModalOpen(false);
-        onConnect?.(mockAddress);
-      } catch (error) {
-        if (connectionId !== activeConnectionId.current) return;
-        setConnectionState('error');
-        setErrorMessage(error instanceof Error ? error.message : 'Connection failed');
-      }
-    }, effectiveDelay);
-  };
-
   const handleDisconnect = () => {
-    activeConnectionId.current += 1;
-    setConnectionState('disconnected');
-    setWalletAddress('');
+    disconnectWallet();
     setIsDropdownOpen(false);
+    setConnectionErrorType(undefined);
     onDisconnect?.();
   };
 
   const handleRetry = () => {
-    setConnectionState('disconnected');
-    setErrorMessage('');
+    clearError();
+    setIsModalOpen(true);
+  };
+
+  const handleOpenHistory = () => {
+    if (onOpenHistory) {
+      onOpenHistory();
+    } else if (navigationContext?.navigator) {
+      navigationContext.navigator.push('/wallet');
+    } else {
+      window.location.assign('/wallet');
+    }
+  };
+
+  const handleRetry = () => {
+    clearError();
     setIsModalOpen(true);
   };
 
@@ -142,6 +140,8 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
             address={walletAddress}
             onClose={() => setIsDropdownOpen(false)}
             onDisconnect={handleDisconnect}
+            onSwitchWallet={handleSwitchWallet}
+            onOpenHistory={handleOpenHistory}
           />
         )}
       </div>
@@ -152,6 +152,7 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
         onConnectFreighter={handleConnectFreighter}
         connectionState={connectionState}
         errorMessage={errorMessage}
+        errorType={connectionErrorType}
         onRetry={handleRetry}
       />
     </>

@@ -34,7 +34,7 @@ export default function RedeemConfirmModal({
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [error, setError] = useState("");
 
-  useModalFocus(modalRef, { isOpen, onClose });
+  useModalFocus(modalRef, { isOpen, onClose, closeOnEscape: !isRedeeming });
 
   const handleRedeem = async () => {
     setIsRedeeming(true);
@@ -79,6 +79,7 @@ export default function RedeemConfirmModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="redeem-confirm-title"
+      aria-busy={isRedeeming}
     >
       <div className="redeem-confirm-backdrop" />
 

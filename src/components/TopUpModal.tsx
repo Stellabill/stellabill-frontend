@@ -3,31 +3,69 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useModalFocus } from "@/hooks/useModalFocus";
 import "./TopUpModal.css";
 
-interface TopUpModalProps {
+export interface TopUpModalProps {
   isOpen: boolean;
   onClose: () => void;
+  planName?: string;
+  planPrice?: number;
+  currentBalance?: number;
+  walletBalance?: number;
+  currency?: string;
+  onConfirm?: (amount: number) => Promise<unknown>;
 }
 
 type TopUpStep = "select" | "review" | "complete";
 
-const QUICK_SELECT_OPTIONS = [
-  { id: "1m", duration: "1 month", amount: 10 },
-  { id: "3m", duration: "3 months", amount: 30 },
-  { id: "6m", duration: "6 months", amount: 60 },
-];
+const STROOPS_PER_UNIT = 10_000_000n;
 
-export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
+function toMinorUnits(val: number | string): bigint {
+  if (typeof val === "number") {
+    if (!Number.isFinite(val) || val <= 0) return 0n;
+    const s = val.toFixed(7);
+    const [intPart, fracPart] = s.split(".");
+    return BigInt(intPart) * STROOPS_PER_UNIT + BigInt(fracPart || "0");
+  }
+  const trimmed = val.trim();
+  if (!trimmed || trimmed === ".") return 0n;
+  const [intPart, fracPart = ""] = trimmed.split(".");
+  const safeInt = intPart === "" ? 0n : BigInt(intPart);
+  const safeFrac = BigInt(fracPart.slice(0, 7).padEnd(7, "0"));
+  return safeInt * STROOPS_PER_UNIT + safeFrac;
+}
+
+function formatDisplayAmount(val: number): string {
+  const s = val.toFixed(7).replace(/0+$/, "");
+  const parts = s.split(".");
+  if (parts.length === 1) return `${parts[0]}.00`;
+  if (parts[1].length < 2) return `${parts[0]}.${parts[1].padEnd(2, "0")}`;
+  return s;
+}
+
+export default function TopUpModal({
+  isOpen,
+  onClose,
+  planName = "Premium Access",
+  planPrice = 10,
+  currentBalance = 30,
+  walletBalance = 150,
+  currency = "USDC",
+  onConfirm,
+}: TopUpModalProps) {
   const [amount, setAmount] = useState<string>("0.00");
   const [selectedQs, setSelectedQs] = useState<string | null>(null);
   const [step, setStep] = useState<TopUpStep>("select");
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmedBalance, setConfirmedBalance] = useState<number | null>(null);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const amountInputRef = useRef<HTMLInputElement>(null);
 
-  const currentBalance = 30;
-  const planPrice = 10;
-  const walletBalance = 150;
+  const quickSelectOptions = [
+    { id: "1m", duration: "1 month", amount: planPrice * 1 },
+    { id: "3m", duration: "3 months", amount: planPrice * 3 },
+    { id: "6m", duration: "6 months", amount: planPrice * 6 },
+  ];
 
   useModalFocus(modalRef, { isOpen, onClose, initialFocusRef: amountInputRef });
 
@@ -37,6 +75,8 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
       setSelectedQs(null);
       setStep("select");
       setError(null);
+      setIsSubmitting(false);
+      setConfirmedBalance(null);
     }
   }, [isOpen]);
 
@@ -48,7 +88,7 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
-    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+    if (value === "" || /^\d*\.?\d{0,7}$/.test(value)) {
       setAmount(value);
       setSelectedQs(null);
       setError(null);
@@ -56,25 +96,44 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
   };
 
   const handleInputBlur = () => {
+    if (!amount || amount === ".") {
+      setAmount("0.00");
+      return;
+    }
     const parsed = parseFloat(amount);
-    setAmount(!Number.isNaN(parsed) ? parsed.toFixed(2) : "0.00");
+    if (Number.isNaN(parsed)) {
+      setAmount("0.00");
+      return;
+    }
+    const parts = amount.split(".");
+    if (parts.length === 1) {
+      setAmount(`${parts[0]}.00`);
+    } else if (parts[1].length < 2) {
+      setAmount(`${parts[0]}.${parts[1].padEnd(2, "0")}`);
+    }
   };
 
+  const topUpMinor = toMinorUnits(amount);
+  const walletMinor = toMinorUnits(walletBalance);
+  const currentMinor = toMinorUnits(currentBalance);
+  const planPriceMinor = toMinorUnits(planPrice);
+
   const topUpNum = parseFloat(amount) || 0;
-  const amountInvalid = topUpNum <= 0 || Number.isNaN(topUpNum);
-  const exceedsWallet = topUpNum > walletBalance;
+  const amountInvalid = topUpMinor <= 0n || Number.isNaN(topUpNum);
+  const exceedsWallet = topUpMinor > walletMinor;
   const validationMessage = amountInvalid
-    ? "Enter a top-up amount greater than 0 USDC."
+    ? `Enter a top-up amount greater than 0 ${currency}.`
     : exceedsWallet
     ? "Your wallet balance is not enough for this top-up amount."
     : null;
 
-  const newBalance = currentBalance + topUpNum;
-  const coverage = Math.floor(newBalance / planPrice);
+  const newBalanceMinor = currentMinor + topUpMinor;
+  const newBalance = Number(newBalanceMinor) / 10_000_000;
+  const coverage = planPriceMinor > 0n ? Number(newBalanceMinor / planPriceMinor) : 0;
 
   const handleReview = () => {
     if (amountInvalid) {
-      setError("Enter a top-up amount greater than 0 USDC.");
+      setError(`Enter a top-up amount greater than 0 ${currency}.`);
       return;
     }
 
@@ -87,7 +146,7 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
     setStep("review");
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (amountInvalid || exceedsWallet) {
       setError("Update the amount before confirming the top up.");
       setStep("select");
@@ -95,7 +154,24 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
     }
 
     setError(null);
-    setStep("complete");
+    setIsSubmitting(true);
+    try {
+      if (onConfirm) {
+        await onConfirm(topUpNum);
+      }
+      setConfirmedBalance(newBalance);
+      setStep("complete");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === "string"
+          ? err
+          : "Failed to confirm top up. Please try again.";
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -103,7 +179,7 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
   return (
     <div
       className="topup-modal-overlay"
-      onClick={(event) => event.target === event.currentTarget && onClose()}
+      onClick={(event) => !isSubmitting && event.target === event.currentTarget && onClose()}
     >
       <div
         ref={modalRef}
@@ -134,7 +210,7 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
               Top up balance
             </h2>
             <p id="topup-modal-description" className="topup-modal-subtitle">
-              Add USDC to your prepaid balance for <strong>Premium Access</strong>.
+              Add {currency} to your prepaid balance for <strong>{planName}</strong>.
             </p>
           </div>
           <button
@@ -142,6 +218,7 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
             onClick={onClose}
             aria-label="Close top up modal"
             type="button"
+            disabled={isSubmitting}
           >
             <svg
               width="20"
@@ -159,31 +236,40 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
           </button>
         </div>
 
-        <div className="topup-steps" role="tablist" aria-label="Top up flow steps">
-          <div className={`topup-step ${step === "select" ? "active" : step === "complete" ? "done" : ""}`}>
+        <ol className="topup-steps" aria-label="Top up flow steps">
+          <li
+            className={`topup-step ${step === "select" ? "active" : step === "complete" ? "done" : ""}`}
+            aria-current={step === "select" ? "step" : undefined}
+          >
             1. Choose amount
-          </div>
-          <div className={`topup-step ${step === "review" ? "active" : ""}`}>
+          </li>
+          <li
+            className={`topup-step ${step === "review" ? "active" : ""}`}
+            aria-current={step === "review" ? "step" : undefined}
+          >
             2. Review
-          </div>
-          <div className={`topup-step ${step === "complete" ? "active" : ""}`}>
+          </li>
+          <li
+            className={`topup-step ${step === "complete" ? "active" : ""}`}
+            aria-current={step === "complete" ? "step" : undefined}
+          >
             3. Confirmed
-          </div>
-        </div>
+          </li>
+        </ol>
 
         {step === "select" && (
           <section className="step-content">
             <div className="balance-card">
               <div className="balance-label">Current prepaid balance</div>
               <div className="balance-value">
-                {currentBalance.toFixed(2)} <span className="balance-currency">USDC</span>
+                {formatDisplayAmount(currentBalance)} <span className="balance-currency">{currency}</span>
               </div>
             </div>
 
             <div>
               <span className="section-label">Quick select</span>
               <div className="quick-select-grid">
-                {QUICK_SELECT_OPTIONS.map((option) => (
+                {quickSelectOptions.map((option) => (
                   <button
                     key={option.id}
                     type="button"
@@ -191,14 +277,16 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
                     onClick={() => handleQuickSelect(option.id, option.amount)}
                   >
                     <span className="qs-duration">{option.duration}</span>
-                    <span className="qs-amount">{option.amount} USDC</span>
+                    <span className="qs-amount">
+                      {formatDisplayAmount(option.amount)} {currency}
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <span className="section-label">Amount (USDC)</span>
+              <span className="section-label">Amount ({currency})</span>
               <div className="amount-field">
                 <div className="amount-input-wrapper">
                   <span className="currency-symbol">$</span>
@@ -213,7 +301,7 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
                     aria-label="Top up amount"
                   />
                 </div>
-                <span className="amount-currency">USDC</span>
+                <span className="amount-currency">{currency}</span>
               </div>
             </div>
 
@@ -240,7 +328,9 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
                 </svg>
                 Your wallet balance
               </div>
-              <div className="wallet-balance-value">{walletBalance.toFixed(2)} USDC</div>
+              <div className="wallet-balance-value">
+                {formatDisplayAmount(walletBalance)} {currency}
+              </div>
             </div>
 
             {topUpNum > 0 && (
@@ -263,7 +353,7 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
                   </svg>
                 </div>
                 <div className="summary-value">
-                  {newBalance.toFixed(2)} <span className="summary-currency">USDC</span>
+                  {formatDisplayAmount(newBalance)} <span className="summary-currency">{currency}</span>
                 </div>
                 <div className="summary-subtext">Covers ~{coverage} payments</div>
               </div>
@@ -281,11 +371,15 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
             <div className="review-block">
               <div className="review-row">
                 <span className="review-label">Top-up amount</span>
-                <span className="review-value">{topUpNum.toFixed(2)} USDC</span>
+                <span className="review-value">
+                  {formatDisplayAmount(topUpNum)} {currency}
+                </span>
               </div>
               <div className="review-row">
                 <span className="review-label">Balance after top-up</span>
-                <span className="review-value">{newBalance.toFixed(2)} USDC</span>
+                <span className="review-value">
+                  {formatDisplayAmount(newBalance)} {currency}
+                </span>
               </div>
               <div className="review-row">
                 <span className="review-label">Coverage estimate</span>
@@ -320,7 +414,9 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
               </svg>
             </div>
             <h3>Top up successful</h3>
-            <p>Your balance has been updated to {newBalance.toFixed(2)} USDC.</p>
+            <p>
+              Your balance has been updated to {formatDisplayAmount(confirmedBalance ?? newBalance)} {currency}.
+            </p>
             <p>We’ll apply this amount toward your next prepaid payment.</p>
           </section>
         )}
@@ -334,11 +430,21 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
         <div className="modal-actions">
           {step === "review" ? (
             <>
-              <button className="btn-secondary" onClick={() => setStep("select")} type="button">
+              <button
+                className="btn-secondary"
+                onClick={() => setStep("select")}
+                type="button"
+                disabled={isSubmitting}
+              >
                 Edit amount
               </button>
-              <button className="btn-primary" onClick={handleConfirm} type="button">
-                Confirm top up
+              <button
+                className="btn-primary"
+                onClick={handleConfirm}
+                type="button"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Confirming..." : "Confirm top up"}
               </button>
             </>
           ) : step === "complete" ? (

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { AlertCircle, RefreshCw, ChevronDown, ChevronUp, WifiOff } from 'lucide-react';
+import { openExternal } from '../utils/openExternal';
+import { SUPPORT_URL } from '../config/links';
 import './ErrorState.css';
 
 interface ErrorStateProps {
@@ -75,7 +77,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
         
         <button 
           className="support-button" 
-          onClick={() => window.open('https://support.stellarbill.com', '_blank')}
+          onClick={() => openExternal(SUPPORT_URL)}
         >
           Contact Support
         </button>

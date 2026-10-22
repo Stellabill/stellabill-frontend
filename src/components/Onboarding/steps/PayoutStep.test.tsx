@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import PayoutStep from './PayoutStep';
 
-const VALID_ADDRESS = 'G' + 'A'.repeat(55);
+const VALID_ADDRESS = 'GBBDCFGKLMNOPQRSTUVWXYZ234567QBBDCFGKLMNOPQRSTUVWXYZ234567';
 
 describe('PayoutStep', () => {
   it('renders the address field, helper text, and navigation buttons', () => {
@@ -50,6 +50,35 @@ describe('PayoutStep', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Please enter a valid Stellar address (starts with G, 56 characters).'
     );
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it('rejects an address with a bad checksum', () => {
+    const onNext = vi.fn();
+    const altered = VALID_ADDRESS.slice(0, 5) + (VALID_ADDRESS.slice(5, 6) === 'A' ? 'B' : 'A') + VALID_ADDRESS.slice(6);
+    render(<PayoutStep onNext={onNext} />);
+
+    fireEvent.change(screen.getByLabelText(/stellar wallet address/i), {
+      target: { value: altered },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Please enter a valid Stellar address (starts with G, 56 characters).'
+    );
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it('shows a secret-key warning when an S address is pasted', () => {
+    const onNext = vi.fn();
+    render(<PayoutStep onNext={onNext} />);
+
+    fireEvent.change(screen.getByLabelText(/stellar wallet address/i), {
+      target: { value: 'S' + 'A'.repeat(55) },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/never paste your secret key/i);
     expect(onNext).not.toHaveBeenCalled();
   });
 

@@ -6,9 +6,10 @@ import '../OnboardingShell.css';
 interface BusinessStepProps {
   onBack?: () => void;
   onNext?: (data: { businessName: string; website: string; logo: File | null; country: string }) => void;
+  notice?: string;
 }
 
-export default function BusinessStep({ onNext }: BusinessStepProps) {
+export default function BusinessStep({ onNext, notice }: BusinessStepProps) {
   const [businessName, setBusinessName] = useState('');
   const [website, setWebsite] = useState('');
   const [logo, setLogo] = useState<File | null>(null);
@@ -58,6 +59,12 @@ export default function BusinessStep({ onNext }: BusinessStepProps) {
 
   return (
     <div>
+      {notice && (
+        <p className="onboarding-notice" role="status">
+          {notice}
+        </p>
+      )}
+
       <div className="onboarding-field">
         <label htmlFor="business-name" className="onboarding-label">
           Business name <span aria-hidden="true">*</span>

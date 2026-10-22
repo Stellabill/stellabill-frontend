@@ -12,6 +12,8 @@ import { useScopedTheme } from '../hooks/useScopedTheme';
 import './UsageBilling.css';
 import InvoiceList from "../components/InvoiceList";
 import PlanRecommendationBanner from "../components/PlanRecommendationBanner";
+import { getStatementView } from '../utils/statement';
+import type { StatementEntry, StatementEntryType } from '../utils/statement';
 
 
 interface UsageData {
@@ -337,17 +339,6 @@ export default function UsageBilling() {
  * Statement of Account
  * ─────────────────────────────────────────────────────────────────────────────── */
 
-type StatementEntryType = 'invoice' | 'payment' | 'credit';
-
-interface StatementEntry {
-  id: string;
-  date: string;
-  description: string;
-  type: StatementEntryType;
-  amount: number;
-  currency: string;
-}
-
 const statementData: StatementEntry[] = [
   { id: 'st-1',  date: '2026-01-15', description: 'Invoice INV-00123456785',  type: 'invoice', amount: 15.20, currency: 'USDC' },
   { id: 'st-2',  date: '2026-01-31', description: 'Payment received',        type: 'payment', amount: -15.20, currency: 'USDC' },
@@ -392,25 +383,12 @@ function StatementOfAccount() {
   const [typeFilter, setTypeFilter] = useState<StatementEntryType | 'all'>('all');
   const [sortAsc, setSortAsc] = useState(true);
 
-  const filtered = useMemo(() => {
-    let items = statementData;
-    if (dateStart) items = items.filter((e) => e.date >= dateStart);
-    if (dateEnd) items = items.filter((e) => e.date <= dateEnd);
-    if (typeFilter !== 'all') items = items.filter((e) => e.type === typeFilter);
-    items = [...items].sort((a, b) => (sortAsc ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)));
-    return items;
-  }, [dateStart, dateEnd, typeFilter, sortAsc]);
+  const { entries: withBalance, openingBalance } = useMemo(
+    () => getStatementView(statementData, { dateStart, dateEnd, typeFilter, sortAsc }),
+    [dateStart, dateEnd, typeFilter, sortAsc],
+  );
 
-  // ── Running balance ──────────────────────────────────────────────────────
-  const withBalance = useMemo(() => {
-    let running = 0;
-    return filtered.map((entry) => {
-      // Invoices add to balance (amount owed), payments and credits subtract
-      const change = entry.type === 'invoice' ? entry.amount : -entry.amount;
-      running += change;
-      return { ...entry, change, balance: running };
-    });
-  }, [filtered]);
+  const statementCurrency = withBalance[0]?.currency ?? statementData[0]?.currency ?? 'USDC';
 
   // ── Export CSV ───────────────────────────────────────────────────────────
   const exportCsv = useCallback(() => {
@@ -418,14 +396,18 @@ function StatementOfAccount() {
     const rows = withBalance.map(
       (e) => `${e.date},"${e.description}",${typeLabels[e.type]},${e.change.toFixed(2)},${e.currency},${e.balance.toFixed(2)}`,
     );
-    const blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const openingRow = dateStart
+      ? `${dateStart},"Opening balance",,,${statementCurrency},${openingBalance.toFixed(2)}`
+      : null;
+    const ordered = openingRow ? [openingRow, ...rows] : rows;
+    const blob = new Blob([header + '\n' + ordered.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `statement-of-account-${dateStart}-to-${dateEnd}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [withBalance, dateStart, dateEnd]);
+  }, [withBalance, dateStart, dateEnd, openingBalance, statementCurrency]);
 
   // ── Export PDF (print stylesheet) ────────────────────────────────────────
   const exportPdf = useCallback(() => {
@@ -512,6 +494,17 @@ function StatementOfAccount() {
                 </tr>
               </thead>
               <tbody>
+                {dateStart && (
+                  <tr className="statement-opening-row">
+                    <td className="cell-date">{dateStart}</td>
+                    <td className="cell-desc">Opening balance</td>
+                    <td>—</td>
+                    <td className="col-amount">—</td>
+                    <td className="col-amount amount-balance">
+                      {openingBalance.toFixed(2)} {statementCurrency}
+                    </td>
+                  </tr>
+                )}
                 {withBalance.map((entry) => (
                   <tr key={entry.id}>
                     <td className="cell-date">{entry.date}</td>
@@ -548,6 +541,21 @@ function StatementOfAccount() {
 
           {/* ── Mobile cards ──────────────────────────────────────────────── */}
           <div className="statement-cards visible-mobile" role="list" aria-label="Statement entries">
+            {dateStart && (
+              <div className="statement-card statement-opening-card" role="listitem">
+                <div className="statement-card-header">
+                  <span className="cell-date">{dateStart}</span>
+                  <span className="statement-opening-label">Opening</span>
+                </div>
+                <p className="statement-card-desc">Opening balance</p>
+                <div className="statement-card-footer">
+                  <span className="statement-card-amount" aria-hidden="true">—</span>
+                  <span className="amount-balance">
+                    Balance: {openingBalance.toFixed(2)} {statementCurrency}
+                  </span>
+                </div>
+              </div>
+            )}
             {withBalance.map((entry) => (
               <div key={entry.id} className="statement-card" role="listitem">
                 <div className="statement-card-header">

@@ -8,6 +8,7 @@ interface WizardHeaderProps {
   isDirty: boolean
   onCancel: () => void
   onSaveDraft: () => void
+  children?: React.ReactNode
 }
 
 export default function WizardHeader({
@@ -17,6 +18,7 @@ export default function WizardHeader({
   isDirty,
   onCancel,
   onSaveDraft,
+  children,
 }: WizardHeaderProps) {
   return (
     <div
@@ -78,7 +80,8 @@ export default function WizardHeader({
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        {children}
         <Button
           variant="outline"
           onClick={onSaveDraft}

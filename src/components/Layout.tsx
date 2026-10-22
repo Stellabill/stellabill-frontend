@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, createContext, useContext, useCallback } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { CircleHelp, Sparkles } from "lucide-react";
 import LandingNavbar from "./LandingNavbar";
@@ -8,6 +8,7 @@ import KeyboardChordIndicator from "./KeyboardChordIndicator";
 import HelpSidebar from "./help/HelpSidebar";
 import ChangelogPanel from "./changelog/ChangelogPanel";
 import FocusOrderVisualizer from "./FocusOrderVisualizer";
+import RouteErrorBoundary from "./RouteErrorBoundary";
 import { LayoutContextType } from "../hooks/useCommandScope";
 import "../styles/sidebar.css";
 
@@ -15,6 +16,41 @@ const RECENT_COMMANDS_KEY = "sb:recent-commands";
 const RECENT_COMMANDS_LIMIT = 5;
 const PINNED_COMMANDS_KEY = "sb:pinned-commands";
 const PINNED_COMMANDS_LIMIT = 5;
+
+// ------------------------------------------------------------------------------
+// Unsaved-changes guard context
+// Pages (e.g. CreatePlan) register a guard while they have unsaved edits.
+// Layout intercepts in-app navigation (sidebar, command palette, chords) and
+// asks the guard to confirm before leaving.
+// -------------------------------------------------------------------------------
+
+export interface UnsavedChangesGuard {
+  /** Return true when the page has unsaved changes. */
+  isDirty: () => boolean;
+  /** Ask the page to show its exit confirm modal. Resolves true if the
+   * user confirmed leaving (and the page has already navigated), false otherwise. */
+  confirmLeave: () => Promise<boolean>;
+}
+
+export interface UnsavedChangesContextType {
+  registerGuard: (guard: UnsavedChangesGuard | null) => void;
+  /** Returns true if navigation is allowed (no guard or user confirmed). */
+  requestNavigation: (to: string) => Promise<boolean>;
+}
+
+const UnsavedChangesContext = createContext<UnsavedChangesContextType | null>(null);
+
+export function useUnsavedChangesGuard(): UnsavedChangesContextType {
+  const ctx = useContext(UnsavedChangesContext);
+  if (!ctx) {
+    // Fallback for tests/stories that render pages without Layout.
+    return {
+      registerGuard: () => {},
+      requestNavigation: async () => true,
+    };
+  }
+  return ctx;
+}
 
 function readRecentCommands(): string[] {
   try {
@@ -138,7 +174,34 @@ export default function Layout() {
   const [scopedItems, setScopedItems] = useState<CommandItem[]>([]);
   const [paletteMode, setPaletteMode] = useState<'global' | 'scoped'>('global');
   const [showScopeToast, setShowScopeToast] = useState(false);
-  
+
+  // Unsaved-changes guard registry. A single page at a time can own the guard.
+  const guardRef = useRef<UnsavedChangesGuard | null>(null);
+  const registerGuard = useCallback((guard: UnsavedChangesGuard | null) => {
+    guardRef.current = guard;
+  }, []);
+
+  const requestNavigation = useCallback(async (to: string): Promise<boolean> => {
+    const guard = guardRef.current;
+    if (!guard || !guard.isDirty()) return true;
+    const confirmed = await guard.confirmLeave();
+    if (confirmed) {
+      // Page confirmed leaving; navigate now that the guard is cleared.
+      navigate(to);
+    }
+    return confirmed;
+  }, [navigate]);
+
+  const unsavedContext = useMemo<UnsavedChangesContextType>(() => ({
+    registerGuard,
+    requestNavigation,
+  }), [registerGuard, requestNavigation]);
+
+  // Wrapped navigate used by sidebar links, palette and chords.
+  const guardedNavigate = useCallback((to: string) => {
+    void requestNavigation(to);
+  }, [requestNavigation]);
+
   const registerScope = useMemo(() => (name: string, items: CommandItem[]) => {
     setScopeName(name);
     setScopedItems(items);
@@ -151,7 +214,7 @@ export default function Layout() {
   const layoutContext = useMemo<LayoutContextType>(() => ({
     registerScope, clearScope
   }), [registerScope, clearScope]);
-  
+
   const [pendingChordKey, setPendingChordKey] = useState<string | null>(null);
   const pendingChordKeyRef = useRef<string | null>(null);
 
@@ -161,18 +224,18 @@ export default function Layout() {
   // Catalog of every page and action the palette can surface.
   const catalog = useMemo<CommandItem[]>(() => {
     const pages: CommandItem[] = [
-      { id: "page-dashboard", label: "Dashboard", group: "Pages", keywords: "home overview", perform: () => navigate("/dashboard") },
-      { id: "page-subscriptions", label: "Subscriptions", group: "Pages", keywords: "subscribers customers", perform: () => navigate("/subscriptions") },
-      { id: "page-plans", label: "Plans", group: "Pages", keywords: "pricing billing", perform: () => navigate("/plans") },
-      { id: "page-browse-plans", label: "Browse Plans", group: "Pages", keywords: "catalog explore", perform: () => navigate("/browse-plans") },
-      { id: "page-settings", label: "Settings", group: "Pages", keywords: "preferences account", perform: () => navigate("/settings") },
-      { id: "page-brand", label: "Brand", group: "Pages", keywords: "design tokens", perform: () => navigate("/brand") },
-      { id: "page-design-tokens", label: "Design Tokens", group: "Pages", keywords: "css variables colors spacing typography motion", perform: () => navigate("/design-tokens") },
+      { id: "page-dashboard", label: "Dashboard", group: "Pages", keywords: "home overview", perform: () => guardedNavigate("/dashboard") },
+      { id: "page-subscriptions", label: "Subscriptions", group: "Pages", keywords: "subscribers customers", perform: () => guardedNavigate("/subscriptions") },
+      { id: "page-plans", label: "Plans", group: "Pages", keywords: "pricing billing", perform: () => guardedNavigate("/plans") },
+      { id: "page-browse-plans", label: "Browse Plans", group: "Pages", keywords: "catalog explore", perform: () => guardedNavigate("/browse-plans") },
+      { id: "page-settings", label: "Settings", group: "Pages", keywords: "preferences account", perform: () => guardedNavigate("/settings") },
+      { id: "page-brand", label: "Brand", group: "Pages", keywords: "design tokens", perform: () => guardedNavigate("/brand") },
+      { id: "page-design-tokens", label: "Design Tokens", group: "Pages", keywords: "css variables colors spacing typography motion", perform: () => guardedNavigate("/design-tokens") },
     ];
     const actions: CommandItem[] = [
-      { id: "action-create-plan", label: "Create plan", group: "Actions", hint: "Start a new billing plan", keywords: "add new plan", perform: () => navigate("/plans/create") },
-      { id: "action-refund", label: "Issue refund", group: "Actions", hint: "Refund a subscription payment", keywords: "money back return reverse", perform: () => navigate("/subscriptions") },
-      { id: "action-pause", label: "Pause subscription", group: "Actions", hint: "Temporarily stop billing", keywords: "hold suspend freeze", perform: () => navigate("/subscriptions") },
+      { id: "action-create-plan", label: "Create plan", group: "Actions", hint: "Start a new billing plan", keywords: "add new plan", perform: () => guardedNavigate("/plans/create") },
+      { id: "action-refund", label: "Issue refund", group: "Actions", hint: "Refund a subscription payment", keywords: "money back return reverse", perform: () => guardedNavigate("/subscriptions") },
+      { id: "action-pause", label: "Pause subscription", group: "Actions", hint: "Temporarily stop billing", keywords: "hold suspend freeze", perform: () => guardedNavigate("/subscriptions") },
       { id: "action-tour", label: "Start product tour", group: "Actions", hint: "Take a guided tour of the dashboard", keywords: "help guide tutorial onboarding walkthrough", perform: () => {
         // Trigger tour restart by clearing localStorage and reloading
         localStorage.removeItem('sb:tour-completed');
@@ -181,7 +244,7 @@ export default function Layout() {
       }},
     ];
     return [...pages, ...actions];
-  }, [navigate]);
+  }, [guardedNavigate]);
 
   const handleCommandSelect = (item: CommandItem) => {
     const baseId = item.id.replace(/^recent-/, "");
@@ -232,7 +295,7 @@ export default function Layout() {
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable;
-      
+
       // Ignore IME composition
       if (event.isComposing || event.keyCode === 229) return;
 
@@ -241,12 +304,12 @@ export default function Layout() {
         if (pendingChordKeyRef.current) {
           const chord = pendingChordKeyRef.current;
           const key = event.key.toLowerCase();
-          
+
           if (chord === 'g' && key === 's') {
             event.preventDefault();
-            navigate('/subscriptions');
+            guardedNavigate('/subscriptions');
           }
-          
+
           // Clear chord regardless of match
           setPendingChordKey(null);
           pendingChordKeyRef.current = null;
@@ -262,243 +325,126 @@ export default function Layout() {
           chordTimeoutId = setTimeout(() => {
             setPendingChordKey(null);
             pendingChordKeyRef.current = null;
-          }, 2000);
+          }, 1000);
           return;
         }
       }
-
-      // Cmd+Shift+K: Open scoped palette
-      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setIsPaletteOpen(true);
-        if (scopeName) {
-            setPaletteMode('scoped');
-            const hasSeenToast = localStorage.getItem('sb:seen-scoped-toast');
-            if (!hasSeenToast) {
-                localStorage.setItem('sb:seen-scoped-toast', 'true');
-                setShowScopeToast(true);
-                setTimeout(() => setShowScopeToast(false), 4000);
-            }
-        } else {
-            setPaletteMode('global');
-        }
-        return;
-      }
-
-      // Cmd+K / Ctrl+K: Open command palette
-      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setIsPaletteOpen(true);
-        setPaletteMode('global');
-        return;
-      }
-
-      // Shift+?: Open help sidebar (outside input fields)
-      // ? alone: Show keyboard shortcuts overlay
-      if (event.key === '?' || event.key === '/') {
-        if (!isInputField) {
-          if (event.shiftKey && event.key === '?') {
-            event.preventDefault();
-            setIsHelpOpen((open) => !open);
-            return;
-          }
-          if (event.key === '?') {
-            event.preventDefault();
-            setIsShortcutsOverlayOpen(true);
-            return;
-          }
-        }
-      }
-
-      // QA Shortcut: Ctrl+Shift+F
-      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'f') {
-        if (import.meta.env.DEV || localStorage.getItem('sb:qa-focus-visualizer') === 'true') {
-          event.preventDefault();
-          setIsQAOverlayOpen((prev) => !prev);
-        }
-      }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown);
       if (chordTimeoutId) clearTimeout(chordTimeoutId);
     };
-  }, [navigate]);
+  }, [guardedNavigate]);
+
+  // Intercept browser Back/Forward and close/reload while dirty.
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      const guard = guardRef.current;
+      if (guard && guard.isDirty()) {
+        event.preventDefault();
+        // Chrome requires returnValue to be set for the prompt to appear.
+        event.returnValue = '';
+        return '';
+      }
+      return undefined;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
+  // Intercept popstate (browser Back/Forward) navigation while dirty.
+  useEffect(() => {
+    const handlePopState = () => {
+      const guard = guardRef.current;
+      if (!guard || !guard.isDirty()) return;
+      // Restore the current entry and ask the page to confirm.
+      window.history.pushState(null, '', window.location.href);
+      void guard.confirmLeave().then((confirmed) => {
+        if (confirmed) {
+          window.history.back();
+        }
+      });
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   return (
-    <div className="app-layout">
-      {/* Top Navbar */}
-      <LandingNavbar />
-      <div className="app-layout__shell">
-        <aside className="sb-sidebar" aria-label="Main navigation">
-          <div className="sb-sidebar__brand">Stellabill</div>
-
-          <button
-            type="button"
-            className="cmdk-trigger"
-            onClick={() => setIsPaletteOpen(true)}
-            aria-label="Open command palette"
-            aria-haspopup="dialog"
-            aria-keyshortcuts="Meta+K Control+K"
-          >
-            <svg
-              className="cmdk-trigger__icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <span className="cmdk-trigger__label">Search…</span>
-            <kbd className="cmdk-trigger__kbd">⌘K</kbd>
-          </button>
-
-          <nav className="sb-sidebar__nav" aria-label="Primary">
-            <div className="sb-sidebar__group">
-              <p className="sb-sidebar__group-label" aria-hidden="true">Main</p>
-              {mainNav.map(({ path, label, icon }) => (
-                <Link
-                  key={path}
-                  to={path}
-                  className="sb-sidebar__link"
-                  aria-current={isActive(path) ? "page" : undefined}
-                >
-                  {icon}
-                  <span className="sb-sidebar__link-label">{label}</span>
-                </Link>
-              ))}
-            </div>
-
-            <div className="sb-sidebar__group">
-              <p className="sb-sidebar__group-label" aria-hidden="true">Developer</p>
-              {devNav.map(({ path, label, icon }) => (
-                <Link
-                  key={path}
-                  to={path}
-                  className="sb-sidebar__link"
-                  aria-current={isActive(path) ? "page" : undefined}
-                >
-                  {icon}
-                  <span className="sb-sidebar__link-label">{label}</span>
-                </Link>
-              ))}
-            </div>
-
-            <div className="sb-sidebar__group" style={{ marginTop: 'auto' }}>
-              <p className="sb-sidebar__group-label" aria-hidden="true">Help</p>
-              <button
-                type="button"
-                className="sb-sidebar__link"
-                onClick={() => setIsChangelogOpen((o) => !o)}
-                aria-haspopup="dialog"
-                aria-expanded={isChangelogOpen}
-              >
-                <svg className="sb-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg>
-                <span className="sb-sidebar__link-label">What's new</span>
-              </button>
-              <button
-                type="button"
-                className="sb-sidebar__link"
-                onClick={() => setIsHelpOpen(true)}
-                aria-haspopup="dialog"
-                aria-expanded={isHelpOpen}
-                aria-keyshortcuts="Shift+?"
-              >
-                <CircleHelp className="sb-sidebar__icon" aria-hidden="true" />
-                <span className="sb-sidebar__link-label">Help &amp; support</span>
-              </button>
-              <button
-                type="button"
-                className="sb-sidebar__link"
-                onClick={() => {
-                  localStorage.removeItem('sb:tour-completed');
-                  localStorage.removeItem('sb:tour-dismissed');
-                  navigate('/dashboard');
-                  window.location.reload();
+    <UnsavedChangesContext.Provider value={unsavedContext}>
+      <div className="sb-layout">
+        <aside className="sb-sidebar">
+          <div className="sb-sidebar__brand">
+            <Link to="/dashboard" className="sb-sidebar__brand-link" onClick={(e => {
+              if (location.pathname === "/dashboard") return;
+              const guard = guardRef.current;
+              if (guard && guard.isDirty()) {
+                e.preventDefault();
+                void requestNavigation("/dashboard");
+              }
+            })}>
+              <Sparkles className="sb-sidebar__brand-icon" aria-hidden="true" />
+              <span>Subscription Billing</span>
+            </Link>
+          </div>
+          <nav className="sb-sidebar__nav" aria-label="Main">
+            {mainNav.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`sb-sidebar__link${isActive(item.path) ? " sb-sidebar__link--active" : ""}`}
+                aria-current={isActive(item.path) ? "page" : undefined}
+                onClick={(e) => {
+                  if (isActive(item.path)) return;
+                  const guard = guardRef.current;
+                  if (guard && guard.isDirty()) {
+                    e.preventDefault();
+                    void requestNavigation(item.path);
+                  }
                 }}
-                title="Restart product tour"
               >
-                <Sparkles className="sb-sidebar__icon" aria-hidden="true" />
-                <span className="sb-sidebar__link-label">Product tour</span>
-              </button>
-            </div>
+                {item.icon}
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+          <nav className="sb-sidebar__nav sb-sidebar__nav--dev" aria-label="Developer">
+            {devNav.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`sb-sidebar__link${isActive(item.path) ? " sb-sidebar__link--active" : ""}`}
+                aria-current={isActive(item.path) ? "page" : undefined}
+                onClick={(e) => {
+                  if (isActive(item.path)) return;
+                  const guard = guardRef.current;
+                  if (guard && guard.isDirty()) {
+                    e.preventDefault();
+                    void requestNavigation(item.path);
+                  }
+                }}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </Link>
+            ))}
           </nav>
         </aside>
 
         {/* Main Content Area */}
         <main className="app-layout__main">
           <div className="app-layout__content">
-            <Outlet context={layoutContext} />
+            <RouteErrorBoundary pathname={location.pathname}>
+              <Outlet context={layoutContext} />
+            </RouteErrorBoundary>
           </div>
 
           {/* Subtle background glow */}
           <div className="app-layout__glow" />
         </main>
       </div>
-
-      <div className="app-layout__bottom-nav-wrapper">
-        <nav className="app-layout__bottom-nav" aria-label="Primary bottom navigation">
-          {mainNav.map(({ path, label, icon }) => (
-            <Link
-              key={path}
-              to={path}
-              className={`app-layout__bottom-nav-link${isActive(path) ? ' app-layout__bottom-nav-link--active' : ''}`}
-              aria-current={isActive(path) ? 'page' : undefined}
-            >
-              <span className="app-layout__bottom-nav-icon" aria-hidden="true">
-                {icon}
-              </span>
-              <span className="app-layout__bottom-nav-label">{label}</span>
-            </Link>
-          ))}
-        </nav>
-      </div>
-
-      <CommandPalette
-        isOpen={isPaletteOpen}
-        onClose={() => setIsPaletteOpen(false)}
-        items={paletteMode === 'scoped' ? scopedItems : paletteItems}
-        onSelect={handleCommandSelect}
-        onTogglePin={handleTogglePin}
-        mode={paletteMode}
-        onModeChange={(mode) => setPaletteMode(mode)}
-        scopeName={scopeName}
-      />
-
-      {showScopeToast && (
-        <div className="cmdk-toast" role="alert">
-          <p>You've opened the scoped command palette! Press <strong>Backspace</strong> to clear the scope and search globally.</p>
-        </div>
-      )}
-
-      <KeyboardShortcutsOverlay
-        isOpen={isShortcutsOverlayOpen}
-        onClose={() => setIsShortcutsOverlayOpen(false)}
-      />
-
-
-      <HelpSidebar
-        isOpen={isHelpOpen}
-        onOpenChange={setIsHelpOpen}
-        showTrigger={false}
-      />
-
-      <ChangelogPanel
-        isOpen={isChangelogOpen}
-        onOpenChange={setIsChangelogOpen}
-      />
-
-      <KeyboardChordIndicator pendingKey={pendingChordKey} />
-
-      {isQAOverlayOpen && <FocusOrderVisualizer onClose={() => setIsQAOverlayOpen(false)} />}
-    </div>
+    </UnsavedChangesContext.Provider>
   );
 }
