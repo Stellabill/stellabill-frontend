@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import OnboardingReview from './OnboardingReview';
+import { SUPPORT_URL } from '../config/links';
 
 describe('OnboardingReview', () => {
   const originalDisplayNames = Intl.DisplayNames;
@@ -79,5 +80,23 @@ describe('OnboardingReview', () => {
     );
 
     expect(screen.getByText(/No country selected/)).toBeInTheDocument();
+  });
+
+  it('opens contact support with noopener,noreferrer when clicked', () => {
+    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+    render(
+      <MemoryRouter>
+        <OnboardingReview />
+      </MemoryRouter>
+    );
+
+    const supportButton = screen.getByRole('button', { name: /questions\? contact support/i });
+    expect(supportButton).toBeInTheDocument();
+
+    fireEvent.click(supportButton);
+    expect(windowOpenSpy).toHaveBeenCalledWith(SUPPORT_URL, '_blank', 'noopener,noreferrer');
+
+    windowOpenSpy.mockRestore();
   });
 });

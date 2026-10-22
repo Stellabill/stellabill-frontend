@@ -59,7 +59,23 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
   const handleDisconnect = () => {
     disconnectWallet();
     setIsDropdownOpen(false);
+    setConnectionErrorType(undefined);
     onDisconnect?.();
+  };
+
+  const handleRetry = () => {
+    clearError();
+    setIsModalOpen(true);
+  };
+
+  const handleOpenHistory = () => {
+    if (onOpenHistory) {
+      onOpenHistory();
+    } else if (navigationContext?.navigator) {
+      navigationContext.navigator.push('/wallet');
+    } else {
+      window.location.assign('/wallet');
+    }
   };
 
   const handleRetry = () => {
@@ -124,6 +140,8 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
             address={walletAddress}
             onClose={() => setIsDropdownOpen(false)}
             onDisconnect={handleDisconnect}
+            onSwitchWallet={handleSwitchWallet}
+            onOpenHistory={handleOpenHistory}
           />
         )}
       </div>

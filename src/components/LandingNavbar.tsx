@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useId, RefObject } from 'react'
 import WalletPill from './WalletPill'
 import WalletConnectModal from './WalletConnectModal'
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -8,7 +8,9 @@ import { Menu, X, Github, Rocket, Zap, BookOpen, MessageSquare, ChevronRight } f
 import { useWallet } from '../wallet/WalletContext';
 import { FreighterConnectionError } from '../wallet/freighter';
 
-export default function LandingNavbar() {
+export interface LandingNavbarProps extends UseWalletConnectionOptions {}
+
+export default function LandingNavbar(props: LandingNavbarProps = {}) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
@@ -137,9 +139,11 @@ export default function LandingNavbar() {
                     </div>
                 )}
                 <button
+                    ref={toggleButtonRef}
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                     className="site-navbar__mobile-toggle p-2 rounded-lg transition-colors"
                     aria-expanded={isMobileMenuOpen}
+                    aria-controls={drawerId}
                     aria-label="Main menu"
                 >
                   {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -152,22 +156,32 @@ export default function LandingNavbar() {
           {isMobileMenuOpen && (
               <div
                   className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={closeDrawer}
+                  aria-hidden="true"
               />
           )}
 
           {/* Mobile Menu Drawer */}
           <div
+              ref={drawerRef}
+              id={drawerId}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Main menu"
               className={`site-navbar__mobile-drawer fixed inset-y-0 right-0 w-full max-w-xs z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
                   isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
               }`}
+              inert={isMobileMenuOpen ? undefined : ''}
+              aria-hidden={!isMobileMenuOpen}
           >
             <div className="flex flex-col h-full">
               <div className="site-navbar__mobile-section flex items-center justify-between p-5 border-b">
                 <Logo size="sm" />
                 <button
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    ref={closeButtonRef}
+                    onClick={closeDrawer}
                     className="site-navbar__drawer-close site-navbar__mobile-toggle p-2 rounded-lg transition-colors"
+                    aria-label="Close menu"
                 >
                   <X size={20} />
                 </button>

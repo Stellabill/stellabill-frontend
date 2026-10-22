@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../OnboardingShell.css';
 
 interface PayoutStepProps {
@@ -8,9 +9,33 @@ interface PayoutStepProps {
 
 const STELLAR_ADDRESS_REGEX = /^G[A-Z2-7]{55}$/;
 
+const BUSINESS_STORAGE_KEY = 'onboardingBusiness';
+
+function hasBusinessData(): boolean {
+  try {
+    const raw = sessionStorage.getItem(BUSINESS_STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as { name?: string; country?: string } | null;
+    if (!parsed) return false;
+    return Boolean(parsed.name && parsed.name.trim() && parsed.country && parsed.country.trim());
+  } catch {
+    return false;
+  }
+}
+
 export default function PayoutStep({ onBack, onNext }: PayoutStepProps) {
+  const navigate = useNavigate();
   const [walletAddress, setWalletAddress] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!hasBusinessData()) {
+      navigate('/onboarding/business', {
+        replace: true,
+        state: { notice: 'Please complete the business step before adding payout details.' },
+      });
+    }
+  }, [navigate]);
 
   const handleNext = () => {
     if (!walletAddress.trim()) {
