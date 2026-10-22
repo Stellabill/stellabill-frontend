@@ -2,9 +2,12 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ApiError } from "../api/client";
 import WalletConnectModal from "../components/WalletConnectModal";
+import { useWallet } from "../wallet/WalletContext";
+import { FreighterConnectionError } from "../wallet/freighter";
 import ErrorState from "../components/ErrorState";
 import SortBySelect from "../components/SortBySelect";
 import GiftPurchaseModal, { type Plan as GiftPlan } from "../components/GiftPurchaseModal";
+import { addBillingInterval } from "../utils/billingDate";
 
 type PlanInterval = "Monthly" | "Yearly";
 // ... (previous types and icons)
@@ -153,7 +156,7 @@ const SORT_OPTIONS = [
 	{ value: "name-desc", label: "Name (Z–A)" },
 	{ value: "price-asc", label: "Price (low to high)" },
 	{ value: "price-desc", label: "Price (high to low)" },
-	{ value: "merchant-asc", label: "Merchant (A–Z)" },
+	{ value: "merchant-asc", label: "Merchant (I–Z)" },
 	{ value: "merchant-desc", label: "Merchant (Z–A)" },
 ];
 
@@ -162,13 +165,11 @@ function getBillingIntervalCopy(interval: PlanInterval) {
 }
 
 function getNextChargeDate(interval: PlanInterval) {
-	const nextCharge = new Date();
-
-	if (interval === "Monthly") {
-		nextCharge.setMonth(nextCharge.getMonth() + 1);
-	} else {
-		nextCharge.setFullYear(nextCharge.getFullYear() + 1);
-	}
+	const nextCharge = addBillingInterval(
+		new Date(),
+		interval === "Monthly" ? "monthly" : "yearly",
+		1,
+	);
 
 	return nextCharge.toLocaleDateString(undefined, {
 		year: "numeric",
@@ -203,9 +204,10 @@ function PlanCard({ plan, onSubscribe, onSendGift }: PlanCardProps) {
 				gap: "20px",
 				transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
 				position: "relative",
-				boxShadow: isHovered
+			
+boxShadow: isHovered
 					? "0 12px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(79, 209, 197, 0.15)"
-					: "0 4px 6px rgba(0, 0, 0, 0.1)",
+						: "0 4px 6px rgba(0, 0, 0, 0.1)",
 				transform: isHovered ? "translateY(-4px)" : "translateY(0)",
 			}}>
 			<div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -242,25 +244,24 @@ function PlanCard({ plan, onSubscribe, onSendGift }: PlanCardProps) {
 
 			<div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
 				<div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-					<span
-						style={{
-							color: "#ffffff",
-							fontSize: "36px",
-							fontWeight: 800,
-						}}>
-						{plan.price}
+					<span style={{
+						color: "#ffffff",
+						fontSize: "36px",
+						fontWeight: 800,
+					}}>
+						{ plan.price }
 					</span>
 					<span style={{ color: "#8b949e", fontSize: "16px", fontWeight: 500 }}>
 						{plan.currency}
 					</span>
 				</div>
 				<p style={{ color: "#8b949e", fontSize: "14px", margin: 0 }}>
-					{billingCopy}
+					{ billingCopy }
 				</p>
 				<p
 					aria-label={`Next charge preview for ${plan.name}`}
 					style={{ color: "#4FD1C5", fontSize: "14px", fontWeight: 600, margin: 0 }}>
-					Next charge: {nextChargeDate}
+					Next charge: { nextChargeDate }
 				</p>
 			</div>
 
@@ -276,7 +277,7 @@ function PlanCard({ plan, onSubscribe, onSendGift }: PlanCardProps) {
 					WebkitBoxOrient: "vertical",
 					overflow: "hidden",
 				}}>
-				{plan.description}
+				{ plan.description }
 			</p>
 
 			<button
@@ -379,10 +380,16 @@ export default function BrowsePlans() {
 	const [intervalFilter, setIntervalFilter] = useState<PlanInterval | "All">("All");
 	const [sortField, setSortField] = useState<SortField>("name");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-	const [isWalletConnected, setIsWalletConnected] = useState(false);
 	const [walletModalOpen, setWalletModalOpen] = useState(false);
 	const [giftModalOpen, setGiftModalOpen] = useState(false);
 	const [selectedPlanForGift, setSelectedPlanForGift] = useState<Plan | null>(null);
+	const {
+		status,
+		error: walletError,
+		connect,
+		clearError,
+		cancelConnect,
+	} = useWallet();
 
 	// Fetch plans from API
 	const fetchPlans = useCallback(async () => {
@@ -395,21 +402,17 @@ export default function BrowsePlans() {
 					if (window.location.search.includes('simulate_error')) {
 						const err: ApiError = new Error('Failed to load plans from catalog');
 						err.status = 500;
-						err.technicalDetails = 'The decentralized plan registry is experiencing high latency. [Error Code: REG-CAT-503]';
+						err.technicalDetails = 'The decentralized plan registry is experiencing high latency. [Error Code: REG-CAT-';
 						reject(err);
-					} else {
-						resolve(true);
+						return;
 					}
-				}, 800);
+					setPlans(mockPlans);
+					setLoading(false);
+					resolve(null);
+				}, 500);
 			});
-			// No backend is deployed for this demo, so the catalog is sample data.
-			setPlans(mockPlans);
-			setLoading(false);
-		} catch (err: unknown) {
-			setError(err as Error);
-			// Fallback to mock data on error so UI still shows something if desired, 
-			// but here we want to show the error state primarily.
-			setPlans(mockPlans);
+		} catch (err) {
+			setError(err as ApiError);
 			setLoading(false);
 		}
 	}, []);
@@ -419,47 +422,38 @@ export default function BrowsePlans() {
 	}, [fetchPlans]);
 
 	const filteredPlans = useMemo(() => {
-		const result = plans.filter((plan) => {
-			const matchesSearch =
-				plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				plan.merchant.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				plan.description.toLowerCase().includes(searchQuery.toLowerCase());
-			const matchesInterval =
-				intervalFilter === "All" || plan.interval === intervalFilter;
+		let result = [...plans];
 
-			return matchesSearch && matchesInterval;
-		});
+		if (searchQuery) {
+			const q = searchQuery.toLowerCase();
+			result = result.filter(
+				(p) =>
+					p.name.toLowerCase().includes(q) ||
+					p.merchant.toLowerCase().includes(q),
+			);
+		}
+
+		if (intervalFilter !== "All") {
+			result = result.filter((p) => p.interval === intervalFilter);
+		}
 
 		result.sort((a, b) => {
-			let comparison = 0;
-
-			if (sortField === "name") {
-				comparison = a.name.localeCompare(b.name);
-			} else if (sortField === "price") {
-				comparison = a.price - b.price;
-			} else if (sortField === "merchant") {
-				comparison = a.merchant.localeCompare(b.merchant);
-			}
-
-			return sortDirection === "asc" ? comparison : -comparison;
+			let cmp = 0;
+			if (sortField === "name") cmp = a.name.localeCompare(b.name);
+			else if (sortField === "price") cmp = a.price - b.price;
+			else cmp = a.merchant.localeCompare(b.merchant);
+			return sortDirection === "asc" ? cmp : -cmp;
 		});
 
 		return result;
 	}, [plans, searchQuery, intervalFilter, sortField, sortDirection]);
 
-	const handleSortChange = (value: string) => {
-		const separatorIndex = value.lastIndexOf("-");
-		setSortField(value.slice(0, separatorIndex) as SortField);
-		setSortDirection(value.slice(separatorIndex + 1) as SortDirection);
-	};
-
 	const handleSubscribe = (plan: Plan) => {
-		if (!isWalletConnected) {
+		if (status !== "connected") {
 			setWalletModalOpen(true);
 			return;
 		}
-
-		navigate(`/checkout/${plan.id}`);
+		navigate(`/subscribe/${plan.id}`);
 	};
 
 	const handleSendGift = (plan: Plan) => {
@@ -467,257 +461,81 @@ export default function BrowsePlans() {
 		setGiftModalOpen(true);
 	};
 
-	const handleGiftPurchaseComplete = (giftCode: string) => {
-		console.log("Gift purchased with code:", giftCode);
-		// Could show a toast notification here
-	};
-
 	const handleWalletConnect = () => {
 		setIsWalletConnected(true);
 		setWalletModalOpen(false);
 	};
 
-	const clearFilters = () => {
-		setSearchQuery("");
-		setIntervalFilter("All");
-		setSortField("name");
-		setSortDirection("asc");
-	};
+	if (error) {
+		return (
+			<ErrorState
+				title="Failed to load plans"
+				message={error.message}
+				technicalDetails={error.technicalDetails}
+				onChange={() => {
+					setError(null);
+					fetchPlans();
+				}}
+				retryLabel="Try again"
+			/>
+		);
+	}
+
+	if (loading) {
+		return <div style={{ color: "#fff", padding: "24px" }}>Loading plans...</div>;
+	}
 
 	return (
-		<div style={{ padding: "2rem", background: "#0a0a0a", minHeight: "100vh" }}>
-			<div style={{ maxWidth: 1280, margin: "0 auto" }}>
-				<div style={{ marginBottom: "2rem" }}>
-					<h1
-						style={{
-							color: "#ffffff",
-							fontSize: "2rem",
-							fontWeight: 700,
-							margin: "0 0 0.5rem",
-						}}>
-						Browse Plans
-					</h1>
-					<p style={{ color: "#94a3b8", margin: 0, fontSize: "1rem" }}>
-						Discover subscription plans from verified merchants on Stellar
-					</p>
-				</div>
-
-				<div
-					style={{
-						display: "flex",
-						gap: "1rem",
-						marginBottom: "2rem",
-						flexWrap: "wrap",
-						alignItems: "center",
-					}}>
-					<div style={{ flex: "1 1 300px", position: "relative" }}>
-						<svg
-							style={{
-								position: "absolute",
-								left: "12px",
-								top: "50%",
-								transform: "translateY(-50%)",
-								width: "18px",
-								height: "18px",
-								color: "#64748b",
-							}}
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24">
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-							/>
-						</svg>
-						<input
-							type="search"
-							placeholder="Search plans..."
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-							style={{
-								width: "100%",
-								padding: "0.75rem 1rem 0.75rem 2.5rem",
-								background: "#1a1a1a",
-								border: "1px solid #2a2a2a",
-								borderRadius: 8,
-								color: "#ffffff",
-								fontSize: "0.875rem",
-								outline: "none",
-							}}
-							onFocus={(e) => (e.currentTarget.style.borderColor = "#22d3ee")}
-							onBlur={(e) => (e.currentTarget.style.borderColor = "#2a2a2a")}
-							onKeyDown={(e) => {
-								if (e.key === "Escape") {
-									clearFilters();
-								}
-							}}
-							aria-label="Search plans by name, merchant, or description"
-						/>
-					</div>
-
-					<select
-						value={intervalFilter}
-						onChange={(e) =>
-							setIntervalFilter(e.target.value as PlanInterval | "All")
-						}
-						style={{
-							padding: "0.75rem 1rem",
-							background: "#1a1a1a",
-							border: "1px solid #2a2a2a",
-							borderRadius: 8,
-							color: "#ffffff",
-							fontSize: "0.875rem",
-							cursor: "pointer",
-							outline: "none",
-						}}
-						onFocus={(e) => (e.currentTarget.style.borderColor = "#22d3ee")}
-						onBlur={(e) => (e.currentTarget.style.borderColor = "#2a2a2a")}
-						aria-label="Filter plans by billing interval">
-						<option value="All">All billing intervals</option>
-						<option value="Monthly">Billed every month</option>
-						<option value="Yearly">Billed every year</option>
-					</select>
-
-					<div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-						<span
-							id="browse-sort-label"
-							style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
-							Sort by:
-						</span>
-						<div style={{ minWidth: 210 }}>
-							<SortBySelect
-								value={`${sortField}-${sortDirection}`}
-								onValueChange={handleSortChange}
-								options={SORT_OPTIONS}
-								labelId="browse-sort-label"
-								ariaLabel="Sort plans"
-							/>
-						</div>
-					</div>
-				</div>
-
-				<div style={{ marginBottom: "1.5rem" }}>
-					<span style={{ color: "#64748b", fontSize: "0.875rem" }}>
-						{filteredPlans.length}{" "}
-						{filteredPlans.length === 1 ? "plan" : "plans"} found
-					</span>
-				</div>
-
-				{loading && (
-					<div
-						style={{
-							textAlign: "center",
-							padding: "4rem 2rem",
-							background: "#1a1a1a",
-							borderRadius: 12,
-							border: "1px solid #2a2a2a",
-						}}>
-						<div
-							style={{
-								width: 48,
-								height: 48,
-								margin: "0 auto 1.5rem",
-								borderRadius: "50%",
-								border: "3px solid #2a2a2a",
-								borderTopColor: "#22d3ee",
-								animation: "spin 1s linear infinite",
-							}}
-						/>
-						<h2 style={{ color: "#ffffff", fontSize: "1.5rem", margin: "0 0 0.5rem" }}>
-							Loading plans...
-						</h2>
-						<p style={{ color: "#94a3b8", margin: 0 }}>
-							Please wait while we fetch available subscription plans
-						</p>
-						<style>{`
-							@keyframes spin {
-								to { transform: rotate(360deg); }
-							}
-						`}</style>
-					</div>
-				)}
-
-				{error && !loading && (
-					<div style={{ padding: "4rem 2rem", background: "#1a1a1a", borderRadius: 12, border: "1px solid #2a2a2a", display: "flex", justifyContent: "center" }}>
-						<ErrorState 
-							title="Failed to load plans"
-							message={error.message}
-							technicalDetails={error.technicalDetails}
-							onRetry={fetchPlans}
-							isRetrying={loading}
-							type={error.isOffline ? 'offline' : 'error'}
-						/>
-					</div>
-				)}
-
-				{!loading &&
-					(filteredPlans.length > 0 ? (
-						<div
-							role="list"
-							aria-label="Available subscription plans"
-							style={{
-								display: "grid",
-								gridTemplateColumns: "repeat(auto-fill, minmax(min(340px, 100%), 1fr))",
-								gap: "24px 32px",
-							}}>
-							{filteredPlans.map((plan) => (
-								<PlanCard 
-									key={plan.id} 
-									plan={plan} 
-									onSubscribe={handleSubscribe} 
-									onSendGift={handleSendGift}
-								/>
-							))}
-						</div>
-					) : (
-						<div
-							role="status"
-							aria-live="polite"
-							style={{
-								textAlign: "center",
-								padding: "4rem 2rem",
-								background: "#1a1a1a",
-								borderRadius: 12,
-								border: "1px solid #2a2a2a",
-							}}>
-							<h2 style={{ color: "#ffffff", fontSize: "1.5rem", margin: "0 0 0.5rem" }}>
-								No plans match your filters
-							</h2>
-							<p style={{ color: "#94a3b8", margin: "0 0 1.5rem" }}>
-								Try adjusting your search criteria or browse all plans
-							</p>
-							<button
-								onClick={clearFilters}
-								style={{
-									padding: "0.75rem 1.5rem",
-									background: "linear-gradient(135deg, #3b82f6 0%, #10b981 100%)",
-									color: "#ffffff",
-									fontSize: "0.875rem",
-									fontWeight: 600,
-									border: "none",
-									borderRadius: 8,
-									cursor: "pointer",
-								}}>
-								Clear Filters
-							</button>
-						</div>
-					))}
-
-				<WalletConnectModal
-					isOpen={walletModalOpen}
-					onClose={() => setWalletModalOpen(false)}
-					onConnected={handleWalletConnect}
+		<main style={{ padding: "24px", color: "#fff" }}>
+			<h1>Browse Plans</h1>
+			<div style={{ display: "flex", gap: "12px", marginBottom: "24px" }}>
+				<input
+					value={searchQuery}
+					onChange={(e) => setSearchQuery(e.target.value)}
+					placeholder="Search plans..."
 				/>
-
-				<GiftPurchaseModal
-					isOpen={giftModalOpen}
-					onClose={() => setGiftModalOpen(false)}
-					plan={selectedPlanForGift}
-					onPurchaseComplete={handleGiftPurchaseComplete}
+				<select
+					value={intervalFilter}
+					onChange={(e) => setIntervalFilter(e.target.value as PlanInterval | "All")}>
+					<option value="All">All</option>
+					<option value="Monthly">Monthly</option>
+					<option value="Yearly">Yearly</option>
+				</select>
+				<SortBySelect
+					options={SORT_OPTIONS}
+					value={`${sortField}-${sortDirection}`}
+					onChange={(value) => {
+						const [nf, nd] = value.split("-");
+						setSortField(nf as SortField);
+						setSortDirection(nd as SortDirection);
+					}}
 				/>
 			</div>
-		</div>
+			<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
+				{filteredPlans.map((plan) => (
+					<PlanCard
+						key={plan.id}
+						plan={plan}
+						onSubscribe={handleSubscribe}
+						onSendGift={handleSendGift}
+					/>
+				))}
+			</div>
+			{walletModalOpen && (
+				<WalletConnectModal
+					onClose={() => setWalletModalOpen(false)}
+					onConnect={handleWalletConnect}
+				/>
+			)}
+			{gentModalOpen && selectedPlanForGift && (
+				<GiftPurchaseModal
+					plan={selectedPlanForGift as unknown as GiftPlan}
+					onClose={() => {
+						setGiftModalOpen(false);
+						setSelectedPlanForGift(null);
+					}}
+				/>
+			)}
+		</main>
 	);
 }

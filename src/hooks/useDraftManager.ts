@@ -18,6 +18,10 @@ export interface DraftEntry {
   data: DraftData
 }
 
+function generateId(): string {
+  return crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2)
+}
+
 function loadDrafts(): DraftEntry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -43,7 +47,7 @@ export function useDraftManager() {
 
   const saveDraft = useCallback((data: DraftData): DraftEntry => {
     const entry: DraftEntry = {
-      id: crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2),
+      id: generateId(),
       savedAt: new Date().toISOString(),
       version: DRAFT_VERSION,
       data,
@@ -52,6 +56,27 @@ export function useDraftManager() {
       const next = [entry, ...prev].slice(0, MAX_DRAFTS)
       persistDrafts(next)
       return next
+    })
+    return entry
+  }, [])
+
+  const upsertDraft = useCallback((id: string | undefined, data: DraftData): DraftEntry => {
+    const existingId = id && loadDrafts().some((d) => d.id === id) ? id : undefined
+    const entry: DraftEntry = {
+      id: existingId ?? generateId(),
+      savedAt: new Date().toISOString(),
+      version: DRAFT_VERSION,
+      data,
+    }
+    setDrafts((prev) => {
+      const index = prev.findIndex((d) => d.id === entry.id)
+      const next =
+        index >= 0
+          ? [entry, ...prev.filter((d) => d.id !== entry.id)]
+          : [entry, ...prev]
+      const capped = next.slice(0, MAX_DRAFTS)
+      persistDrafts(capped)
+      return capped
     })
     return entry
   }, [])
@@ -74,6 +99,7 @@ export function useDraftManager() {
   return {
     drafts,
     saveDraft,
+    upsertDraft,
     deleteDraft,
     getDraftById,
   }

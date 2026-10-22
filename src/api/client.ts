@@ -2,13 +2,21 @@ import { Subscription } from '@/types/subscription'
 
 const API_BASE = '/api'
 
+const DEFAULT_TIMEOUT_MS = 15000;
+
 export interface ApiError extends Error {
   status?: number;
   technicalDetails?: string;
   isOffline?: boolean;
+  isTimeout?: boolean;
+  isNetworkError?: boolean;
 }
 
-export async function api<T>(path: string, options?: RequestInit): Promise<T> {
+export interface ApiRequestOptions extends RequestInit {
+  timeout?: number;
+}
+
+export async function api<T>(path: string, options?: ApiRequestOptions): Promise<T> {
   // Simulate network offline for demo if URL has ?simulate_offline
   if (typeof window !== 'undefined' && window.location.search.includes('simulate_offline')) {
     const error: ApiError = new Error('No internet connection');
@@ -24,9 +32,33 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
     throw error;
   }
 
+  const controller = new AbortController();
+  let isTimeout = false;
+  const timeoutMs = options?.timeout ?? DEFAULT_TIMEOUT_MS;
+
+  const timeoutId = setTimeout(() => {
+    isTimeout = true;
+    controller.abort();
+  }, timeoutMs);
+
+  const callerSignal = options?.signal;
+  let onCallerAbort: (() => void) | undefined;
+
+  if (callerSignal) {
+    if (callerSignal.aborted) {
+      controller.abort(callerSignal.reason);
+    } else {
+      onCallerAbort = () => {
+        controller.abort(callerSignal.reason);
+      };
+      callerSignal.addEventListener('abort', onCallerAbort, { once: true });
+    }
+  }
+
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       ...options,
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         ...options?.headers,
@@ -45,14 +77,72 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
       throw error;
     }
     
-    return res.json() as Promise<T>
-  } catch (e: unknown) {
-    if (e instanceof Error && e.name === 'TypeError' && !navigator.onLine) {
-      const error: ApiError = new Error('Network request failed (offline)');
-      error.isOffline = true;
+    if (res.status === 204 || res.headers?.get?.('content-length') === '0') {
+      return undefined as unknown as T;
+    }
+
+    const contentType = res.headers?.get?.('content-type');
+    if (res.headers && (!contentType || !contentType.includes('application/json'))) {
+      const error: ApiError = new Error('Unexpected response format');
+      error.status = res.status;
+      error.technicalDetails = `Expected application/json but received ${contentType || 'none'}`;
       throw error;
     }
-    throw e;
+
+    if (typeof res.text === 'function') {
+      const text = await res.text();
+      if (!text || !text.trim()) {
+        return undefined as unknown as T;
+      }
+      try {
+        return JSON.parse(text) as T;
+      } catch (err) {
+        const error: ApiError = new Error('Unexpected response format');
+        error.status = res.status;
+        error.technicalDetails = err instanceof Error ? err.message : 'Invalid JSON';
+        throw error;
+      }
+    }
+
+    try {
+      return (await res.json()) as T;
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        const error: ApiError = new Error('Unexpected response format');
+        error.status = res.status;
+        error.technicalDetails = err.message;
+        throw error;
+      }
+      throw err;
+    }
+  } catch (e: unknown) {
+    if (isTimeout) {
+      const error: ApiError = new Error('Request timed out');
+      error.isTimeout = true;
+      throw error;
+    }
+
+    if (callerSignal?.aborted) {
+      const error: ApiError = (e instanceof Error ? e : new Error(String(e))) as ApiError;
+      throw error;
+    }
+
+    const apiError: ApiError = (e instanceof Error ? e : new Error(String(e))) as ApiError;
+
+    if (apiError.name === 'TypeError') {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        apiError.message = 'Network request failed (offline)';
+        apiError.isOffline = true;
+      }
+      apiError.isNetworkError = true;
+    }
+
+    throw apiError;
+  } finally {
+    clearTimeout(timeoutId);
+    if (callerSignal && onCallerAbort) {
+      callerSignal.removeEventListener('abort', onCallerAbort);
+    }
   }
 }
 
@@ -80,9 +170,38 @@ export const subscriptions = {
   },
   cancel: (id: string) => {
     // Simulating API call for development/demonstration
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       console.log(`Simulating cancel for subscription: ${id}`);
+
+      if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
+        setTimeout(() => {
+          const error: ApiError = new Error('Action Failed');
+          error.status = 400;
+          error.technicalDetails = 'The subscription is already in the requested state or pending a transaction.';
+          reject(error);
+        }, 1000);
+        return;
+      }
+
       setTimeout(() => resolve({ success: true }), 1000);
+    });
+  },
+  resume: (id: string) => {
+    // Simulating API call for development/demonstration
+    return new Promise((resolve, reject) => {
+      console.log(`Simulating resume for subscription: ${id}`);
+
+      if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
+        setTimeout(() => {
+          const error: ApiError = new Error('Action Failed');
+          error.status = 400;
+          error.technicalDetails = 'The subscription is already in the requested state or pending a transaction.';
+          reject(error);
+        }, 800);
+        return;
+      }
+
+      setTimeout(() => resolve({ success: true }), 800);
     });
   },
 }
