@@ -179,9 +179,10 @@ describe('WalletDropdown', () => {
       renderDropdown();
       fireEvent.click(screen.getByText(/view in explorer/i));
       expect(openSpy).toHaveBeenCalledTimes(1);
-      const [url, target] = openSpy.mock.calls[0];
+      const [url, target, features] = openSpy.mock.calls[0];
       expect(url).toBe(`https://stellar.expert/explorer/public/account/${ADDRESS}`);
       expect(target).toBe('_blank');
+      expect(features).toBe('noopener,noreferrer');
     });
   });
 

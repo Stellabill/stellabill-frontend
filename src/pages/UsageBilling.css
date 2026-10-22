@@ -393,6 +393,11 @@
     background: rgba(255, 255, 255, 0.03);
 }
 
+.statement-opening-row td {
+    color: #94A3B8;
+    font-style: italic;
+}
+
 .cell-date {
     white-space: nowrap;
     color: #94A3B8;
@@ -472,6 +477,18 @@
     font-size: 15px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+}
+
+.statement-opening-card {
+    border-style: dashed;
+}
+
+.statement-opening-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: #94A3B8;
 }
 
 /* Empty state */

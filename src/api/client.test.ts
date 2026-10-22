@@ -36,6 +36,7 @@ describe('client.ts', () => {
       const result = await api('/test-path');
       expect(result).toEqual(mockResponse);
       expect(global.fetch).toHaveBeenCalledWith('/api/test-path', {
+        signal: expect.any(Object),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -51,6 +52,7 @@ describe('client.ts', () => {
       await api('/test-path', { method: 'POST', headers: { 'Authorization': 'Bearer token' } });
       expect(global.fetch).toHaveBeenCalledWith('/api/test-path', {
         method: 'POST',
+        signal: expect.any(Object),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer token'
@@ -112,6 +114,108 @@ describe('client.ts', () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(originalError);
 
       await expect(api('/test')).rejects.toThrow('Some other error');
+    });
+
+    it('resolves with undefined on 204 No Content response', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        headers: new Headers(),
+        json: async () => {
+          throw new SyntaxError('Unexpected end of JSON input');
+        },
+      });
+
+      const result = await api('/test-204');
+      expect(result).toBeUndefined();
+    });
+
+    it('resolves with undefined for empty response body', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-length': '0' }),
+      });
+
+      const result = await api('/test-empty');
+      expect(result).toBeUndefined();
+    });
+
+    it('rejects with an ApiError carrying status on HTML 200 response', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'text/html; charset=utf-8' }),
+        text: async () => '<!DOCTYPE html><html><body>Error</body></html>',
+        json: async () => {
+          throw new SyntaxError('Unexpected token < in JSON at position 0');
+        },
+      });
+
+      try {
+        await api('/test-html');
+        expect.fail('Should have thrown');
+      } catch (e: unknown) {
+        expect((e as Error).message).toBe('Unexpected response format');
+        expect((e as ApiError).status).toBe(200);
+      }
+    });
+
+    it('rejects with isTimeout when request exceeds timeout', async () => {
+      vi.useFakeTimers();
+      (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+        (_url: string, options?: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            options?.signal?.addEventListener('abort', () => {
+              const err = new Error('The operation was aborted');
+              err.name = 'AbortError';
+              reject(err);
+            });
+          })
+      );
+
+      const promise = api('/test-timeout');
+      vi.advanceTimersByTime(15000);
+
+      await expect(promise).rejects.toMatchObject({
+        isTimeout: true,
+      });
+      vi.useRealTimers();
+    });
+
+    it('rejects with AbortError when caller aborts the request', async () => {
+      const callerController = new AbortController();
+      (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+        (_url: string, options?: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            options?.signal?.addEventListener('abort', () => {
+              const err = new Error('The operation was aborted');
+              err.name = 'AbortError';
+              reject(err);
+            });
+          })
+      );
+
+      const promise = api('/test-caller-abort', { signal: callerController.signal });
+      callerController.abort();
+
+      await expect(promise).rejects.toMatchObject({
+        name: 'AbortError',
+      });
+      await expect(promise).rejects.not.toHaveProperty('isTimeout', true);
+    });
+
+    it('throws ApiError with isNetworkError=true if fetch throws TypeError and navigator is online', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      vi.stubGlobal('navigator', { onLine: true });
+
+      try {
+        await api('/test');
+        expect.fail('Should have thrown');
+      } catch (e: unknown) {
+        expect((e as ApiError).isNetworkError).toBe(true);
+        expect((e as ApiError).isOffline).toBeFalsy();
+      }
     });
 
     it('simulates offline when ?simulate_offline is in URL', async () => {
