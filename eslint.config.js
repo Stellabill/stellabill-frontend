@@ -3,9 +3,6 @@ import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
 
 export default tseslint.config({
   extends: [js.configs.recommended, ...tseslint.configs.recommended],
@@ -36,6 +33,12 @@ export default tseslint.config({
         message:
           'Avoid interpolating counts directly into template strings. ' +
           'Use ICU MessageFormat via t() instead — see docs/ICU_PLURALIZATION_GUIDE.md.',
+      },
+      {
+        selector:
+          "CallExpression[callee.object.name='window'][callee.property.name='open']:not([arguments.2.value=/noopener/])",
+        message:
+          'window.open must include "noopener" in windowFeatures to mitigate reverse tabnabbing. Use openExternal() from "@/utils/openExternal" instead.',
       },
     ],
   },

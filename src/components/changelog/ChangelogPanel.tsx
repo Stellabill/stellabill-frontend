@@ -293,7 +293,7 @@ export default function ChangelogPanel({ isOpen, onOpenChange }: ChangelogPanelP
         {/* Footer */}
         <div className="changelog-footer">
           <Mail size={14} aria-hidden="true" />
-          <a href="mailto:updates@stellarbill.com" className="changelog-footer__link">
+          <a href="mailto:updates@stellabill.com" className="changelog-footer__link">
             Subscribe to email updates
           </a>
         </div>
