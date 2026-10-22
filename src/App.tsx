@@ -24,6 +24,28 @@ const Settings = lazy(() => import("./pages/Settings"));
 const DesignTokens = lazy(() => import("./pages/DesignTokens"));
 const WalletDetailView = lazy(() => import("./pages/WalletDetailView"));
 
+const ONBOARDING_BUSINESS_KEY = "onboardingBusiness";
+const ONBOARDING_PAYOUT_KEY = "onboardingPayout";
+
+function hasStoredBusiness(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = sessionStorage.getItem(ONBOARDING_BUSINESS_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    return Boolean(parsed && typeof parsed === "object");
+  } catch {
+    return false;
+  }
+}
+
+function OnboardingPayoutGuard() {
+  if (!hasStoredBusiness()) {
+    return <Navigate to="/onboarding/business" replace />;
+  }
+  return <OnboardingPayout />;
+}
+
 function ScrollToHash() {
   const { pathname, hash } = useLocation();
   useEffect(() => {
@@ -58,7 +80,7 @@ function App() {
         element={<Navigate to="/onboarding/business" replace />}
       />
       <Route path="/onboarding/business" element={<OnboardingBusiness />} />
-      <Route path="/onboarding/payout" element={<OnboardingPayout />} />
+      <Route path="/onboarding/payout" element={<OnboardingPayoutGuard />} />
       <Route path="/onboarding/review" element={<OnboardingReviewPage />} />
       <Route path="/onboarding-success" element={<OnboardingSuccess />} />
       <Route path="/redeem-gift" element={<RedeemGift />} />

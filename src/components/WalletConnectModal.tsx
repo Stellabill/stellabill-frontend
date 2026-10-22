@@ -2,6 +2,8 @@ import { useRef } from "react";
 import { useModalFocus } from "../hooks/useModalFocus";
 import type { ConnectionState } from "./ConnectButton";
 import { X, ShieldCheck, Info, RotateCcw, HelpCircle, AlertCircle, Loader2 } from "lucide-react";
+import { openExternal } from "../utils/openExternal";
+import { STELLAR_WALLETS_DOCS_URL } from "../config/links";
 
 interface WalletConnectModalProps {
   isOpen: boolean;
@@ -178,7 +180,7 @@ export default function WalletConnectModal({
                 Try Again
               </button>
               <button 
-                onClick={() => window.open('https://docs.stellar.org/wallets', '_blank')}
+                onClick={() => openExternal(STELLAR_WALLETS_DOCS_URL)}
                 className="w-full flex items-center justify-center gap-2 py-4 text-slate-400 hover:text-white transition-colors text-sm font-medium"
               >
                 <HelpCircle className="w-4 h-4" />

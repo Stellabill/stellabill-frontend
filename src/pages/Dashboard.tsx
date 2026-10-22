@@ -1,6 +1,6 @@
-import { useEffect, useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Users,
   TrendingUp,
@@ -13,7 +13,6 @@ import {
   Save,
   RotateCcw,
 } from 'lucide-react';
-import { useState } from 'react';
 import RevenueChart from '../components/RevenueChart';
 import DashboardCard from '../components/Dashboard/DashboardCard';
 import ActivityList, { ActivityType } from '../components/Dashboard/ActivityList';
@@ -29,9 +28,95 @@ import { useProductTour } from '../hooks/useProductTour';
 import type { PlanRevenueSlice } from '../components/Dashboard/revenueSplitUtils';
 import {
   useDashboardWidgets,
+  type DashboardFilters,
   type WidgetId,
 } from '../hooks/useDashboardWidgets';
 import './Dashboard.css';
+
+const DEFAULT_FILTERS: DashboardFilters = {
+  status: 'active',
+  planId: 'pro',
+  range: 'last30Days',
+};
+const SAVED_FILTERS_STORAGE_KEY = 'stellabill.dashboard.savedFilters';
+const FILTER_QUERY_KEYS = ['status', 'planId', 'range', 'filters'] as const;
+
+interface DashboardFilterState {
+  filters: DashboardFilters;
+  announcement: string;
+}
+
+function filtersFromSearchParams(
+  searchParams: URLSearchParams,
+): DashboardFilters | null {
+  if (!FILTER_QUERY_KEYS.some((key) => searchParams.has(key))) return null;
+  if (searchParams.get('filters') === 'none') return {};
+
+  return {
+    ...(searchParams.get('status') === 'active' ? { status: 'active' as const } : {}),
+    ...(searchParams.get('planId') ? { planId: searchParams.get('planId')! } : {}),
+    ...(searchParams.get('range') === 'last30Days'
+      ? { range: 'last30Days' as const }
+      : {}),
+  };
+}
+
+function parseSavedFilters(value: unknown): DashboardFilters {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Saved dashboard filters are invalid.');
+  }
+
+  const saved = value as Record<string, unknown>;
+  if (
+    (saved.status !== undefined && saved.status !== 'active') ||
+    (saved.planId !== undefined && typeof saved.planId !== 'string') ||
+    (saved.range !== undefined && saved.range !== 'last30Days')
+  ) {
+    throw new Error('Saved dashboard filters are invalid.');
+  }
+
+  return {
+    ...(saved.status === 'active' ? { status: 'active' as const } : {}),
+    ...(typeof saved.planId === 'string' ? { planId: saved.planId } : {}),
+    ...(saved.range === 'last30Days' ? { range: 'last30Days' as const } : {}),
+  };
+}
+
+function initialFilterState(searchParams: URLSearchParams): DashboardFilterState {
+  const urlFilters = filtersFromSearchParams(searchParams);
+  if (urlFilters) return { filters: urlFilters, announcement: '' };
+  if (typeof window === 'undefined') {
+    return { filters: DEFAULT_FILTERS, announcement: '' };
+  }
+
+  try {
+    const saved = window.localStorage.getItem(SAVED_FILTERS_STORAGE_KEY);
+    return {
+      filters: saved ? parseSavedFilters(JSON.parse(saved)) : DEFAULT_FILTERS,
+      announcement: '',
+    };
+  } catch {
+    return {
+      filters: DEFAULT_FILTERS,
+      announcement: 'Unable to restore the saved filter view.',
+    };
+  }
+}
+
+function writeFiltersToSearchParams(
+  searchParams: URLSearchParams,
+  filters: DashboardFilters,
+): URLSearchParams {
+  const nextParams = new URLSearchParams(searchParams);
+  FILTER_QUERY_KEYS.forEach((key) => nextParams.delete(key));
+  if (filters.status) nextParams.set('status', filters.status);
+  if (filters.planId) nextParams.set('planId', filters.planId);
+  if (filters.range) nextParams.set('range', filters.range);
+  if (!filters.status && !filters.planId && !filters.range) {
+    nextParams.set('filters', 'none');
+  }
+  return nextParams;
+}
 
 /** Mock plan revenue until /api/merchant/revenue-by-plan is wired. */
 const MOCK_PLAN_REVENUE: PlanRevenueSlice[] = [
@@ -68,8 +153,13 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const summaryRegionId = useId();
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filterState, setFilterState] = useState(() =>
+    initialFilterState(searchParams),
+  );
+  const { filters, announcement: filterAnnouncement } = filterState;
   const { widgets, loadAll, retryWidget, isInitialLoading, failedWidgetIds } =
-    useDashboardWidgets();
+    useDashboardWidgets(filters);
 
   const {
     isOpen: isTourOpen,
@@ -80,35 +170,66 @@ export default function Dashboard() {
     closeCompletion,
   } = useProductTour();
 
-  const [activeFilters, setActiveFilters] = useState([
-    { id: 'status', label: 'Status: Active' },
-    { id: 'plan', label: 'Plan: Pro' },
-    { id: 'date', label: 'Date: Last 30 Days' },
-  ]);
-  const [filterAnnouncement, setFilterAnnouncement] = useState('');
+  const activeFilters = [
+    ...(filters.status
+      ? [{ id: 'status' as const, label: 'Status: Active' }]
+      : []),
+    ...(filters.planId
+      ? [{
+          id: 'planId' as const,
+          label: `Plan: ${MOCK_PLAN_REVENUE.find((plan) => plan.planId === filters.planId)?.planName ?? filters.planId}`,
+        }]
+      : []),
+    ...(filters.range
+      ? [{ id: 'range' as const, label: 'Date: Last 30 Days' }]
+      : []),
+  ];
 
-  // Kick off the initial parallel widget loads
+  // Reload widgets whenever the active filter values change.
   useEffect(() => {
     loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadAll]);
+
+  useEffect(() => {
+    const nextParams = writeFiltersToSearchParams(searchParams, filters);
+    if (nextParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [filters, searchParams, setSearchParams]);
 
   // ─── Filter chip helpers ────────────────────────────────────────────
-  const removeFilter = (id: string) => {
-    setActiveFilters((prev) => {
-      const filter = prev.find((f) => f.id === id);
-      if (filter) setFilterAnnouncement(`Filter ${filter.label} removed.`);
-      return prev.filter((f) => f.id !== id);
+  const removeFilter = (id: keyof DashboardFilters) => {
+    const filter = activeFilters.find((item) => item.id === id);
+    if (!filter) return;
+
+    const nextFilters = { ...filters };
+    delete nextFilters[id];
+    setFilterState({
+      filters: nextFilters,
+      announcement: `Filter ${filter.label} removed.`,
     });
   };
 
   const resetFilters = () => {
-    setActiveFilters([]);
-    setFilterAnnouncement('All filters reset.');
+    setFilterState({ filters: {}, announcement: 'All filters reset.' });
   };
 
   const saveView = () => {
-    setFilterAnnouncement('Filter view saved successfully.');
+    try {
+      window.localStorage.setItem(
+        SAVED_FILTERS_STORAGE_KEY,
+        JSON.stringify(filters),
+      );
+      setFilterState({
+        filters,
+        announcement: 'Filter view saved successfully.',
+      });
+    } catch {
+      setFilterState({
+        filters,
+        announcement: 'Unable to save the filter view. Check browser storage and try again.',
+      });
+    }
   };
 
   // ─── Initial skeleton ───────────────────────────────────────────────
@@ -142,6 +263,9 @@ export default function Dashboard() {
       timestamp: '2 minutes ago',
       amount: '$29.00',
       status: 'success',
+      planId: 'pro',
+      subscriptionStatus: 'active',
+      ageInDays: 0,
     },
     {
       id: '2',
@@ -149,6 +273,9 @@ export default function Dashboard() {
       description: 'New subscription: Pro Plan',
       timestamp: '45 minutes ago',
       status: 'success',
+      planId: 'pro',
+      subscriptionStatus: 'active',
+      ageInDays: 0,
     },
     {
       id: '3',
@@ -157,6 +284,9 @@ export default function Dashboard() {
       timestamp: '2 hours ago',
       amount: '$49.00',
       status: 'failed',
+      planId: 'enterprise',
+      subscriptionStatus: 'active',
+      ageInDays: 0,
     },
     {
       id: '4',
@@ -164,6 +294,9 @@ export default function Dashboard() {
       description: 'Subscription renewing: Enterprise 10',
       timestamp: 'Tomorrow',
       status: 'pending',
+      planId: 'enterprise',
+      subscriptionStatus: 'active',
+      ageInDays: 0,
     },
     {
       id: '5',
@@ -171,8 +304,28 @@ export default function Dashboard() {
       description: 'Subscription cancelled: Basic Plan',
       timestamp: 'Yesterday',
       status: 'cancelled',
+      planId: 'basic',
+      subscriptionStatus: 'inactive',
+      ageInDays: 1,
     },
   ];
+  const filteredActivities = mockActivities
+    .filter((activity) =>
+      (!filters.status || activity.subscriptionStatus === filters.status) &&
+      (!filters.planId || activity.planId === filters.planId) &&
+      (!filters.range || activity.ageInDays <= 30),
+    )
+    .map((activity) => ({
+      id: activity.id,
+      type: activity.type,
+      description: activity.description,
+      timestamp: activity.timestamp,
+      amount: activity.amount,
+      status: activity.status,
+    }));
+  const filteredPlanRevenue = MOCK_PLAN_REVENUE.filter(
+    (plan) => !filters.planId || plan.planId === filters.planId,
+  );
 
   return (
     <>
@@ -417,7 +570,7 @@ export default function Dashboard() {
           ) : (
             <>
               <ActivityList
-                activities={mockActivities}
+                activities={filteredActivities}
                 loading={w.activity_feed.status === 'loading'}
               />
               <button className="dashboard-load-more">See all activity</button>
@@ -428,7 +581,7 @@ export default function Dashboard() {
 
         {/* ── Revenue Split By Plan ───────────────────────────────────── */}
         <div className="dashboard-revenue-split">
-          <RevenueSplitByPlanPanel plans={MOCK_PLAN_REVENUE} />
+          <RevenueSplitByPlanPanel plans={filteredPlanRevenue} />
         </div>
       </div>
 

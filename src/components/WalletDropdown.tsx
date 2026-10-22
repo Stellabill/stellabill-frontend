@@ -15,10 +15,14 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClos
 
   if (!isOpen) return null;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    const succeeded = await copyToClipboard(address);
+    setCopyStatus(succeeded ? 'copied' : 'error');
+    resetTimerRef.current = setTimeout(() => {
+      setCopyStatus('idle');
+      resetTimerRef.current = null;
+    }, 2000);
   };
 
   const handleDisconnect = () => {
@@ -54,12 +58,19 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClos
           <div className="text-xs font-mono text-slate-300 break-all leading-relaxed">
             {address}
           </div>
-          <button 
+          <span className="sr-only" role="status" aria-live="polite">
+            {copyStatus === 'copied'
+              ? 'Wallet address copied to clipboard'
+              : copyStatus === 'error'
+                ? 'Copy failed — select and copy manually'
+                : ''}
+          </span>
+          <button
             onClick={handleCopy}
             className="absolute top-4 right-4 p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition-all"
             title="Copy address"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copyStatus === 'copied' ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
             <span className="sr-only">Copy address</span>
           </button>
         </div>
@@ -67,7 +78,7 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClos
         <div className="space-y-1">
           <button 
             className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all group"
-            onClick={() => window.open(`https://stellar.expert/explorer/public/account/${address}`, '_blank')}
+            onClick={() => openExternal(getExplorerAccountUrl(address))}
           >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-slate-800 rounded-lg group-hover:bg-cyan-500/10 transition-colors">
@@ -120,10 +131,13 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({ isOpen, address, onClos
         </div>
       </div>
       
-      {/* Toast simplified */}
-      {copied && (
-        <div className="absolute bottom-0 left-0 right-0 py-2 bg-cyan-500 text-black text-[10px] font-bold text-center uppercase tracking-widest animate-in slide-in-from-bottom-full duration-300">
-          Copied to clipboard
+      {copyStatus !== 'idle' && (
+        <div
+          className={`absolute bottom-0 left-0 right-0 py-2 text-[10px] font-bold text-center uppercase tracking-widest animate-in slide-in-from-bottom-full duration-300 ${
+            copyStatus === 'copied' ? 'bg-cyan-500 text-black' : 'bg-red-500 text-white'
+          }`}
+        >
+          {copyStatus === 'copied' ? 'Copied to clipboard' : 'Copy failed — select and copy manually'}
         </div>
       )}
     </div>

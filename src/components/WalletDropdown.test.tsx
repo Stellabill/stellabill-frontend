@@ -1,6 +1,14 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import WalletDropdown from './WalletDropdown';
+import { copyToClipboard } from '../utils/clipboard';
+
+vi.mock('../utils/clipboard', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils/clipboard')>();
+  return { ...actual, copyToClipboard: vi.fn(actual.copyToClipboard) };
+});
+
+const mockedCopyToClipboard = vi.mocked(copyToClipboard);
 
 const ADDRESS = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
 
@@ -29,15 +37,11 @@ function renderDropdown(overrides: Overrides = {}) {
 }
 
 describe('WalletDropdown', () => {
-  const writeText = vi.fn().mockResolvedValue(undefined);
   let openSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    writeText.mockClear();
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText },
-    });
+    mockedCopyToClipboard.mockClear();
+    mockedCopyToClipboard.mockResolvedValue(true);
     openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
   });
 
@@ -111,41 +115,58 @@ describe('WalletDropdown', () => {
 
   // ── Clipboard / copied-toast lifecycle ─────────────────────────────────────
   describe('copy address', () => {
-    it('writes the address to the clipboard', () => {
+    it('writes the address through copyToClipboard', () => {
       renderDropdown();
       fireEvent.click(screen.getByTitle('Copy address'));
-      expect(writeText).toHaveBeenCalledTimes(1);
-      expect(writeText).toHaveBeenCalledWith(ADDRESS);
+      expect(mockedCopyToClipboard).toHaveBeenCalledTimes(1);
+      expect(mockedCopyToClipboard).toHaveBeenCalledWith(ADDRESS);
     });
 
-    it('shows the copied toast immediately after a copy', () => {
+    it('shows the copied toast after a successful copy', async () => {
       renderDropdown();
+      expect(screen.queryAllByText(/copied to clipboard/i)).toHaveLength(0);
+      fireEvent.click(screen.getByTitle('Copy address'));
+      expect((await screen.findAllByText(/copied to clipboard/i)).length).toBeGreaterThan(0);
+      expect(screen.getByRole('status')).toHaveTextContent(/wallet address copied to clipboard/i);
+    });
+
+    it('does not show success and announces failure when copy fails', async () => {
+      mockedCopyToClipboard.mockResolvedValueOnce(false);
+      renderDropdown();
+      fireEvent.click(screen.getByTitle('Copy address'));
+
+      await waitFor(() => {
+        expect(screen.getByRole('status')).toHaveTextContent(/copy failed — select and copy manually/i);
+      });
       expect(screen.queryByText(/copied to clipboard/i)).not.toBeInTheDocument();
-      fireEvent.click(screen.getByTitle('Copy address'));
-      expect(screen.getByText(/copied to clipboard/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/copy failed — select and copy manually/i).length).toBeGreaterThan(0);
     });
 
-    it('hides the copied toast after the 2s window elapses', () => {
+    it('hides the copied toast after the 2s window elapses', async () => {
       vi.useFakeTimers();
       renderDropdown();
-      fireEvent.click(screen.getByTitle('Copy address'));
-      expect(screen.getByText(/copied to clipboard/i)).toBeInTheDocument();
+      await act(async () => {
+        fireEvent.click(screen.getByTitle('Copy address'));
+      });
+      expect(screen.getAllByText(/copied to clipboard/i).length).toBeGreaterThan(0);
 
       act(() => {
         vi.advanceTimersByTime(2000);
       });
-      expect(screen.queryByText(/copied to clipboard/i)).not.toBeInTheDocument();
+      expect(screen.queryAllByText(/copied to clipboard/i)).toHaveLength(0);
     });
 
-    it('keeps the toast visible before the 2s window elapses', () => {
+    it('keeps the toast visible before the 2s window elapses', async () => {
       vi.useFakeTimers();
       renderDropdown();
-      fireEvent.click(screen.getByTitle('Copy address'));
+      await act(async () => {
+        fireEvent.click(screen.getByTitle('Copy address'));
+      });
 
       act(() => {
         vi.advanceTimersByTime(1999);
       });
-      expect(screen.getByText(/copied to clipboard/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/copied to clipboard/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -192,9 +213,10 @@ describe('WalletDropdown', () => {
       renderDropdown();
       fireEvent.click(screen.getByText(/view in explorer/i));
       expect(openSpy).toHaveBeenCalledTimes(1);
-      const [url, target] = openSpy.mock.calls[0];
+      const [url, target, features] = openSpy.mock.calls[0];
       expect(url).toBe(`https://stellar.expert/explorer/public/account/${ADDRESS}`);
       expect(target).toBe('_blank');
+      expect(features).toBe('noopener,noreferrer');
     });
   });
 
