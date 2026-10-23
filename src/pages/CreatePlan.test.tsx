@@ -1,7 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, act, fireEvent } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import CreatePlan from './CreatePlan'
+import { api, plans } from '../api/client'
+
+vi.mock('../api/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../api/client')>()
+  return {
+    ...actual,
+    api: vi.fn(),
+    plans: {
+      ...actual.plans,
+      create: vi.fn(),
+    },
+  }
+})
 
 const AUTOSAVE_KEY = 'stellabill-create-plan'
 
