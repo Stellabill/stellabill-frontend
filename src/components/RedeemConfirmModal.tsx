@@ -1,19 +1,8 @@
 import { useRef, useState } from "react";
 import { useModalFocus } from "../hooks/useModalFocus";
 import { X, Gift, Calendar, DollarSign, Package, Loader2 } from "lucide-react";
+import type { GiftDetails } from "../utils/giftCode";
 import "./RedeemConfirmModal.css";
-
-interface GiftDetails {
-  planId: string;
-  planName: string;
-  merchant: string;
-  duration: number;
-  gifterName?: string;
-  message?: string;
-  value: number;
-  currency: string;
-  expiresOn: string;
-}
 
 interface RedeemConfirmModalProps {
   isOpen: boolean;
