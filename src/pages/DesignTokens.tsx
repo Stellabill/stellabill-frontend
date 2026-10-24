@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { usePageTitle } from '../hooks/usePageTitle';
 import { Check, Clipboard, Search } from "lucide-react";
 import { copyToClipboard } from "../utils/clipboard";
 import "./DesignTokens.css";
@@ -50,6 +51,7 @@ function getSample(token: Token) {
 }
 
 export default function DesignTokens() {
+  usePageTitle('Design Tokens');
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<TokenCategory | "All">("All");
   const [copyState, setCopyState] = useState<Record<string, "copied" | "failed">>({});

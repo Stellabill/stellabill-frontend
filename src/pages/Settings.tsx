@@ -9,6 +9,7 @@ import ManageTagsSettings, { TagData } from '../components/settings/ManageTagsSe
 import { useTags } from '../hooks/useTags'
 import type { TagProps } from '../components/Tag'
 import './Settings.css'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 type SettingsTab = 'organization' | 'billing' | 'api-keys' | 'tags' | 'appearance' | 'family-plan'
 
@@ -100,6 +101,7 @@ const settingsSections: SettingsSection[] = [
 ]
 
 export default function Settings() {
+  usePageTitle('Settings')
   const [activeTab, setActiveTab] = useState<SettingsTab>('organization')
 
   const ActiveComponent = settingsSections.find((section) => section.id === activeTab)?.component

@@ -9,6 +9,7 @@ import AutosaveIndicator from '../components/AutosaveIndicator'
 import AutosaveHistory from '../components/AutosaveHistory'
 import { useAutosave, type AutosaveEntry } from '../hooks/useAutosave'
 import { useDraftManager } from '../hooks/useDraftManager'
+import { usePageTitle } from '../hooks/usePageTitle'
 import styles from './CreatePlan.module.css'
 
 const AUTOSAVE_KEY = 'stellabill-create-plan'
@@ -48,6 +49,7 @@ function deserialiseForm(entry: AutosaveEntry): {
 }
 
 export default function CreatePlan() {
+  usePageTitle('Create Plan')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { getDraftById } = useDraftManager()
