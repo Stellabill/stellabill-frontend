@@ -432,17 +432,10 @@ export default function Layout() {
             ))}
           </nav>
         </aside>
-
-        {/* Main Content Area */}
-        <main className="app-layout__main">
-          <div className="app-layout__content">
-            <RouteErrorBoundary pathname={location.pathname}>
-              <Outlet context={layoutContext} />
-            </RouteErrorBoundary>
-          </div>
-
-          {/* Subtle background glow */}
-          <div className="app-layout__glow" />
+        <main className="sb-main">
+          <RouteErrorBoundary pathname={location.pathname}>
+            <Outlet context={layoutContext} />
+          </RouteErrorBoundary>
         </main>
       </div>
     </UnsavedChangesContext.Provider>

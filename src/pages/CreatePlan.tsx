@@ -9,6 +9,7 @@ import AutosaveIndicator from '../components/AutosaveIndicator'
 import AutosaveHistory from '../components/AutosaveHistory'
 import { useAutosave, type AutosaveEntry } from '../hooks/useAutosave'
 import { useDraftManager } from '../hooks/useDraftManager'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { plans } from '../api/client'
 import styles from './CreatePlan.module.css'
 
@@ -366,19 +367,83 @@ export default function CreatePlan() {
             flexWrap: 'wrap',
           }}
         >
-          <button type="submit" disabled={isSubmitting}>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.6rem',
+              background: 'linear-gradient(135deg, #38bcd4 0%, #4dd8e1 100%)',
+              border: 'none',
+              borderRadius: '8px',
+              color: '#000',
+              fontSize: '0.925rem',
+              fontWeight: 600,
+              cursor: isSubmitting ? 'wait' : 'pointer',
+              opacity: isSubmitting ? 0.7 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!isSubmitting) e.currentTarget.style.opacity = '0.88'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = isSubmitting ? '0.7' : '1'
+            }}
+          >
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
             {isSubmitting ? 'Creating…' : 'Create plan'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCancel}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '0.75rem 1.6rem',
+              background: 'none',
+              border: '1px solid #3a3a3a',
+              borderRadius: '8px',
+              color: '#e2e8f0',
+              fontSize: '0.925rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#555'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#3a3a3a'
+            }}
+          >
+            Cancel
           </button>
         </div>
       </form>
 
-      {showExitConfirm && (
-        <ExitConfirmModal
-          onSaveDraft={handleExitSaveDraft}
-          onDiscard={handleExitDiscard}
-          onKeepEditing={handleKeepEditing}
-        />
-      )}
+      <ExitConfirmModal
+        isOpen={showExitConfirm}
+        onSaveDraft={handleExitSaveDraft}
+        onDiscard={handleExitDiscard}
+        onKeepEditing={handleKeepEditing}
+      />
     </div>
   )
 }

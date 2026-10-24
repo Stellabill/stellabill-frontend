@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { usePageTitle } from '../hooks/usePageTitle';
+import { usePageTitle } from "../hooks/usePageTitle";
 import type { ApiError } from "../api/client";
 import WalletConnectModal from "../components/WalletConnectModal";
 import { useWallet } from "../wallet/WalletContext";
@@ -9,22 +9,10 @@ import ErrorState from "../components/ErrorState";
 import SortBySelect from "../components/SortBySelect";
 import GiftPurchaseModal, { type Plan as GiftPlan } from "../components/GiftPurchaseModal";
 import { addBillingInterval } from "../utils/billingDate";
+import { catalogPlans as mockPlans, type Plan, type PlanInterval } from "../data/catalogPlans";
 
-type PlanInterval = "Monthly" | "Yearly";
-// ... (previous types and icons)
 type SortField = "name" | "price" | "merchant";
 type SortDirection = "asc" | "desc";
-
-interface Plan {
-	id: string;
-	merchant: string;
-	name: string;
-	price: number;
-	currency: string;
-	interval: PlanInterval;
-	description: string;
-	icon: "newspaper" | "cloud" | "robot" | "muscle" | "fitness" | "chart";
-}
 
 const NewspaperIcon = () => (
 	<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -83,81 +71,13 @@ const iconMap = {
 	chart: ChartIcon,
 };
 
-const mockPlans: Plan[] = [
-	{
-		id: "1",
-		merchant: "Stellar News",
-		name: "Premium Access",
-		price: 10,
-		currency: "USDC",
-		interval: "Monthly",
-		description:
-			"Get unlimited access to premium articles, exclusive interviews, and breaking news coverage.",
-		icon: "newspaper",
-	},
-	{
-		id: "2",
-		merchant: "CloudFlow",
-		name: "Pro Plan",
-		price: 25,
-		currency: "USDC",
-		interval: "Monthly",
-		description:
-			"Advanced cloud storage with 1TB space, priority support, and team collaboration features.",
-		icon: "cloud",
-	},
-	{
-		id: "3",
-		merchant: "DevTools AI",
-		name: "Starter",
-		price: 15,
-		currency: "USDC",
-		interval: "Monthly",
-		description:
-			"AI-powered development tools with code completion, debugging, and documentation generation.",
-		icon: "robot",
-	},
-	{
-		id: "4",
-		merchant: "Stellar News",
-		name: "Annual Premium",
-		price: 100,
-		currency: "USDC",
-		interval: "Yearly",
-		description:
-			"Full year of premium access at a discounted rate. Save 17% compared to monthly billing.",
-		icon: "newspaper",
-	},
-	{
-		id: "5",
-		merchant: "CloudFlow",
-		name: "Enterprise",
-		price: 50,
-		currency: "USDC",
-		interval: "Monthly",
-		description:
-			"Unlimited storage, advanced security, dedicated support, and custom integrations for teams.",
-		icon: "cloud",
-	},
-	{
-		id: "6",
-		merchant: "FitTrack",
-		name: "Premium Coaching",
-		price: 30,
-		currency: "USDC",
-		interval: "Monthly",
-		description:
-			"Personal fitness coaching with custom workout plans, nutrition tracking, and weekly check-ins.",
-		icon: "fitness",
-	},
-];
 
 const SORT_OPTIONS = [
 	{ value: "name-asc", label: "Name (A–Z)" },
 	{ value: "name-desc", label: "Name (Z–A)" },
 	{ value: "price-asc", label: "Price (low to high)" },
 	{ value: "price-desc", label: "Price (high to low)" },
-	{ value: "merchant-asc", label: "Merchant (I–Z)" },
+	{ value: "merchant-asc", label: "Merchant (A–Z)" },
 	{ value: "merchant-desc", label: "Merchant (Z–A)" },
 ];
 
@@ -205,10 +125,9 @@ function PlanCard({ plan, onSubscribe, onSendGift }: PlanCardProps) {
 				gap: "20px",
 				transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
 				position: "relative",
-			
-boxShadow: isHovered
+				boxShadow: isHovered
 					? "0 12px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(79, 209, 197, 0.15)"
-						: "0 4px 6px rgba(0, 0, 0, 0.1)",
+					: "0 4px 6px rgba(0, 0, 0, 0.1)",
 				transform: isHovered ? "translateY(-4px)" : "translateY(0)",
 			}}>
 			<div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -245,24 +164,25 @@ boxShadow: isHovered
 
 			<div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
 				<div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-					<span style={{
-						color: "#ffffff",
-						fontSize: "36px",
-						fontWeight: 800,
-					}}>
-						{ plan.price }
+					<span
+						style={{
+							color: "#ffffff",
+							fontSize: "36px",
+							fontWeight: 800,
+						}}>
+						{plan.price}
 					</span>
 					<span style={{ color: "#8b949e", fontSize: "16px", fontWeight: 500 }}>
 						{plan.currency}
 					</span>
 				</div>
 				<p style={{ color: "#8b949e", fontSize: "14px", margin: 0 }}>
-					{ billingCopy }
+					{billingCopy}
 				</p>
 				<p
 					aria-label={`Next charge preview for ${plan.name}`}
 					style={{ color: "#4FD1C5", fontSize: "14px", fontWeight: 600, margin: 0 }}>
-					Next charge: { nextChargeDate }
+					Next charge: {nextChargeDate}
 				</p>
 			</div>
 
@@ -278,7 +198,7 @@ boxShadow: isHovered
 					WebkitBoxOrient: "vertical",
 					overflow: "hidden",
 				}}>
-				{ plan.description }
+				{plan.description}
 			</p>
 
 			<button
@@ -373,7 +293,7 @@ boxShadow: isHovered
 }
 
 export default function BrowsePlans() {
-  usePageTitle('Browse Plans');
+	usePageTitle("Browse Plans");
 	const navigate = useNavigate();
 	const [plans, setPlans] = useState<Plan[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -404,17 +324,21 @@ export default function BrowsePlans() {
 					if (window.location.search.includes('simulate_error')) {
 						const err: ApiError = new Error('Failed to load plans from catalog');
 						err.status = 500;
-						err.technicalDetails = 'The decentralized plan registry is experiencing high latency. [Error Code: REG-CAT-';
+						err.technicalDetails = 'The decentralized plan registry is experiencing high latency. [Error Code: REG-CAT-503]';
 						reject(err);
-						return;
+					} else {
+						resolve(true);
 					}
-					setPlans(mockPlans);
-					setLoading(false);
-					resolve(null);
-				}, 500);
+				}, 800);
 			});
-		} catch (err) {
-			setError(err as ApiError);
+			// No backend is deployed for this demo, so the catalog is sample data.
+			setPlans(mockPlans);
+			setLoading(false);
+		} catch (err: unknown) {
+			setError(err as Error);
+			// Fallback to mock data on error so UI still shows something if desired, 
+			// but here we want to show the error state primarily.
+			setPlans(mockPlans);
 			setLoading(false);
 		}
 	}, []);
@@ -424,38 +348,47 @@ export default function BrowsePlans() {
 	}, [fetchPlans]);
 
 	const filteredPlans = useMemo(() => {
-		let result = [...plans];
+		const result = plans.filter((plan) => {
+			const matchesSearch =
+				plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				plan.merchant.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				plan.description.toLowerCase().includes(searchQuery.toLowerCase());
+			const matchesInterval =
+				intervalFilter === "All" || plan.interval === intervalFilter;
 
-		if (searchQuery) {
-			const q = searchQuery.toLowerCase();
-			result = result.filter(
-				(p) =>
-					p.name.toLowerCase().includes(q) ||
-					p.merchant.toLowerCase().includes(q),
-			);
-		}
-
-		if (intervalFilter !== "All") {
-			result = result.filter((p) => p.interval === intervalFilter);
-		}
+			return matchesSearch && matchesInterval;
+		});
 
 		result.sort((a, b) => {
-			let cmp = 0;
-			if (sortField === "name") cmp = a.name.localeCompare(b.name);
-			else if (sortField === "price") cmp = a.price - b.price;
-			else cmp = a.merchant.localeCompare(b.merchant);
-			return sortDirection === "asc" ? cmp : -cmp;
+			let comparison = 0;
+
+			if (sortField === "name") {
+				comparison = a.name.localeCompare(b.name);
+			} else if (sortField === "price") {
+				comparison = a.price - b.price;
+			} else if (sortField === "merchant") {
+				comparison = a.merchant.localeCompare(b.merchant);
+			}
+
+			return sortDirection === "asc" ? comparison : -comparison;
 		});
 
 		return result;
 	}, [plans, searchQuery, intervalFilter, sortField, sortDirection]);
+
+	const handleSortChange = (value: string) => {
+		const separatorIndex = value.lastIndexOf("-");
+		setSortField(value.slice(0, separatorIndex) as SortField);
+		setSortDirection(value.slice(separatorIndex + 1) as SortDirection);
+	};
 
 	const handleSubscribe = (plan: Plan) => {
 		if (status !== "connected") {
 			setWalletModalOpen(true);
 			return;
 		}
-		navigate(`/subscribe/${plan.id}`);
+
+		navigate(`/checkout/${plan.id}`);
 	};
 
 	const handleSendGift = (plan: Plan) => {
@@ -463,81 +396,273 @@ export default function BrowsePlans() {
 		setGiftModalOpen(true);
 	};
 
-	const handleWalletConnect = () => {
-		setIsWalletConnected(true);
-		setWalletModalOpen(false);
+	const handleGiftPurchaseComplete = (giftCode: string) => {
+		console.log("Gift purchased with code:", giftCode);
+		// Could show a toast notification here
 	};
 
-	if (error) {
-		return (
-			<ErrorState
-				title="Failed to load plans"
-				message={error.message}
-				technicalDetails={error.technicalDetails}
-				onChange={() => {
-					setError(null);
-					fetchPlans();
-				}}
-				retryLabel="Try again"
-			/>
-		);
-	}
+	const handleWalletConnect = async () => {
+		try {
+			const result = await connect();
+			if (!result) return;
+			setWalletModalOpen(false);
+		} catch {
+			// The provider exposes the error to the modal.
+		}
+	};
 
-	if (loading) {
-		return <div style={{ color: "#fff", padding: "24px" }}>Loading plans...</div>;
-	}
+	const clearFilters = () => {
+		setSearchQuery("");
+		setIntervalFilter("All");
+		setSortField("name");
+		setSortDirection("asc");
+	};
 
 	return (
-		<main style={{ padding: "24px", color: "#fff" }}>
-			<h1>Browse Plans</h1>
-			<div style={{ display: "flex", gap: "12px", marginBottom: "24px" }}>
-				<input
-					value={searchQuery}
-					onChange={(e) => setSearchQuery(e.target.value)}
-					placeholder="Search plans..."
-				/>
-				<select
-					value={intervalFilter}
-					onChange={(e) => setIntervalFilter(e.target.value as PlanInterval | "All")}>
-					<option value="All">All</option>
-					<option value="Monthly">Monthly</option>
-					<option value="Yearly">Yearly</option>
-				</select>
-				<SortBySelect
-					options={SORT_OPTIONS}
-					value={`${sortField}-${sortDirection}`}
-					onChange={(value) => {
-						const [nf, nd] = value.split("-");
-						setSortField(nf as SortField);
-						setSortDirection(nd as SortDirection);
-					}}
-				/>
-			</div>
-			<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
-				{filteredPlans.map((plan) => (
-					<PlanCard
-						key={plan.id}
-						plan={plan}
-						onSubscribe={handleSubscribe}
-						onSendGift={handleSendGift}
-					/>
-				))}
-			</div>
-			{walletModalOpen && (
+		<div style={{ padding: "2rem", background: "#0a0a0a", minHeight: "100vh" }}>
+			<div style={{ maxWidth: 1280, margin: "0 auto" }}>
+				<div style={{ marginBottom: "2rem" }}>
+					<h1
+						style={{
+							color: "#ffffff",
+							fontSize: "2rem",
+							fontWeight: 700,
+							margin: "0 0 0.5rem",
+						}}>
+						Browse Plans
+					</h1>
+					<p style={{ color: "#94a3b8", margin: 0, fontSize: "1rem" }}>
+						Discover subscription plans from verified merchants on Stellar
+					</p>
+				</div>
+
+				<div
+					style={{
+						display: "flex",
+						gap: "1rem",
+						marginBottom: "2rem",
+						flexWrap: "wrap",
+						alignItems: "center",
+					}}>
+					<div style={{ flex: "1 1 300px", position: "relative" }}>
+						<svg
+							style={{
+								position: "absolute",
+								left: "12px",
+								top: "50%",
+								transform: "translateY(-50%)",
+								width: "18px",
+								height: "18px",
+								color: "#64748b",
+							}}
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24">
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+							/>
+						</svg>
+						<input
+							type="search"
+							placeholder="Search plans..."
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+							style={{
+								width: "100%",
+								padding: "0.75rem 1rem 0.75rem 2.5rem",
+								background: "#1a1a1a",
+								border: "1px solid #2a2a2a",
+								borderRadius: 8,
+								color: "#ffffff",
+								fontSize: "0.875rem",
+								outline: "none",
+							}}
+							onFocus={(e) => (e.currentTarget.style.borderColor = "#22d3ee")}
+							onBlur={(e) => (e.currentTarget.style.borderColor = "#2a2a2a")}
+							onKeyDown={(e) => {
+								if (e.key === "Escape") {
+									clearFilters();
+								}
+							}}
+							aria-label="Search plans by name, merchant, or description"
+						/>
+					</div>
+
+					<select
+						value={intervalFilter}
+						onChange={(e) =>
+							setIntervalFilter(e.target.value as PlanInterval | "All")
+						}
+						style={{
+							padding: "0.75rem 1rem",
+							background: "#1a1a1a",
+							border: "1px solid #2a2a2a",
+							borderRadius: 8,
+							color: "#ffffff",
+							fontSize: "0.875rem",
+							cursor: "pointer",
+							outline: "none",
+						}}
+						onFocus={(e) => (e.currentTarget.style.borderColor = "#22d3ee")}
+						onBlur={(e) => (e.currentTarget.style.borderColor = "#2a2a2a")}
+						aria-label="Filter plans by billing interval">
+						<option value="All">All billing intervals</option>
+						<option value="Monthly">Billed every month</option>
+						<option value="Yearly">Billed every year</option>
+					</select>
+
+					<div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+						<span
+							id="browse-sort-label"
+							style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+							Sort by:
+						</span>
+						<div style={{ minWidth: 210 }}>
+							<SortBySelect
+								value={`${sortField}-${sortDirection}`}
+								onValueChange={handleSortChange}
+								options={SORT_OPTIONS}
+								labelId="browse-sort-label"
+								ariaLabel="Sort plans"
+							/>
+						</div>
+					</div>
+				</div>
+
+				<div style={{ marginBottom: "1.5rem" }}>
+					<span style={{ color: "#64748b", fontSize: "0.875rem" }}>
+						{filteredPlans.length}{" "}
+						{filteredPlans.length === 1 ? "plan" : "plans"} found
+					</span>
+				</div>
+
+				{loading && (
+					<div
+						style={{
+							textAlign: "center",
+							padding: "4rem 2rem",
+							background: "#1a1a1a",
+							borderRadius: 12,
+							border: "1px solid #2a2a2a",
+						}}>
+						<div
+							style={{
+								width: 48,
+								height: 48,
+								margin: "0 auto 1.5rem",
+								borderRadius: "50%",
+								border: "3px solid #2a2a2a",
+								borderTopColor: "#22d3ee",
+								animation: "spin 1s linear infinite",
+							}}
+						/>
+						<h2 style={{ color: "#ffffff", fontSize: "1.5rem", margin: "0 0 0.5rem" }}>
+							Loading plans...
+						</h2>
+						<p style={{ color: "#94a3b8", margin: 0 }}>
+							Please wait while we fetch available subscription plans
+						</p>
+						<style>{`
+							@keyframes spin {
+								to { transform: rotate(360deg); }
+							}
+						`}</style>
+					</div>
+				)}
+
+				{error && !loading && (
+					<div style={{ padding: "4rem 2rem", background: "#1a1a1a", borderRadius: 12, border: "1px solid #2a2a2a", display: "flex", justifyContent: "center" }}>
+						<ErrorState 
+							title="Failed to load plans"
+							message={error.message}
+							technicalDetails={error.technicalDetails}
+							onRetry={fetchPlans}
+							isRetrying={loading}
+							type={error.isOffline ? 'offline' : 'error'}
+						/>
+					</div>
+				)}
+
+				{!loading &&
+					(filteredPlans.length > 0 ? (
+						<div
+							role="list"
+							aria-label="Available subscription plans"
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(auto-fill, minmax(min(340px, 100%), 1fr))",
+								gap: "24px 32px",
+							}}>
+							{filteredPlans.map((plan) => (
+								<PlanCard 
+									key={plan.id} 
+									plan={plan} 
+									onSubscribe={handleSubscribe} 
+									onSendGift={handleSendGift}
+								/>
+							))}
+						</div>
+					) : (
+						<div
+							role="status"
+							aria-live="polite"
+							style={{
+								textAlign: "center",
+								padding: "4rem 2rem",
+								background: "#1a1a1a",
+								borderRadius: 12,
+								border: "1px solid #2a2a2a",
+							}}>
+							<h2 style={{ color: "#ffffff", fontSize: "1.5rem", margin: "0 0 0.5rem" }}>
+								No plans match your filters
+							</h2>
+							<p style={{ color: "#94a3b8", margin: "0 0 1.5rem" }}>
+								Try adjusting your search criteria or browse all plans
+							</p>
+							<button
+								onClick={clearFilters}
+								style={{
+									padding: "0.75rem 1.5rem",
+									background: "linear-gradient(135deg, #3b82f6 0%, #10b981 100%)",
+									color: "#ffffff",
+									fontSize: "0.875rem",
+									fontWeight: 600,
+									border: "none",
+									borderRadius: 8,
+									cursor: "pointer",
+								}}>
+								Clear Filters
+							</button>
+						</div>
+					))}
+
 				<WalletConnectModal
-					onClose={() => setWalletModalOpen(false)}
-					onConnect={handleWalletConnect}
-				/>
-			)}
-			{gentModalOpen && selectedPlanForGift && (
-				<GiftPurchaseModal
-					plan={selectedPlanForGift as unknown as GiftPlan}
+					isOpen={walletModalOpen}
 					onClose={() => {
-						setGiftModalOpen(false);
-						setSelectedPlanForGift(null);
+						cancelConnect();
+						setWalletModalOpen(false);
 					}}
+					onConnectFreighter={handleWalletConnect}
+					connectionState={status}
+					errorMessage={walletError?.message}
+					errorType={
+						walletError instanceof FreighterConnectionError
+							? walletError.type
+							: undefined
+					}
+					onRetry={clearError}
 				/>
-			)}
-		</main>
+
+				<GiftPurchaseModal
+					isOpen={giftModalOpen}
+					onClose={() => setGiftModalOpen(false)}
+					plan={selectedPlanForGift}
+					onPurchaseComplete={handleGiftPurchaseComplete}
+				/>
+			</div>
+		</div>
 	);
 }

@@ -1,87 +1,63 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AmountInput } from '../components/AmountInput';
-import { useWallet } from '../context/WalletContext';
-import { useSubscriptions } from '../context/SubscriptionsContext';
-import type { Plan } from '../types';
-import { getPlan } from '../api/plans';
+import { AmountInput } from '../components/common/AmountInput';
+import { useWallet } from '../wallet/WalletContext';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { findCatalogPlan, type PlanInterval } from '../data/catalogPlans';
+import { addBillingInterval } from '../utils/billingDate';
 
-
-const INTERVAL_LABELS: Record<Plan['interval'], string> = {
-  daily: 'day',
-  weekly: 'week',
-  monthly: 'month',
+const INTERVAL_LABELS: Record<PlanInterval, string> = {
+  Monthly: 'month',
+  Yearly: 'year',
 };
 
-function addInterval(date: Date, interval: Plan['interval']): Date {
-  const next = new Date(date.getTime());
-  if (interval === 'daily') {
-    next.setDate(next.getDate() + 1);
-  } else if (interval === 'weekly') {
-    next.setDate(next.getDate() + 7);
-  } else {
-    next.setMonth(next.getMonth() + 1);
-  }
-  return next;
-}
+const cardStyle = {
+  maxWidth: 560,
+  margin: '0 auto',
+  padding: '2rem',
+  background: '#161B22',
+  borderRadius: 16,
+  border: '1px solid #30363D',
+  color: '#e2e8f0',
+} as const;
+
+const linkStyle = { color: '#4FD1C5' } as const;
 
 export default function Checkout() {
+  usePageTitle('Checkout');
   const { planId } = useParams();
   const navigate = useNavigate();
-  const { isWalletConnected, connectWallet } = useWallet();
-  const { addSubscription } = useSubscriptions();
-  const [plan, setPlan] = useState<Plan | null | undefined>(undefined);
-  const [deposit, setDeposit] = useState<string>('');
+  const { status, connect, error: walletError } = useWallet();
+  const plan = planId ? findCatalogPlan(planId) : undefined;
+  const [deposit, setDeposit] = useState<number | null>(null);
+  const [currency, setCurrency] = useState<string>(plan?.currency ?? 'USDC');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    setPlan(undefined);
-    if (!planId) {
-      setPlan(null);
-      return () => {
-        cancelled = true;
-      };
-    }
-    getPlan(planId)
-      .then((found) => {
-        if (!cancelled) setPlan(found ?? null);
-      })
-      .catch(() => {
-        if (!cancelled) setPlan(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [planId]);
-
   const firstChargeDate = useMemo(() => {
     if (!plan) return null;
-    return addInterval(new Date(), plan.interval);
+    return addBillingInterval(new Date(), plan.interval === 'Monthly' ? 'monthly' : 'yearly', 1);
   }, [plan]);
 
-  if (plan === undefined) {
+  if (!plan) {
     return (
-      <div className="checkout-page">
-        <p className="checkout-loading">Updating checkout&hellip;</p>
+      <div style={{ padding: '2rem' }}>
+        <div style={cardStyle}>
+          <h1 style={{ marginTop: 0 }}>Plan not found</h1>
+          <p style={{ color: '#94a3b8' }}>The plan you are trying to subscribe to does not exist.</p>
+          <Link to="/browse-plans" style={linkStyle}>
+            Back to Browse Plans
+          </Link>
+        </div>
       </div>
     );
   }
 
-  if (plan === null) {
-    return (
-      <div className="checkout-page">
-        <h1>Plan not found</h1>
-        <p>The plan you are trying to subscribe to does not exist.</p>
-        <Link to="/browse-plans">Back to Browse Plans</Link>
-      </div>
-    );
-  }
+  const isWalletConnected = status === 'connected';
 
   const handleConnect = async () => {
     try {
-      await connectWallet();
+      await connect();
     } catch {
       setError('Unable to connect wallet. Please try again.');
     }
@@ -92,47 +68,67 @@ export default function Checkout() {
       await handleConnect();
       return;
     }
-    const depositNumber = Number(deposit);
-    if (!deposit || Number.isNaN(depositNumber) || depositNumber <= 0) {
+    if (deposit === null || Number.isNaN(deposit) || deposit <= 0) {
       setError('Enter a valid initial deposit.');
       return;
     }
     setError(null);
     setSubmitting(true);
-    try {
-      await addSubscription({ plan, initialDeposit: depositNumber });
-      navigate('/subscriptions');
-    } catch {
-      setError('Unable to create subscription. Please try again.');
-      setSubmitting(false);
-    }
+    // No subscriptions backend is deployed for this demo; return to the subscriptions list.
+    navigate('/subscriptions');
   };
 
   return (
-    <div className="checkout-page">
-      <h1>Confirm subscription</h1>
-      <dl className="checkout-summary">
-        <dt>Plan</dt>
-        <dd>{plan.name}</dd>
-        <dt>Price</dt>
-        <dd>
-          {plan.price} {plan.currency} per {INTERVAL_LABELS[plan.interval]}
-        </dd>
-        <dt>Interval</dt>
-        <dd>{plan.interval}</dd>
-        <dt>First charge</dt>
-        <dd>{firstChargeDate ? firstChargeDate.toLocaleDateString() : '\u2014'}</dd>
-      </dl>
-      <label className="checkout-deposit-label">
-        Initial prepaid deposit
-        <AmountInput value={deposit} onChange={setDeposit} currency={plan.currency} />
-      </label>
-      {error && <p className="checkout-error">{error}</p>}
-      <div className="checkout-actions">
-        <button type="button" onClick={handleConfirm} disabled={submitting}>
-          {!isWalletConnected ? 'Connect wallet' : submitting ? 'Confirming\u2026' : 'Confirm subscription'}
-        </button>
-        <Link to="/browse-plans">Cancel</Link>
+    <div style={{ padding: '2rem' }}>
+      <div style={cardStyle}>
+        <h1 style={{ marginTop: 0 }}>Confirm subscription</h1>
+        <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem 1.5rem', margin: '0 0 1.5rem' }}>
+          <dt style={{ color: '#94a3b8' }}>Plan</dt>
+          <dd style={{ margin: 0 }}>
+            {plan.name} <span style={{ color: '#94a3b8' }}>by {plan.merchant}</span>
+          </dd>
+          <dt style={{ color: '#94a3b8' }}>Price</dt>
+          <dd style={{ margin: 0 }}>
+            {plan.price} {plan.currency} per {INTERVAL_LABELS[plan.interval]}
+          </dd>
+          <dt style={{ color: '#94a3b8' }}>First charge</dt>
+          <dd style={{ margin: 0 }}>{firstChargeDate ? firstChargeDate.toLocaleDateString() : '—'}</dd>
+        </dl>
+        <AmountInput
+          label="Initial prepaid deposit"
+          value={deposit}
+          onChange={setDeposit}
+          currency={currency}
+          onCurrencyChange={setCurrency}
+          required
+          error={error ?? undefined}
+        />
+        {walletError && !isWalletConnected && (
+          <p role="alert" style={{ color: '#ef4444' }}>
+            {walletError.message}
+          </p>
+        )}
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1.5rem' }}>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={submitting || status === 'connecting'}
+            style={{
+              padding: '0.75rem 1.5rem',
+              borderRadius: 8,
+              border: 'none',
+              background: 'linear-gradient(135deg, #67d5f0, #5ce0b8)',
+              color: '#0f172a',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {!isWalletConnected ? 'Connect wallet' : submitting ? 'Confirming…' : 'Confirm subscription'}
+          </button>
+          <Link to="/browse-plans" style={linkStyle}>
+            Cancel
+          </Link>
+        </div>
       </div>
     </div>
   );

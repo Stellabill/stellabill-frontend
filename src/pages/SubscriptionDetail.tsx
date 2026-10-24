@@ -12,7 +12,7 @@ import ReactivationModal, { type ReactivationPlan } from '../components/Reactiva
 import DowngradeConfirmModal, { type PlanFeature } from '../components/DowngradeConfirmModal';
 import TrialCountdownBanner from '../components/TrialCountdownBanner';
 import ProrationPreviewModal from '../components/common/ProrationPreviewModal';
-import ErrorState from '../components/common/ErrorState';
+import ErrorState from '../components/ErrorState';
 import { subscriptions } from '../api/client';
 import type { Subscription } from '../types/subscription';
 
@@ -148,7 +148,8 @@ export default function SubscriptionDetail() {
     }, [id]);
 
     // ── Derived data from fetched subscription ────────────────────────────────
-    const subscriptionStatus: SubscriptionStatus = subscriptionData?.status ?? 'active';
+    const subscriptionStatus: SubscriptionStatus =
+        (subscriptionData?.status?.toLowerCase() as SubscriptionStatus | undefined) ?? 'active';
     const trialEndsAt = subscriptionData?.trialEndsAt
         ? new Date(subscriptionData.trialEndsAt)
         : null;
@@ -162,7 +163,7 @@ export default function SubscriptionDetail() {
     const subscription = {
         currentInterval: (subscriptionData?.interval ?? 'monthly') as BillingInterval,
         nextCharge: subscriptionData?.nextCharge ?? '',
-        amount: subscriptionData?.amount ?? 0,
+        amount: subscriptionData?.amount ?? subscriptionData?.price ?? 0,
         currency: subscriptionData?.currency ?? 'USDC',
         billingDay: subscriptionData?.billingDay ?? 1,
     };

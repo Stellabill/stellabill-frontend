@@ -12,4 +12,16 @@ export interface Subscription {
   nextCharge: string;
   subscribedSince: string;
   icon?: string;
+  /** Optional detail fields returned by GET /subscriptions/:id. */
+  trialEndsAt?: string | null;
+  cancelledAt?: string | null;
+  failedAttempts?: number;
+  amount?: number;
+  billingDay?: number;
+  usageBased?: boolean;
+  usage?: {
+    billingPeriod: string;
+    usage: string;
+    estimatedCharge: string;
+  } | null;
 }

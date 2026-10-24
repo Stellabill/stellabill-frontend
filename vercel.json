@@ -1,5 +1,5 @@
 {
-  "$roleschema": "https://openapi.vercel.sh/vercel.json",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "installCommand": "npm install",
   "buildCommand": "npx vite build",
@@ -11,7 +11,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://stellar.expert; connect-src 'self' https://horizon.stellar.org https://soroban-mainnet.stellar.org https://soroban-testnet.stellar.org https://soroban-futurenet.stellar.org https://stellar.expert; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' 'sha256-+BSOs9zR7jyYp0GeCNHdQM7NnsFyMvh1lm/15BuySeI='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://stellar.expert; frame-src 'self' blob:; connect-src 'self' https://horizon.stellar.org https://soroban-mainnet.stellar.org https://soroban-testnet.stellar.org https://soroban-futurenet.stellar.org https://stellar.expert; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
         },
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "X-Content-Type-Options", "value": "nosniff" },

@@ -11,6 +11,7 @@ const Plans = lazy(() => import("./pages/Plans"));
 const CreatePlan = lazy(() => import("./pages/CreatePlan"));
 const Landing = lazy(() => import("./pages/Landing"));
 const BrowsePlans = lazy(() => import("./pages/BrowsePlans"));
+const Checkout = lazy(() => import("./pages/Checkout"));
 const OnboardingBusiness = lazy(() => import("./pages/OnboardingBusiness"));
 const OnboardingPayout = lazy(() => import("./pages/OnboardingPayout"));
 const OnboardingReviewPage = lazy(() => import("./components/OnboardingReview"));
@@ -102,6 +103,7 @@ function App() {
           {/* Redirect base dashboard path to specific dashboard component if needed */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/browse-plans" element={<BrowsePlans />} />
+          <Route path="/checkout/:planId" element={<Checkout />} />
           {/* Plans Management */}
           <Route path="/plans" element={<Plans />} />
           <Route path="/plans/create" element={<CreatePlan />} />

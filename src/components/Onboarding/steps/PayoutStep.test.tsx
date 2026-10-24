@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import PayoutStep from './PayoutStep';
 
-const VALID_ADDRESS = 'GBBDCFGKLMNOPQRSTUVWXYZ234567QBBDCFGKLMNOPQRSTUVWXYZ234567';
+const VALID_ADDRESS = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7';
 
 describe('PayoutStep', () => {
   it('renders the address field, helper text, and navigation buttons', () => {

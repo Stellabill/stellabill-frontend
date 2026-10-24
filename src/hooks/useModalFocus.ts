@@ -4,6 +4,7 @@ interface UseModalFocusOptions {
   isOpen: boolean;
   onClose: () => void;
   initialFocusRef?: RefObject<HTMLElement>;
+  fallbackFocusRef?: RefObject<HTMLElement>;
   /**
    * Whether the Escape key should trigger `onClose`. Defaults to `true`.
    * Set to `false` to prevent dismissal while an action is in flight.
@@ -62,16 +63,19 @@ const getFocusableElements = (container: HTMLElement) =>
  * @param options.isOpen Boolean indicating if the modal is currently open.
  * @param options.onClose Callback function to close the modal (triggered by Escape).
  * @param options.initialFocusRef Optional reference to an element that should be focused first.
+ * @param options.fallbackFocusRef Optional focus target if the previous element was removed.
  * @param options.closeOnEscape Whether Escape should close the modal (default true).
  */
 export function useModalFocus(
   modalRef: RefObject<HTMLElement>,
-  { isOpen, onClose, initialFocusRef, closeOnEscape = true }: UseModalFocusOptions
+  { isOpen, onClose, initialFocusRef, fallbackFocusRef, closeOnEscape = true }: UseModalFocusOptions
 ) {
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const modalIdRef = useRef(Symbol('modal'));
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const closeOnEscapeRef = useRef(closeOnEscape);
+  closeOnEscapeRef.current = closeOnEscape;
 
   useEffect(() => {
     if (isOpen) {
@@ -111,10 +115,16 @@ export function useModalFocus(
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (closeOnEscape) {
-          onClose();
+    const modalId = modalIdRef.current;
+    modalStack.push(modalId);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only the top-most open modal reacts to keyboard events.
+      if (modalStack[modalStack.length - 1] !== modalId) return;
+
+      if (event.key === 'Escape') {
+        if (closeOnEscapeRef.current) {
+          onCloseRef.current();
         }
         return;
       }
@@ -142,6 +152,10 @@ export function useModalFocus(
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, modalRef, closeOnEscape]);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      const stackIndex = modalStack.lastIndexOf(modalId);
+      if (stackIndex !== -1) modalStack.splice(stackIndex, 1);
+    };
+  }, [isOpen, modalRef]);
 }

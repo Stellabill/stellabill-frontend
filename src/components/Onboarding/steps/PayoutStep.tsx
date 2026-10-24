@@ -1,10 +1,25 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { isValidEd25519PublicKey } from '../../../utils/stellarAddress';
 import '../OnboardingShell.css';
 
 interface PayoutStepProps {
   onBack?: () => void;
   onNext?: (walletAddress: string) => void;
+}
+
+const BUSINESS_STORAGE_KEY = 'onboardingBusiness';
+
+function hasBusinessData(): boolean {
+  try {
+    const raw = sessionStorage.getItem(BUSINESS_STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as { name?: string; country?: string } | null;
+    if (!parsed) return false;
+    return Boolean(parsed.name && parsed.name.trim() && parsed.country && parsed.country.trim());
+  } catch {
+    return false;
+  }
 }
 
 export default function PayoutStep({ onBack, onNext }: PayoutStepProps) {

@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import SwipeableRow from "../components/SwipeableRow";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,6 +17,7 @@ import { ToastContainer, type ToastOptions } from "../components/TransactionToas
 import { useRefresh } from "../hooks/useRefresh";
 import { useFlip } from "../hooks/useFlip";
 import { useTags } from "../hooks/useTags";
+import { formatAmount } from "../utils/amount";
 import "./Subscriptions.css";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -486,6 +486,7 @@ export default function Subscriptions() {
 		pullDistance,
 		isRefreshing,
 		triggerRefresh,
+		containerRef: refreshContainerRef,
 		handlers: refreshHandlers
 	} = useRefresh({
 		onRefresh: fetchSubscriptions
@@ -500,13 +501,13 @@ export default function Subscriptions() {
 			setData((prev) =>
 				prev.map((sub) => {
 					if (sub.id !== selectedId) return sub;
-					const currentNum = parseFloat(sub.prepaidBalance) || 0;
+					const currentNum = sub.prepaidBalance || 0;
 					const updatedNum = currentNum + amount;
 					const coverageCount = sub.price > 0 ? Math.floor(updatedNum / sub.price) : 0;
 					const coverageStr = `~${coverageCount} payment${coverageCount === 1 ? "" : "s"}`;
 					return {
 						...sub,
-						prepaidBalance: `${updatedNum} ${sub.currency}`,
+						prepaidBalance: updatedNum,
 						coverage: coverageStr,
 					};
 				}),
@@ -847,8 +848,8 @@ export default function Subscriptions() {
 
 				<div style={{ marginTop: "1.5rem" }}>
 					<PrepaidBalanceCard
-						balance={parseFloat(selectedSub.prepaidBalance) || 0}
-						maxBalance={Math.max(parseFloat(selectedSub.prepaidBalance) || 0, selectedSub.price * 3, 30)}
+						balance={selectedSub.prepaidBalance || 0}
+						maxBalance={Math.max(selectedSub.prepaidBalance || 0, selectedSub.price * 3, 30)}
 						paymentAmount={selectedSub.price}
 						onTopUp={() => setIsTopUpModalOpen(true)}
 					/>
@@ -868,7 +869,7 @@ export default function Subscriptions() {
 					onClose={() => setIsTopUpModalOpen(false)}
 					planName={selectedSub.planName}
 					planPrice={selectedSub.price}
-					currentBalance={parseFloat(selectedSub.prepaidBalance) || 0}
+					currentBalance={selectedSub.prepaidBalance || 0}
 					walletBalance={150}
 					currency={selectedSub.currency}
 					onConfirm={handleTopUpConfirm}
@@ -892,7 +893,7 @@ export default function Subscriptions() {
 					onConfirm={handleCancelConfirm}
 					onOfferSelected={handleOfferSelected}
 					isLoading={isActionLoading}
-					balance={formatAmount(selectedSub.prepaidBalance)}
+					balance={formatAmount(selectedSub.prepaidBalance).number}
 					endDate={selectedSub.nextCharge || "N/A"}
 					error={cancelError}
 				/>
@@ -1060,7 +1061,7 @@ export default function Subscriptions() {
 									<td>
 											<span className="subs-table__meta-cell">
 												<IconWallet />
-												{formatAmount(sub.prepaidBalance)} {sub.currency}
+												{formatAmount(sub.prepaidBalance).number} {sub.currency}
 											</span>
 									</td>
 
@@ -1088,7 +1089,10 @@ export default function Subscriptions() {
 					{/* ── Mobile cards ──────────────────────────────────── */}
 					{/* FLIP container for mobile card stack */}
 					<div
-						ref={cardsContainerRef as React.RefObject<HTMLDivElement>}
+						ref={(el: HTMLDivElement | null) => {
+							(cardsContainerRef as React.MutableRefObject<HTMLElement | null>).current = el;
+							refreshContainerRef.current = el;
+						}}
 						className="subs-cards"
 						aria-label="Subscriptions"
 						data-testid="subscriptions-cards"
@@ -1214,7 +1218,7 @@ export default function Subscriptions() {
 									<div className="subs-card__meta">
 										<div className="subs-card__meta-item">
 											<span className="subs-card__meta-label">{t('subscriptions.table.prepaid')}</span>
-											<span className="subs-card__meta-value">{formatAmount(sub.prepaidBalance)} {sub.currency}</span>
+											<span className="subs-card__meta-value">{formatAmount(sub.prepaidBalance).number} {sub.currency}</span>
 										</div>
 										<div className="subs-card__meta-item">
 											<span className="subs-card__meta-label">{t('subscriptions.table.coverage')}</span>

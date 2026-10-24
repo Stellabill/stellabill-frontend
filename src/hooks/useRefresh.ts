@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface UseRefreshOptions {
-  onRefresh: () => Promise<void> | promise<void>;
+  onRefresh: () => Promise<void> | void;
   threshold?: number;
   resistance?: number;
 }
@@ -22,7 +22,6 @@ export function useRefresh({
   const thresholdRef = useRef(threshold);
   const resistanceRef = useRef(resistance);
   const isRefreshingRef = useRef(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const prefersReducedMotionRef = useRef(false);
 
   useEffect(() => {
@@ -43,11 +42,9 @@ export function useRefresh({
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(mediaQuery.matches);
     prefersReducedMotionRef.current = mediaQuery.matches;
 
     const handler = (e: MediaQueryListEvent) => {
-      setPrefersReducedMotion(e.matches);
       prefersReducedMotionRef.current = e.matches;
     };
     // Use modern event listener
@@ -70,7 +67,7 @@ export function useRefresh({
   }, []);
 
   const onTouchMove = useCallback((e: React.TouchEvent | TouchEvent) => {
-    if (!isPulling.curent || isRefreshingRef.current) return;
+    if (!isPulling.current || isRefreshingRef.current) return;
 
     const target = e.currentTarget as HTMLElement;
     if (target.scrollTop > 0) {
@@ -150,17 +147,20 @@ export function useRefresh({
   }, []);
 
   // Attach touchmove natively with { passive: false } so preventDefault works.
+  // Runs after every render so a container that mounts later (or changes) is picked up.
+  const attachedElRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (el === attachedElRef.current) return;
+    attachedElRef.current?.removeEventListener('touchmove', onTouchMove as EventListener);
+    el?.addEventListener('touchmove', onTouchMove as EventListener, { passive: false });
+    attachedElRef.current = el;
+  });
 
-    const handleTouchMove = (e: TouchEvent) => {
-      onTouchMove(e);
-    };
-
-    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+  useEffect(() => {
     return () => {
-      el.removeEventListener('touchmove', handleTouchMove);
+      attachedElRef.current?.removeEventListener('touchmove', onTouchMove as EventListener);
+      attachedElRef.current = null;
     };
   }, [onTouchMove]);
 

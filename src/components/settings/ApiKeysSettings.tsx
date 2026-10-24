@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Key, Plus, Copy, RotateCcw, Trash2, AlertTriangle, Shield, Calendar, User, Check } from 'lucide-react'
 import { defaultGenerateApiKey, maskApiKey } from '../../utils/apiKey'
 
@@ -63,10 +63,32 @@ export default function ApiKeysSettings({
   } | null>(null)
   const [copiedSecret, setCopiedSecret] = useState(false)
 
-  const copyToClipboard = (text: string) => {
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(text)
+  const [copyFeedback, setCopyFeedback] = useState<{ keyId: string; success: boolean } | null>(null)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const revokeTriggerRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const revokeConfirmInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
     }
+  }, [])
+
+  const copyToClipboard = (text: string): boolean => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {})
+      return true
+    }
+    return false
+  }
+
+  const handleCopyKey = (keyId: string, text: string) => {
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    setCopyFeedback({ keyId, success: copyToClipboard(text) })
+    copyTimerRef.current = setTimeout(() => {
+      setCopyFeedback(null)
+      copyTimerRef.current = null
+    }, 2000)
   }
 
   const resetCreateForm = () => {
@@ -309,7 +331,7 @@ export default function ApiKeysSettings({
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
                     <button
-                      onClick={() => copyToClipboard(key.key)}
+                      onClick={() => handleCopyKey(key.id, key.key)}
                       style={{
                         background: 'transparent',
                         border: 'none',
@@ -740,7 +762,7 @@ export default function ApiKeysSettings({
             </div>
           </div>
         </div>
-      </Modal>
+      )}
 
       {/* Revoke Confirmation Modal */}
       {showRevokeConfirmation && keyToRevoke && (
@@ -878,8 +900,8 @@ export default function ApiKeysSettings({
               </button>
             </div>
           </div>
-        )}
-      </Modal>
+        </div>
+      )}
     </div>
   )
 }

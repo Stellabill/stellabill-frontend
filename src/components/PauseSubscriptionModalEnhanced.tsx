@@ -48,13 +48,13 @@ export default function PauseSubscriptionModalEnhanced({
     {
       label: '1 month',
       value: () => {
-        return addBillingInterval(new Date(), 'month', 1);
+        return addBillingInterval(new Date(), 'monthly', 1);
       }
     },
     {
       label: '3 months',
       value: () => {
-        return addBillingInterval(new Date(), 'month', 3);
+        return addBillingInterval(new Date(), 'monthly', 3);
       }
     }
   ];
@@ -236,8 +236,8 @@ export default function PauseSubscriptionModalEnhanced({
         </div>
 
         {/* Accessibility info */}
-        <div className="modal-a1y-info">
-          <p className="a1y-info-text">
+        <div className="modal-a11y-info">
+          <p className="a11y-info-text">
             This modal supports keyboard navigation. Press Tab to move between options, Enter to select, and Escape to close.
           </p>
         </div>

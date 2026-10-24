@@ -148,7 +148,8 @@ export async function api<T>(path: string, options?: ApiRequestOptions): Promise
 
 export const subscriptions = {
   list: () => api<{ subscriptions: Subscription[] }>('/subscriptions'),
-  get: (id: string) => api<Subscription>(`/subscriptions/${id}`),
+  get: (id: string, options?: ApiRequestOptions) =>
+    api<Subscription>(`/subscriptions/${encodeURIComponent(id)}`, options),
   pause: (id: string) => {
     // Simulating API call for development/demonstration
     return new Promise((resolve, reject) => {
@@ -206,6 +207,16 @@ export const subscriptions = {
   },
 }
 
+export interface CreatePlanPayload {
+  usage_enabled: boolean;
+  trial_period_days: number;
+  price: number;
+  price_type: string;
+  interval: string;
+}
+
 export const plans = {
   list: () => api<{ plans: unknown[] }>('/plans'),
+  create: (payload: CreatePlanPayload) =>
+    api<unknown>('/plans', { method: 'POST', body: JSON.stringify(payload) }),
 }
