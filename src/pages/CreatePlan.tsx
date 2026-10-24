@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import PricingSection, { validatePricing, type PricingSectionValue } from '../components/PricingSection'
@@ -9,7 +9,7 @@ import AutosaveIndicator from '../components/AutosaveIndicator'
 import AutosaveHistory from '../components/AutosaveHistory'
 import { useAutosave, type AutosaveEntry } from '../hooks/useAutosave'
 import { useDraftManager } from '../hooks/useDraftManager'
-import { usePageTitle } from '../hooks/usePageTitle'
+import { plans } from '../api/client'
 import styles from './CreatePlan.module.css'
 
 const AUTOSAVE_KEY = 'stellabill-create-plan'
@@ -46,6 +46,13 @@ function deserialiseForm(entry: AutosaveEntry): {
     // Malformed data — ignore.
   }
   return null
+}
+
+function errorMessageOf(err: unknown): { message: string; technicalDetails?: string } {
+  if (err instanceof Error) {
+    return { message: err.message || 'Failed to create plan.', technicalDetails: err.stack }
+  }
+  return { message: 'Failed to create plan.', technicalDetails: String(err) }
 }
 
 export default function CreatePlan() {
@@ -91,6 +98,9 @@ export default function CreatePlan() {
   const [errors, setErrors] = useState<{ priceError?: string; intervalError?: string }>({})
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<{ message: string; technicalDetails?: string } | null>(null)
+  const submittingRef = useRef(false)
 
   // Load draft if query param present or re-sync
   useEffect(() => {
@@ -226,8 +236,10 @@ export default function CreatePlan() {
 
   // ── Submit ──────────────────────────────────────────────────────────────
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (submittingRef.current) return
+
     const nextErrors = validatePricing(pricing)
     setErrors(nextErrors)
     if (nextErrors.priceError || nextErrors.intervalError) {
@@ -241,9 +253,23 @@ export default function CreatePlan() {
       price_type: pricing.priceType,
       interval: pricing.interval,
     }
-    console.log('Create plan payload:', payload)
-    clearHistory()
-    localStorage.removeItem(AUTOSAVE_KEY)
+
+    submittingRef.current = true
+    setIsSubmitting(true)
+    setSubmitError(null)
+    try {
+      await plans.create(payload)
+      clearHistory()
+      localStorage.removeItem(AUTOSAVE_KEY)
+      navigate('/plans', {
+        state: { toast: { type: 'success', message: 'Plan created successfully.' } },
+      })
+    } catch (err) {
+      setSubmitError(errorMessageOf(err))
+    } finally {
+      submittingRef.current = false
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -312,6 +338,26 @@ export default function CreatePlan() {
           />
         </div>
 
+        {submitError && (
+          <div role="alert" style={{
+            padding: '0.75rem 1rem',
+            marginBottom: '1rem',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '8px',
+            color: '#f87171',
+            fontSize: '0.875rem',
+          }}>
+            <div style={{ fontWeight: 600 }}>{submitError.message}</div>
+            {submitError.technicalDetails && (
+              <details style={{ marginTop: '0.5rem' }}>
+                <summary>Technical details</summary>
+                <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}>{submitError.technicalDetails}</pre>
+              </details>
+            )}
+          </div>
+        )}
+
         <div
           style={{
             display: 'flex',
@@ -320,80 +366,19 @@ export default function CreatePlan() {
             flexWrap: 'wrap',
           }}
         >
-          <button
-            type="submit"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.6rem',
-              background: 'linear-gradient(135deg, #38bcd4 0%, #4dd8e1 100%)',
-              border: 'none',
-              borderRadius: '8px',
-              color: '#000',
-              fontSize: '0.925rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.88'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1'
-            }}
-          >
-            <svg
-              width="17"
-              height="17"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-            </svg>
-            Create plan
-          </button>
-
-          <button
-            type="button"
-            onClick={handleCancel}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              padding: '0.75rem 1.6rem',
-              background: 'none',
-              border: '1px solid #3a3a3a',
-              borderRadius: '8px',
-              color: '#e2e8f0',
-              fontSize: '0.925rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#555'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#3a3a3a'
-            }}
-          >
-            Cancel
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating…' : 'Create plan'}
           </button>
         </div>
       </form>
 
-      <ExitConfirmModal
-        isOpen={showExitConfirm}
-        onSaveDraft={handleExitSaveDraft}
-        onDiscard={handleExitDiscard}
-        onKeepEditing={handleKeepEditing}
-      />
+      {showExitConfirm && (
+        <ExitConfirmModal
+          onSaveDraft={handleExitSaveDraft}
+          onDiscard={handleExitDiscard}
+          onKeepEditing={handleKeepEditing}
+        />
+      )}
     </div>
   )
 }
