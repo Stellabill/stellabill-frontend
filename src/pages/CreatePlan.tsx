@@ -56,6 +56,7 @@ function errorMessageOf(err: unknown): { message: string; technicalDetails?: str
 }
 
 export default function CreatePlan() {
+  usePageTitle('Create Plan')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { getDraftById } = useDraftManager()

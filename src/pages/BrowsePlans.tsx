@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePageTitle } from '../hooks/usePageTitle';
 import type { ApiError } from "../api/client";
 import WalletConnectModal from "../components/WalletConnectModal";
 import { useWallet } from "../wallet/WalletContext";
@@ -372,6 +373,7 @@ boxShadow: isHovered
 }
 
 export default function BrowsePlans() {
+  usePageTitle('Browse Plans');
 	const navigate = useNavigate();
 	const [plans, setPlans] = useState<Plan[]>([]);
 	const [loading, setLoading] = useState(true);

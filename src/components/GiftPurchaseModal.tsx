@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, type ChangeEvent } from "react";
 import { useModalFocus } from "../hooks/useModalFocus";
 import { X, Gift, ArrowRight, ArrowLeft, Check, Copy, Share2, Mail, MessageSquare, Link as LinkIcon, Loader2 } from "lucide-react";
 import { copyToClipboard } from "../utils/clipboard";
+import { generateGiftCode } from "../utils/giftCode";
 import "./GiftPurchaseModal.css";
 
 export interface Plan {
@@ -132,8 +133,7 @@ export default function GiftPurchaseModal({
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Generate mock gift code
-      const code = `GIFT-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const code = generateGiftCode();
       setGiftCode(code);
       setStep("complete");
 

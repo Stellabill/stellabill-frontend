@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { usePageTitle } from '../hooks/usePageTitle';
 import Logo from '../components/Branding/Logo';
 import Icon from '../components/Branding/Icon';
 import { EmptyDashboard, NoTransactions } from '../components/Branding/Illustrations';
@@ -25,6 +26,7 @@ type UploadState = 'idle' | 'processing' | 'ready' | 'error';
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const BrandPack: React.FC = () => {
+  usePageTitle('Brand Pack');
   const colors = [
     { name: 'Cyan (Primary)', hex: '#22d3ee', bg: 'bg-cyan-400' },
     { name: 'Emerald (Primary)', hex: '#14b8a6', bg: 'bg-teal-500' },
