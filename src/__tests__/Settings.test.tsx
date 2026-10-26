@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { describe, it, expect, beforeEach, vi} from 'vitest'
 import Settings from '../pages/Settings'
@@ -177,5 +177,49 @@ describe('Settings Navigation', () => {
       expect(screen.getByTestId('density-preview')).toBeInTheDocument()
       expect(screen.queryByTestId('organization-settings')).not.toBeInDocument()
     })
+  })
+})
+
+describe('Settings Tags tab', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  const openTags = () => {
+    renderWithRouter(<Settings />)
+    fireEvent.click(screen.getByRole('button', { name: /^tags/i }))
+    return screen.getByRole('table', { name: 'Manage tags' })
+  }
+
+  /** The "Label" column of every body row. */
+  const labelsIn = (table: HTMLElement) =>
+    within(table)
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => (row as HTMLTableRowElement).cells[1]?.textContent?.trim())
+
+  it('renders the tag manager with the seeded tags instead of crashing', () => {
+    const table = openTags()
+
+    expect(labelsIn(table)).toEqual(['Priority', 'Team', 'Trial'])
+  })
+
+  it('renames a tag and updates the list', () => {
+    const table = openTags()
+
+    fireEvent.click(within(table).getByRole('button', { name: 'Edit Team tag' }))
+    const input = within(table).getByRole('textbox', { name: 'Edit tag label' })
+    fireEvent.change(input, { target: { value: 'Core team' } })
+    fireEvent.click(within(table).getByRole('button', { name: 'Save changes' }))
+
+    expect(labelsIn(table)).toEqual(['Priority', 'Core team', 'Trial'])
+  })
+
+  it('deletes an unused tag and removes it from the list', () => {
+    const table = openTags()
+
+    fireEvent.click(within(table).getByRole('button', { name: 'Delete Trial tag' }))
+
+    expect(labelsIn(table)).toEqual(['Priority', 'Team'])
   })
 })
