@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import WalletPill from './WalletPill';
 
@@ -79,6 +80,7 @@ describe('WalletPill', () => {
       expect(openSpy).toHaveBeenCalledWith(
         `https://stellar.expert/explorer/testnet/account/${LONG_ADDRESS}`,
         '_blank',
+        'noopener,noreferrer',
       );
     });
 
@@ -99,6 +101,7 @@ describe('WalletPill', () => {
       expect(openSpy).toHaveBeenCalledWith(
         `https://stellar.expert/explorer/public/account/${LONG_ADDRESS}`,
         '_blank',
+        'noopener,noreferrer',
       );
     });
 

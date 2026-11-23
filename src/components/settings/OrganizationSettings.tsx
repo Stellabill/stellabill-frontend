@@ -87,10 +87,10 @@ export default function OrganizationSettings() {
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '0.5rem' }}>
+        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
           Organization Settings
         </h2>
-        <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>
+        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
           Manage your organization profile and team members
         </p>
       </div>
@@ -99,8 +99,8 @@ export default function OrganizationSettings() {
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Building2 size={20} style={{ color: '#67d5f0' }} />
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#e2e8f0' }}>
+            <Building2 size={20} style={{ color: 'var(--color-brand-primary)' }} />
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
               Profile Information
             </h3>
           </div>
@@ -112,9 +112,9 @@ export default function OrganizationSettings() {
               gap: '0.5rem',
               padding: '0.5rem 1rem',
               borderRadius: '6px',
-              border: isEditing ? 'none' : '1px solid #2d2d44',
-              background: isEditing ? '#ef4444' : 'transparent',
-              color: isEditing ? '#fff' : '#e2e8f0',
+              border: isEditing ? '1px solid var(--color-danger-border)' : '1px solid var(--color-border-default)',
+              background: isEditing ? 'var(--color-danger-bg)' : 'transparent',
+              color: isEditing ? 'var(--color-danger)' : 'var(--color-text-primary)',
               fontSize: '0.875rem',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -131,7 +131,7 @@ export default function OrganizationSettings() {
           </button>
         </div>
 
-        <div style={{ background: '#0a0a0a', borderRadius: '6px', padding: '1.5rem', border: '1px solid #2d2d44' }}>
+        <div style={{ background: 'var(--color-surface-card)', borderRadius: '6px', padding: '1.5rem', border: '1px solid var(--color-border-subtle)' }}>
           {/* Avatar Upload Section */}
           <div style={{
             display: 'flex',
@@ -139,7 +139,7 @@ export default function OrganizationSettings() {
             gap: '1.5rem',
             marginBottom: '1.5rem',
             paddingBottom: '1.5rem',
-            borderBottom: '1px solid #2d2d44',
+            borderBottom: '1px solid var(--color-border-subtle)',
           }}>
             <AvatarUploader
               currentSrc={orgAvatar}
@@ -149,10 +149,10 @@ export default function OrganizationSettings() {
               onRemove={handleAvatarRemove}
             />
             <div>
-              <div style={{ fontWeight: 600, color: '#e2e8f0', marginBottom: '0.25rem' }}>
+              <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
                 Organization Avatar
               </div>
-              <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.875rem', lineHeight: 1.5 }}>
+              <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.875rem', lineHeight: 1.5 }}>
                 {orgAvatar
                   ? 'Hover over the avatar to change or remove the photo.'
                   : 'Click or drag an image to upload. Recommended: Square, at least 200×200px.'
@@ -167,7 +167,7 @@ export default function OrganizationSettings() {
                 htmlFor="organization-name"
                 helpTitle="Organization name"
                 help={<p>This display name appears in customer-facing invoices, emails, and workspace headers.</p>}
-                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}
               >
                 Organization Name
               </FieldLabelWithHelp>
@@ -181,9 +181,9 @@ export default function OrganizationSettings() {
                   width: '100%',
                   padding: '0.75rem',
                   borderRadius: '4px',
-                  border: '1px solid #2d2d44',
-                  background: isEditing ? '#1a1a2e' : '#0f0f0f',
-                  color: '#e2e8f0',
+                  border: '1px solid var(--color-border-default)',
+                  background: isEditing ? 'var(--color-surface-control)' : 'var(--color-surface-subtle)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                   opacity: isEditing ? 1 : 0.7,
                 }}
@@ -195,7 +195,7 @@ export default function OrganizationSettings() {
                 htmlFor="organization-domain"
                 helpTitle="Domain"
                 help={<p>Use the primary company domain for workspace identity and future domain verification.</p>}
-                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}
               >
                 Domain
               </FieldLabelWithHelp>
@@ -209,9 +209,9 @@ export default function OrganizationSettings() {
                   width: '100%',
                   padding: '0.75rem',
                   borderRadius: '4px',
-                  border: '1px solid #2d2d44',
-                  background: isEditing ? '#1a1a2e' : '#0f0f0f',
-                  color: '#e2e8f0',
+                  border: '1px solid var(--color-border-default)',
+                  background: isEditing ? 'var(--color-surface-control)' : 'var(--color-surface-subtle)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                   opacity: isEditing ? 1 : 0.7,
                 }}
@@ -223,7 +223,7 @@ export default function OrganizationSettings() {
                 htmlFor="organization-contact-email"
                 helpTitle="Contact email"
                 help={<p>Operational notices and organization-level account messages are sent here.</p>}
-                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}
               >
                 Contact Email
               </FieldLabelWithHelp>
@@ -237,9 +237,9 @@ export default function OrganizationSettings() {
                   width: '100%',
                   padding: '0.75rem',
                   borderRadius: '4px',
-                  border: '1px solid #2d2d44',
-                  background: isEditing ? '#1a1a2e' : '#0f0f0f',
-                  color: '#e2e8f0',
+                  border: '1px solid var(--color-border-default)',
+                  background: isEditing ? 'var(--color-surface-control)' : 'var(--color-surface-subtle)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                   opacity: isEditing ? 1 : 0.7,
                 }}
@@ -251,7 +251,7 @@ export default function OrganizationSettings() {
                 htmlFor="organization-timezone"
                 helpTitle="Timezone"
                 help={<p>Controls date boundaries for reports, invoice schedules, and activity timestamps.</p>}
-                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}
               >
                 Timezone
               </FieldLabelWithHelp>
@@ -264,9 +264,9 @@ export default function OrganizationSettings() {
                   width: '100%',
                   padding: '0.75rem',
                   borderRadius: '4px',
-                  border: '1px solid #2d2d44',
-                  background: isEditing ? '#1a1a2e' : '#0f0f0f',
-                  color: '#e2e8f0',
+                  border: '1px solid var(--color-border-default)',
+                  background: isEditing ? 'var(--color-surface-control)' : 'var(--color-surface-subtle)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                   opacity: isEditing ? 1 : 0.7,
                 }}
@@ -284,7 +284,7 @@ export default function OrganizationSettings() {
                 htmlFor="organization-currency"
                 helpTitle="Currency"
                 help={<p>Sets the default reporting and invoice currency for new plans and billing summaries.</p>}
-                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}
               >
                 Currency
               </FieldLabelWithHelp>
@@ -297,9 +297,9 @@ export default function OrganizationSettings() {
                   width: '100%',
                   padding: '0.75rem',
                   borderRadius: '4px',
-                  border: '1px solid #2d2d44',
-                  background: isEditing ? '#1a1a2e' : '#0f0f0f',
-                  color: '#e2e8f0',
+                  border: '1px solid var(--color-border-default)',
+                  background: isEditing ? 'var(--color-surface-control)' : 'var(--color-surface-subtle)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                   opacity: isEditing ? 1 : 0.7,
                 }}
@@ -316,7 +316,7 @@ export default function OrganizationSettings() {
                 htmlFor="organization-language"
                 helpTitle="Language"
                 help={<p>Sets the default locale for customer-facing billing copy where localization is available.</p>}
-                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}
               >
                 Language
               </FieldLabelWithHelp>
@@ -329,9 +329,9 @@ export default function OrganizationSettings() {
                   width: '100%',
                   padding: '0.75rem',
                   borderRadius: '4px',
-                  border: '1px solid #2d2d44',
-                  background: isEditing ? '#1a1a2e' : '#0f0f0f',
-                  color: '#e2e8f0',
+                  border: '1px solid var(--color-border-default)',
+                  background: isEditing ? 'var(--color-surface-control)' : 'var(--color-surface-subtle)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                   opacity: isEditing ? 1 : 0.7,
                 }}
@@ -352,9 +352,9 @@ export default function OrganizationSettings() {
                 style={{
                   padding: '0.75rem 1.5rem',
                   borderRadius: '6px',
-                  border: '1px solid #2d2d44',
+                  border: '1px solid var(--color-border-default)',
                   background: 'transparent',
-                  color: '#94a3b8',
+                  color: 'var(--color-text-muted)',
                   fontSize: '0.875rem',
                   cursor: 'pointer',
                 }}
@@ -370,8 +370,8 @@ export default function OrganizationSettings() {
                   padding: '0.75rem 1.5rem',
                   borderRadius: '6px',
                   border: 'none',
-                  background: 'linear-gradient(135deg, #67d5f0, #5ce0b8)',
-                  color: '#fff',
+                  background: 'var(--color-brand-gradient)',
+                  color: 'var(--color-brand-on)',
                   fontSize: '0.875rem',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -389,11 +389,11 @@ export default function OrganizationSettings() {
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Users size={20} style={{ color: '#67d5f0' }} />
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#e2e8f0' }}>
+            <Users size={20} style={{ color: 'var(--color-brand-primary)' }} />
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
               Team Members
             </h3>
-            <span style={{ background: '#2d2d44', color: '#94a3b8', fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
+            <span style={{ background: 'var(--color-surface-subtle)', color: 'var(--color-text-muted)', fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
               {teamMembers.length} members
             </span>
           </div>
@@ -401,9 +401,9 @@ export default function OrganizationSettings() {
             style={{
               padding: '0.5rem 1rem',
               borderRadius: '6px',
-              border: '1px solid #2d2d44',
+              border: '1px solid var(--color-border-default)',
               background: 'transparent',
-              color: '#e2e8f0',
+              color: 'var(--color-text-primary)',
               fontSize: '0.875rem',
               cursor: 'pointer',
             }}
@@ -412,7 +412,7 @@ export default function OrganizationSettings() {
           </button>
         </div>
 
-        <div style={{ background: '#0a0a0a', borderRadius: '6px', border: '1px solid #2d2d44', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--color-surface-card)', borderRadius: '6px', border: '1px solid var(--color-border-subtle)', overflow: 'hidden' }}>
           {teamMembers.map((member, index) => (
             <div
               key={member.id}
@@ -421,16 +421,16 @@ export default function OrganizationSettings() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '1rem 1.5rem',
-                borderBottom: index < teamMembers.length - 1 ? '1px solid #2d2d44' : 'none',
+                borderBottom: index < teamMembers.length - 1 ? '1px solid var(--color-border-subtle)' : 'none',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <Avatar name={member.name} src={member.avatar} size="lg" />
                 <div>
-                  <div style={{ fontWeight: 500, color: '#e2e8f0', marginBottom: '0.25rem' }}>
+                  <div style={{ fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
                     {member.name}
                   </div>
-                  <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                     {member.email}
                   </div>
                 </div>
@@ -444,16 +444,27 @@ export default function OrganizationSettings() {
                     fontWeight: 500,
                     background:
                       member.role === 'admin'
-                        ? '#dc2626'
+                        ? 'var(--color-danger-bg)'
                         : member.role === 'member'
-                        ? '#2563eb'
-                        : '#64748b',
-                    color: '#fff',
+                        ? 'var(--color-info-bg)'
+                        : 'var(--color-surface-subtle)',
+                    border:
+                      member.role === 'admin'
+                        ? '1px solid var(--color-danger-border)'
+                        : member.role === 'member'
+                        ? '1px solid var(--color-info-border)'
+                        : '1px solid var(--color-border-default)',
+                    color:
+                      member.role === 'admin'
+                        ? 'var(--color-danger)'
+                        : member.role === 'member'
+                        ? 'var(--color-info)'
+                        : 'var(--color-text-muted)',
                   }}
                 >
                   {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
                 </span>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                   Joined {new Date(member.joinedAt).toLocaleDateString()}
                 </span>
               </div>

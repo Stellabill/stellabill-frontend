@@ -1,13 +1,24 @@
-import { useState, useId, useCallback } from 'react'
+import { useState, useId, useCallback, useEffect, useRef } from 'react'
 import { Send, Mail, Users, Edit3, Eye } from 'lucide-react'
+import { INVALID_EMAIL_MESSAGE, isValidInvitationEmail } from './invitationEmail'
 import './FamilyInvitationPreview.css'
 
 const NOTE_MAX_LENGTH = 200
 
+interface InvitationResult {
+  success: boolean
+  message?: string
+}
+
 interface FamilyInvitationPreviewProps {
   merchantName: string
   memberCount: number
-  onSendTest: (email: string) => void
+  onSendTest: (email: string) => InvitationResult | undefined
+}
+
+type SendStatus = {
+  type: 'success' | 'error'
+  message: string
 }
 
 interface FamilyMember {
@@ -39,12 +50,18 @@ export default function FamilyInvitationPreview({
   const previewTabId = useId()
   const noteId = useId()
   const testEmailId = useId()
+  const testStatusId = useId()
 
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
   const [note, setNote] = useState('')
   const [selectedMemberId, setSelectedMemberId] = useState(MOCK_MEMBERS[0]?.id ?? '')
   const [testEmail, setTestEmail] = useState('')
-  const [testSent, setTestSent] = useState(false)
+  const [sendStatus, setSendStatus] = useState<SendStatus | null>(null)
+  const statusTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (statusTimeout.current) clearTimeout(statusTimeout.current)
+  }, [])
 
   const selectedMember = MOCK_MEMBERS.find((m) => m.id === selectedMemberId) ?? MOCK_MEMBERS[0]
 
@@ -58,13 +75,29 @@ export default function FamilyInvitationPreview({
     }
   }, [])
 
+  const showStatus = useCallback((status: SendStatus) => {
+    if (statusTimeout.current) clearTimeout(statusTimeout.current)
+    setSendStatus(status)
+    statusTimeout.current = setTimeout(() => setSendStatus(null), 3000)
+  }, [])
+
   const handleSendTest = useCallback(() => {
     const email = testEmail.trim()
     if (!email) return
-    onSendTest(email)
-    setTestSent(true)
-    setTimeout(() => setTestSent(false), 3000)
-  }, [testEmail, onSendTest])
+    if (!isValidInvitationEmail(email)) {
+      showStatus({ type: 'error', message: INVALID_EMAIL_MESSAGE })
+      return
+    }
+    const result = onSendTest(email)
+    if (result?.success === false) {
+      showStatus({ type: 'error', message: result.message ?? 'Unable to send the invitation.' })
+      return
+    }
+    showStatus({
+      type: 'success',
+      message: result?.message ?? 'Test invitation sent to ' + email,
+    })
+  }, [testEmail, onSendTest, showStatus])
 
   const previewSubject = `You're invited to ${merchantName} family plan`
   const previewBody = resolveTokens(
@@ -171,6 +204,8 @@ export default function FamilyInvitationPreview({
                 value={testEmail}
                 onChange={(e) => setTestEmail(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSendTest() }}
+                aria-invalid={sendStatus?.type === 'error'}
+                aria-describedby={sendStatus ? testStatusId : undefined}
               />
               <button
                 type="button"
@@ -183,9 +218,14 @@ export default function FamilyInvitationPreview({
                 Send Test
               </button>
             </div>
-            {testSent && (
-              <div className="fip-test-sent" role="status" aria-live="polite">
-                Test invitation sent to {testEmail}
+            {sendStatus && (
+              <div
+                id={testStatusId}
+                className={sendStatus.type === 'error' ? 'fip-test-error' : 'fip-test-sent'}
+                role="status"
+                aria-live="polite"
+              >
+                {sendStatus.message}
               </div>
             )}
           </div>

@@ -1,7 +1,12 @@
 import { useRef, useState } from "react";
 import { useModalFocus } from "../hooks/useModalFocus";
 import { X, Gift, Calendar, DollarSign, Package, Loader2 } from "lucide-react";
-import type { GiftDetails } from "../utils/giftCode";
+import { gifts, type GiftRedeemResult } from "../api/client";
+import {
+  formatExpiredGiftMessage,
+  GIFT_ALREADY_REDEEMED_MESSAGE,
+  type GiftDetails,
+} from "../utils/giftCode";
 import "./RedeemConfirmModal.css";
 
 interface RedeemConfirmModalProps {
@@ -10,6 +15,7 @@ interface RedeemConfirmModalProps {
   giftDetails: GiftDetails;
   giftCode: string;
   onRedemptionComplete: () => void;
+  redeemGift?: (code: string) => Promise<GiftRedeemResult>;
 }
 
 export default function RedeemConfirmModal({
@@ -18,6 +24,7 @@ export default function RedeemConfirmModal({
   giftDetails,
   giftCode,
   onRedemptionComplete,
+  redeemGift = gifts.redeem,
 }: RedeemConfirmModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [isRedeeming, setIsRedeeming] = useState(false);
@@ -30,12 +37,23 @@ export default function RedeemConfirmModal({
     setError("");
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const result = await redeemGift(giftCode);
 
-      // On success, call the completion handler
-      onRedemptionComplete();
-    } catch (err) {
+      if (result.status === "ok") {
+        onRedemptionComplete();
+        return;
+      }
+
+      if (result.status === "already-redeemed") {
+        setError(GIFT_ALREADY_REDEEMED_MESSAGE);
+        return;
+      }
+
+      if (result.status === "expired") {
+        setError(formatExpiredGiftMessage(result.expiredOn ?? giftDetails.expiresOn));
+        return;
+      }
+    } catch {
       setError("Failed to redeem gift. Please try again.");
     } finally {
       setIsRedeeming(false);
