@@ -1,8 +1,25 @@
 import { render } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Shimmer from './Shimmer';
 
+function setReducedMotion(reduce: boolean) {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: reduce && query.includes('prefers-reduced-motion'),
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(() => false),
+  })) as unknown as typeof window.matchMedia;
+}
+
 describe('Shimmer', () => {
+  beforeEach(() => {
+    setReducedMotion(false);
+  });
+
   it('renders a decorative block by default', () => {
     const { container } = render(<Shimmer width="10rem" height="1rem" />);
     const el = container.firstChild as HTMLElement;
@@ -75,5 +92,14 @@ describe('Shimmer', () => {
     expect(el).toHaveAttribute('role', 'status');
     expect(el).toHaveAttribute('aria-label', 'Loading revenue chart');
     expect(el).not.toHaveAttribute('aria-hidden');
+  });
+
+  it('sets zero animation duration and disables animation when prefers-reduced-motion is enabled', () => {
+    setReducedMotion(true);
+    const { container } = render(<Shimmer duration="1.6s" />);
+    const el = container.firstChild as HTMLElement;
+
+    expect(el.style.getPropertyValue('--shimmer-duration')).toBe('0s');
+    expect(Number.parseFloat(el.style.animationDuration || '0')).toBe(0);
   });
 });

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import RevenueChart, { LineChart, SeriesData } from './RevenueChart';
 import { copyToClipboard } from '../utils/clipboard';
 
@@ -100,6 +101,9 @@ describe('RevenueChart — Basic Rendering with Multi-Series', () => {
     const summaryEl = document.getElementById('revenue-chart-summary-desc');
     expect(summaryEl).toBeInTheDocument();
     expect(summaryEl?.textContent).toContain('Total Revenue, Subscriptions, One-time Payments');
+    expect(summaryEl?.textContent).toContain('Highest revenue is $1,200');
+    expect(summaryEl?.textContent).toContain('Lowest revenue is $200');
+    expect(summaryEl?.textContent).toContain('Average revenue is $527');
   });
 });
 
@@ -575,6 +579,88 @@ describe('RevenueChart — Hidden Series Line & Point Rendering', () => {
 });
 
 describe('RevenueChart — Chart Point Keyboard & Tooltip Interactions', () => {
+  it('moves roving point focus with arrow keys and announces the active point', async () => {
+    const user = userEvent.setup();
+    render(<RevenueChart series={mockSeriesData} />);
+    const firstPoint = screen.getByRole('button', { name: /total revenue: jan 1/i });
+
+    firstPoint.focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /total revenue: jan 2/i }));
+    expect(screen.getByTestId('chart-live-region')).toHaveTextContent(/total revenue: jan 2, \$750/i);
+  });
+
+  it('moves between series and endpoints with ArrowUp, ArrowDown, Home, and End', async () => {
+    const user = userEvent.setup();
+    render(<RevenueChart series={mockSeriesData} />);
+    const firstPoint = screen.getByRole('button', { name: /total revenue: jan 1/i });
+
+    firstPoint.focus();
+    await user.keyboard('{ArrowDown}');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /subscriptions: jan 1/i }));
+
+    await user.keyboard('{End}');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /subscriptions: jan 5/i }));
+
+    await user.keyboard('{Home}{ArrowUp}');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /total revenue: jan 1/i }));
+  });
+
+  it('reverses horizontal arrow traversal in RTL contexts', async () => {
+    const user = userEvent.setup();
+    render(
+      <div dir="rtl">
+        <RevenueChart series={mockSeriesData} />
+      </div>,
+    );
+    const secondPoint = screen.getByRole('button', { name: /total revenue: jan 2/i });
+
+    secondPoint.focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /total revenue: jan 1/i }));
+  });
+
+  it('dismisses the focused tooltip with Escape', async () => {
+    const user = userEvent.setup();
+    render(<RevenueChart series={mockSeriesData} />);
+    const firstPoint = screen.getByRole('button', { name: /total revenue: jan 1/i });
+
+    firstPoint.focus();
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(document.activeElement).not.toBe(firstPoint);
+  });
+
+  it.each(['{Space}', '{Enter}'])('toggles a legend chip with %s and announces the new state', async (key) => {
+    const user = userEvent.setup();
+    render(<RevenueChart series={mockSeriesData} />);
+    const revenueChip = screen.getByRole('button', { name: /total revenue series, visible/i });
+
+    revenueChip.focus();
+    await user.keyboard(key);
+
+    expect(screen.getByRole('button', { name: /total revenue series, hidden/i })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('legend-live-region')).toHaveTextContent('Total Revenue series hidden');
+  });
+
+  it('restores a visible point as the roving tab stop when the focused series is hidden', async () => {
+    render(<RevenueChart series={mockSeriesData} />);
+    const focusedPoint = screen.getByRole('button', { name: /subscriptions: jan 1/i });
+
+    focusedPoint.focus();
+    fireEvent.click(screen.getByRole('button', { name: /subscriptions series, visible/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /total revenue: jan 1/i })).toHaveAttribute('tabindex', '0');
+    });
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
   it('navigates between data points with ArrowRight / ArrowLeft in same series', () => {
     render(<RevenueChart series={mockSeriesData} />);
     const points = screen.getAllByRole('button', { name: /\(Point \d+ of \d+\)/ });

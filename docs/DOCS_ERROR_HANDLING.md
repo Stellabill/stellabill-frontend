@@ -89,3 +89,37 @@ npm test src/components/ErrorState.test.tsx
 - **Loading state**: Verifies the button is disabled and shows "Retrying..." during active requests.
 - **Details toggle**: Checks that technical details can be expanded and collapsed.
 - **Offline detection**: Confirms that specific offline UI is shown when appropriate.
+
+## Global Error Reporting & Runtime Error Boundary Pipeline
+
+Location: `src/utils/errorReporter.ts`
+
+To make runtime failures visible without leaking sensitive wallet information, StellarBill routes all caught render errors, API failures, and uncaught browser errors through a centralized `reportError()` pipeline.
+
+### Features
+1. **Pluggable Adapters**:
+   - `noopErrorAdapter`: Default silent adapter in production when no external telemetry sink is configured.
+   - `consoleErrorAdapter`: Enabled automatically in development (`import.meta.env.DEV` in `src/main.tsx`) to log structured payloads to `console.error`.
+   - Custom adapters can be registered via `setErrorReporterAdapter(adapter)` to forward errors to services like Sentry, Datadog, or an internal ingestion endpoint.
+2. **Automatic Wallet Address PII Scrubbing**:
+   - `scrubPii()` and `scrubValue()` automatically redact Stellar public keys (`G...`), secret seeds (`S...`), Soroban contract IDs (`C...`), muxed accounts (`M...`), and hex wallet addresses (`0x...`) across error messages, stack traces, component stacks, routes, endpoints, and metadata before any adapter receives the payload.
+3. **End-to-End Integration**:
+   - **Route Error Boundary (`src/components/RouteErrorBoundary.tsx`)**: Calls `reportError(error, { source: 'boundary', route, componentStack })` inside `componentDidCatch`.
+   - **API Client (`src/api/client.ts`)**: Calls `reportError(apiError, { source: 'api', endpoint, method, status, metadata })` on HTTP, network, timeout, and simulated failures (excluding intentional caller-triggered `AbortSignal` cancellations).
+   - **Global Window Handlers (`src/main.tsx`)**: Calls `installGlobalErrorHandlers()` at startup to attach `window.onerror` and `unhandledrejection` listeners.
+
+### Configuring a Custom Adapter
+
+```typescript
+import { setErrorReporterAdapter, ErrorReporterAdapter } from '@/utils/errorReporter';
+
+const customTelemetryAdapter: ErrorReporterAdapter = {
+  report(payload) {
+    // payload is already scrubbed of wallet addresses and includes route context
+    navigator.sendBeacon('/telemetry/errors', JSON.stringify(payload));
+  },
+};
+
+setErrorReporterAdapter(customTelemetryAdapter);
+```
+
