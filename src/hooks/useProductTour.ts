@@ -4,6 +4,38 @@ const TOUR_STORAGE_KEY = 'sb:tour-completed';
 const TOUR_DISMISSED_KEY = 'sb:tour-dismissed';
 const TOUR_VERSION = '1.0'; // Increment to reset tour for all users
 
+function getStorage(): Storage | null {
+  try {
+    return window.localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function safeGetItem(key: string): string | null {
+  try {
+    return getStorage()?.getItem(key) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(key: string, value: string): void {
+  try {
+    getStorage()?.setItem(key, value);
+  } catch {
+    return;
+  }
+}
+
+function safeRemoveItem(key: string): void {
+  try {
+    getStorage()?.removeItem(key);
+  } catch {
+    return;
+  }
+}
+
 export interface TourState {
   isOpen: boolean;
   isCompleted: boolean;
@@ -17,15 +49,15 @@ export function useProductTour() {
 
   // Check if tour should be shown on mount
   useEffect(() => {
-    const completed = localStorage.getItem(TOUR_STORAGE_KEY);
-    const dismissed = localStorage.getItem(TOUR_DISMISSED_KEY);
-    const storedVersion = localStorage.getItem(`${TOUR_STORAGE_KEY}-version`);
+    const completed = safeGetItem(TOUR_STORAGE_KEY);
+    const dismissed = safeGetItem(TOUR_DISMISSED_KEY);
+    const storedVersion = safeGetItem(`${TOUR_STORAGE_KEY}-version`);
 
     // Reset tour if version has changed
     if (storedVersion !== TOUR_VERSION) {
-      localStorage.removeItem(TOUR_STORAGE_KEY);
-      localStorage.removeItem(TOUR_DISMISSED_KEY);
-      localStorage.setItem(`${TOUR_STORAGE_KEY}-version`, TOUR_VERSION);
+      safeRemoveItem(TOUR_STORAGE_KEY);
+      safeRemoveItem(TOUR_DISMISSED_KEY);
+      safeSetItem(`${TOUR_STORAGE_KEY}-version`, TOUR_VERSION);
     }
 
     // Show tour if not completed and not dismissed
@@ -46,17 +78,18 @@ export function useProductTour() {
   }, []);
 
   const completeTour = useCallback(() => {
-    localStorage.setItem(TOUR_STORAGE_KEY, 'true');
+    safeSetItem(TOUR_STORAGE_KEY, 'true');
     setShowCompletion(true);
   }, []);
 
   const dismissTour = useCallback(() => {
-    localStorage.setItem(TOUR_DISMISSED_KEY, 'true');
+    safeSetItem(TOUR_DISMISSED_KEY, 'true');
+    setIsOpen(false);
   }, []);
 
   const resetTour = useCallback(() => {
-    localStorage.removeItem(TOUR_STORAGE_KEY);
-    localStorage.removeItem(TOUR_DISMISSED_KEY);
+    safeRemoveItem(TOUR_STORAGE_KEY);
+    safeRemoveItem(TOUR_DISMISSED_KEY);
     setIsOpen(false);
     setShowCompletion(false);
   }, []);

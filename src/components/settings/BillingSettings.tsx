@@ -17,7 +17,7 @@ interface PaymentMethod {
   addedAt: string
 }
 
-interface BillingPreferences {
+export interface BillingPreferences {
   billingCycle: 'monthly' | 'yearly'
   autoPay: boolean
   emailInvoices: boolean
@@ -33,24 +33,13 @@ interface BillingPreferences {
   }
 }
 
+export type BillingPrefs = BillingPreferences
+
 export interface BillingSettingsProps {
-  subscriptionId?: string
-  initialStatus?: SubscriptionStatus
+  onSave?: (prefs: BillingPreferences) => Promise<void>
 }
 
-export default function BillingSettings({
-  subscriptionId = 'SUB-001',
-  initialStatus = 'Active',
-}: BillingSettingsProps = {}) {
-  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>(initialStatus)
-  const {
-    pendingAction,
-    isPending,
-    toasts,
-    removeToast,
-    cancel,
-  } = useSubscriptionActions()
-  const isCancelling = pendingAction === 'cancel'
+export default function BillingSettings({ onSave }: BillingSettingsProps = {}) {
   const [billingPrefs, setBillingPrefs] = useState<BillingPreferences>({
     billingCycle: 'monthly',
     autoPay: true,
@@ -89,14 +78,27 @@ export default function BillingSettings({
   ])
 
   const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [showAddPaymentMethod, setShowAddPaymentMethod] = useState(false)
   const [pendingRemovalId, setPendingRemovalId] = useState<string | null>(null)
   const [showCancelSubscription, setShowCancelSubscription] = useState(false)
 
   const pendingRemoval = paymentMethods.find((m) => m.id === pendingRemovalId) ?? null
 
-  const handleSave = () => {
-    setIsEditing(false)
+  const handleSave = async () => {
+    setIsSaving(true)
+    setSaveStatus(null)
+    try {
+      await onSave?.(billingPrefs)
+      setSaveStatus({ type: 'success', message: 'Saved' })
+      setIsEditing(false)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save billing preferences'
+      setSaveStatus({ type: 'error', message })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleSetDefaultPaymentMethod = (id: string) => {
@@ -131,10 +133,10 @@ export default function BillingSettings({
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '0.5rem' }}>
+        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
           Billing Settings
         </h2>
-        <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>
+        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
           Configure payment methods, billing cycles, and invoice preferences
         </p>
       </div>
@@ -143,19 +145,23 @@ export default function BillingSettings({
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <CreditCard size={20} style={{ color: '#67d5f0' }} />
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#e2e8f0' }}>
+            <CreditCard size={20} style={{ color: 'var(--color-brand-primary)' }} />
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
               Billing Preferences
             </h3>
           </div>
           <button
-            onClick={() => setIsEditing(!isEditing)}
+            onClick={() => {
+              setIsEditing(!isEditing)
+              setSaveStatus(null)
+            }}
+            disabled={isSaving}
             style={{
               padding: '0.5rem 1rem',
               borderRadius: '6px',
-              border: '1px solid #2d2d44',
+              border: '1px solid var(--color-border-default)',
               background: 'transparent',
-              color: '#e2e8f0',
+              color: 'var(--color-text-primary)',
               fontSize: '0.875rem',
               cursor: 'pointer',
             }}
@@ -164,14 +170,14 @@ export default function BillingSettings({
           </button>
         </div>
 
-        <div style={{ background: '#0a0a0a', borderRadius: '6px', padding: '1.5rem', border: '1px solid #2d2d44' }}>
+        <div style={{ background: 'var(--color-surface-card)', borderRadius: '6px', padding: '1.5rem', border: '1px solid var(--color-border-subtle)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             <div>
               <FieldLabelWithHelp
                 htmlFor="billing-cycle"
                 helpTitle="Billing cycle"
                 help={<p>Sets the default renewal cadence for this account. Yearly billing uses the annual discount shown in the menu.</p>}
-                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}
               >
                 Billing Cycle
               </FieldLabelWithHelp>
@@ -184,9 +190,9 @@ export default function BillingSettings({
                   width: '100%',
                   padding: '0.75rem',
                   borderRadius: '4px',
-                  border: '1px solid #2d2d44',
-                  background: isEditing ? '#1a1a2e' : '#0f0f0f',
-                  color: '#e2e8f0',
+                  border: '1px solid var(--color-border-default)',
+                  background: isEditing ? 'var(--color-surface-control)' : 'var(--color-surface-subtle)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                   opacity: isEditing ? 1 : 0.7,
                 }}
@@ -201,7 +207,7 @@ export default function BillingSettings({
                 htmlFor="invoice-email"
                 helpTitle="Invoice email"
                 help={<p>Invoices, receipts, and billing failure notices are sent to this address.</p>}
-                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}
               >
                 Invoice Email
               </FieldLabelWithHelp>
@@ -215,9 +221,9 @@ export default function BillingSettings({
                   width: '100%',
                   padding: '0.75rem',
                   borderRadius: '4px',
-                  border: '1px solid #2d2d44',
-                  background: isEditing ? '#1a1a2e' : '#0f0f0f',
-                  color: '#e2e8f0',
+                  border: '1px solid var(--color-border-default)',
+                  background: isEditing ? 'var(--color-surface-control)' : 'var(--color-surface-subtle)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                   opacity: isEditing ? 1 : 0.7,
                 }}
@@ -230,7 +236,7 @@ export default function BillingSettings({
                 optional
                 helpTitle="Tax ID"
                 help={<p>Add a business tax identifier when it needs to appear on invoices for accounting or compliance.</p>}
-                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}
+                style={{ display: 'inline-flex', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}
               >
                 Tax ID
               </FieldLabelWithHelp>
@@ -245,9 +251,9 @@ export default function BillingSettings({
                   width: '100%',
                   padding: '0.75rem',
                   borderRadius: '4px',
-                  border: '1px solid #2d2d44',
-                  background: isEditing ? '#1a1a2e' : '#0f0f0f',
-                  color: '#e2e8f0',
+                  border: '1px solid var(--color-border-default)',
+                  background: isEditing ? 'var(--color-surface-control)' : 'var(--color-surface-subtle)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                   opacity: isEditing ? 1 : 0.7,
                 }}
@@ -265,13 +271,13 @@ export default function BillingSettings({
                 style={{
                   width: '18px',
                   height: '18px',
-                  accentColor: '#67d5f0',
+                  accentColor: 'var(--color-brand-primary)',
                   cursor: isEditing ? 'pointer' : 'default',
                 }}
               />
               <div>
-                <div style={{ fontWeight: 500, color: '#e2e8f0' }}>Enable Auto-Pay</div>
-                <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                <div style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Enable Auto-Pay</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                   Automatically charge payment methods when invoices are due
                 </div>
               </div>
@@ -286,13 +292,13 @@ export default function BillingSettings({
                 style={{
                   width: '18px',
                   height: '18px',
-                  accentColor: '#67d5f0',
+                  accentColor: 'var(--color-brand-primary)',
                   cursor: isEditing ? 'pointer' : 'default',
                 }}
               />
               <div>
-                <div style={{ fontWeight: 500, color: '#e2e8f0' }}>Email Invoices</div>
-                <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                <div style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Email Invoices</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                   Send invoice copies to the billing email address
                 </div>
               </div>
@@ -303,20 +309,24 @@ export default function BillingSettings({
             <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button
                 onClick={() => setIsEditing(false)}
+                disabled={isSaving}
                 style={{
                   padding: '0.75rem 1.5rem',
                   borderRadius: '6px',
-                  border: '1px solid #2d2d44',
+                  border: '1px solid var(--color-border-default)',
                   background: 'transparent',
-                  color: '#94a3b8',
+                  color: 'var(--color-text-muted)',
                   fontSize: '0.875rem',
-                  cursor: 'pointer',
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  opacity: isSaving ? 0.6 : 1,
                 }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
+                disabled={isSaving}
+                aria-label="Save Changes"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -324,16 +334,31 @@ export default function BillingSettings({
                   padding: '0.75rem 1.5rem',
                   borderRadius: '6px',
                   border: 'none',
-                  background: 'linear-gradient(135deg, #67d5f0, #5ce0b8)',
-                  color: '#fff',
+                  background: 'var(--color-brand-gradient)',
+                  color: 'var(--color-brand-on)',
                   fontSize: '0.875rem',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  opacity: isSaving ? 0.6 : 1,
                 }}
               >
                 <Save size={16} />
-                Save Changes
+                {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
+            </div>
+          )}
+
+          {saveStatus && (
+            <div
+              role={saveStatus.type === 'error' ? 'alert' : 'status'}
+              style={{
+                marginTop: '1rem',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                color: saveStatus.type === 'error' ? '#ef4444' : '#10b981',
+              }}
+            >
+              {saveStatus.message}
             </div>
           )}
         </div>
@@ -343,11 +368,11 @@ export default function BillingSettings({
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <CreditCard size={20} style={{ color: '#67d5f0' }} />
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#e2e8f0' }}>
+            <CreditCard size={20} style={{ color: 'var(--color-brand-primary)' }} />
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
               Payment Methods
             </h3>
-            <span style={{ background: '#2d2d44', color: '#94a3b8', fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
+            <span style={{ background: 'var(--color-surface-subtle)', color: 'var(--color-text-muted)', fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
               {paymentMethods.length} methods
             </span>
           </div>
@@ -359,9 +384,9 @@ export default function BillingSettings({
               gap: '0.5rem',
               padding: '0.5rem 1rem',
               borderRadius: '6px',
-              border: '1px solid #2d2d44',
+              border: '1px solid var(--color-border-default)',
               background: 'transparent',
-              color: '#e2e8f0',
+              color: 'var(--color-text-primary)',
               fontSize: '0.875rem',
               cursor: 'pointer',
             }}
@@ -371,7 +396,7 @@ export default function BillingSettings({
           </button>
         </div>
 
-        <div style={{ background: '#0a0a0a', borderRadius: '6px', border: '1px solid #2d2d44', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--color-surface-card)', borderRadius: '6px', border: '1px solid var(--color-border-subtle)', overflow: 'hidden' }}>
           {paymentMethods.map((method, index) => (
             <div
               key={method.id}
@@ -380,7 +405,7 @@ export default function BillingSettings({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '1rem 1.5rem',
-                borderBottom: index < paymentMethods.length - 1 ? '1px solid #2d2d44' : 'none',
+                borderBottom: index < paymentMethods.length - 1 ? '1px solid var(--color-border-subtle)' : 'none',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -389,11 +414,27 @@ export default function BillingSettings({
                     width: '48px',
                     height: '32px',
                     borderRadius: '4px',
-                    background: method.brand === 'Visa' ? '#1a1f71' : method.brand === 'Mastercard' ? '#eb001b' : '#2d2d44',
+                    background:
+                      method.brand === 'Visa'
+                        ? 'var(--color-info-bg)'
+                        : method.brand === 'Mastercard'
+                        ? 'var(--color-danger-bg)'
+                        : 'var(--color-surface-subtle)',
+                    border:
+                      method.brand === 'Visa'
+                        ? '1px solid var(--color-info-border)'
+                        : method.brand === 'Mastercard'
+                        ? '1px solid var(--color-danger-border)'
+                        : '1px solid var(--color-border-default)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#fff',
+                    color:
+                      method.brand === 'Visa'
+                        ? 'var(--color-info)'
+                        : method.brand === 'Mastercard'
+                        ? 'var(--color-danger)'
+                        : 'var(--color-text-secondary)',
                     fontSize: '0.75rem',
                     fontWeight: 600,
                   }}
@@ -402,16 +443,16 @@ export default function BillingSettings({
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                    <span style={{ fontWeight: 500, color: '#e2e8f0' }}>
+                    <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
                       {method.brand} •••• {method.last4}
                     </span>
                     {method.isDefault && (
-                      <span style={{ background: '#10b981', color: '#fff', fontSize: '0.75rem', padding: '0.125rem 0.5rem', borderRadius: '4px', fontWeight: 500 }}>
+                      <span style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)', border: '1px solid var(--color-success-border)', fontSize: '0.75rem', padding: '0.125rem 0.5rem', borderRadius: '4px', fontWeight: 500 }}>
                         Default
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                     Expires {method.expiry} • Added {new Date(method.addedAt).toLocaleDateString()}
                   </div>
                 </div>
@@ -423,9 +464,9 @@ export default function BillingSettings({
                     style={{
                       padding: '0.375rem 0.75rem',
                       borderRadius: '4px',
-                      border: '1px solid #2d2d44',
+                      border: '1px solid var(--color-border-default)',
                       background: 'transparent',
-                      color: '#94a3b8',
+                      color: 'var(--color-text-muted)',
                       fontSize: '0.75rem',
                       cursor: 'pointer',
                     }}
@@ -442,9 +483,9 @@ export default function BillingSettings({
                     gap: '0.25rem',
                     padding: '0.375rem 0.75rem',
                     borderRadius: '4px',
-                    border: '1px solid #dc2626',
+                    border: '1px solid var(--color-danger-border)',
                     background: 'transparent',
-                    color: '#ef4444',
+                    color: 'var(--color-danger)',
                     fontSize: '0.75rem',
                     cursor: 'pointer',
                   }}
@@ -462,8 +503,8 @@ export default function BillingSettings({
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Download size={20} style={{ color: '#67d5f0' }} />
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#e2e8f0' }}>
+            <Download size={20} style={{ color: 'var(--color-brand-primary)' }} />
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
               Billing History
             </h3>
           </div>
@@ -474,9 +515,9 @@ export default function BillingSettings({
               gap: '0.5rem',
               padding: '0.5rem 1rem',
               borderRadius: '6px',
-              border: '1px solid #2d2d44',
+              border: '1px solid var(--color-border-default)',
               background: 'transparent',
-              color: '#e2e8f0',
+              color: 'var(--color-text-primary)',
               fontSize: '0.875rem',
               cursor: 'pointer',
             }}
@@ -486,10 +527,10 @@ export default function BillingSettings({
           </button>
         </div>
 
-        <div style={{ background: '#0a0a0a', borderRadius: '6px', border: '1px solid #2d2d44', padding: '1rem' }}>
+        <div style={{ background: 'var(--color-surface-card)', borderRadius: '6px', border: '1px solid var(--color-border-subtle)', padding: '1rem' }}>
           <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <div style={{ color: '#64748b', marginBottom: '0.5rem' }}>No billing history available</div>
-            <div style={{ fontSize: '0.875rem', color: '#475569' }}>
+            <div style={{ color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>No billing history available</div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--color-text-subtle)' }}>
               Your invoices and payment history will appear here
             </div>
           </div>
@@ -562,26 +603,26 @@ export default function BillingSettings({
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
+          background: 'var(--color-surface-overlay)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
         }}>
           <div style={{
-            background: '#1a1a2e',
+            background: 'var(--color-surface-elevated)',
             borderRadius: '8px',
             padding: '2rem',
             maxWidth: '500px',
             width: '90%',
-            border: '1px solid #2d2d44',
+            border: '1px solid var(--color-border-default)',
           }}>
-            <h3 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0' }}>
+            <h3 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
               Add Payment Method
             </h3>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                 Card Number
               </label>
               <input
@@ -591,9 +632,9 @@ export default function BillingSettings({
                   width: '100%',
                   padding: '0.75rem',
                   borderRadius: '4px',
-                  border: '1px solid #2d2d44',
-                  background: '#0a0a0a',
-                  color: '#e2e8f0',
+                  border: '1px solid var(--color-border-default)',
+                  background: 'var(--color-surface-control)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                 }}
               />
@@ -601,7 +642,7 @@ export default function BillingSettings({
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                   Expiry Date
                 </label>
                 <input
@@ -611,15 +652,15 @@ export default function BillingSettings({
                     width: '100%',
                     padding: '0.75rem',
                     borderRadius: '4px',
-                    border: '1px solid #2d2d44',
-                    background: '#0a0a0a',
-                    color: '#e2e8f0',
+                    border: '1px solid var(--color-border-default)',
+                    background: 'var(--color-surface-control)',
+                    color: 'var(--color-text-primary)',
                     fontSize: '0.875rem',
                   }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                   CVC
                 </label>
                 <input
@@ -629,9 +670,9 @@ export default function BillingSettings({
                     width: '100%',
                     padding: '0.75rem',
                     borderRadius: '4px',
-                    border: '1px solid #2d2d44',
-                    background: '#0a0a0a',
-                    color: '#e2e8f0',
+                    border: '1px solid var(--color-border-default)',
+                    background: 'var(--color-surface-control)',
+                    color: 'var(--color-text-primary)',
                     fontSize: '0.875rem',
                   }}
                 />
@@ -639,7 +680,7 @@ export default function BillingSettings({
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                 Cardholder Name
               </label>
               <input
@@ -649,9 +690,9 @@ export default function BillingSettings({
                   width: '100%',
                   padding: '0.75rem',
                   borderRadius: '4px',
-                  border: '1px solid #2d2d44',
-                  background: '#0a0a0a',
-                  color: '#e2e8f0',
+                  border: '1px solid var(--color-border-default)',
+                  background: 'var(--color-surface-control)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                 }}
               />
@@ -663,9 +704,9 @@ export default function BillingSettings({
                 style={{
                   padding: '0.75rem 1.5rem',
                   borderRadius: '6px',
-                  border: '1px solid #2d2d44',
+                  border: '1px solid var(--color-border-default)',
                   background: 'transparent',
-                  color: '#94a3b8',
+                  color: 'var(--color-text-muted)',
                   fontSize: '0.875rem',
                   cursor: 'pointer',
                 }}
@@ -681,8 +722,8 @@ export default function BillingSettings({
                   padding: '0.75rem 1.5rem',
                   borderRadius: '6px',
                   border: 'none',
-                  background: 'linear-gradient(135deg, #67d5f0, #5ce0b8)',
-                  color: '#fff',
+                  background: 'var(--color-brand-gradient)',
+                  color: 'var(--color-brand-on)',
                   fontSize: '0.875rem',
                   fontWeight: 600,
                   cursor: 'pointer',

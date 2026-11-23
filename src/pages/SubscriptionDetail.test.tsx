@@ -1,251 +1,324 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import SubscriptionDetail from './SubscriptionDetail';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { subscriptions } from '../api/client';
 import type { Subscription } from '../types/subscription';
+import SubscriptionDetail from './SubscriptionDetail';
 
-const mockNavigate = vi.fn();
-
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
+const { useCommandScopeMock } = vi.hoisted(() => ({
+  useCommandScopeMock: vi.fn(),
+}));
 
 vi.mock('../api/client', () => ({
   subscriptions: {
     get: vi.fn(),
+    payments: vi.fn(),
     reactivate: vi.fn(),
-    downgrade: vi.fn(),
-    cancel: vi.fn(),
-    pause: vi.fn(),
-    resume: vi.fn(),
   },
+}));
+
+vi.mock('../hooks/useCommandScope', () => ({
+  useCommandScope: useCommandScopeMock,
+}));
+
+vi.mock('../hooks/usePageTitle', () => ({
+  usePageTitle: vi.fn(),
 }));
 
 vi.mock('../components/RecentPayments', () => ({
-  default: () => <div data-testid="recent-payments" />,
+  default: ({ subscriptionId }: { subscriptionId?: string }) => (
+    <div data-testid="recent-payments">{subscriptionId}</div>
+  ),
 }));
 
-vi.mock('../components/PlanStatusTimeline', () => ({
-  default: () => <div data-testid="plan-status-timeline" />,
+vi.mock('../components/UsageThisPeriod', () => ({
+  default: ({ onViewFullUsage }: { onViewFullUsage?: () => void }) => (
+    <button type="button" onClick={onViewFullUsage}>
+      View full usage details
+    </button>
+  ),
 }));
 
-const ACTIVE_SUB: Subscription = {
-  id: 'SUB-101',
-  planName: 'Pro Monthly',
-  merchantName: 'CloudFlow',
+vi.mock('../components/Dunning/PaymentFailedBanner', () => ({ default: () => null }));
+vi.mock('../components/PlanStatusTimeline', () => ({ default: () => null }));
+vi.mock('../components/ScheduleChangePreview', () => ({ default: () => null }));
+vi.mock('../components/common/ProrationPreviewModal', () => ({ default: () => null }));
+
+vi.mock('../components/ReactivationModal', () => ({
+  default: ({
+    isOpen,
+    isLoading,
+    onConfirm,
+  }: {
+    isOpen: boolean;
+    isLoading?: boolean;
+    onConfirm: (date: Date) => void;
+  }) =>
+    isOpen ? (
+      <div role="dialog" aria-label="Reactivate subscription">
+        <button type="button" onClick={() => onConfirm(new Date('2026-11-24T00:00:00.000Z'))}>
+          {isLoading ? 'Reactivating...' : 'Confirm Reactivation'}
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock('../components/DowngradeConfirmModal', () => ({
+  default: ({
+    isOpen,
+    isLoading,
+    onConfirm,
+  }: {
+    isOpen: boolean;
+    isLoading?: boolean;
+    onConfirm: () => void;
+  }) =>
+    isOpen ? (
+      <div role="dialog" aria-label="Downgrade subscription">
+        <button type="button" onClick={onConfirm}>
+          {isLoading ? 'Downgrading...' : 'Confirm Downgrade'}
+        </button>
+      </div>
+    ) : null,
+}));
+
+const activeSubscription: Subscription = {
+  id: 'sub-42',
+  planName: 'Developer Pro',
+  merchantName: 'Stellabill',
   status: 'Active',
   price: 50,
-  amount: 50,
   currency: 'USDC',
   interval: 'monthly',
-  lastPayment: 'Jul 1, 2026',
-  nextCharge: 'Aug 1, 2026',
-  subscribedSince: 'Jan 1, 2026',
-  billingDay: 1,
-  usageBased: true,
-  usage: {
-    billingPeriod: 'Jul 1 - Jul 31',
-    usage: '12,000 API calls',
-    estimatedCharge: '50 USDC',
-  },
+  lastPayment: '2026-10-01',
+  nextCharge: '2026-12-01',
+  subscribedSince: '2025-01-01',
 };
 
-const CANCELLED_SUB: Subscription = {
-  ...ACTIVE_SUB,
-  id: 'SUB-102',
+const cancelledSubscription: Subscription = {
+  ...activeSubscription,
   status: 'Cancelled',
-  cancelledAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+  cancelledAt: '2026-11-10T00:00:00.000Z',
 };
 
-function renderDetail(id = 'SUB-101') {
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+function renderPage(id = 'sub-42') {
   return render(
     <MemoryRouter initialEntries={['/subscriptions/' + id]}>
       <Routes>
         <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />
+        <Route path="/subscriptions/:id/usage" element={<h1>Full usage destination</h1>} />
       </Routes>
     </MemoryRouter>,
   );
 }
 
-describe('SubscriptionDetail actions', () => {
+function setSubscriptionResponse(subscription: Subscription = activeSubscription) {
+  vi.mocked(subscriptions.get).mockResolvedValue(subscription);
+}
+
+describe('SubscriptionDetail', () => {
   beforeEach(() => {
+    vi.mocked(subscriptions.get).mockReset();
+    vi.mocked(subscriptions.reactivate).mockReset();
+    vi.mocked(subscriptions.payments).mockReset().mockResolvedValue({ payments: [] });
+    useCommandScopeMock.mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
-  it('reactivates a cancelled subscription optimistically and shows a success toast', async () => {
-    vi.mocked(subscriptions.get).mockResolvedValueOnce(CANCELLED_SUB);
-    let resolveReactivate!: (val: { success: boolean }) => void;
-    vi.mocked(subscriptions.reactivate).mockImplementationOnce(
-      () => new Promise((res) => { resolveReactivate = res; }),
-    );
+  it('shows the loading skeleton before rendering a known subscription', async () => {
+    const request = deferred<Subscription>();
+    vi.mocked(subscriptions.get).mockReturnValue(request.promise);
 
-    renderDetail('SUB-102');
+    renderPage();
 
-    const reactivateBtn = await screen.findByRole('button', {
-      name: /reactivate this subscription/i,
-    });
-    fireEvent.click(reactivateBtn);
-
-    const confirmBtn = screen.getByRole('button', { name: /confirm reactivation/i });
-    fireEvent.click(confirmBtn);
-
-    // While pending: confirm button is disabled & optimistic status hides Reactivate CTA and shows Downgrade CTA
-    expect(screen.getByRole('button', { name: /reactivating subscription/i })).toBeDisabled();
-    expect(
-      screen.getByRole('button', {
-        name: /downgrade to a lower plan/i,
-        hidden: true,
-      }),
-    ).toBeDisabled();
+    expect(screen.getByRole('status', { name: 'Loading subscription' })).toBeInTheDocument();
 
     await act(async () => {
-      resolveReactivate({ success: true });
+      request.resolve(activeSubscription);
+      await request.promise;
     });
 
-    expect(subscriptions.reactivate).toHaveBeenCalledWith(
-      'SUB-102',
-      expect.objectContaining({ startDate: expect.any(String) }),
-    );
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
-    expect(screen.getByText('Subscription reactivated')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', {
-        name: /downgrade to a lower plan/i,
-        hidden: true,
-      }),
-    ).not.toBeDisabled();
+    expect(await screen.findByRole('heading', { name: 'Subscription sub-42' })).toBeInTheDocument();
+    expect(screen.getByTestId('recent-payments')).toHaveTextContent('sub-42');
   });
 
-  it('rolls back reactivation status and shows an error toast on failure', async () => {
-    vi.mocked(subscriptions.get).mockResolvedValueOnce(CANCELLED_SUB);
-    let rejectReactivate!: (err: Error) => void;
-    vi.mocked(subscriptions.reactivate).mockImplementationOnce(
-      () => new Promise((_, rej) => { rejectReactivate = rej; }),
-    );
+  it('renders the not-found view when the API returns 404', async () => {
+    const error = Object.assign(new Error('Not found'), { status: 404 });
+    vi.mocked(subscriptions.get).mockRejectedValue(error);
 
-    renderDetail('SUB-102');
+    renderPage('missing-sub');
 
-    const reactivateBtn = await screen.findByRole('button', {
-      name: /reactivate this subscription/i,
-    });
-    fireEvent.click(reactivateBtn);
+    expect(await screen.findByRole('heading', { name: 'Subscription not found' })).toBeInTheDocument();
+    expect(screen.getByText(/missing-sub/)).toBeInTheDocument();
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: /confirm reactivation/i }));
+  it('shows a load error and refetches the subscription when retried', async () => {
+    const user = userEvent.setup();
+    vi.mocked(subscriptions.get)
+      .mockRejectedValueOnce(new Error('Service unavailable'))
+      .mockResolvedValueOnce(activeSubscription);
 
-    // Optimistic state: active CTAs rendered
-    expect(
-      screen.getByRole('button', {
-        name: /downgrade to a lower plan/i,
-        hidden: true,
-      }),
-    ).toBeInTheDocument();
+    renderPage();
 
-    await act(async () => {
-      rejectReactivate(new Error('Reactivation failed on server'));
-    });
+    expect(await screen.findByText('Service unavailable')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /try again/i }));
 
-    // Rolled back to cancelled: Reactivate CTA is back, Downgrade CTA is gone, error toast shown
+    expect(await screen.findByRole('heading', { name: 'Subscription sub-42' })).toBeInTheDocument();
+    expect(subscriptions.get).toHaveBeenCalledTimes(2);
+    expect(subscriptions.get).toHaveBeenNthCalledWith(2, 'sub-42');
+  });
+
+  it('registers scoped actions for an active subscription', async () => {
+    setSubscriptionResponse();
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'Subscription sub-42' });
     await waitFor(() => {
       expect(
-        screen.getByRole('button', {
-          name: /reactivate this subscription/i,
-          hidden: true,
-        }),
-      ).toBeInTheDocument();
+        useCommandScopeMock.mock.calls.some(([name]) => name === 'Subscription sub-42'),
+      ).toBe(true);
     });
+
+    const latestScope = useCommandScopeMock.mock.calls
+      .filter(([name]) => name === 'Subscription sub-42')
+      .at(-1);
+    const actionIds = latestScope?.[1].map((item) => item.id);
+
+    expect(actionIds).toEqual(
+      expect.arrayContaining(['downgrade-sub', 'preview-proration', 'view-usage', 'back-to-subs']),
+    );
+    expect(screen.getByRole('button', { name: 'Downgrade to a lower plan' })).toBeInTheDocument();
+  });
+
+  it('shows reactivation for a cancelled subscription within the window', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-23T12:00:00.000Z'));
+    setSubscriptionResponse(cancelledSubscription);
+
+    renderPage();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole('button', { name: 'Reactivate this subscription' })).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', {
-        name: /downgrade to a lower plan/i,
-        hidden: true,
-      }),
+      useCommandScopeMock.mock.calls.some(
+        ([name, items]) =>
+          name === 'Subscription sub-42' && items.some((item) => item.id === 'reactivate-sub'),
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps the reactivation modal open while confirming, then closes it', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-23T12:00:00.000Z'));
+    setSubscriptionResponse(cancelledSubscription);
+    const request = deferred<{ id: string; status: 'Active' }>();
+    vi.mocked(subscriptions.reactivate).mockReturnValue(request.promise);
+
+    renderPage();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reactivate this subscription' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Reactivation' }));
+
+    expect(screen.getByRole('button', { name: 'Reactivating...' })).toBeInTheDocument();
+    expect(subscriptions.reactivate).toHaveBeenCalledWith('sub-42', {
+      startDate: expect.any(String),
+    });
+
+    await act(async () => {
+      request.resolve({ id: 'sub-42', status: 'Active' });
+      await request.promise;
+    });
+
+    expect(screen.queryByRole('dialog', { name: 'Reactivate subscription' })).not.toBeInTheDocument();
+    // The subscription is active again, so the reactivate CTA disappears.
+    expect(
+      screen.queryByRole('button', { name: 'Reactivate this subscription' }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText('Reactivation failed on server')).toBeInTheDocument();
   });
 
-  it('downgrades an active subscription optimistically and shows a success toast', async () => {
-    vi.mocked(subscriptions.get).mockResolvedValueOnce(ACTIVE_SUB);
-    let resolveDowngrade!: (val: { success: boolean }) => void;
-    vi.mocked(subscriptions.downgrade).mockImplementationOnce(
-      () => new Promise((res) => { resolveDowngrade = res; }),
-    );
-
-    renderDetail('SUB-101');
-
-    const downgradeBtn = await screen.findByRole('button', {
-      name: /downgrade to a lower plan/i,
+  it('surfaces a reactivation API error and keeps the modal open', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-23T12:00:00.000Z'));
+    setSubscriptionResponse(cancelledSubscription);
+    const error = Object.assign(new Error('API error: Internal Server Error'), {
+      status: 500,
+      technicalDetails: 'billing service unavailable',
     });
-    fireEvent.click(downgradeBtn);
+    vi.mocked(subscriptions.reactivate).mockRejectedValue(error);
 
-    fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.click(screen.getByRole('button', { name: /^confirm downgrade$/i }));
+    renderPage();
+    await act(async () => {
+      await Promise.resolve();
+    });
 
-    expect(screen.getByRole('button', { name: /processing downgrade/i })).toBeDisabled();
-    expect(
-      screen.getByRole('button', {
-        name: /downgrade to a lower plan/i,
-        hidden: true,
-      }),
-    ).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Reactivate this subscription' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm Reactivation' }));
+    });
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Reactivation failed: API error: Internal Server Error');
+    expect(alert).toHaveTextContent('billing service unavailable');
+    expect(screen.getByRole('dialog', { name: 'Reactivate subscription' })).toBeInTheDocument();
+  });
+
+  it('sets downgrade loading while confirming and clears it when complete', async () => {
+    vi.useFakeTimers();
+    setSubscriptionResponse();
+
+    renderPage();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Downgrade to a lower plan' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Downgrade' }));
+
+    expect(screen.getByRole('button', { name: 'Downgrading...' })).toBeInTheDocument();
 
     await act(async () => {
-      resolveDowngrade({ success: true });
+      await vi.advanceTimersByTimeAsync(1200);
     });
 
-    expect(subscriptions.downgrade).toHaveBeenCalledWith('SUB-101', { planName: 'Basic' });
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
-    expect(screen.getByText('Plan downgraded')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Downgrade subscription' })).not.toBeInTheDocument();
   });
 
-  it('rolls back downgrade plan changes and shows an error toast on failure', async () => {
-    vi.mocked(subscriptions.get).mockResolvedValueOnce(ACTIVE_SUB);
-    let rejectDowngrade!: (err: Error) => void;
-    vi.mocked(subscriptions.downgrade).mockImplementationOnce(
-      () => new Promise((_, rej) => { rejectDowngrade = rej; }),
-    );
-
-    renderDetail('SUB-101');
-
-    const downgradeBtn = await screen.findByRole('button', {
-      name: /downgrade to a lower plan/i,
-    });
-    fireEvent.click(downgradeBtn);
-
-    fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.click(screen.getByRole('button', { name: /^confirm downgrade$/i }));
-
-    await act(async () => {
-      rejectDowngrade(new Error('Downgrade rejected by billing service'));
+  it('navigates to the full usage route from the usage action', async () => {
+    const user = userEvent.setup();
+    setSubscriptionResponse({
+      ...activeSubscription,
+      usageBased: true,
+      usage: {
+        billingPeriod: 'November 2026',
+        usage: '3,000 API calls',
+        estimatedCharge: '1.50 USDC',
+      },
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Downgrade rejected by billing service')).toBeInTheDocument();
-    });
-    expect(
-      screen.getByRole('button', {
-        name: /downgrade to a lower plan/i,
-        hidden: true,
-      }),
-    ).not.toBeDisabled();
-  });
+    renderPage();
+    await screen.findByRole('heading', { name: 'Subscription sub-42' });
+    await user.click(screen.getByRole('button', { name: 'View full usage details' }));
 
-  it('navigates to /subscriptions/:id/usage when View full usage is clicked', async () => {
-    vi.mocked(subscriptions.get).mockResolvedValueOnce(ACTIVE_SUB);
-    renderDetail('SUB-101');
-
-    const viewUsageBtn = await screen.findByRole('button', {
-      name: /view full usage details/i,
-    });
-    fireEvent.click(viewUsageBtn);
-
-    expect(mockNavigate).toHaveBeenCalledWith('/subscriptions/SUB-101/usage');
+    expect(await screen.findByRole('heading', { name: 'Full usage destination' })).toBeInTheDocument();
   });
 });

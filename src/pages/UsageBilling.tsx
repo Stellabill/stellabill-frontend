@@ -13,23 +13,14 @@ import './UsageBilling.css';
 import InvoiceList from "../components/InvoiceList";
 import PlanRecommendationBanner from "../components/PlanRecommendationBanner";
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useUsageData } from '../hooks/useUsageData';
+import ErrorState from '../components/ErrorState';
 import { getStatementView } from '../utils/statement';
 import type { StatementEntry, StatementEntryType } from '../utils/statement';
 
-
-interface UsageData {
-    planName: string;
-    billingPeriod: string;
-    usageCount: number;
-    usageLimit: number;
-    unit: string;
-    amount: string;
-    currency: string;
-}
-
 function UsageSkeleton() {
     return (
-        <div className="usage-billing-page" aria-busy="true" aria-label="Loading usage data">
+        <div className="usage-billing-page" role="status" aria-busy="true" aria-label="Loading usage data">
             <div className="skeleton skeleton-breadcrumb" />
             <div className="skeleton skeleton-heading" />
             <div className="skeleton skeleton-subheading" />
@@ -89,19 +80,19 @@ export default function UsageBilling() {
     usePageTitle('Usage & Billing');
     const { id } = useParams<{ id: string }>();
 
-    const isLoading = false;
-
-    const data: UsageData | null = {
-        planName: "Developer Pro",
-        billingPeriod: "Mar 1 – Mar 31, 2026",
-        usageCount: 32450,
-        usageLimit: 50000,
-        unit: "API calls",
-        amount: "16.23",
-        currency: "USDC",
-    };
+    const { data, isLoading, error } = useUsageData(id);
 
     if (isLoading) return <UsageSkeleton />;
+    if (error) {
+        return (
+            <div className="usage-billing-page">
+                <ErrorState
+                    title="Unable to load usage"
+                    message={error.message}
+                />
+            </div>
+        );
+    }
     if (!data || data.usageCount === 0) {
         return (
             <EmptyUsageState
@@ -330,7 +321,10 @@ export default function UsageBilling() {
                 <ReceiptPreview receipt={receipt} />
             </div>
 
-            <StatementOfAccount />
+            <StatementOfAccount
+                periodStart={data.currentPeriod.start}
+                periodEnd={data.currentPeriod.end}
+            />
 
             <PastPeriods />
         </div>
@@ -372,7 +366,7 @@ function fmtSigned(value: number, currency: string): string {
   return `+${abs} ${currency}`;
 }
 
-function StatementOfAccount() {
+function StatementOfAccount({ periodStart, periodEnd }: { periodStart: string; periodEnd: string }) {
   const headingId = useId();
 
   // Force light theme on the statement section so that PDF/print output
@@ -380,8 +374,8 @@ function StatementOfAccount() {
   const sectionRef = useScopedTheme<HTMLElement>('light');
 
   // ── Filters ──────────────────────────────────────────────────────────────
-  const [dateStart, setDateStart] = useState('2026-01-01');
-  const [dateEnd, setDateEnd] = useState('2026-12-31');
+  const [dateStart, setDateStart] = useState(periodStart);
+  const [dateEnd, setDateEnd] = useState(periodEnd);
   const [typeFilter, setTypeFilter] = useState<StatementEntryType | 'all'>('all');
   const [sortAsc, setSortAsc] = useState(true);
 

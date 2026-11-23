@@ -226,6 +226,40 @@ describe('FamilyInvitationPreview', () => {
     expect(onSendTest).toHaveBeenCalledWith('enter@test.com')
   })
 
+  it('rejects a malformed email before calling onSendTest', async () => {
+    const onSendTest = vi.fn()
+    renderPreview({ onSendTest })
+    const input = screen.getByPlaceholderText(/enter recipient email/i)
+    await userEvent.type(input, 'not-an-email')
+    await userEvent.click(screen.getByRole('button', { name: /send test/i }))
+    expect(onSendTest).not.toHaveBeenCalled()
+    expect(screen.getByText(/please enter a valid email address/i)).toBeInTheDocument()
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('shows the validation failure returned by onSendTest', async () => {
+    const onSendTest = vi.fn(() => ({
+      success: false,
+      message: 'This email is already a member of the family plan.',
+    }))
+    renderPreview({ onSendTest })
+    const input = screen.getByPlaceholderText(/enter recipient email/i)
+    await userEvent.type(input, 'taken@example.com')
+    await userEvent.click(screen.getByRole('button', { name: /send test/i }))
+    expect(onSendTest).toHaveBeenCalledWith('taken@example.com')
+    expect(screen.getByText(/already a member of the family plan/i)).toBeInTheDocument()
+    expect(screen.queryByText(/test invitation sent to/i)).not.toBeInTheDocument()
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('shows a success message supplied by onSendTest', async () => {
+    const onSendTest = vi.fn(() => ({ success: true, message: 'Invitation queued.' }))
+    renderPreview({ onSendTest })
+    await userEvent.type(screen.getByPlaceholderText(/enter recipient email/i), 'queued@example.com')
+    await userEvent.click(screen.getByRole('button', { name: /send test/i }))
+    expect(screen.getByText('Invitation queued.')).toBeInTheDocument()
+  })
+
   // ── Long merchant names ───────────────────────────────────────────────
 
   it('renders a very long merchant name without breaking layout', async () => {
@@ -270,6 +304,14 @@ describe('FamilyInvitationPreview', () => {
     const btn = screen.getByRole('button', { name: /send test/i })
     await userEvent.click(btn)
     const msg = screen.getByText(/test invitation sent to/i)
+    expect(msg.closest('[aria-live="polite"]')).toBeInTheDocument()
+  })
+
+  it('uses aria-live="polite" for validation failures', async () => {
+    renderPreview()
+    await userEvent.type(screen.getByPlaceholderText(/enter recipient email/i), 'bad-email')
+    await userEvent.click(screen.getByRole('button', { name: /send test/i }))
+    const msg = screen.getByText(/please enter a valid email address/i)
     expect(msg.closest('[aria-live="polite"]')).toBeInTheDocument()
   })
 

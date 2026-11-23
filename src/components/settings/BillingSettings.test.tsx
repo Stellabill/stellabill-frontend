@@ -1,89 +1,74 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import BillingSettings from './BillingSettings';
-import { subscriptions } from '../../api/client';
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, it, expect, vi } from 'vitest'
+import BillingSettings from './BillingSettings'
 
-vi.mock('../../api/client', () => ({
-  subscriptions: {
-    cancel: vi.fn(),
-    pause: vi.fn(),
-    resume: vi.fn(),
-    downgrade: vi.fn(),
-    reactivate: vi.fn(),
-  },
-}));
+describe('BillingSettings', () => {
+  it('calls onSave with current billing preferences and closes edit mode on success', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn().mockResolvedValue(undefined)
 
-describe('BillingSettings subscription cancellation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    render(<BillingSettings onSave={onSave} />)
 
-  it('cancels the subscription optimistically, disables buttons while pending, and shows a success toast', async () => {
-    let resolveCancel!: (val: { success: boolean }) => void;
-    vi.mocked(subscriptions.cancel).mockImplementationOnce(
-      () => new Promise((res) => { resolveCancel = res; }),
-    );
+    await user.click(screen.getByRole('button', { name: /edit/i }))
 
-    render(<BillingSettings subscriptionId="SUB-999" />);
+    const invoiceEmailInput = screen.getByLabelText(/^invoice email$/i)
+    await user.clear(invoiceEmailInput)
+    await user.type(invoiceEmailInput, 'finance@acme.com')
 
-    const triggerBtn = screen.getByRole('button', {
-      name: /cancel subscription: cancel subscription/i,
-    });
-    fireEvent.click(triggerBtn);
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
 
-    const dialog = screen.getByRole('alertdialog');
-    expect(dialog).toBeInTheDocument();
-
-    const confirmBtn = screen.getByRole('button', { name: /^cancel subscription$/i });
-    fireEvent.click(confirmBtn);
-
-    // While pending: dialog confirm button and danger zone trigger are disabled, optimistic status is Cancelled
-    expect(screen.getByRole('button', { name: /cancelling\.\.\./i })).toBeDisabled();
-    expect(triggerBtn).toBeDisabled();
-    expect(screen.getByText('Your subscription has been cancelled.')).toBeInTheDocument();
-
-    await act(async () => {
-      resolveCancel({ success: true });
-    });
-
-    expect(subscriptions.cancel).toHaveBeenCalledWith('SUB-999');
     await waitFor(() => {
-      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-    });
-    expect(screen.getAllByText('Subscription cancelled').length).toBeGreaterThanOrEqual(1);
-    expect(triggerBtn).toBeDisabled();
-  });
+      expect(onSave).toHaveBeenCalledTimes(1)
+    })
 
-  it('rolls back optimistic cancellation status and shows an error toast when API fails', async () => {
-    let rejectCancel!: (err: Error) => void;
-    vi.mocked(subscriptions.cancel).mockImplementationOnce(
-      () => new Promise((_, rej) => { rejectCancel = rej; }),
-    );
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        invoiceEmail: 'finance@acme.com',
+        billingCycle: 'monthly',
+      })
+    )
 
-    render(<BillingSettings subscriptionId="SUB-999" />);
+    expect(await screen.findByText(/saved/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /save changes/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument()
+  })
 
-    const triggerBtn = screen.getByRole('button', {
-      name: /cancel subscription: cancel subscription/i,
-    });
-    fireEvent.click(triggerBtn);
+  it('disables the Save button while saving is pending', async () => {
+    const user = userEvent.setup()
+    let resolveSave!: () => void
+    const onSave = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSave = resolve
+        })
+    )
 
-    const confirmBtn = screen.getByRole('button', { name: /^cancel subscription$/i });
-    fireEvent.click(confirmBtn);
+    render(<BillingSettings onSave={onSave} />)
 
-    // Optimistic state while pending
-    expect(screen.getByText('Your subscription has been cancelled.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /edit/i }))
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    await user.click(saveButton)
 
-    await act(async () => {
-      rejectCancel(new Error('Unable to cancel subscription'));
-    });
+    expect(saveButton).toBeDisabled()
 
-    // Rolled back to Active description, trigger re-enabled, error toast shown
+    resolveSave()
+
     await waitFor(() => {
-      expect(screen.getByText('Unable to cancel subscription')).toBeInTheDocument();
-    });
-    expect(
-      screen.getByText(/Cancel your active subscription/i),
-    ).toBeInTheDocument();
-    expect(triggerBtn).not.toBeDisabled();
-  });
-});
+      expect(screen.getByText(/saved/i)).toBeInTheDocument()
+    })
+  })
+
+  it('shows an error message and keeps edit mode open when onSave fails', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn().mockRejectedValue(new Error('Network error'))
+
+    render(<BillingSettings onSave={onSave} />)
+
+    await user.click(screen.getByRole('button', { name: /edit/i }))
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/network error/i)
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeEnabled()
+  })
+})

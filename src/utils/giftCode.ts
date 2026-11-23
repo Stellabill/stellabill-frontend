@@ -27,6 +27,17 @@ export type GiftCodeValidationResult =
   | { status: "expired"; code: string; expiredOn: string }
   | { status: "redeemed"; code: string };
 
+export const GIFT_ALREADY_REDEEMED_MESSAGE = "This gift has already been redeemed.";
+
+export function formatExpiredGiftMessage(expiredOn: string): string {
+  const formatted = new Date(expiredOn).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  return `This gift code expired on ${formatted}. Please contact the sender.`;
+}
+
 function withDashes(body: string): string {
   return `${GIFT_CODE_PREFIX}-${body.slice(0, SEGMENT_LENGTH)}-${body.slice(SEGMENT_LENGTH)}`;
 }

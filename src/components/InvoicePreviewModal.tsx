@@ -1,56 +1,192 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Download, Printer } from 'lucide-react';
 import { Modal } from './common/Modal';
 import { PdfThumbnailNavigator } from './PdfThumbnailNavigator';
+import InvoicePrintRoot, { type PaperSize } from './InvoicePrintRoot';
+import InvoiceBreakdownCard, {
+  type InvoiceWithBreakdown,
+  type LineItem,
+} from './InvoiceBreakdownCard';
+import { buildInvoiceCsv, downloadCsvFile } from '../utils/statement';
+
+export const DEFAULT_ITEMS_PER_PAGE = 8;
+
+export function paginateLineItems(
+  lineItems: LineItem[] = [],
+  itemsPerPage: number = DEFAULT_ITEMS_PER_PAGE,
+): LineItem[][] {
+  const safeSize = Math.max(1, Math.floor(itemsPerPage));
+  if (lineItems.length === 0) return [[]];
+
+  const pages: LineItem[][] = [];
+  for (let i = 0; i < lineItems.length; i += safeSize) {
+    pages.push(lineItems.slice(i, i + safeSize));
+  }
+  return pages;
+}
 
 export interface InvoicePreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   invoiceId: string | null;
+  invoice?: InvoiceWithBreakdown | null;
+  itemsPerPage?: number;
+  paper?: PaperSize;
 }
 
 export const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   isOpen,
   onClose,
   invoiceId,
+  invoice,
+  itemsPerPage = DEFAULT_ITEMS_PER_PAGE,
+  paper: initialPaper = 'a4',
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const numPages = 5; // Mock 5 pages for the preview
+  const [paper, setPaper] = useState<PaperSize>(initialPaper);
 
-  if (!isOpen || !invoiceId) return null;
+  useEffect(() => {
+    setPaper(initialPaper);
+  }, [initialPaper]);
+
+  const resolvedInvoice = useMemo<InvoiceWithBreakdown | null>(() => {
+    if (!invoiceId) return null;
+    if (invoice) return invoice;
+    return {
+      id: invoiceId,
+      date: new Date().toISOString().slice(0, 10),
+      status: 'paid',
+      total: '0.00',
+      currency: 'USDC',
+      lineItems: [],
+    };
+  }, [invoiceId, invoice]);
+
+  const pages = useMemo(
+    () => paginateLineItems(resolvedInvoice?.lineItems ?? [], itemsPerPage),
+    [resolvedInvoice, itemsPerPage],
+  );
+  const numPages = pages.length;
+  const safePage = Math.min(Math.max(1, currentPage), numPages);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [invoiceId, invoice?.id]);
+
+  const handlePrintPdf = useCallback(() => {
+    if (!resolvedInvoice) return;
+    const prevTitle = document.title;
+    document.title = `invoice-${resolvedInvoice.id}`;
+    try {
+      window.print();
+    } finally {
+      document.title = prevTitle;
+    }
+  }, [resolvedInvoice]);
+
+  const handleDownloadCsv = useCallback(() => {
+    if (!resolvedInvoice) return;
+    const csv = buildInvoiceCsv(resolvedInvoice);
+    downloadCsvFile(`invoice-${resolvedInvoice.id}.csv`, csv);
+  }, [resolvedInvoice]);
+
+  if (!isOpen || !invoiceId || !resolvedInvoice) return null;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Preview Invoice ${invoiceId}`}
+      title={`Preview Invoice ${resolvedInvoice.id}`}
       maxWidth="xl"
     >
+      <div
+        className="no-print flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b border-gray-200"
+        data-print="hide"
+      >
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <label htmlFor="invoice-paper-size" className="font-medium">
+            Paper:
+          </label>
+          <select
+            id="invoice-paper-size"
+            value={paper}
+            onChange={(e) => setPaper(e.target.value as PaperSize)}
+            className="border border-gray-300 rounded px-2 py-1 text-sm bg-white text-gray-900"
+          >
+            <option value="a4">A4</option>
+            <option value="letter">Letter</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleDownloadCsv}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium border border-gray-300 bg-white text-gray-800 hover:bg-gray-50 cursor-pointer"
+          >
+            <Download size={15} aria-hidden="true" />
+            Download CSV
+          </button>
+          <button
+            type="button"
+            onClick={handlePrintPdf}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-cyan-600 text-white hover:bg-cyan-700 cursor-pointer"
+          >
+            <Printer size={15} aria-hidden="true" />
+            Download PDF / Print
+          </button>
+        </div>
+      </div>
+
       <div className="flex h-[60vh] min-h-[400px] border border-gray-200 rounded-lg overflow-hidden bg-gray-50 relative">
         <PdfThumbnailNavigator
           numPages={numPages}
-          currentPage={currentPage}
+          currentPage={safePage}
           onPageChange={setCurrentPage}
-          className="flex-shrink-0"
+          className="flex-shrink-0 no-print"
         />
-        
-        <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-y-auto bg-gray-100 relative">
-          {/* Mock PDF Page Content */}
-          <div className="w-full max-w-[400px] bg-white shadow-lg h-full max-h-[800px] p-8 border border-gray-200 text-center flex flex-col justify-between">
-            <div>
-              <h2 className="text-2xl font-bold mb-4">Invoice {invoiceId}</h2>
-              <div className="text-gray-500 mb-8">Page {currentPage} of {numPages}</div>
-              
-              <div className="space-y-4">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
-                <div className="h-4 bg-gray-200 rounded w-full mx-auto"></div>
-                <div className="h-4 bg-gray-200 rounded w-5/6 mx-auto"></div>
-              </div>
-            </div>
-            
-            <div className="text-sm text-gray-400">
-              Generated for display purposes only
-            </div>
-          </div>
+
+        <div className="flex-1 overflow-y-auto bg-gray-100 p-6">
+          <InvoicePrintRoot paper={paper} showTrigger={false}>
+            {pages.map((pageItems, idx) => {
+              const pageNumber = idx + 1;
+              const isLastPage = pageNumber === numPages;
+              const isVisibleOnScreen = pageNumber === safePage;
+
+              const pageInvoice: InvoiceWithBreakdown = {
+                ...resolvedInvoice,
+                lineItems: pageItems,
+                subtotal: isLastPage ? resolvedInvoice.subtotal : undefined,
+                taxes: isLastPage ? resolvedInvoice.taxes : undefined,
+                credits: isLastPage ? resolvedInvoice.credits : undefined,
+              };
+
+              return (
+                <div
+                  key={pageNumber}
+                  data-testid={`invoice-preview-page-${pageNumber}`}
+                  className={[
+                    'invoice-preview-page w-full max-w-[680px] mx-auto bg-white shadow-lg p-6 border border-gray-200 text-gray-900',
+                    idx > 0 ? 'page-break-before' : '',
+                    !isVisibleOnScreen ? 'hidden invoice-preview-page--hidden' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <div className="flex items-baseline justify-between mb-4 pb-3 border-b border-gray-200">
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Invoice {resolvedInvoice.id}
+                    </h2>
+                    <div className="text-sm text-gray-500">
+                      Page {pageNumber} of {numPages}
+                    </div>
+                  </div>
+
+                  <InvoiceBreakdownCard invoice={pageInvoice} defaultExpanded />
+                </div>
+              );
+            })}
+          </InvoicePrintRoot>
         </div>
       </div>
     </Modal>

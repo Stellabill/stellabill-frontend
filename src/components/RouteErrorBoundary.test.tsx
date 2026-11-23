@@ -4,6 +4,12 @@ import React from "react";
 import { MemoryRouter, Routes, Route, Link } from "react-router-dom";
 import RouteErrorBoundary from "./RouteErrorBoundary";
 import Layout from "./Layout";
+import {
+  setErrorReporterAdapter,
+  resetErrorReporterAdapter,
+  REDACTED_ADDRESS,
+  type ErrorReportPayload,
+} from "../utils/errorReporter";
 
 describe("RouteErrorBoundary", () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
@@ -15,6 +21,7 @@ describe("RouteErrorBoundary", () => {
 
   afterEach(() => {
     consoleErrorSpy.mockRestore();
+    resetErrorReporterAdapter();
   });
 
   it("throwing child shows fallback", () => {
@@ -259,5 +266,38 @@ describe("RouteErrorBoundary", () => {
     fireEvent.click(subLinks[0]);
     expect(screen.getByText("Subscriptions OK")).toBeInTheDocument();
     expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
+  });
+
+  it("reports caught render errors to the configured errorReporter adapter with route context and scrubbed addresses", () => {
+    const reports: ErrorReportPayload[] = [];
+    setErrorReporterAdapter({
+      report(payload) {
+        reports.push(payload);
+      },
+    });
+
+    const walletAddress =
+      "GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H";
+
+    function LeakingCrashChild(): JSX.Element {
+      throw new Error("Render crash for wallet " + walletAddress);
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/subscriptions"]}>
+        <RouteErrorBoundary>
+          <LeakingCrashChild />
+        </RouteErrorBoundary>
+      </MemoryRouter>
+    );
+
+    expect(reports).toHaveLength(1);
+    expect(reports[0].source).toBe("boundary");
+    expect(reports[0].route).toBe("/subscriptions");
+    expect(reports[0].message).toBe(
+      "Render crash for wallet " + REDACTED_ADDRESS
+    );
+    expect(reports[0].message).not.toContain(walletAddress);
+    expect(reports[0].componentStack).toBeDefined();
   });
 });
