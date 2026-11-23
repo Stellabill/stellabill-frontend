@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isValidEd25519PublicKey } from '../../../utils/stellarAddress';
 import '../OnboardingShell.css';
 
 interface PayoutStepProps {
   onBack?: () => void;
   onNext?: (walletAddress: string) => void;
 }
-
-const STELLAR_ADDRESS_REGEX = /^G[A-Z2-7]{55}$/;
 
 const BUSINESS_STORAGE_KEY = 'onboardingBusiness';
 
@@ -38,16 +37,25 @@ export default function PayoutStep({ onBack, onNext }: PayoutStepProps) {
   }, [navigate]);
 
   const handleNext = () => {
-    if (!walletAddress.trim()) {
+    const normalized = walletAddress.trim().toUpperCase();
+    if (!normalized) {
       setError('Stellar wallet address is required.');
       return;
     }
-    if (!STELLAR_ADDRESS_REGEX.test(walletAddress.trim())) {
-      setError('Please enter a valid Stellar address (starts with G, 56 characters).');
+    if (normalized.startsWith('S')) {
+      setError('Never paste your secret key. Enter your public Stellar address (starts with G).');
+      return;
+    }
+    if (normalized.startsWith('M')) {
+      setError('Muxed addresses (starting with M) are not supported. Enter your public Stellar address (starts with G).');
+      return;
+    }
+    if (!isValidEd25519PublicKey(normalized)) {
+      setError('Please enter a valid Stellar address (starts with G, 56 characters, valid checksum).');
       return;
     }
     setError('');
-    onNext?.(walletAddress.trim());
+    onNext?.(normalized);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,6 +77,7 @@ export default function PayoutStep({ onBack, onNext }: PayoutStepProps) {
           onChange={handleChange}
           placeholder="GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
           aria-required="true"
+          aria-invalid={error ? 'true' : 'false'}
           aria-describedby={error ? 'stellar-error' : 'stellar-helper'}
           autoComplete="off"
           spellCheck={false}

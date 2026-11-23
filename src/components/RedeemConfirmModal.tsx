@@ -1,19 +1,8 @@
 import { useRef, useState } from "react";
 import { useModalFocus } from "../hooks/useModalFocus";
 import { X, Gift, Calendar, DollarSign, Package, Loader2 } from "lucide-react";
+import type { GiftDetails } from "../utils/giftCode";
 import "./RedeemConfirmModal.css";
-
-interface GiftDetails {
-  planId: string;
-  planName: string;
-  merchant: string;
-  duration: number;
-  gifterName?: string;
-  message?: string;
-  value: number;
-  currency: string;
-  expiresOn: string;
-}
 
 interface RedeemConfirmModalProps {
   isOpen: boolean;
@@ -34,7 +23,7 @@ export default function RedeemConfirmModal({
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [error, setError] = useState("");
 
-  useModalFocus(modalRef, { isOpen, onClose });
+  useModalFocus(modalRef, { isOpen, onClose, closeOnEscape: !isRedeeming });
 
   const handleRedeem = async () => {
     setIsRedeeming(true);
@@ -79,6 +68,7 @@ export default function RedeemConfirmModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="redeem-confirm-title"
+      aria-busy={isRedeeming}
     >
       <div className="redeem-confirm-backdrop" />
 

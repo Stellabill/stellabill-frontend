@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect, useContext } from 'react';
-import { UNSAFE_NavigationContext } from 'react-router-dom';
+import React, { useState, useRef } from 'react';
 import WalletDropdown from './WalletDropdown';
 import { ChevronDown, Globe, AlertTriangle } from 'lucide-react';
 import {
@@ -23,15 +22,7 @@ const WalletPill: React.FC<WalletPillProps> = ({
   expectedNetwork,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentAddress, setCurrentAddress] = useState(address);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
-  const containerRef = useRef<HTMLDivElement>(null);
-  const navigationContext = useContext(UNSAFE_NavigationContext);
-
-  useEffect(() => {
-    setCurrentAddress(address);
-  }, [address]);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const resolvedExpectedNetwork = expectedNetwork
     ? normalizeNetwork(expectedNetwork)
@@ -46,73 +37,14 @@ const WalletPill: React.FC<WalletPillProps> = ({
     ? `${currentAddress.slice(0, 4)}...${currentAddress.slice(-4)}`
     : currentAddress;
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleKeyDown);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen]);
-
-  const handleSwitchWallet = () => {
-    setIsOpen(false);
-    setCurrentAddress('');
-    setConnectionState('disconnected');
-    if (onSwitchWallet) {
-      onDisconnect();
-      onSwitchWallet();
-    } else {
-      setIsModalOpen(true);
-    }
-  };
-
-  const handleFreighterConnect = () => {
-    const newAddress = 'GB3K4Y5QYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQYQ';
-    setCurrentAddress(newAddress);
-    setConnectionState('connected');
-    setIsModalOpen(false);
-    onConnect?.(newAddress);
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-    if (!currentAddress) {
-      onDisconnect();
-    }
-  };
-
-  const handleOpenHistory = () => {
-    if (onOpenHistory) {
-      onOpenHistory();
-    } else if (navigationContext?.navigator) {
-      navigationContext.navigator.push('/wallet');
-    } else {
-      window.location.assign('/wallet');
-    }
-  };
-
   return (
-    <div className="relative inline-block" ref={containerRef}>
+    <div className="relative inline-block">
       <button 
+        ref={triggerRef}
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-haspopup="true"
+        aria-controls="wallet-dropdown"
         className={`
           flex items-center gap-3 px-4 py-2 rounded-2xl text-sm font-bold transition-all duration-300
           ${isOpen 
@@ -150,8 +82,7 @@ const WalletPill: React.FC<WalletPillProps> = ({
         address={currentAddress} 
         onClose={() => setIsOpen(false)} 
         onDisconnect={onDisconnect}
-        network={resolvedWalletNetwork}
-        expectedNetwork={resolvedExpectedNetwork}
+        triggerRef={triggerRef}
       />
     </div>
   );

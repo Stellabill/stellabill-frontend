@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import styles from './LandingHeader.module.css';
 import WalletPill from '../WalletPill';
 import ConnectButton from '../ConnectButton';
+import { useWallet } from '../../wallet/WalletContext';
 
 const LandingHeader: React.FC = () => {
-    const [isConnected, setIsConnected] = useState(false);
-    const [address] = useState("GABCDEFGHIJK1234567890ABCDEFGHIJK1234567890ABCDEXYZ9");
+    const { status, address, disconnect } = useWallet();
 
     return (
         <header className={styles.header}>
@@ -26,13 +26,13 @@ const LandingHeader: React.FC = () => {
 
             <div className={styles.right}>
                 <span className={styles.subscribeText}>Subscribe with USDC</span>
-                {isConnected ? (
+                {status === 'connected' ? (
                     <WalletPill 
-                        address={address} 
-                        onDisconnect={() => setIsConnected(false)} 
+                        address={address ?? ''}
+                        onDisconnect={disconnect}
                     />
                 ) : (
-                    <ConnectButton onConnect={() => setIsConnected(true)} />
+                    <ConnectButton />
                 )}
             </div>
         </header>

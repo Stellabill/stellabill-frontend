@@ -1,9 +1,10 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import TransitionLayout from './TransitionLayout';
 import { transitionTokens } from '../design/tokens/transitions';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 /*
  * Regression coverage for TransitionLayout (issue #841).
@@ -70,6 +71,34 @@ function renderLayout(routeElement: ReactNode = <div>route content</div>) {
   );
 }
 
+function NavigationHarness() {
+  const navigate = useNavigate();
+  return (
+    <>
+      <button onClick={() => navigate('/next')}>Go to next page</button>
+      <main><h1>Current page</h1></main>
+    </>
+  );
+}
+
+function NextPage() {
+  usePageTitle('Next');
+  return <main><h1>Next page heading</h1></main>;
+}
+
+function renderNavigation() {
+  return render(
+    <MemoryRouter initialEntries={['/current']}>
+      <Routes>
+        <Route element={<TransitionLayout />}>
+          <Route path="/current" element={<NavigationHarness />} />
+          <Route path="/next" element={<NextPage />} />
+        </Route>
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
 function variants(): {
   initial: Record<string, unknown>;
   animate: Record<string, unknown>;
@@ -107,9 +136,10 @@ describe('TransitionLayout', () => {
     expect(screen.getByText('dashboard body')).toBeInTheDocument();
   });
 
-  it('does not trap assistive technology: the surface is aria-live="polite"', () => {
+  it('keeps the routed page outside the live region and renders one route announcer', () => {
     renderLayout();
-    expect(screen.getByTestId('transition-surface')).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByTestId('transition-surface')).not.toHaveAttribute('aria-live');
+    expect(document.querySelectorAll('[aria-live="polite"]')).toHaveLength(1);
   });
 
   it('animates forward (slide from the right) on PUSH navigation', () => {
@@ -163,7 +193,7 @@ describe('TransitionLayout', () => {
     expect(v.exit).toEqual({});
   });
 
-  it('moves focus to the first heading in <main> after the transition duration', () => {
+  it('does not move focus on the initial route render', () => {
     vi.useFakeTimers();
     routerState.navType = 'PUSH';
     renderLayout(
@@ -174,11 +204,23 @@ describe('TransitionLayout', () => {
     const heading = screen.getByRole('heading', { level: 1 });
     expect(document.activeElement).not.toBe(heading);
 
-    act(() => {
-      vi.advanceTimersByTime(transitionTokens.forward.duration);
-    });
+    act(() => { vi.advanceTimersByTime(transitionTokens.forward.duration); });
+    expect(document.activeElement).not.toBe(heading);
+  });
 
+  it('moves focus and announces the new page on navigation, and updates the title', () => {
+    vi.useFakeTimers();
+    routerState.navType = 'PUSH';
+    renderNavigation();
+    fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
+
+    const heading = screen.getByRole('heading', { name: 'Next page heading' });
+    act(() => { vi.advanceTimersByTime(transitionTokens.forward.duration); });
+
+    expect(heading).toHaveAttribute('tabindex', '-1');
     expect(document.activeElement).toBe(heading);
+    expect(document.title).toBe('Next | Stellabill');
+    expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent('Next page heading page');
   });
 
   it('does not throw when the new route has no heading to focus', () => {

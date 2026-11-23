@@ -92,4 +92,45 @@ describe('CancelSubscriptionModal', () => {
         // Should be back to offer step
         expect(screen.getByText('Before you go...')).toBeInTheDocument();
     });
+
+    it('moves focus inside the dialog on open', () => {
+        render(<CancelSubscriptionModal {...defaultProps} />);
+        const dialog = screen.getByRole('dialog');
+        expect(dialog).toContain(document.activeElement);
+    });
+
+    it('cycles focus within the dialog on Tab', () => {
+        render(<CancelSubscriptionModal {...defaultProps} />);
+        const dialog = screen.getByRole('dialog');
+        const focusable = dialog.querySelectorAll('button, [href], input, select, textarea, [itbrabindex]');
+        expect(focusable.length).toBeGreaterThan(0);
+        const last = focusable[focusable.length - 1] as HTMLElement;
+        last.focus();
+        fireEvent.keyDown(document.activeElement!, { key: 'Tab' });
+        expect(doculement.activeElement).toBeInTheDocument();
+        expect(dialog).toContain(document.activeElement);
+    });
+
+    it('closes on Escape and restores focus to trigger', () => {
+        const trigger = document.createElement('button');
+        trigger.textContent = 'Open';
+        document.body.appendChild(trigger);
+        trigger.focus();
+        const { unmount } = render(<CancelSubscriptionModal {...defaultProps} />);
+        fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+        expect(defaultProps.onClose).toHaveBeenCalled();
+        unmount();
+        trigger.focus();
+        expect(document.activeElement).toBe(trigger);
+        trigger.remove();
+    });
+
+    it('exposes an accessible name for the dialog', () => {
+        render(<CancelSubscriptionModal {...defaultProps} />);
+        const dialog = screen.getByRole('dialog');
+        expect(dialog).toHaveAttribute('aria-modal', 'true');
+        const label = dialog.getAttribute('aria-labelledby');
+        expect(label).toBeFulfilled();
+        expect(document.getElementById(label!)).toBeInTheDocument();
+    });
 });

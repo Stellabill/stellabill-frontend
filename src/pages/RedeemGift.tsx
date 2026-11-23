@@ -1,20 +1,19 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Gift, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import LandingNavbar from "../components/LandingNavbar";
 import RedeemConfirmModal from "../components/RedeemConfirmModal";
+import { normalizeGiftCode, validateGiftCode, type GiftDetails } from "../utils/giftCode";
 import "./RedeemGift.css";
 
-interface GiftDetails {
-  planId: string;
-  planName: string;
-  merchant: string;
-  duration: number;
-  gifterName?: string;
-  message?: string;
-  value: number;
-  currency: string;
-  expiresOn: string;
+const MALFORMED_CODE_ERROR = "Please enter a valid gift code (e.g., GIFT-ABC123-XYZ789)";
+
+function formatGiftDate(value: string): string {
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default function RedeemGift() {
@@ -26,102 +25,47 @@ export default function RedeemGift() {
   const [giftDetails, setGiftDetails] = useState<GiftDetails | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const autoValidatedCodeRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    // Check if code is in URL params
-    const urlCode = searchParams.get("code");
-    if (urlCode) {
-      setCode(urlCode);
-      // Auto-validate if code is provided
-      validateCode(urlCode);
-    }
-  }, [searchParams]);
-
-  const formatCode = (value: string): string => {
-    // Remove any non-alphanumeric characters except hyphens
-    const cleaned = value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
-    
-    // If it doesn't start with GIFT-, add it
-    if (cleaned && !cleaned.startsWith("GIFT-")) {
-      return `GIFT-${cleaned}`;
-    }
-    
-    return cleaned;
-  };
-
-  const validateCodeFormat = (value: string): boolean => {
-    // Format: GIFT-XXXXXX-YYYYYY
-    const codeRegex = /^GIFT-[A-Z0-9]{6}-[A-Z0-9]{6}$/;
-    return codeRegex.test(value);
-  };
-
-  const validateCode = async (codeToValidate: string) => {
-    const formattedCode = formatCode(codeToValidate);
-    
-    if (!validateCodeFormat(formattedCode)) {
-      setError("Please enter a valid gift code (e.g., GIFT-ABC123-XYZ789)");
-      return;
-    }
-
+  const validateCode = useCallback(async (codeToValidate: string) => {
     setIsValidating(true);
     setError("");
 
     try {
-      // Simulate API call
-      await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          // Mock validation - check for specific codes to simulate different scenarios
-          if (formattedCode === "GIFT-EXPIRE-DCODE1") {
-            reject({ type: "expired", date: "Aug 15, 2026" });
-          } else if (formattedCode === "GIFT-ALREAD-YUSED1") {
-            reject({ type: "redeemed" });
-          } else if (formattedCode.length < 20) {
-            reject({ type: "invalid" });
-          } else {
-            resolve({
-              planId: "1",
-              planName: "Premium Access",
-              merchant: "Stellar News",
-              duration: 12,
-              gifterName: "Sarah Johnson",
-              message: "I thought you'd enjoy this subscription. Happy reading!",
-              value: 120,
-              currency: "USDC",
-              expiresOn: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-            });
-          }
-        }, 1500);
-      });
+      const result = await validateGiftCode(codeToValidate);
 
-      // Mock successful validation
-      const mockGiftDetails: GiftDetails = {
-        planId: "1",
-        planName: "Premium Access",
-        merchant: "Stellar News",
-        duration: 12,
-        gifterName: "Sarah Johnson",
-        message: "I thought you'd enjoy this subscription. Happy reading!",
-        value: 120,
-        currency: "USDC",
-        expiresOn: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      };
-
-      setGiftDetails(mockGiftDetails);
-      setShowConfirmModal(true);
-    } catch (err: any) {
-      if (err.type === "expired") {
-        setError(`This gift code expired on ${err.date}. Please contact the sender.`);
-      } else if (err.type === "redeemed") {
+      if (result.status === "ok") {
+        setCode(result.code);
+        setGiftDetails(result.giftDetails);
+        setShowConfirmModal(true);
+      } else if (result.status === "expired") {
+        setError(`This gift code expired on ${formatGiftDate(result.expiredOn)}. Please contact the sender.`);
+      } else if (result.status === "redeemed") {
         setError("This gift has already been redeemed.");
-      } else if (err.type === "invalid") {
-        setError("This gift code is not recognized. Please check and try again.");
+      } else if (result.reason === "malformed") {
+        setError(MALFORMED_CODE_ERROR);
       } else {
-        setError("Unable to validate gift code. Please check your connection and try again.");
+        setError("This gift code is not recognized. Please check and try again.");
       }
+    } catch {
+      setError("Unable to validate gift code. Please check your connection and try again.");
     } finally {
       setIsValidating(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const urlCode = searchParams.get("code");
+    if (!urlCode) return;
+
+    const normalizedCode = normalizeGiftCode(urlCode) ?? urlCode;
+    // StrictMode runs effects twice on mount; a code already validated must not start a second one.
+    if (autoValidatedCodeRef.current === normalizedCode) return;
+    autoValidatedCodeRef.current = normalizedCode;
+
+    setCode(normalizedCode);
+    void validateCode(normalizedCode);
+  }, [searchParams, validateCode]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,6 +76,11 @@ export default function RedeemGift() {
     const value = e.target.value;
     setCode(value);
     if (error) setError("");
+  };
+
+  const handleCodeBlur = () => {
+    const normalizedCode = normalizeGiftCode(code);
+    if (normalizedCode !== null) setCode(normalizedCode);
   };
 
   const handleRedemptionComplete = () => {
@@ -180,6 +129,7 @@ export default function RedeemGift() {
                 placeholder="GIFT-"
                 value={code}
                 onChange={handleCodeChange}
+                onBlur={handleCodeBlur}
                 disabled={isValidating}
                 aria-invalid={!!error}
                 aria-describedby={error ? "code-error" : "code-hint"}

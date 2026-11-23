@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect } from "react";
-import { Navigate, Routes, Route, useLocation } from "react-router-dom";
+import { Navigate, Routes, Route, useLocation, Outlet } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import TransitionLayout from "./components/TransitionLayout";
+import RouteErrorBoundary from "./components/RouteErrorBoundary";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const SubscriptionDetail = lazy(() => import("./pages/SubscriptionDetail"));
@@ -10,6 +11,7 @@ const Plans = lazy(() => import("./pages/Plans"));
 const CreatePlan = lazy(() => import("./pages/CreatePlan"));
 const Landing = lazy(() => import("./pages/Landing"));
 const BrowsePlans = lazy(() => import("./pages/BrowsePlans"));
+const Checkout = lazy(() => import("./pages/Checkout"));
 const OnboardingBusiness = lazy(() => import("./pages/OnboardingBusiness"));
 const OnboardingPayout = lazy(() => import("./pages/OnboardingPayout"));
 const OnboardingReviewPage = lazy(() => import("./components/OnboardingReview"));
@@ -62,12 +64,20 @@ function ScrollToHash() {
 }
 
 function App() {
+  const location = useLocation();
   return (
     <>
     <ScrollToHash />
     <Suspense fallback={<div style={{ minHeight: '100vh' }} role="status" aria-label="Loading" />}>
     <Routes>
       {/* 1. Public Routes (No Layout) */}
+      <Route
+        element={
+          <RouteErrorBoundary pathname={location.pathname}>
+            <Outlet />
+          </RouteErrorBoundary>
+        }
+      >
       <Route path="/" element={<Landing />} />
       <Route path="/landing" element={<Navigate to="/" replace />} />
       <Route path="/pricing" element={<Pricing />} />
@@ -85,6 +95,7 @@ function App() {
       <Route path="/onboarding-success" element={<OnboardingSuccess />} />
       <Route path="/redeem-gift" element={<RedeemGift />} />
       <Route path="/gift-redeem-success" element={<GiftRedeemSuccess />} />
+      </Route>
 
       {/* 2. Authenticated Routes (Wrapped in Layout) */}
       <Route element={<Layout />}>
@@ -92,6 +103,7 @@ function App() {
           {/* Redirect base dashboard path to specific dashboard component if needed */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/browse-plans" element={<BrowsePlans />} />
+          <Route path="/checkout/:planId" element={<Checkout />} />
           {/* Plans Management */}
           <Route path="/plans" element={<Plans />} />
           <Route path="/plans/create" element={<CreatePlan />} />
@@ -110,7 +122,14 @@ function App() {
       </Route>
 
       {/* 3. Catch-all redirect - Sends users back to the dashboard for safety */}
-      <Route path="*" element={<NotFound />} />
+      <Route
+        path="*"
+        element={
+          <RouteErrorBoundary pathname={location.pathname}>
+            <NotFound />
+          </RouteErrorBoundary>
+        }
+      />
     </Routes>
     </Suspense>
     </>

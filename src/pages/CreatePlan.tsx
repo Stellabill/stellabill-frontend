@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import PricingSection, { validatePricing, type PricingSectionValue } from '../components/PricingSection'
 import BillingTypeSection from '../components/create-plan/BillingTypeSection'
 import WizardHeader from '../components/create-plan/WizardHeader'
 import ExitConfirmModal from '../components/create-plan/ExitConfirmModal'
+import AutosaveIndicator from '../components/AutosaveIndicator'
+import AutosaveHistory from '../components/AutosaveHistory'
 import { useAutosave, type AutosaveEntry } from '../hooks/useAutosave'
 import { useDraftManager } from '../hooks/useDraftManager'
+import { usePageTitle } from '../hooks/usePageTitle'
+import { plans } from '../api/client'
 import styles from './CreatePlan.module.css'
 
 const AUTOSAVE_KEY = 'stellabill-create-plan'
@@ -45,18 +49,61 @@ function deserialiseForm(entry: AutosaveEntry): {
   return null
 }
 
+function errorMessageOf(err: unknown): { message: string; technicalDetails?: string } {
+  if (err instanceof Error) {
+    return { message: err.message || 'Failed to create plan.', technicalDetails: err.stack }
+  }
+  return { message: 'Failed to create plan.', technicalDetails: String(err) }
+}
+
 export default function CreatePlan() {
+  usePageTitle('Create Plan')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { getDraftById } = useDraftManager()
-  const [usageEnabled, setUsageEnabled] = useState(false)
-  const [trialDays, setTrialDays] = useState('')
-  const [pricing, setPricing] = useState<PricingSectionValue>({ price: '', interval: '', priceType: 'currency' })
+
+  // Load draft or restore autosaved snapshot on initial mount
+  const initialSnapshot = useMemo(() => {
+    const draftIdParam = searchParams.get('draftId')
+    if (draftIdParam !== null) {
+      const draft = getDraftById(draftIdParam)
+      if (draft) return draft.data
+    } else {
+      let savedData = localStorage.getItem(AUTOSAVE_KEY)
+      if (!savedData) {
+        try {
+          const rawHistory = localStorage.getItem(`${AUTOSAVE_KEY}:history`)
+          if (rawHistory) {
+            const parsed = JSON.parse(rawHistory)
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.data) {
+              savedData = parsed[0].data
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+      if (savedData) {
+        const restored = deserialiseForm({ data: savedData, savedAt: '', label: '' })
+        if (restored) return restored
+      }
+    }
+    return null
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [usageEnabled, setUsageEnabled] = useState(() => initialSnapshot?.usageEnabled ?? false)
+  const [trialDays, setTrialDays] = useState(() => initialSnapshot?.trialDays ?? '')
+  const [pricing, setPricing] = useState<PricingSectionValue>(
+    () => initialSnapshot?.pricing ?? { price: '', interval: '', priceType: 'currency' },
+  )
   const [errors, setErrors] = useState<{ priceError?: string; intervalError?: string }>({})
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<{ message: string; technicalDetails?: string } | null>(null)
+  const submittingRef = useRef(false)
 
-  // Load draft if query param present
+  // Load draft if query param present or re-sync
   useEffect(() => {
     const draftIdParam = searchParams.get('draftId')
     if (draftIdParam !== null) {
@@ -67,8 +114,32 @@ export default function CreatePlan() {
         setPricing(draft.data.pricing)
         setErrors({})
       }
+    } else {
+      let savedData = localStorage.getItem(AUTOSAVE_KEY)
+      if (!savedData) {
+        try {
+          const rawHistory = localStorage.getItem(`${AUTOSAVE_KEY}:history`)
+          if (rawHistory) {
+            const parsed = JSON.parse(rawHistory)
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.data) {
+              savedData = parsed[0].data
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+      if (savedData) {
+        const restored = deserialiseForm({ data: savedData, savedAt: '', label: '' })
+        if (restored) {
+          setUsageEnabled(restored.usageEnabled)
+          setTrialDays(restored.trialDays)
+          setPricing(restored.pricing)
+          setErrors({})
+        }
+      }
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Autosave ────────────────────────────────────────────────────────────
 
@@ -98,21 +169,17 @@ export default function CreatePlan() {
     status,
     lastSavedAt,
     history,
-    saveNow,
     clearHistory,
     restore,
     isOffline,
   } = useAutosave({
+    value: currentData,
     storageKey: AUTOSAVE_KEY,
     delay: 2_000,
     maxHistory: 10,
     onSave: handleSave,
     onRestore: handleRestore,
   })
-
-  useEffect(() => {
-    saveNow()
-  }, [currentData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Draft persistence ───────────────────────────────────────────────────
 
@@ -170,8 +237,10 @@ export default function CreatePlan() {
 
   // ── Submit ──────────────────────────────────────────────────────────────
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (submittingRef.current) return
+
     const nextErrors = validatePricing(pricing)
     setErrors(nextErrors)
     if (nextErrors.priceError || nextErrors.intervalError) {
@@ -185,9 +254,23 @@ export default function CreatePlan() {
       price_type: pricing.priceType,
       interval: pricing.interval,
     }
-    console.log('Create plan payload:', payload)
-    clearHistory()
-    localStorage.removeItem(AUTOSAVE_KEY)
+
+    submittingRef.current = true
+    setIsSubmitting(true)
+    setSubmitError(null)
+    try {
+      await plans.create(payload)
+      clearHistory()
+      localStorage.removeItem(AUTOSAVE_KEY)
+      navigate('/plans', {
+        state: { toast: { type: 'success', message: 'Plan created successfully.' } },
+      })
+    } catch (err) {
+      setSubmitError(errorMessageOf(err))
+    } finally {
+      submittingRef.current = false
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -226,7 +309,18 @@ export default function CreatePlan() {
         isDirty={isDirty}
         onCancel={handleCancel}
         onSaveDraft={handleSaveDraft}
-      />
+      >
+        <AutosaveIndicator
+          status={status}
+          lastSavedAt={lastSavedAt}
+          isOffline={isOffline}
+        />
+        <AutosaveHistory
+          history={history}
+          onRestore={restore}
+          onClear={clearHistory}
+        />
+      </WizardHeader>
 
       <form onSubmit={handleSubmit} noValidate>
         <BillingTypeSection
@@ -245,6 +339,26 @@ export default function CreatePlan() {
           />
         </div>
 
+        {submitError && (
+          <div role="alert" style={{
+            padding: '0.75rem 1rem',
+            marginBottom: '1rem',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '8px',
+            color: '#f87171',
+            fontSize: '0.875rem',
+          }}>
+            <div style={{ fontWeight: 600 }}>{submitError.message}</div>
+            {submitError.technicalDetails && (
+              <details style={{ marginTop: '0.5rem' }}>
+                <summary>Technical details</summary>
+                <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}>{submitError.technicalDetails}</pre>
+              </details>
+            )}
+          </div>
+        )}
+
         <div
           style={{
             display: 'flex',
@@ -255,6 +369,8 @@ export default function CreatePlan() {
         >
           <button
             type="submit"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -266,13 +382,14 @@ export default function CreatePlan() {
               color: '#000',
               fontSize: '0.925rem',
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: isSubmitting ? 'wait' : 'pointer',
+              opacity: isSubmitting ? 0.7 : 1,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.88'
+              if (!isSubmitting) e.currentTarget.style.opacity = '0.88'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1'
+              e.currentTarget.style.opacity = isSubmitting ? '0.7' : '1'
             }}
           >
             <svg
@@ -291,7 +408,7 @@ export default function CreatePlan() {
               <line x1="16" y1="13" x2="8" y2="13" />
               <line x1="16" y1="17" x2="8" y2="17" />
             </svg>
-            Create plan
+            {isSubmitting ? 'Creating…' : 'Create plan'}
           </button>
 
           <button

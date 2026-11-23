@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, act } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TopUpModal from './TopUpModal';
 
@@ -107,5 +107,81 @@ describe('TopUpModal failure handling', () => {
     // The controlled input never adopts the rejected value.
     expect(amount).toHaveValue('0.00');
     expect(screen.getByRole('button', { name: /review top up/i })).toBeDisabled();
+  });
+
+  it('rejects input with more than 7 decimal places', () => {
+    render(<TopUpModal isOpen onClose={vi.fn()} />);
+    const amount = screen.getByRole('textbox', { name: /top up amount/i }) as HTMLInputElement;
+
+    fireEvent.change(amount, { target: { value: '5.1234567' } });
+    expect(amount).toHaveValue('5.1234567');
+
+    // Attempting to add an 8th decimal place is rejected (value remains at 7 decimal places)
+    fireEvent.change(amount, { target: { value: '5.12345678' } });
+    expect(amount).toHaveValue('5.1234567');
+
+    // Direct input with >7 decimals from initial value is rejected
+    fireEvent.change(amount, { target: { value: '1.23456789' } });
+    expect(amount).toHaveValue('5.1234567');
+  });
+
+  it('compares amounts in minor units against wallet balance', () => {
+    render(
+      <TopUpModal
+        isOpen
+        onClose={vi.fn()}
+        walletBalance={50}
+      />
+    );
+    const amount = screen.getByRole('textbox', { name: /top up amount/i });
+
+    // Amount slightly exceeding wallet balance in fractional stroops
+    fireEvent.change(amount, { target: { value: '50.0000001' } });
+    expect(screen.getByText(/wallet balance is not enough/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /review top up/i })).toBeDisabled();
+
+    // Exactly at wallet balance is allowed
+    fireEvent.change(amount, { target: { value: '50.0000000' } });
+    expect(screen.queryByText(/wallet balance is not enough/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /review top up/i })).toBeEnabled();
+  });
+
+  it('shows pending, then upon rejection displays error and keeps modal on review step', async () => {
+    let rejectConfirm!: (err: Error) => void;
+    const onConfirm = vi.fn().mockImplementation(() => {
+      return new Promise<void>((_, reject) => {
+        rejectConfirm = reject;
+      });
+    });
+
+    render(
+      <TopUpModal
+        isOpen
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />
+    );
+
+    const amountInput = screen.getByRole('textbox', { name: /top up amount/i });
+    fireEvent.change(amountInput, { target: { value: '20' } });
+    fireEvent.blur(amountInput);
+
+    fireEvent.click(screen.getByRole('button', { name: /review top up/i }));
+    const confirmBtn = screen.getByRole('button', { name: /confirm top up/i });
+    fireEvent.click(confirmBtn);
+
+    // Shows pending and disables confirm
+    expect(screen.getByRole('button', { name: /confirming/i })).toBeDisabled();
+
+    // Reject promise
+    await act(async () => {
+      rejectConfirm(new Error('Network transaction dropped'));
+    });
+
+    // Rejection shows error and keeps modal on review
+    expect(screen.getByRole('alert')).toHaveTextContent('Network transaction dropped');
+    expect(screen.getByRole('button', { name: /confirm top up/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /edit amount/i })).toBeInTheDocument();
+    expect(screen.queryByText(/top up successful/i)).not.toBeInTheDocument();
   });
 });

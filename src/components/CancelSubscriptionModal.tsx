@@ -11,6 +11,7 @@ interface CancelSubscriptionModalProps {
     isLoading?: boolean;
     balance: string;
     endDate: string;
+    error?: { message: string; technicalDetails?: string } | null;
 }
 
 type CancelStep = 'offer' | 'confirm';
@@ -22,7 +23,8 @@ export default function CancelSubscriptionModal({
     onOfferSelected,
     isLoading = false,
     balance,
-    endDate
+    endDate,
+    error
 }: CancelSubscriptionModalProps) {
     const [step, setStep] = useState<CancelStep>('offer');
     const modalRef = useRef<HTMLDivElement>(null);
@@ -45,7 +47,7 @@ export default function CancelSubscriptionModal({
         }
     }, [step, isOpen]);
 
-    useModalFocus(modalRef, { isOpen, onClose, initialFocusRef });
+    useModalFocus(modalRef, { isOpen, onClose, initialFocusRef, closeOnEscape: !isLoading });
 
     if (!isOpen) return null;
 
@@ -59,7 +61,7 @@ export default function CancelSubscriptionModal({
     return (
         <div
             className="cancel-modal-overlay"
-            onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose()}
+            onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && !isLoading && onClose()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="cancel-modal-title"
@@ -68,11 +70,13 @@ export default function CancelSubscriptionModal({
             <div 
                 className={`cancel-modal-content ${isOfferStep ? 'cancel-modal-content-wide' : ''}`} 
                 ref={modalRef}
+                aria-busy={isLoading}
             >
                 <button
                     className="cancel-close-btn"
-                    onClick={onClose}
+                    onClick={() => !isLoading && onClose()}
                     aria-label="Close"
+                    disabled={isLoading}
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -102,6 +106,18 @@ export default function CancelSubscriptionModal({
                         <p id="cancel-modal-description" className="cancel-description">
                             You will no longer be charged. Your remaining prepaid balance ({balance} USDC) can be withdrawn to your wallet.
                         </p>
+
+                        {error && (
+                            <div className="cancel-action-error" role="alert">
+                                <p>{error.message}</p>
+                                {error.technicalDetails && (
+                                    <details>
+                                        <summary>Technical details</summary>
+                                        <p>{error.technicalDetails}</p>
+                                    </details>
+                                )}
+                            </div>
+                        )}
 
                         <div className="cancel-checklist-container">
                             <div className="cancel-checklist-item">
@@ -146,7 +162,7 @@ export default function CancelSubscriptionModal({
                             <button
                                 ref={initialFocusRef}
                                 className="cancel-btn cancel-btn-keep"
-                                onClick={onClose}
+                                onClick={() => !isLoading && onClose()}
                                 disabled={isLoading}
                             >
                                 Keep subscription

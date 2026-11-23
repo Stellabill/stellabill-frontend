@@ -8,6 +8,7 @@ import KeyboardChordIndicator from "./KeyboardChordIndicator";
 import HelpSidebar from "./help/HelpSidebar";
 import ChangelogPanel from "./changelog/ChangelogPanel";
 import FocusOrderVisualizer from "./FocusOrderVisualizer";
+import RouteErrorBoundary from "./RouteErrorBoundary";
 import { LayoutContextType } from "../hooks/useCommandScope";
 import "../styles/sidebar.css";
 
@@ -432,7 +433,9 @@ export default function Layout() {
           </nav>
         </aside>
         <main className="sb-main">
-          <Outlet context={layoutContext} />
+          <RouteErrorBoundary pathname={location.pathname}>
+            <Outlet context={layoutContext} />
+          </RouteErrorBoundary>
         </main>
       </div>
     </UnsavedChangesContext.Provider>

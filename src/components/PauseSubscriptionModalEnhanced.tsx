@@ -2,6 +2,7 @@ import { useRef, MouseEvent, useState } from 'react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import DatePickerCalendar from './DatePickerCalendar';
 import PauseSchedulePreview from './PauseSchedulePreview';
+import { addBillingInterval } from '../utils/billingDate';
 import './PauseSubscriptionModalEnhanced.css';
 
 interface PauseSubscriptionModalEnhancedProps {
@@ -47,17 +48,13 @@ export default function PauseSubscriptionModalEnhanced({
     {
       label: '1 month',
       value: () => {
-        const date = new Date();
-        date.setMonth(date.getMonth() + 1);
-        return date;
+        return addBillingInterval(new Date(), 'monthly', 1);
       }
     },
     {
       label: '3 months',
       value: () => {
-        const date = new Date();
-        date.setMonth(date.getMonth() + 3);
-        return date;
+        return addBillingInterval(new Date(), 'monthly', 3);
       }
     }
   ];

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { useDraftManager } from '../hooks/useDraftManager'
 import './Plans.css'
 
@@ -24,6 +25,7 @@ function pricePreview(data: { pricing: { price: string; interval: string; priceT
 }
 
 export default function Plans() {
+  usePageTitle('Plans')
   const navigate = useNavigate()
   const { drafts, deleteDraft } = useDraftManager()
 

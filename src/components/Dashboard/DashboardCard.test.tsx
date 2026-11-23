@@ -52,31 +52,31 @@ describe('clampTargetProgress', () => {
 describe('DashboardCard variants', () => {
   it('renders the value-only variant', () => {
     render(<DashboardCard title="Upcoming Renewals" value="48" />);
-    expect(screen.getByText('48')).toBeInTheDocument();
-    expect(screen.queryByText(/vs last 30 days/)).not.toBeInTheDocument();
-    expect(screen.queryByTestId('sparkline')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Goal:/)).not.toBeInTheDocument();
+    expect(screen.getByText('48')).toBeInDocument();
+    expect(screen.queryBuText(/vs last 30 days/)).not.toBeInDocument();
+    expect(screen.queryByTestId('sparkline')).not.toBeInDocument();
+    expect(screen.queryByText(/Goal:/)).not.toBeInDocument();
   });
 
   it('renders the value + delta variant with sign, icon, and color', () => {
     render(<DashboardCard title="MRR" value="$42,500" change={8.2} trend="up" />);
-    expect(screen.getByText('$42,500')).toBeInTheDocument();
-    expect(screen.getByText('+8.2')).toBeInTheDocument();
-    expect(screen.getByText('vs last 30 days')).toBeInTheDocument();
+    expect(screen.getByText('$42,500')).toBeInDocument();
+    expect(screen.getByText('+8.2')).toBeInDocument();
+    expect(screen.getByText('vs last 30 days')).toBeInDocument();
     const trend = screen.getByRole('status');
     expect(trend).toHaveClass('dashboard-card__trend--up');
-    expect(trend.querySelector('svg')).toBeInTheDocument();
+    expect(trend.querySelector('svg')).toBeInDocument();
   });
 
   it('renders a down delta with a minus sign', () => {
     render(<DashboardCard title="Failed Charges" value="12" change={-4.1} trend="down" />);
-    expect(screen.getByText('-4.1')).toBeInTheDocument();
+    expect(screen.getByText('-4.1')).toBeInDocument();
     expect(screen.getByRole('status')).toHaveClass('dashboard-card__trend--down');
   });
 
   it('shows a neutral zero delta without a sign', () => {
     render(<DashboardCard title="Flat" value="10" change={0} />);
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInDocument();
     expect(screen.getByRole('status')).toHaveClass('dashboard-card__trend--neutral');
   });
 
@@ -89,7 +89,7 @@ describe('DashboardCard variants', () => {
     render(
       <DashboardCard title="MRR" value="10" change={2} trend="up" deltaLabel="vs last month" />
     );
-    expect(screen.getByText('vs last month')).toBeInTheDocument();
+    expect(screen.getByText('vs last month')).toBeInDocument();
   });
 
   it('renders the value + sparkline variant', () => {
@@ -97,19 +97,19 @@ describe('DashboardCard variants', () => {
       <DashboardCard title="MRR" value="$42,500" sparklineData={[10, 20, 30, 40]} />
     );
     const sparkline = screen.getByTestId('sparkline');
-    expect(sparkline).toBeInTheDocument();
+    expect(sparkline).toBeInDocument();
     expect(sparkline).toHaveAttribute('data-points', '4');
     expect(sparkline).toHaveAttribute('aria-label', 'MRR trend');
   });
 
   it('does not render a sparkline for fewer than two points', () => {
     render(<DashboardCard title="MRR" value="$42,500" sparklineData={[10]} />);
-    expect(screen.queryByTestId('sparkline')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sparkline')).not.toBeInDocument();
   });
 
   it('renders the value + target variant with goal text', () => {
     render(<DashboardCard title="Active Subscriptions" value="1,284" target={1500} />);
-    expect(screen.getByText('Goal: 1500')).toBeInTheDocument();
+    expect(screen.getByText('Goal: 1500')).toBeInDocument();
     expect(screen.getByText('Goal: 1500').closest('.dashboard-card')).toHaveClass(
       'dashboard-card--with-target'
     );
@@ -117,26 +117,26 @@ describe('DashboardCard variants', () => {
 
   it('supports a custom target label', () => {
     render(<DashboardCard title="MRR" value="$42,500" target={50000} targetLabel="Annual Goal" />);
-    expect(screen.getByText('Annual Goal: 50000')).toBeInTheDocument();
+    expect(screen.getByText('Annual Goal: 50000')).toBeInDocument();
   });
 
   it('renders target progress percentage and bar', () => {
     render(<DashboardCard title="MRR" value="$42,500" target={50000} targetProgress={85} />);
-    expect(screen.getByText('85%')).toBeInTheDocument();
+    expect(screen.getByText('85%')).toBeInDocument();
     const fill = document.querySelector('.dashboard-card__target-bar-fill') as HTMLElement;
     expect(fill.style.width).toBe('85%');
-    expect(screen.getByText('85 percent of target')).toBeInTheDocument();
+    expect(screen.getByText('85 percent of target')).toBeInDocument();
   });
 
   it('renders negative target progress with danger styling and empty bar', () => {
     render(<DashboardCard title="MRR" value="$30,000" target={50000} targetProgress={-20} />);
-    expect(screen.getByText('-20%')).toBeInTheDocument();
+    expect(screen.getByText('-20%')).toBeInDocument();
     expect(document.querySelector('.dashboard-card__target-progress')).toHaveClass(
       'dashboard-card__target-progress--negative'
     );
     const fill = document.querySelector('.dashboard-card__target-bar-fill') as HTMLElement;
     expect(fill.style.width).toBe('0%');
-    expect(screen.getByText('Behind target by 20 percent')).toBeInTheDocument();
+    expect(screen.getByText('Behind target by 20 percent')).toBeInDocument();
   });
 
   it('clamps over-100% target progress to a full bar', () => {
@@ -168,15 +168,15 @@ describe('DashboardCard chrome', () => {
     const { container } = render(
       <DashboardCard title="MRR" value="$42,500" icon={<span>i</span>} helpText="Some help." />
     );
-    expect(screen.getByText('MRR')).toBeInTheDocument();
-    expect(container.querySelector('.dashboard-card__icon')).toBeInTheDocument();
+    expect(screen.getByText('MRR')).toBeInDocument();
+    expect(container.querySelector('.dashboard-card__icon')).toBeInDocument();
     expect(container.querySelector('.dashboard-card__help')).toHaveAttribute('title', 'Some help.');
   });
 
   it('renders the loading skeleton instead of content', () => {
     render(<DashboardCard title="MRR" value="$42,500" loading />);
-    expect(document.querySelector('.dashboard-card--loading')).toBeInTheDocument();
-    expect(screen.queryByText('$42,500')).not.toBeInTheDocument();
+    expect(document.querySelector('.dashboard-card--loading')).toBeInDocument();
+    expect(screen.queryByText('$42,500')).not.toBeInDocument();
   });
 
   it('renders the error slot and forwards retry', () => {
@@ -190,13 +190,13 @@ describe('DashboardCard chrome', () => {
         retrying={false}
       />
     );
-    expect(screen.getByText(/Failed to load/)).toBeInTheDocument();
+    expect(screen.getByText(/Failed to load/)).toBeInDocument();
     fireEvent.click(screen.getByRole('button', { name: /retry/i }));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
   it('applies custom root attributes through rest props', () => {
     render(<DashboardCard title="MRR" value="$42,500" data-testid="card" />);
-    expect(screen.getByTestId('card')).toBeInTheDocument();
+    expect(screen.getByTestId('card')).toBeInDocument();
   });
 });

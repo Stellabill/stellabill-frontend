@@ -108,6 +108,28 @@
   margin-right: auto;
 }
 
+.pause-action-error {
+  margin: -1.5rem 0 2rem;
+  padding: 1rem;
+  color: #fecaca;
+  background: #2a1414;
+  border: 1px solid #7f1d1d;
+  border-radius: 12px;
+}
+
+.pause-action-error p {
+  margin: 0;
+}
+
+.pause-action-error details {
+  margin-top: 0.75rem;
+  color: #fca5a5;
+}
+
+.pause-action-error summary {
+  cursor: pointer;
+}
+
 .pause-checklist-container {
   background-color: #121415;
   border-radius: 20px;

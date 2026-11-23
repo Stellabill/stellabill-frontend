@@ -1,26 +1,18 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePageTitle } from "../hooks/usePageTitle";
 import type { ApiError } from "../api/client";
 import WalletConnectModal from "../components/WalletConnectModal";
+import { useWallet } from "../wallet/WalletContext";
+import { FreighterConnectionError } from "../wallet/freighter";
 import ErrorState from "../components/ErrorState";
 import SortBySelect from "../components/SortBySelect";
 import GiftPurchaseModal, { type Plan as GiftPlan } from "../components/GiftPurchaseModal";
+import { addBillingInterval } from "../utils/billingDate";
+import { catalogPlans as mockPlans, type Plan, type PlanInterval } from "../data/catalogPlans";
 
-type PlanInterval = "Monthly" | "Yearly";
-// ... (previous types and icons)
 type SortField = "name" | "price" | "merchant";
 type SortDirection = "asc" | "desc";
-
-interface Plan {
-	id: string;
-	merchant: string;
-	name: string;
-	price: number;
-	currency: string;
-	interval: PlanInterval;
-	description: string;
-	icon: "newspaper" | "cloud" | "robot" | "muscle" | "fitness" | "chart";
-}
 
 const NewspaperIcon = () => (
 	<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -79,74 +71,6 @@ const iconMap = {
 	chart: ChartIcon,
 };
 
-const mockPlans: Plan[] = [
-	{
-		id: "1",
-		merchant: "Stellar News",
-		name: "Premium Access",
-		price: 10,
-		currency: "USDC",
-		interval: "Monthly",
-		description:
-			"Get unlimited access to premium articles, exclusive interviews, and breaking news coverage.",
-		icon: "newspaper",
-	},
-	{
-		id: "2",
-		merchant: "CloudFlow",
-		name: "Pro Plan",
-		price: 25,
-		currency: "USDC",
-		interval: "Monthly",
-		description:
-			"Advanced cloud storage with 1TB space, priority support, and team collaboration features.",
-		icon: "cloud",
-	},
-	{
-		id: "3",
-		merchant: "DevTools AI",
-		name: "Starter",
-		price: 15,
-		currency: "USDC",
-		interval: "Monthly",
-		description:
-			"AI-powered development tools with code completion, debugging, and documentation generation.",
-		icon: "robot",
-	},
-	{
-		id: "4",
-		merchant: "Stellar News",
-		name: "Annual Premium",
-		price: 100,
-		currency: "USDC",
-		interval: "Yearly",
-		description:
-			"Full year of premium access at a discounted rate. Save 17% compared to monthly billing.",
-		icon: "newspaper",
-	},
-	{
-		id: "5",
-		merchant: "CloudFlow",
-		name: "Enterprise",
-		price: 50,
-		currency: "USDC",
-		interval: "Monthly",
-		description:
-			"Unlimited storage, advanced security, dedicated support, and custom integrations for teams.",
-		icon: "cloud",
-	},
-	{
-		id: "6",
-		merchant: "FitTrack",
-		name: "Premium Coaching",
-		price: 30,
-		currency: "USDC",
-		interval: "Monthly",
-		description:
-			"Personal fitness coaching with custom workout plans, nutrition tracking, and weekly check-ins.",
-		icon: "fitness",
-	},
-];
 
 const SORT_OPTIONS = [
 	{ value: "name-asc", label: "Name (A–Z)" },
@@ -162,13 +86,11 @@ function getBillingIntervalCopy(interval: PlanInterval) {
 }
 
 function getNextChargeDate(interval: PlanInterval) {
-	const nextCharge = new Date();
-
-	if (interval === "Monthly") {
-		nextCharge.setMonth(nextCharge.getMonth() + 1);
-	} else {
-		nextCharge.setFullYear(nextCharge.getFullYear() + 1);
-	}
+	const nextCharge = addBillingInterval(
+		new Date(),
+		interval === "Monthly" ? "monthly" : "yearly",
+		1,
+	);
 
 	return nextCharge.toLocaleDateString(undefined, {
 		year: "numeric",
@@ -371,6 +293,7 @@ function PlanCard({ plan, onSubscribe, onSendGift }: PlanCardProps) {
 }
 
 export default function BrowsePlans() {
+	usePageTitle("Browse Plans");
 	const navigate = useNavigate();
 	const [plans, setPlans] = useState<Plan[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -379,10 +302,16 @@ export default function BrowsePlans() {
 	const [intervalFilter, setIntervalFilter] = useState<PlanInterval | "All">("All");
 	const [sortField, setSortField] = useState<SortField>("name");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-	const [isWalletConnected, setIsWalletConnected] = useState(false);
 	const [walletModalOpen, setWalletModalOpen] = useState(false);
 	const [giftModalOpen, setGiftModalOpen] = useState(false);
 	const [selectedPlanForGift, setSelectedPlanForGift] = useState<Plan | null>(null);
+	const {
+		status,
+		error: walletError,
+		connect,
+		clearError,
+		cancelConnect,
+	} = useWallet();
 
 	// Fetch plans from API
 	const fetchPlans = useCallback(async () => {
@@ -454,7 +383,7 @@ export default function BrowsePlans() {
 	};
 
 	const handleSubscribe = (plan: Plan) => {
-		if (!isWalletConnected) {
+		if (status !== "connected") {
 			setWalletModalOpen(true);
 			return;
 		}
@@ -472,9 +401,14 @@ export default function BrowsePlans() {
 		// Could show a toast notification here
 	};
 
-	const handleWalletConnect = () => {
-		setIsWalletConnected(true);
-		setWalletModalOpen(false);
+	const handleWalletConnect = async () => {
+		try {
+			const result = await connect();
+			if (!result) return;
+			setWalletModalOpen(false);
+		} catch {
+			// The provider exposes the error to the modal.
+		}
 	};
 
 	const clearFilters = () => {
@@ -707,8 +641,19 @@ export default function BrowsePlans() {
 
 				<WalletConnectModal
 					isOpen={walletModalOpen}
-					onClose={() => setWalletModalOpen(false)}
-					onConnected={handleWalletConnect}
+					onClose={() => {
+						cancelConnect();
+						setWalletModalOpen(false);
+					}}
+					onConnectFreighter={handleWalletConnect}
+					connectionState={status}
+					errorMessage={walletError?.message}
+					errorType={
+						walletError instanceof FreighterConnectionError
+							? walletError.type
+							: undefined
+					}
+					onRetry={clearError}
 				/>
 
 				<GiftPurchaseModal

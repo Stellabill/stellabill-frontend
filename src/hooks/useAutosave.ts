@@ -13,7 +13,7 @@ export interface AutosaveEntry {
   label: string
 }
 
-export interface UseAutosaveOptions {
+export interface UseAutosaveOptions<T = unknown> {
   /** Key used for localStorage persistence. */
   storageKey: string
   /** Debounce delay in ms before the save fires. Default 2000. */
@@ -26,6 +26,9 @@ export interface UseAutosaveOptions {
   onRestore: (entry: AutosaveEntry) => T | null
   /** Optional. If true, autosave is disabled (e.g. while tab is hidden). */
   disabled?: boolean
+  /** Current value to monitor and autosave (debounced automatically on change). */
+  value?: string
+  data?: string
 }
 
 export interface UseAutosaveReturn {
@@ -35,8 +38,10 @@ export interface UseAutosaveReturn {
   lastSavedAt: string | null
   /** Ordered history entries (newest first). */
   history: AutosaveEntry[]
-  /** Manually trigger an immediate save (bypasses debounce). */
-  saveNow: () => void
+  /** Manually trigger an immediate save (bypasses debounce). Optionally accepts data. */
+  saveNow: (overrideData?: string) => void
+  /** Schedule a debounced save with data. */
+  scheduleSave: (data: string) => void
   /** Clear all persisted history. */
   clearHistory: () => void
   /** Restore a specific history entry. */
@@ -84,8 +89,6 @@ function relativeTime(iso: string): string {
 
 // ── Hook ────────────────────────────────────────────────────────────────────
 
-type T = unknown
-
 export function useAutosave({
   storageKey,
   delay = DEBOUNCE_DEFAULT,
@@ -93,9 +96,14 @@ export function useAutosave({
   onSave,
   onRestore,
   disabled = false,
+  value,
+  data,
 }: UseAutosaveOptions): UseAutosaveReturn {
   const [status, setStatus] = useState<AutosaveStatus>('idle')
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(() => {
+    const initialHistory = loadHistory(storageKey, maxHistory)
+    return initialHistory.length > 0 ? initialHistory[0].savedAt : null
+  })
   const [history, setHistory] = useState<AutosaveEntry[]>(() =>
     loadHistory(storageKey, maxHistory),
   )
@@ -107,49 +115,20 @@ export function useAutosave({
   const pendingDataRef = useRef<string | null>(null)
   const mountedRef = useRef(true)
 
-  // Track online/offline status
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false)
-    const handleOffline = () => setIsOffline(true)
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [])
-
-  // Track tab visibility (pause autosave when tab is hidden)
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.hidden && timerRef.current) {
-        clearTimeout(timerRef.current)
-        timerRef.current = null
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [])
-
-  // Cleanup on unmount
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  }, [])
+  const currentValue = value ?? data
+  const valueRef = useRef(currentValue)
+  valueRef.current = currentValue
 
   const persist = useCallback(
-    async (data: string) => {
+    async (dataToPersist: string) => {
       if (!mountedRef.current) return
       setStatus('saving')
       try {
-        await onSave(data)
+        await onSave(dataToPersist)
         const now = new Date().toISOString()
         const entry: AutosaveEntry = {
           savedAt: now,
-          data,
+          data: dataToPersist,
           label: relativeTime(now),
         }
         setLastSavedAt(now)
@@ -167,30 +146,123 @@ export function useAutosave({
   )
 
   const scheduleSave = useCallback(
-    (data: string) => {
-      if (disabled || isOffline) {
-        pendingDataRef.current = data
+    (dataToSchedule: string) => {
+      pendingDataRef.current = dataToSchedule
+      const offline = typeof navigator !== 'undefined' && !navigator.onLine
+      if (disabled || isOffline || offline) {
         return
       }
-      pendingDataRef.current = data
-      if (timerRef.current) clearTimeout(timerRef.current)
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
       timerRef.current = setTimeout(() => {
-        if (pendingDataRef.current && mountedRef.current) {
-          void persist(pendingDataRef.current)
+        if (pendingDataRef.current !== null && mountedRef.current) {
+          const toSave = pendingDataRef.current
           pendingDataRef.current = null
+          void persist(toSave)
         }
       }, delay)
     },
     [disabled, isOffline, delay, persist],
   )
 
-  const saveNow = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    if (pendingDataRef.current && mountedRef.current) {
-      void persist(pendingDataRef.current)
-      pendingDataRef.current = null
+  const saveNow = useCallback(
+    (overrideData?: string) => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+      const dataToSave =
+        overrideData !== undefined
+          ? overrideData
+          : pendingDataRef.current !== null
+            ? pendingDataRef.current
+            : valueRef.current !== undefined
+              ? valueRef.current
+              : ''
+      if (mountedRef.current) {
+        pendingDataRef.current = null
+        void persist(dataToSave)
+      }
+    },
+    [persist],
+  )
+
+  // Track online/offline status and flush on coming back online
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false)
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+      if (pendingDataRef.current !== null && mountedRef.current && !disabled) {
+        const toSave = pendingDataRef.current
+        pendingDataRef.current = null
+        void persist(toSave)
+      }
     }
-  }, [persist])
+    const handleOffline = () => {
+      setIsOffline(true)
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+    }
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [disabled, persist])
+
+  // Track tab visibility (flush pending data when tab is hidden)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (timerRef.current) {
+          clearTimeout(timerRef.current)
+          timerRef.current = null
+        }
+        const offline = typeof navigator !== 'undefined' && !navigator.onLine
+        if (pendingDataRef.current !== null && mountedRef.current && !disabled && !isOffline && !offline) {
+          const toSave = pendingDataRef.current
+          pendingDataRef.current = null
+          void persist(toSave)
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [disabled, isOffline, persist])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
+
+  // Debounce when value/data changes
+  const prevValueRef = useRef<string | undefined>(undefined)
+  const isInitialMount = useRef(true)
+
+  useEffect(() => {
+    if (currentValue === undefined) return
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      prevValueRef.current = currentValue
+      return
+    }
+    if (currentValue !== prevValueRef.current) {
+      prevValueRef.current = currentValue
+      scheduleSave(currentValue)
+    }
+  }, [currentValue, scheduleSave])
 
   const clearHistory = useCallback(() => {
     setHistory([])
@@ -221,6 +293,7 @@ export function useAutosave({
     lastSavedAt,
     history,
     saveNow,
+    scheduleSave,
     clearHistory,
     restore,
     isOffline,

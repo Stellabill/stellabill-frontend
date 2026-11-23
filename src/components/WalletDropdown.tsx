@@ -1,12 +1,5 @@
-import React, { useState } from 'react';
-import { Copy, ExternalLink, LogOut, Check, CreditCard, AlertTriangle } from 'lucide-react';
-import {
-  explorerAccountUrl,
-  getExpectedNetwork,
-  isNetworkMismatch,
-  normalizeNetwork,
-  type StellarNetwork,
-} from '../config/network';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Copy, ExternalLink, LogOut, Check, CreditCard } from 'lucide-react';
 
 interface WalletDropdownProps {
   isOpen: boolean;
@@ -15,8 +8,8 @@ interface WalletDropdownProps {
   onDisconnect: () => void;
   onSwitchWallet?: () => void;
   onOpenHistory?: () => void;
-  network?: StellarNetwork | 'testnet' | 'mainnet' | 'public' | (string & {});
-  expectedNetwork?: StellarNetwork | 'testnet' | 'mainnet' | 'public' | (string & {});
+  triggerRef?: React.RefObject<HTMLButtonElement | null>;
+  id?: string;
 }
 
 const WalletDropdown: React.FC<WalletDropdownProps> = ({
@@ -25,10 +18,54 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
   onClose,
   onDisconnect,
   onOpenHistory,
-  network,
-  expectedNetwork,
+  triggerRef,
+  id = 'wallet-dropdown',
 }) => {
   const [copied, setCopied] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const getMenuItems = useCallback((): HTMLElement[] => {
+    if (!menuRef.current) return [];
+    return Array.from(menuRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+  }, []);
+
+  // Focus first item on open
+  useEffect(() => {
+    if (!isOpen) return;
+    const items = getMenuItems();
+    if (items.length > 0) {
+      items[0].focus();
+    }
+  }, [isOpen, getMenuItems]);
+
+  // Escape + outside pointerdown
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        triggerRef?.current?.focus();
+      }
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (menuRef.current && menuRef.current.contains(target)) return;
+      if (triggerRef?.current && triggerRef.current.contains(target)) return;
+      onClose();
+      triggerRef?.current?.focus();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('pointerdown', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [isOpen, onClose, triggerRef]);
 
   if (!isOpen) return null;
 
@@ -51,19 +88,48 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
     onClose();
   };
 
-  const handleSwitchWallet = () => {
-    onClose();
-    if (onSwitchWallet) {
-      onSwitchWallet();
-    } else {
-      onDisconnect();
+  const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const items = getMenuItems();
+    if (items.length === 0) return;
+    const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+
+    switch (event.key) {
+      case 'ArrowDown': {
+        event.preventDefault();
+        const next = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length;
+        items[next].focus();
+        break;
+      }
+      case 'ArrowUp': {
+        event.preventDefault();
+        const prev = currentIndex < 0 ? items.length - 1 : (currentIndex - 1 + items.length) % items.length;
+        items[prev].focus();
+        break;
+      }
+      case 'Home': {
+        event.preventDefault();
+        items[0].focus();
+        break;
+      }
+      case 'End': {
+        event.preventDefault();
+        items[items.length - 1].focus();
+        break;
+      }
+      default:
+        break;
     }
   };
 
   return (
     <div 
+      ref={menuRef}
+      id={id}
+      role="menu"
+      aria-label="Wallet menu"
       className="absolute right-0 mt-3 w-72 bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200"
       onClick={(e) => e.stopPropagation()}
+      onKeyDown={handleMenuKeyDown}
     >
       <div className="p-5">
         <div className="flex items-center justify-between mb-4">
@@ -113,6 +179,8 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
 
         <div className="space-y-1">
           <button 
+            role="menuitem"
+            tabIndex={-1}
             className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all group"
             onClick={() => window.open(explorerAccountUrl(resolvedWalletNetwork, address), '_blank')}
           >
@@ -125,6 +193,8 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
           </button>
 
           <button
+            role="menuitem"
+            tabIndex={-1}
             className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all group"
             onClick={handleSwitchWallet}
           >
@@ -137,6 +207,8 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
           </button>
 
           <button 
+            role="menuitem"
+            tabIndex={-1}
             className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all group"
             onClick={() => {
               onClose();
@@ -154,6 +226,8 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
           <div className="h-px bg-white/5 my-2" />
 
           <button 
+            role="menuitem"
+            tabIndex={-1}
             className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all group"
             onClick={handleDisconnect}
           >

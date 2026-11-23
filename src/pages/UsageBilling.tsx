@@ -12,6 +12,7 @@ import { useScopedTheme } from '../hooks/useScopedTheme';
 import './UsageBilling.css';
 import InvoiceList from "../components/InvoiceList";
 import PlanRecommendationBanner from "../components/PlanRecommendationBanner";
+import { usePageTitle } from '../hooks/usePageTitle';
 import { getStatementView } from '../utils/statement';
 import type { StatementEntry, StatementEntryType } from '../utils/statement';
 
@@ -85,6 +86,7 @@ function EmptyUsageState({ planName, billingPeriod, id }: { planName: string; bi
 }
 
 export default function UsageBilling() {
+    usePageTitle('Usage & Billing');
     const { id } = useParams<{ id: string }>();
 
     const isLoading = false;

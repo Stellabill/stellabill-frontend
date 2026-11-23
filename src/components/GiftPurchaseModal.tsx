@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, type ChangeEvent } from "react";
 import { useModalFocus } from "../hooks/useModalFocus";
 import { X, Gift, ArrowRight, ArrowLeft, Check, Copy, Share2, Mail, MessageSquare, Link as LinkIcon, Loader2 } from "lucide-react";
 import { copyToClipboard } from "../utils/clipboard";
+import { generateGiftCode } from "../utils/giftCode";
 import "./GiftPurchaseModal.css";
 
 export interface Plan {
@@ -65,7 +66,7 @@ export default function GiftPurchaseModal({
   const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useModalFocus(modalRef, { isOpen, onClose, initialFocusRef: emailInputRef });
+  useModalFocus(modalRef, { isOpen, onClose, initialFocusRef: emailInputRef, closeOnEscape: !isProcessing });
 
   useEffect(() => {
     return () => {
@@ -132,8 +133,7 @@ export default function GiftPurchaseModal({
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Generate mock gift code
-      const code = `GIFT-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const code = generateGiftCode();
       setGiftCode(code);
       setStep("complete");
 
@@ -186,6 +186,7 @@ export default function GiftPurchaseModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="gift-modal-title"
+      aria-busy={isProcessing}
     >
       <div className="gift-modal-backdrop" />
 
@@ -226,7 +227,7 @@ export default function GiftPurchaseModal({
           </div>
           <button
             className="gift-modal-close"
-            onClick={onClose}
+            onClick={() => !isProcessing && onClose()}
             aria-label="Close modal"
             disabled={isProcessing}
           >

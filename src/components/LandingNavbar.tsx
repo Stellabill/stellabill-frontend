@@ -5,49 +5,25 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from './Branding/Logo';
 import LocaleSwitcher from './LocaleSwitcher';
 import { Menu, X, Github, Rocket, Zap, BookOpen, MessageSquare, ChevronRight } from 'lucide-react';
-import { useWalletConnection, type UseWalletConnectionOptions } from '../hooks/useWalletConnection';
+import { useWallet } from '../wallet/WalletContext';
+import { FreighterConnectionError } from '../wallet/freighter';
 
 export interface LandingNavbarProps extends UseWalletConnectionOptions {}
 
 export default function LandingNavbar(props: LandingNavbarProps = {}) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
   const {
-    connectionState,
-    isConnected,
+    status,
     address,
-    errorMessage,
-    isModalOpen: isWalletModalOpen,
-    openModal: handleConnectWallet,
-    closeModal: handleCloseModal,
-    connectFreighter: handleFreighterConnect,
-    disconnect: handleDisconnect,
-    retry: handleRetry,
-  } = useWalletConnection(props);
-
-  const drawerRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const toggleButtonRef = useRef<HTMLButtonElement>(null);
-  const drawerId = useId();
-
-  const closeDrawer = () => setIsMobileMenuOpen(false);
-
-  useModalFocus(drawerRef as RefObject<HTMLElement>, {
-    isOpen: isMobileMenuOpen,
-    onClose: closeDrawer,
-    initialFocusRef: closeButtonRef as RefObject<HTMLElement>,
-  });
-
-  // Lock body scroll when drawer is open
-  useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [isMobileMenuOpen]);
+    error,
+    connect,
+    disconnect,
+    clearError,
+    cancelConnect,
+  } = useWallet()
+  const isConnected = status === 'connected'
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -68,6 +44,20 @@ export default function LandingNavbar(props: LandingNavbarProps = {}) {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
+
+  const handleConnectWallet = () => {
+    setIsWalletModalOpen(true);
+  }
+
+  const handleFreighterConnect = async () => {
+    try {
+      const result = await connect()
+      if (!result) return
+      setIsWalletModalOpen(false)
+    } catch {
+      // The provider exposes the error to the modal.
+    }
+  }
 
   const handleSubscribe = () => {
     navigate("/browse-plans");
@@ -128,8 +118,8 @@ export default function LandingNavbar(props: LandingNavbarProps = {}) {
 
                 {isConnected ? (
                     <WalletPill
-                        address={address}
-                        onDisconnect={handleDisconnect}
+                        address={address ?? ''}
+                        onDisconnect={disconnect}
                     />
                 ) : (
                     <button
@@ -145,7 +135,7 @@ export default function LandingNavbar(props: LandingNavbarProps = {}) {
               <div className="md:hidden flex items-center gap-3">
                 {isConnected && (
                     <div className="scale-90 origin-right">
-                      <WalletPill address={address} onDisconnect={handleDisconnect} />
+                      <WalletPill address={address ?? ''} onDisconnect={disconnect} />
                     </div>
                 )}
                 <button
@@ -263,7 +253,7 @@ export default function LandingNavbar(props: LandingNavbarProps = {}) {
                 {isConnected && (
                     <button
                         onClick={() => {
-                          handleDisconnect();
+                          disconnect();
                           setIsMobileMenuOpen(false);
                         }}
                         className="w-full py-4 px-6 text-center text-red-400 bg-red-400/5 hover:bg-red-400/10 border border-red-400/20 rounded-xl font-medium transition-all"
@@ -279,11 +269,15 @@ export default function LandingNavbar(props: LandingNavbarProps = {}) {
         {/* Wallet Connect Modal */}
         <WalletConnectModal
             isOpen={isWalletModalOpen}
-            onClose={handleCloseModal}
+            onClose={() => {
+              cancelConnect()
+              setIsWalletModalOpen(false)
+            }}
             onConnectFreighter={handleFreighterConnect}
-            connectionState={connectionState}
-            errorMessage={errorMessage}
-            onRetry={handleRetry}
+            connectionState={status}
+            errorMessage={error?.message}
+            errorType={error instanceof FreighterConnectionError ? error.type : undefined}
+            onRetry={clearError}
         />
       </>
   );

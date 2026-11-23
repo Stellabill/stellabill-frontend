@@ -483,7 +483,7 @@ export default function NotificationsCenter({
     });
   };
 
-  const { pullDistance, isRefreshing, triggerRefresh, handlers: refreshHandlers } = useRefresh({
+  const { pullDistance, isRefreshing, triggerRefresh, containerRef: refreshContainerRef, handlers: refreshHandlers } = useRefresh({
     onRefresh: fetchNotifications,
   });
 
@@ -1109,6 +1109,7 @@ export default function NotificationsCenter({
           ) : (
             <div
               className="notifications-scroll-area"
+              ref={refreshContainerRef as React.RefObject<HTMLDivElement>}
               {...refreshHandlers}
               style={{ position: 'relative', overflowY: 'auto', flex: 1 }}
             >

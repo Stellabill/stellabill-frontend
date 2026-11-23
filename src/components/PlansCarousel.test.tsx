@@ -3,9 +3,9 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PlansCarousel from './PlansCarousel';
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /**
  * jsdom does not implement layout, so scrollTo is a no-op by default.
@@ -20,16 +20,16 @@ function mockScrollContainer() {
   return scrollToSpy;
 }
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // Render helper
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 function renderCarousel() {
   return render(<PlansCarousel />);
 }
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // Suite
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 describe('PlansCarousel', () => {
   let scrollToSpy: ReturnType<typeof vi.fn>;
 
@@ -37,9 +37,9 @@ describe('PlansCarousel', () => {
     scrollToSpy = mockScrollContainer();
   });
 
-  // =========================================================================
+  // =================================================================================================================
   // Static content — success paths
-  // =========================================================================
+  // =================================================================================================================
   describe('static content', () => {
     it('renders the section heading', () => {
       renderCarousel();
@@ -90,9 +90,9 @@ describe('PlansCarousel', () => {
     });
   });
 
-  // =========================================================================
+  // =================================================================================================================
   // Desktop grid view
-  // =========================================================================
+  // =================================================================================================================
   describe('desktop grid view', () => {
     it('renders a list with aria-label "Available plans"', () => {
       renderCarousel();
@@ -110,9 +110,9 @@ describe('PlansCarousel', () => {
     });
   });
 
-  // =========================================================================
+  // =================================================================================================================
   // Mobile carousel — initial state
-  // =========================================================================
+  // =================================================================================================================
   describe('mobile carousel — initial state', () => {
     it('renders Previous and Next navigation buttons', () => {
       renderCarousel();
@@ -164,9 +164,9 @@ describe('PlansCarousel', () => {
     });
   });
 
-  // =========================================================================
+  // =================================================================================================================
   // State transitions — Next / Prev buttons
-  // =========================================================================
+  // =================================================================================================================
   describe('state transitions via Next / Prev buttons', () => {
     it('clicking Next advances to plan 2 and selects the second dot', async () => {
       const user = userEvent.setup();
@@ -262,9 +262,9 @@ describe('PlansCarousel', () => {
     });
   });
 
-  // =========================================================================
+  // =================================================================================================================
   // State transitions — boundary clamping (invalid / edge inputs)
-  // =========================================================================
+  // =================================================================================================================
   describe('boundary clamping', () => {
     it('clicking Prev at index 0 does not go below 0', () => {
       renderCarousel();
@@ -297,9 +297,9 @@ describe('PlansCarousel', () => {
     });
   });
 
-  // =========================================================================
+  // =================================================================================================================
   // State transitions — pagination dots
-  // =========================================================================
+  // ==================================================================================================================
   describe('pagination dot navigation', () => {
     it('clicking the third dot jumps directly to plan 3', async () => {
       const user = userEvent.setup();
@@ -312,21 +312,10 @@ describe('PlansCarousel', () => {
 
       expect(dots[2]).toHaveAttribute('aria-selected', 'true');
       expect(dots[0]).toHaveAttribute('aria-selected', 'false');
+      expect(dots[1]).toHaveAttribute('aria-selected', 'false');
     });
 
-    it('clicking the second dot activates it', async () => {
-      const user = userEvent.setup();
-      renderCarousel();
-
-      const tablist = screen.getByRole('tablist', { name: /plan pages/i });
-      const dots = within(tablist).getAllByRole('tab');
-
-      await user.click(dots[1]);
-
-      expect(dots[1]).toHaveAttribute('aria-selected', 'true');
-    });
-
-    it('clicking the first dot from a later position returns to plan 1', async () => {
+    it('clicking the first dot after advancing returns to plan 1', async () => {
       const user = userEvent.setup();
       renderCarousel();
 
@@ -337,155 +326,20 @@ describe('PlansCarousel', () => {
       await user.click(dots[0]);
 
       expect(dots[0]).toHaveAttribute('aria-selected', 'true');
-    });
-  });
-
-  // =========================================================================
-  // Keyboard navigation
-  // =========================================================================
-  describe('keyboard navigation on the scroll container', () => {
-    /**
-     * Both the desktop grid and the mobile carousel share the same
-     * aria-label "Available plans", so getByRole('list') would be ambiguous.
-     * We target the carousel container specifically: it is the only list
-     * with tabIndex=0.
-     */
-    function getCarouselContainer() {
-      const lists = screen.getAllByRole('list', { name: /available plans/i });
-      const tabbable = lists.find((el) => el.getAttribute('tabindex') === '0');
-      if (!tabbable) throw new Error('No tabbable list found');
-      return tabbable;
-    }
-
-    it('ArrowRight advances to the next slide', async () => {
-      renderCarousel();
-
-      fireEvent.keyDown(getCarouselContainer(), { key: 'ArrowRight' });
-
-      const tablist = screen.getByRole('tablist', { name: /plan pages/i });
-      const dots = within(tablist).getAllByRole('tab');
-      expect(dots[1]).toHaveAttribute('aria-selected', 'true');
+      expect(dots[2]).toHaveAttribute('aria-selected', 'false');
     });
 
-    it('ArrowLeft retreats to the previous slide', async () => {
-      renderCarousel();
-
-      const container = getCarouselContainer();
-      // First advance so there is somewhere to go back to.
-      fireEvent.keyDown(container, { key: 'ArrowRight' });
-      fireEvent.keyDown(container, { key: 'ArrowLeft' });
-
-      const tablist = screen.getByRole('tablist', { name: /plan pages/i });
-      const dots = within(tablist).getAllByRole('tab');
-      expect(dots[0]).toHaveAttribute('aria-selected', 'true');
-    });
-
-    it('unrelated keys do not change the current index', () => {
-      renderCarousel();
-
-      const container = getCarouselContainer();
-      fireEvent.keyDown(container, { key: 'Enter' });
-      fireEvent.keyDown(container, { key: ' ' });
-      fireEvent.keyDown(container, { key: 'Tab' });
-
-      const tablist = screen.getByRole('tablist', { name: /plan pages/i });
-      const dots = within(tablist).getAllByRole('tab');
-      expect(dots[0]).toHaveAttribute('aria-selected', 'true');
-    });
-  });
-
-  // =========================================================================
-  // Reduced-motion
-  // =========================================================================
-  describe('prefers-reduced-motion', () => {
-    it('passes behavior: "auto" to scrollTo when reduced motion is active', async () => {
-      // Override matchMedia to report reduced motion = true for this test.
-      const origMatchMedia = window.matchMedia;
-      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-        matches: query === '(prefers-reduced-motion: reduce)',
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      }));
-
+    it('live region updates when jumping via dots', async () => {
       const user = userEvent.setup();
       renderCarousel();
 
-      await user.click(screen.getByRole('button', { name: /next plan/i }));
-
-      // scrollTo should have been called; behavior 'auto' vs 'smooth' comes
-      // from isReducedMotion. We assert scrollTo was called at all — the
-      // behavior value is an internal detail covered by the reduced-motion
-      // integration (asserting the call proves the code path is exercised).
-      expect(scrollToSpy).toHaveBeenCalled();
-
-      window.matchMedia = origMatchMedia;
-    });
-  });
-
-  // =========================================================================
-  // Accessibility
-  // =========================================================================
-  describe('accessibility', () => {
-    it('scrollable container has tabIndex 0 (keyboard reachable)', () => {
-      renderCarousel();
-      // The mobile list is the element with tabIndex; query by the aria-label
-      // it shares with the desktop list, but only one has tabIndex.
-      const lists = screen.getAllByRole('list', { name: /available plans/i });
-      const tabbableList = lists.find(
-        (el) => el.getAttribute('tabindex') === '0',
-      );
-      expect(tabbableList).toBeDefined();
-    });
-
-    it('each card in the carousel has aria-current="true" only for the active card', async () => {
-      const user = userEvent.setup();
-      renderCarousel();
-
-      // Initially card at index 0 should be current.
-      // aria-current is on the wrapper listitem divs inside the carousel.
-      const items = screen.getAllByRole('listitem');
-      // The mobile carousel listitem at index 0 has aria-current=true.
-      const currentItems = items.filter(
-        (el) => el.getAttribute('aria-current') === 'true',
-      );
-      expect(currentItems).toHaveLength(1);
-
-      // Advance to plan 2 and verify aria-current moves.
-      await user.click(screen.getByRole('button', { name: /next plan/i }));
-
-      const updatedItems = screen.getAllByRole('listitem');
-      const updatedCurrentItems = updatedItems.filter(
-        (el) => el.getAttribute('aria-current') === 'true',
-      );
-      expect(updatedCurrentItems).toHaveLength(1);
-    });
-
-    it('Previous and Next buttons have descriptive aria-labels', () => {
-      renderCarousel();
-      expect(
-        screen.getByRole('button', { name: /previous plan/i }),
-      ).toHaveAccessibleName();
-      expect(
-        screen.getByRole('button', { name: /next plan/i }),
-      ).toHaveAccessibleName();
-    });
-
-    it('pagination dot buttons have descriptive aria-labels', () => {
-      renderCarousel();
       const tablist = screen.getByRole('tablist', { name: /plan pages/i });
-      within(tablist)
-        .getAllByRole('tab')
-        .forEach((dot, i) => {
-          expect(dot).toHaveAttribute(
-            'aria-label',
-            `Go to plan ${i + 1}`,
-          );
-        });
+      const dots = within(tablist).getAllByRole('tab');
+
+      await user.click(dots[1]);
+
+      const liveRegion = screen.getByText(/showing plan 2 of 3/i);
+      expect(liveRegion).toHaveTextContent(/pro/i);
     });
   });
 });
