@@ -8,7 +8,7 @@ import RouteErrorBoundary from "./components/RouteErrorBoundary";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const SubscriptionDetail = lazy(() => import("./pages/SubscriptionDetail"));
-const Plans = lazy(() => import("./pages/Plans"));
+const MerchantPlans = lazy(() => import("./pages/MerchantPlans"));
 const CreatePlan = lazy(() => import("./pages/CreatePlan"));
 const Landing = lazy(() => import("./pages/Landing"));
 const BrowsePlans = lazy(() => import("./pages/BrowsePlans"));
@@ -99,29 +99,27 @@ function App() {
       <Route path="/gift-redeem-success" element={<GiftRedeemSuccess />} />
       </Route>
 
-      {/* 2. Authenticated Routes (Wrapped in RequireWallet + Layout) */}
-      <Route element={<RequireWallet />}>
-        <Route element={<Layout />}>
-          <Route element={<TransitionLayout />}>
-            {/* Redirect base dashboard path to specific dashboard component if needed */}
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/browse-plans" element={<BrowsePlans />} />
-            <Route path="/checkout/:planId" element={<Checkout />} />
-            {/* Plans Management */}
-            <Route path="/plans" element={<Plans />} />
-            <Route path="/plans/create" element={<CreatePlan />} />
-            <Route path="/plans/new" element={<CreatePlan />} />{" "}
-            {/* Alias for flexibility */}
-            {/* Subscriptions Management */}
-            <Route path="/subscriptions" element={<Subscriptions />} />
-            <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />
-            <Route path="/subscriptions/:id/usage" element={<UsageBilling />} />
-            <Route path="/wallet" element={<WalletDetailView />} />
-            <Route path="/settings" element={<Settings />} />
-            {/* Development/UI Kit */}
-            <Route path="/brand" element={<BrandPack />} />
-            <Route path="/design-tokens" element={<DesignTokens />} />
-          </Route>
+      {/* 2. Authenticated Routes (Wrapped in Layout) */}
+      <Route element={<Layout />}>
+        <Route element={<TransitionLayout />}>
+          {/* Redirect base dashboard path to specific dashboard component if needed */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/browse-plans" element={<BrowsePlans />} />
+          <Route path="/checkout/:planId" element={<Checkout />} />
+          {/* Plans Management */}
+          <Route path="/plans" element={<MerchantPlans />} />
+          <Route path="/plans/create" element={<CreatePlan />} />
+          <Route path="/plans/new" element={<CreatePlan />} />{" "}
+          {/* Alias for flexibility */}
+          {/* Subscriptions Management */}
+          <Route path="/subscriptions" element={<Subscriptions />} />
+          <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />
+          <Route path="/subscriptions/:id/usage" element={<UsageBilling />} />
+          <Route path="/wallet" element={<WalletDetailView />} />
+          <Route path="/settings" element={<Settings />} />
+          {/* Development/UI Kit */}
+          <Route path="/brand" element={<BrandPack />} />
+          <Route path="/design-tokens" element={<DesignTokens />} />
         </Route>
       </Route>
 

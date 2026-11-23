@@ -1,0 +1,234 @@
+{
+  "landing": {
+    "hero": {
+      "tag": "Creado con contratos inteligentes de Soroban",
+      "headline": "<0>Facturación recurrente en USDC para el</0> <1>ecosistema Stellar</1>",
+      "subtitle": "Facturación de suscripciones con infraestructura de alta fiabilidad y bóvedas de prepago. Los usuarios depositan USDC y los contratos inteligentes liberan fondos periódicamente, sin cargos forzados y con liquidaciones rápidas y comisiones bajas.",
+      "actionsLabel": "Acciones principales",
+      "primaryAction": "Empieza a aceptar suscripciones",
+      "secondaryAction": "Ver precios"
+    },
+    "faq": {
+      "title": "Preguntas frecuentes",
+      "prepaid": {
+        "question": "¿Qué es el saldo de prepago?",
+        "answer": "El saldo de prepago es un crédito que añades a tu cuenta de Stellabill en USDC en la red Stellar. Los cargos de suscripción se deducen automáticamente de este saldo en cada ciclo de facturación para que no se te pase ningún pago."
+      },
+      "cancellation": {
+        "question": "¿Cómo funciona la cancelación?",
+        "answer": "Puedes cancelar cualquier suscripción en cualquier momento desde tu panel. Conservarás el acceso hasta el final del periodo de facturación actual. Puedes retirar el saldo de prepago restante a tu monedero."
+      },
+      "wallets": {
+        "question": "¿Qué monederos son compatibles?",
+        "answer": "Stellabill funciona con cualquier monedero compatible con Stellar, como Freighter, Lobstr y Albedo. Necesitas USDC en Stellar y una pequeña reserva de XLM para las comisiones de transacción."
+      }
+    },
+    "metrics": {
+      "label": "Indicadores clave de rendimiento",
+      "headline": "\"<0>Facturación</0> de alta fiabilidad para SaaS de Web3\"",
+      "uptime": {
+        "label": "DISPONIBILIDAD",
+        "value": "99,9 %"
+      },
+      "settlement": {
+        "label": "LIQUIDACIÓN",
+        "value": "<2 s"
+      },
+      "fee": {
+        "label": "COMISIÓN MEDIA",
+        "value": "0,01 US$"
+      },
+      "trusted": "LA CONFIANZA DE LOS DESARROLLADORES DEL ECOSISTEMA STELLAR"
+    }
+  },
+  "pricing": {
+    "plans": {
+      "free": {
+        "title": "Gratis",
+        "tagline": "Para particulares y proyectos personales que están empezando.",
+        "buttonText": "Empieza gratis"
+      },
+      "pro": {
+        "title": "Pro",
+        "tagline": "Para equipos en crecimiento que necesitan facturación y análisis avanzados.",
+        "buttonText": "Inicia tu prueba gratuita"
+      },
+      "enterprise": {
+        "title": "Empresas",
+        "tagline": "Para grandes organizaciones con requisitos de cumplimiento específicos.",
+        "priceLabel": "A medida",
+        "priceSubtext": "Descuentos por volumen y acuerdos de servicio específicos",
+        "buttonText": "Contacta con ventas"
+      }
+    },
+    "features": {
+      "subscriptionLimit": "Hasta 50 suscripciones activas",
+      "basicBilling": "Facturación recurrente básica",
+      "webhooks": "Webhooks",
+      "community": "Soporte de la comunidad",
+      "unlimited": "Suscripciones ilimitadas",
+      "usage": "Facturación por uso",
+      "priority": "Soporte prioritario",
+      "analytics": "Análisis avanzados",
+      "customWebhooks": "Webhooks personalizados",
+      "everythingPro": "Todo lo incluido en Pro",
+      "slas": "Acuerdos de servicio personalizados",
+      "volume": "Precios por volumen",
+      "whiteLabel": "Opciones de marca blanca",
+      "dedicatedSupport": "Equipo de soporte dedicado",
+      "recurring": "Facturación recurrente",
+      "api": "Acceso a la API",
+      "dedicated": "Equipo dedicado"
+    },
+    "title": "Planes y precios",
+    "subtitle": "Planes en USDC sin comisiones ocultas.",
+    "printCta": "¿Listo para empezar? Visita <0>stellabill.com/pricing</0>",
+    "popular": "Más popular",
+    "perSeat": "/ usuario / mes",
+    "perMonth": "/mes",
+    "total": "{count, plural, one {{amount} / mes en total por # usuario} other {{amount} / mes en total por # usuarios}}",
+    "mode": {
+      "label": "Modalidad de precios",
+      "flat": "Tarifa fija",
+      "perSeat": "Por usuario"
+    },
+    "seats": {
+      "label": "Número de usuarios",
+      "remove": "Quitar un usuario",
+      "add": "Añadir un usuario",
+      "selected": "{count, plural, one {# usuario seleccionado} other {# usuarios seleccionados}}",
+      "definition": "Un <0>usuario</0> es un miembro activo del equipo que puede iniciar sesión y gestionar suscripciones. Los precios se muestran por usuario al mes."
+    },
+    "comparison": {
+      "title": "Comparación de funciones",
+      "label": "Tabla comparativa de funciones",
+      "caption": "Comparación de funciones de los planes Gratis, Pro y Empresas",
+      "features": "Funciones",
+      "cardsLabel": "Tarjetas de funciones de los planes",
+      "included": "Incluido",
+      "excluded": "No incluido",
+      "basic": "Básico"
+    },
+    "groups": {
+      "billing": "Facturación",
+      "integrations": "Integraciones",
+      "support": "Soporte",
+      "enterprise": "Empresas"
+    }
+  },
+  "subscriptions": {
+    "table": {
+      "tags": "Etiquetas",
+      "plan": "Plan",
+      "status": "Estado",
+      "price": "Precio",
+      "nextCharge": "Próximo cargo",
+      "prepaidBalance": "Saldo de prepago",
+      "actions": "Acciones",
+      "manage": "Gestionar",
+      "prepaid": "Prepago",
+      "coverage": "Cobertura",
+      "lastPayment": "Último pago"
+    },
+    "pageTitle": "Mis suscripciones",
+    "pageDescription": "Gestiona tus suscripciones activas y anteriores",
+    "browsePlans": "Explorar planes",
+    "tabs": {
+      "all": "Todas",
+      "active": "Activa",
+      "paused": "En pausa",
+      "cancelled": "Cancelada"
+    },
+    "status": {
+      "active": "Activa",
+      "paused": "En pausa",
+      "cancelled": "Cancelada"
+    },
+    "empty": {
+      "noFiltered": "No hay suscripciones {filter}",
+      "noFilteredDesc": "No tienes suscripciones {filter}. Prueba otro filtro o explora los planes disponibles.",
+      "noSubscriptions": "Todavía no hay suscripciones",
+      "noSubscriptionsDesc": "Todavía no te has suscrito a ningún plan. Explora los planes disponibles para empezar con Stellabill."
+    },
+    "pluralTest": "{count, plural, =0 {No hay suscripciones activas} one {1 suscripción activa} other {{count} suscripciones activas}}",
+    "subscriptionCount": "{count, plural, =0 {No hay suscripciones} one {1 suscripción} other {{count} suscripciones}}",
+    "tabCount": "{label} ({count})",
+    "tabAriaLabel": "{count, plural, one {Mostrar suscripciones {label} (1)} other {Mostrar suscripciones {label} ({count})}}"
+  },
+  "dashboard": {
+    "title": "Resumen del panel",
+    "subtitle": "Supervisa el rendimiento de tus suscripciones y los indicadores de crecimiento.",
+    "viewPlans": "Ver planes",
+    "createPlan": "Crear plan",
+    "kpis": {
+      "activeSubscriptions": "Suscripciones activas",
+      "activeSubscriptionsHelp": "Número total de suscripciones de pago activas.",
+      "mrr": "Ingresos recurrentes mensuales",
+      "mrrHelp": "Ingresos recurrentes mensuales de todas las suscripciones activas.",
+      "failedCharges": "Cargos fallidos",
+      "failedChargesHelp": "Número de cargos fallidos en los últimos 30 días.",
+      "upcomingRenewals": "Próximas renovaciones",
+      "upcomingRenewalsHelp": "Suscripciones que se renovarán en los próximos 7 días.",
+      "targetLabel": "Objetivo"
+    },
+    "revenueGrowth": "Crecimiento de los ingresos",
+    "viewDetailedReport": "Ver informe detallado",
+    "recentActivity": "Actividad reciente",
+    "markAllAsRead": "Marcar todo como leído",
+    "seeAllActivity": "Ver toda la actividad",
+    "unavailable": "Panel no disponible",
+    "simulateError": "El servicio de indicadores no está disponible. [Código de error: MET-500]"
+  },
+  "aria": {
+    "loadingSubscriptions": "Cargando suscripciones",
+    "filterByStatus": "Filtrar suscripciones por estado",
+    "subscriptionsList": "Lista de suscripciones"
+  },
+  "notifications": {
+    "unreadCount": "{count, plural, =0 {No hay notificaciones sin leer} one {1 notificación sin leer} other {{count} notificaciones sin leer}}",
+    "billingAlerts": "Alertas de facturación",
+    "title": "Notificaciones",
+    "toolbar": "{count, plural, =0 {No hay alertas} one {1 sin leer} other {{count} sin leer}}",
+    "toolbarAllRead": "Todo al día",
+    "markAllRead": "Marcar todo como leído",
+    "close": "Cerrar notificaciones de facturación",
+    "listLabel": "Lista de notificaciones de facturación",
+    "triggerLabel": "{count, plural, =0 {Abrir notificaciones de facturación} one {Abrir notificaciones de facturación, 1 sin leer} other {Abrir notificaciones de facturación, {count} sin leer}}",
+    "liveRegion": "{count, plural, =0 {Todas las notificaciones de facturación están leídas} one {1 notificación de facturación sin leer} other {{count} notificaciones de facturación sin leer}}",
+    "emptyTitle": "No hay alertas de facturación",
+    "emptyDescription": "Aquí aparecerán los cargos fallidos, los saldos bajos y los cambios de plan.",
+    "allReadTitle": "Todo al día",
+    "allReadDescription": "No hay eventos de facturación sin leer en este momento.",
+    "allSilencedTitle": "Todas las notificaciones silenciadas",
+    "allSilencedDescription": "{count, plural, one {1 notificación silenciada o aplazada} other {{count} notificaciones silenciadas o aplazadas}}",
+    "snooze": {
+      "triggerLabel": "Aplazar o silenciar: {{title}}",
+      "triggerLabelSnoozed": "Aplazada — {{title}}. Abre para cambiar",
+      "triggerLabelMuted": "Silenciada — {{title}}. Abre para reactivar",
+      "menuLabel": "Opciones para aplazar o silenciar {{title}}",
+      "snoozeFor": "Aplazar durante",
+      "1h": "1 hora",
+      "8h": "8 horas",
+      "24h": "1 día",
+      "mute": "Silenciar esta notificación",
+      "unmute": "Reactivar",
+      "unsnooze": "Reanudar ahora",
+      "mutedLabel": "Silenciada",
+      "resumesInHours": "{count, plural, one {Se reanuda en 1 h} other {Se reanuda en {{count}} h}}",
+      "resumesInMinutes": "{count, plural, one {Se reanuda en 1 min} other {Se reanuda en {{count}} min}}",
+      "silencedCount": "{count, plural, one {Silenciada (1)} other {Silenciadas ({{count}})}}",
+      "silencedListLabel": "Notificaciones silenciadas y aplazadas",
+      "announceSnoozed1h": "{{title}} aplazada durante 1 hora",
+      "announceSnoozed8h": "{{title}} aplazada durante 8 horas",
+      "announceSnoozed24h": "{{title}} aplazada durante 1 día",
+      "announceMuted": "{{title}} silenciada",
+      "announceResumed": "Notificaciones de {{title}} reanudadas"
+    }
+  },
+  "icu": {
+    "pluralExample": "{count, plural, =0 {No hay elementos} one {1 elemento} other {{count} elementos}}",
+    "selectExample": "{gender, select, male {A él le gustó} female {A ella le gustó} other {Les gustó}} tu publicación",
+    "selectOrdinalExample": "Terminaste en el puesto {rank}",
+    "combinedExample": "{gender, select, male {Él tiene} female {Ella tiene} other {Tienen}} {count, plural, one {1 factura} other {{count} facturas}}"
+  }
+}

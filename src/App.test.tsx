@@ -1,5 +1,20 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+/**
+ * Test suite for src/App.tsx
+ *
+ * Covers:
+ *  - Default export is a valid React component
+ *  - Root "/" renders the public landing page
+ *  - "/onboarding" redirects to "/onboarding/business"
+ *  - Catch-all unknown paths render the not-found page
+ *  - Every public route renders its page stub (no Layout wrapper)
+ *  - Every Layout-wrapped authenticated route renders inside the Layout
+ *  - Both "/plans/create" and "/plans/new" resolve to the CreatePlan page
+ *  - Parameterised routes ("/subscriptions/:id" and "/subscriptions/:id/usage")
+ *    accept arbitrary id values
+ */
+
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import App from './App';
 import { WalletProvider, useWallet } from './wallet/WalletContext';
@@ -43,6 +58,8 @@ vi.mock('./components/TransitionLayout', async () => {
   };
 });
 
+vi.mock('./pages/NotFound', () => ({ default: () => <div data-testid="page-not-found" /> }));
+
 // Pages – public
 vi.mock('./pages/Landing', () => ({
   default: function MockLanding() {
@@ -69,7 +86,7 @@ vi.mock('./pages/GiftRedeemSuccess', () => ({ default: () => <div data-testid="p
 vi.mock('./pages/Dashboard', () => ({ default: () => <div data-testid="page-dashboard" /> }));
 vi.mock('./pages/BrowsePlans', () => ({ default: () => <div data-testid="page-browse-plans" /> }));
 vi.mock('./pages/Checkout', () => ({ default: () => <div data-testid="page-checkout" /> }));
-vi.mock('./pages/Plans', () => ({ default: () => <div data-testid="page-plans" /> }));
+vi.mock('./pages/MerchantPlans', () => ({ default: () => <div data-testid="page-plans" /> }));
 vi.mock('./pages/CreatePlan', () => ({ default: () => <div data-testid="page-create-plan" /> }));
 vi.mock('./pages/Subscriptions', () => ({ default: () => <div data-testid="page-subscriptions" /> }));
 vi.mock('./pages/SubscriptionDetail', () => ({ default: () => <div data-testid="page-subscription-detail" /> }));
@@ -78,6 +95,7 @@ vi.mock('./pages/WalletDetailView', () => ({ default: () => <div data-testid="pa
 vi.mock('./pages/Settings', () => ({ default: () => <div data-testid="page-settings" /> }));
 vi.mock('./pages/BrandPack', () => ({ default: () => <div data-testid="page-brand-pack" /> }));
 vi.mock('./pages/DesignTokens', () => ({ default: () => <div data-testid="page-design-tokens" /> }));
+vi.mock('./pages/WalletDetailView', () => ({ default: () => <div data-testid="page-wallet-detail" /> }));
 
 function LocationDisplay() {
   const location = useLocation();
@@ -124,67 +142,28 @@ describe('App – module contract', () => {
   });
 });
 
-describe('App – RequireWallet guard', () => {
-  it.each(['/dashboard', '/subscriptions', '/wallet', '/settings'])(
-    'redirects unauthenticated visit to "%s" to "/" without rendering Layout',
-    async (protectedPath) => {
-      renderAt(protectedPath, { connected: false });
-
-      expect(await screen.findByTestId('page-landing')).toBeInTheDocument();
-      expect(screen.queryByTestId('layout')).not.toBeInTheDocument();
-      expect(screen.getByTestId('location-display')).toHaveTextContent('/');
-    },
-  );
-
-  it('preserves intended destination (including search and hash) and returns after connecting', async () => {
-    renderAt('/subscriptions?tab=active#top', { connected: false });
-
+// ---------------------------------------------------------------------------
+// Redirect behaviour
+// ---------------------------------------------------------------------------
+describe('App – redirects', () => {
+  it('renders the landing page at "/"', async () => {
+    renderAt('/');
     expect(await screen.findByTestId('page-landing')).toBeInTheDocument();
-    expect(screen.getByTestId('location-display')).toHaveTextContent('/');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Connect Wallet' }));
-
-    expect(await screen.findByTestId('page-subscriptions')).toBeInTheDocument();
-    expect(screen.getByTestId('layout')).toBeInTheDocument();
-    expect(screen.getByTestId('location-display')).toHaveTextContent(
-      '/subscriptions?tab=active#top',
-    );
   });
 
-  it('shows a loading state while the wallet reconnects and renders the route once restored', async () => {
-    let resolveConnection!: (value: { isConnected: boolean }) => void;
-    const adapter = createMockAdapter({
-      isConnected: vi.fn(
-        () =>
-          new Promise((resolve) => {
-            resolveConnection = resolve;
-          }),
-      ),
-    });
-
-    renderAt('/subscriptions', { connected: true, adapter });
-
-    expect(screen.getByRole('status', { name: 'Reconnecting wallet' })).toBeInTheDocument();
-    expect(screen.queryByTestId('page-landing')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('page-subscriptions')).not.toBeInTheDocument();
-
-    resolveConnection({ isConnected: true });
-
-    expect(await screen.findByTestId('page-subscriptions')).toBeInTheDocument();
-    expect(screen.getByTestId('layout')).toBeInTheDocument();
+  it('redirects "/onboarding" to "/onboarding/business"', async () => {
+    renderAt('/onboarding');
+    expect(await screen.findByTestId('page-onboarding-business')).toBeInTheDocument();
   });
 
-  it('redirects to "/" if wallet reconnection fails', async () => {
-    const adapter = createMockAdapter({
-      isConnected: vi.fn().mockRejectedValue(new Error('Extension unavailable')),
-    });
+  it('renders the not-found page for an unknown path', async () => {
+    renderAt('/this-route-does-not-exist');
+    expect(await screen.findByTestId('page-not-found')).toBeInTheDocument();
+  });
 
-    renderAt('/subscriptions', { connected: true, adapter });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('page-landing')).toBeInTheDocument();
-    });
-    expect(screen.queryByTestId('layout')).not.toBeInTheDocument();
+  it('renders the not-found page for a deeply nested unknown path', async () => {
+    renderAt('/a/b/c/d/e');
+    expect(await screen.findByTestId('page-not-found')).toBeInTheDocument();
   });
 });
 
@@ -202,10 +181,19 @@ describe('App – public routes (unauthenticated)', () => {
     { path: '/gift-redeem-success', testId: 'page-gift-redeem-success' },
   ];
 
+  beforeEach(() => {
+    // Ensure Layout is NOT rendered for public routes and guards start clean.
+    sessionStorage.clear();
+  });
+
   publicRoutes.forEach(({ path, testId }) => {
-    it(`renders "${path}" without a connected wallet and without Layout`, async () => {
-      renderAt(path, { connected: false });
+    it(`renders "${path}" and does NOT wrap it in the authenticated Layout`, async () => {
+      if (path === '/onboarding/payout') {
+        sessionStorage.setItem('onboardingBusiness', '{}');
+      }
+      renderAt(path);
       expect(await screen.findByTestId(testId)).toBeInTheDocument();
+      // Public routes must not render inside the authenticated Layout
       expect(screen.queryByTestId('layout')).not.toBeInTheDocument();
     });
   });
@@ -222,6 +210,7 @@ describe('App – authenticated (Layout-wrapped) routes when connected', () => {
   const authRoutes: Array<{ path: string; testId: string; label?: string }> = [
     { path: '/dashboard', testId: 'page-dashboard' },
     { path: '/browse-plans', testId: 'page-browse-plans' },
+    { path: '/checkout/test-plan', testId: 'page-checkout' },
     { path: '/plans', testId: 'page-plans' },
     { path: '/plans/create', testId: 'page-create-plan' },
     { path: '/plans/new', testId: 'page-create-plan', label: '/plans/new (alias for create)' },
@@ -232,20 +221,76 @@ describe('App – authenticated (Layout-wrapped) routes when connected', () => {
     { path: '/settings', testId: 'page-settings' },
     { path: '/brand', testId: 'page-brand-pack' },
     { path: '/design-tokens', testId: 'page-design-tokens' },
+    { path: '/wallet', testId: 'page-wallet-detail' },
   ];
 
   authRoutes.forEach(({ path, testId, label }) => {
-    it(`renders "${label ?? path}" inside Layout when wallet is connected`, async () => {
-      renderAt(path, { connected: true });
+    it(`renders "${label ?? path}" inside the Layout`, async () => {
+      renderAt(path);
       expect(await screen.findByTestId(testId)).toBeInTheDocument();
       expect(screen.getByTestId('layout')).toBeInTheDocument();
     });
   });
 });
 
-describe('App – catch-all route', () => {
-  it('renders NotFound for unknown paths', async () => {
-    renderAt('/this-route-does-not-exist', { connected: false });
-    expect(await screen.findByRole('heading', { name: /page not found/i })).toBeInTheDocument();
+// ---------------------------------------------------------------------------
+// Parameterised routes
+// ---------------------------------------------------------------------------
+describe('App – parameterised routes', () => {
+  it('mounts SubscriptionDetail for any :id value', async () => {
+    renderAt('/subscriptions/ARBITRARY-ID-99');
+    expect(await screen.findByTestId('page-subscription-detail')).toBeInTheDocument();
+  });
+
+  it('mounts UsageBilling for any :id value with /usage suffix', async () => {
+    renderAt('/subscriptions/ARBITRARY-ID-99/usage');
+    expect(await screen.findByTestId('page-usage-billing')).toBeInTheDocument();
+  });
+
+  it('does NOT render UsageBilling at the plain subscription-detail path', async () => {
+    renderAt('/subscriptions/some-id');
+    expect(await screen.findByTestId('page-subscription-detail')).toBeInTheDocument();
+    expect(screen.queryByTestId('page-usage-billing')).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Route aliasing
+// ---------------------------------------------------------------------------
+describe('App – route aliases', () => {
+  it('renders the same CreatePlan component at /plans/create and /plans/new', async () => {
+    const { unmount } = renderAt('/plans/create');
+    expect(await screen.findByTestId('page-create-plan')).toBeInTheDocument();
+    unmount();
+
+    renderAt('/plans/new');
+    expect(await screen.findByTestId('page-create-plan')).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Boundary / invalid input behaviour
+// ---------------------------------------------------------------------------
+describe('App – boundary and invalid-input behaviour', () => {
+  it('handles an empty string path by rendering the landing page', async () => {
+    // MemoryRouter treats '' as '/' which renders the landing page.
+    renderAt('');
+    expect(await screen.findByTestId('page-landing')).toBeInTheDocument();
+  });
+
+  it('handles an unknown path with a trailing slash using the not-found page', async () => {
+    renderAt('/unknown/');
+    expect(await screen.findByTestId('page-not-found')).toBeInTheDocument();
+  });
+
+  it('does not leak Layout into public pages even when rendered multiple times', async () => {
+    const { unmount } = renderAt('/landing');
+    expect(await screen.findByTestId('page-landing')).toBeInTheDocument();
+    expect(screen.queryByTestId('layout')).not.toBeInTheDocument();
+    unmount();
+
+    renderAt('/pricing');
+    expect(await screen.findByTestId('page-pricing')).toBeInTheDocument();
+    expect(screen.queryByTestId('layout')).not.toBeInTheDocument();
   });
 });
