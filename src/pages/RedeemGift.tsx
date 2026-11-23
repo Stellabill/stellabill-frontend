@@ -3,7 +3,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Gift, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import LandingNavbar from "../components/LandingNavbar";
 import RedeemConfirmModal from "../components/RedeemConfirmModal";
-import { normalizeGiftCode, validateGiftCode, type GiftDetails } from "../utils/giftCode";
+import {
+  normalizeGiftCode,
+  validateGiftCode,
+  type GiftCodeValidator,
+  type GiftDetails,
+} from "../utils/giftCode";
 import "./RedeemGift.css";
 
 const MALFORMED_CODE_ERROR = "Please enter a valid gift code (e.g., GIFT-ABC123-XYZ789)";
@@ -16,7 +21,15 @@ function formatGiftDate(value: string): string {
   });
 }
 
-export default function RedeemGift() {
+export interface RedeemGiftProps {
+  validator?: GiftCodeValidator;
+  useFixtures?: boolean;
+}
+
+export default function RedeemGift({
+  validator,
+  useFixtures = true,
+}: RedeemGiftProps = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [code, setCode] = useState("");
@@ -32,7 +45,7 @@ export default function RedeemGift() {
     setError("");
 
     try {
-      const result = await validateGiftCode(codeToValidate);
+      const result = await validateGiftCode(codeToValidate, { validator, useFixtures });
 
       if (result.status === "ok") {
         setCode(result.code);
@@ -52,7 +65,7 @@ export default function RedeemGift() {
     } finally {
       setIsValidating(false);
     }
-  }, []);
+  }, [useFixtures, validator]);
 
   useEffect(() => {
     const urlCode = searchParams.get("code");
