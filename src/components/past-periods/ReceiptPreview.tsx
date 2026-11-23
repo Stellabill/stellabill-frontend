@@ -1,6 +1,7 @@
-import React, { useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import "./ReceiptPrint.css";
 import { useScopedTheme } from "../../hooks/useScopedTheme";
+import InvoicePrintRoot from "../InvoicePrintRoot";
 
 type Money = {
   amount: number;
@@ -152,6 +153,10 @@ export default function ReceiptPreview({ receipt }: { receipt: ReceiptData | nul
     return { subtotal: derivedSubtotal, taxes, total: derivedTotal };
   }, [receipt]);
 
+  const handleAfterPrint = useCallback(() => {
+    setDownloadState("idle");
+  }, []);
+
   function onDownloadPdf() {
     if (!receipt) return;
     if (downloadState === "compiling") return;
@@ -159,29 +164,17 @@ export default function ReceiptPreview({ receipt }: { receipt: ReceiptData | nul
     setDownloadError(null);
     setDownloadState("compiling");
 
-    // Simulate compilation time.
-    const ms = 1200;
-    window.setTimeout(() => {
+    const previousTitle = document.title;
+    document.title = `receipt-${receipt.receiptId}`;
+    try {
+      window.print();
       setDownloadState("ready");
-
-      // Simulate a download action without external dependencies.
-      try {
-        const blob = new Blob(["PDF compilation simulated"], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `receipt-${receipt.receiptId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      } catch {
-        setDownloadError("Unable to start download.");
-        setDownloadState("idle");
-      }
-
-      window.setTimeout(() => setDownloadState("idle"), 1200);
-    }, ms);
+    } catch {
+      setDownloadError("Unable to open print dialog.");
+      setDownloadState("idle");
+    } finally {
+      document.title = previousTitle;
+    }
   }
 
   if (!receipt || !hasHistory) {
@@ -255,7 +248,8 @@ export default function ReceiptPreview({ receipt }: { receipt: ReceiptData | nul
       </header>
 
       <div className="rp-preview" aria-label="Receipt preview container">
-        <div className="rp-paper" ref={paperRef} role="region" aria-label="Receipt document" tabIndex={0}>
+        <InvoicePrintRoot showTrigger={false} onAfterPrint={handleAfterPrint}>
+          <div className="rp-paper" ref={paperRef} role="region" aria-label="Receipt document" tabIndex={0}>
           {/* Header area */}
           <div className="rp-doc-header">
             <div className="rp-doc-brand">
@@ -436,6 +430,7 @@ export default function ReceiptPreview({ receipt }: { receipt: ReceiptData | nul
             </div>
           </div>
         </div>
+        </InvoicePrintRoot>
       </div>
     </section>
   );

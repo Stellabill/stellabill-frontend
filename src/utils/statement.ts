@@ -93,3 +93,75 @@ export function getStatementView(
     openingBalance,
   };
 }
+
+export interface InvoiceCsvLineItem {
+  description: string;
+  quantity?: number;
+  unitPrice?: string;
+  lineTotal: string;
+}
+
+export interface InvoiceCsvSummaryItem {
+  label: string;
+  amount: string;
+}
+
+export interface InvoiceCsvData {
+  id: string;
+  total: string;
+  lineItems?: InvoiceCsvLineItem[];
+  subtotal?: string;
+  taxes?: InvoiceCsvSummaryItem[];
+  credits?: InvoiceCsvSummaryItem[];
+}
+
+export function escapeCsvCell(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (/[",\r\n]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+export function buildInvoiceCsv(invoice: InvoiceCsvData): string {
+  const header = 'Description,Quantity,Unit Price,Line Total';
+  const rows = (invoice.lineItems ?? []).map((item) =>
+    [
+      escapeCsvCell(item.description),
+      escapeCsvCell(item.quantity ?? ''),
+      escapeCsvCell(item.unitPrice ?? ''),
+      escapeCsvCell(item.lineTotal),
+    ].join(','),
+  );
+
+  const summaryRows: string[] = [];
+  if (invoice.subtotal) {
+    summaryRows.push(`Subtotal,,,${escapeCsvCell(invoice.subtotal)}`);
+  }
+  if (invoice.taxes) {
+    for (const tax of invoice.taxes) {
+      summaryRows.push(`${escapeCsvCell(tax.label)},,,${escapeCsvCell(tax.amount)}`);
+    }
+  }
+  if (invoice.credits) {
+    for (const credit of invoice.credits) {
+      summaryRows.push(`${escapeCsvCell(credit.label)},,,${escapeCsvCell(credit.amount)}`);
+    }
+  }
+  summaryRows.push(`Total,,,${escapeCsvCell(invoice.total)}`);
+
+  return `${header}\n${rows.join('\n')}\n\n${summaryRows.join('\n')}`;
+}
+
+export function downloadCsvFile(filename: string, csvContent: string): void {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

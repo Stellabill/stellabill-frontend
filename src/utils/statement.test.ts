@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   computeStatementBalances,
   getStatementView,
+  escapeCsvCell,
+  buildInvoiceCsv,
   type StatementEntry,
 } from './statement';
 
@@ -121,5 +123,33 @@ describe('getStatementView', () => {
 
     expect(view.openingBalance).toBe(0);
     expect(view.entries[0].balance).toBe(15.2);
+  });
+});
+
+describe('invoice CSV helpers', () => {
+  it('escapes commas and quotes in CSV cells', () => {
+    expect(escapeCsvCell('simple')).toBe('simple');
+    expect(escapeCsvCell('a, b')).toBe('"a, b"');
+    expect(escapeCsvCell('say "hi"')).toBe('"say ""hi"""');
+  });
+
+  it('builds CSV with line items, taxes, credits, and total', () => {
+    const csv = buildInvoiceCsv({
+      id: 'INV-1',
+      subtotal: '100.00',
+      total: '105.00',
+      lineItems: [
+        { description: 'Pro Plan, Monthly', quantity: 1, unitPrice: '100.00', lineTotal: '100.00' },
+      ],
+      taxes: [{ label: 'VAT', amount: '10.00' }],
+      credits: [{ label: 'Promo', amount: '5.00' }],
+    });
+
+    expect(csv).toContain('Description,Quantity,Unit Price,Line Total');
+    expect(csv).toContain('"Pro Plan, Monthly",1,100.00,100.00');
+    expect(csv).toContain('Subtotal,,,100.00');
+    expect(csv).toContain('VAT,,,10.00');
+    expect(csv).toContain('Promo,,,5.00');
+    expect(csv).toContain('Total,,,105.00');
   });
 });

@@ -79,44 +79,36 @@ describe("ReceiptPreview", () => {
     expect(safeCurrencyParse("   ")).toBeNull();
   });
 
-  it("disables the action while a PDF is compiling and restores idle state after completion", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    vi.useFakeTimers();
+  it("invokes window.print() via the print root when Download PDF is clicked and resets on afterprint", async () => {
+    const user = userEvent.setup();
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => undefined);
 
-    const createObjectURLMock = vi.fn(() => "blob:mock");
-    const revokeObjectURLMock = vi.fn();
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const { container } = render(<ReceiptPreview receipt={BASE_RECEIPT} />);
+    expect(container.querySelector(".invoice-print-root")).toBeInTheDocument();
 
-    Object.defineProperty(URL, "createObjectURL", {
-      configurable: true,
-      writable: true,
-      value: createObjectURLMock,
-    });
-    Object.defineProperty(URL, "revokeObjectURL", {
-      configurable: true,
-      writable: true,
-      value: revokeObjectURLMock,
-    });
-    render(<ReceiptPreview receipt={BASE_RECEIPT} />);
     const button = screen.getByRole("button", { name: /Download PDF/i });
-
     await user.click(button);
 
-    expect(button).toBeDisabled();
-    expect(screen.getByText("Compiling…")).toBeInTheDocument();
+    expect(printSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Download started.")).toBeInTheDocument();
 
-    vi.advanceTimersByTime(1200);
-
-    await waitFor(() => {
-      expect(screen.getByText("Download started.")).toBeInTheDocument();
-    });
-    expect(createObjectURLMock).toHaveBeenCalledTimes(1);
-    expect(clickSpy).toHaveBeenCalledTimes(1);
-
-    vi.advanceTimersByTime(1200);
+    window.dispatchEvent(new Event("afterprint"));
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Download PDF/i })).not.toBeDisabled();
+      expect(screen.queryByText("Download started.")).not.toBeInTheDocument();
     });
+    expect(screen.getByRole("button", { name: /Download PDF/i })).not.toBeDisabled();
+  });
+
+  it("shows an error alert if window.print() throws", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "print").mockImplementation(() => {
+      throw new Error("Print unavailable");
+    });
+
+    render(<ReceiptPreview receipt={BASE_RECEIPT} />);
+    await user.click(screen.getByRole("button", { name: /Download PDF/i }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Unable to open print dialog.");
   });
 });
