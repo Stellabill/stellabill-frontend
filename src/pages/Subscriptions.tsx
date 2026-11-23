@@ -525,6 +525,8 @@ export default function Subscriptions() {
 		return sortSubscriptions(filtered, sort);
 	}, [activeFilter, data, sort]);
 
+	const listAnnouncement = `${filteredData.length} ${filteredData.length === 1 ? "subscription" : "subscriptions"}, sorted by ${SORT_LABELS[sort.field]} ${sort.direction === "asc" ? "ascending" : "descending"}, filter ${activeFilter}.`;
+
 	// FLIP animation — keys must match the render order
 	const flipKeys = useMemo(() => filteredData.map((s) => s.id), [filteredData]);
 	const { containerRef: tableBodyRef, getItemProps } = useFlip({
@@ -942,6 +944,15 @@ export default function Subscriptions() {
 				))}
 			</div>
 
+			<span
+				className="visually-hidden"
+				role="status"
+				aria-live="polite"
+				aria-atomic="true"
+				data-testid="subscriptions-list-live-region">
+				{listAnnouncement}
+			</span>
+
 			{/* Empty state */}
 			{filteredData.length === 0 ? (
 				<EmptyState filter={activeFilter} />
@@ -959,14 +970,6 @@ export default function Subscriptions() {
 								<SortButton key={f} field={f} sort={sort} onSort={handleSortField} />
 							))}
 						</div>
-						{/* Accessible live announcement for sort changes */}
-						<span
-							className="visually-hidden"
-							role="status"
-							aria-live="polite"
-							aria-atomic="true">
-							{`Sorted by ${SORT_LABELS[sort.field]}, ${sort.direction === "asc" ? "ascending" : "descending"}`}
-						</span>
 					</div>
 
 					{/* ── Desktop table ─────────────────────────────────── */}

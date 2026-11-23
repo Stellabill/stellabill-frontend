@@ -500,6 +500,33 @@ describe('Subscriptions page', () => {
       fireEvent.click(screen.getByRole('button', { name: /show active subscriptions/i }));
       expect(screen.queryByText(/no subscriptions yet/i)).not.toBeInTheDocument();
     });
+
+    it('announces the filtered subscription count and status', async () => {
+      await renderAndLoad();
+
+      fireEvent.click(screen.getByRole('button', { name: /show paused subscriptions/i }));
+
+      expect(screen.getByTestId('subscriptions-list-live-region')).toHaveTextContent(
+        '1 subscription, sorted by Plan name ascending, filter Paused.',
+      );
+    });
+  });
+
+  describe('List change announcements', () => {
+    it('announces the sort field and direction outside the subscriptions list', async () => {
+      await renderAndLoad();
+
+      fireEvent.click(screen.getByRole('button', { name: /sort by price/i }));
+
+      const liveRegion = screen.getByTestId('subscriptions-list-live-region');
+      expect(liveRegion).toHaveClass('visually-hidden');
+      expect(liveRegion).toHaveAttribute('role', 'status');
+      expect(liveRegion).toHaveAttribute('aria-live', 'polite');
+      expect(liveRegion).toHaveTextContent(
+        '4 subscriptions, sorted by Price ascending, filter All.',
+      );
+      expect(liveRegion.closest('.subs-table-wrapper')).toBeNull();
+    });
   });
 
   /* ── Empty state ──────────────────────────────────────────── */
