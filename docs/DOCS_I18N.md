@@ -45,6 +45,9 @@ Provide translations for the exact categories your target languages support: `ze
 {t('activeSubscriptions', { count: activeCount })}
 ```
 
+For plural, `select`, and nested ICU examples—including replacing manually
+concatenated count suffixes—see the [ICU pluralization guide](./ICU_PLURALIZATION_GUIDE.md).
+
 ## 4. Length-Expansion Preview Mode
 Translating English text into languages like German or Russian often results in text expansion of up to 30%. To ensure our UI components can handle this, we've implemented a length-expansion preview mode.
 
