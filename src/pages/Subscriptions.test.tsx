@@ -1,7 +1,10 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
-import type { Subscription } from '../api/client';
+import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom';
+import { subscriptions } from '../api/client';
+import type { Subscription } from '../types/subscription';
 import Subscriptions from './Subscriptions';
 
 /* ─── Module mocks ──────────────────────────────────────────── */
@@ -102,57 +105,72 @@ vi.mock('../components/ErrorState', () => ({
 
 /* ─── Helpers ───────────────────────────────────────────────── */
 
-const FIXTURE_SUBSCRIPTIONS: Subscription[] = [
+const FIXTURE_SUBSCRIPTIONS: (Subscription & { prepaidBalance: number })[] = [
   {
     id: 'SUB-001',
     planName: 'Premium Access',
     merchantName: 'Stellar News',
-    status: 'active',
+    status: 'Active',
     price: 10,
+    currency: 'USDC',
     interval: 'month',
     nextCharge: '2025-02-01',
     prepaidBalance: 30,
     lastPayment: '2025-01-01',
+    subscribedSince: '2025-01-01',
   },
   {
     id: 'SUB-002',
     planName: 'Pro Plan',
     merchantName: 'CloudFlow',
-    status: 'active',
+    status: 'Active',
     price: 25,
+    currency: 'USDC',
     interval: 'month',
     nextCharge: '2025-02-05',
     prepaidBalance: 50,
     lastPayment: '2025-01-05',
+    subscribedSince: '2025-01-05',
   },
   {
     id: 'SUB-003',
     planName: 'Basic Stream',
     merchantName: 'Stellar News',
-    status: 'paused',
+    status: 'Paused',
     price: 5,
+    currency: 'USDC',
     interval: 'month',
     nextCharge: '2025-02-10',
     prepaidBalance: 15,
     lastPayment: '2025-01-10',
+    subscribedSince: '2025-01-10',
   },
   {
     id: 'SUB-004',
     planName: 'Enterprise AI',
     merchantName: 'CloudFlow',
-    status: 'cancelled',
+    status: 'Cancelled',
     price: 100,
+    currency: 'USDC',
     interval: 'month',
     nextCharge: '2025-02-15',
     prepaidBalance: 0,
     lastPayment: '2025-01-15',
+    subscribedSince: '2025-01-15',
   },
 ];
 
-function renderSubscriptions() {
+function RouterState() {
+  const { search } = useLocation();
+  const navigationType = useNavigationType();
+  return <div data-testid="subscription-search" data-navigation-type={navigationType}>{search}</div>;
+}
+
+function renderSubscriptions(initialEntry = '/subscriptions') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Subscriptions />
+      <RouterState />
     </MemoryRouter>,
   );
 }
@@ -168,8 +186,8 @@ async function advanceTimersAndFlush(ms = 2000) {
 }
 
 /** Render the page and wait for the data table to appear. */
-async function renderAndLoad() {
-  const utils = renderSubscriptions();
+async function renderAndLoad(initialEntry?: string) {
+  const utils = renderSubscriptions(initialEntry);
   await advanceTimersAndFlush();
   await waitFor(
     () => expect(screen.getByTestId('subscriptions-table')).toBeInTheDocument(),
@@ -425,6 +443,45 @@ describe('Subscriptions page', () => {
     });
   });
 
+  describe('Subscription URL state', () => {
+    it('restores the status and sort direction from a deep link', async () => {
+      await renderAndLoad('/subscriptions?status=Active&sort=price-desc');
+
+      expect(screen.getByRole('button', { name: /show active subscriptions/i }))
+        .toHaveAttribute('aria-pressed', 'true');
+      const [first, second] = within(screen.getByTestId('subscriptions-table'))
+        .getAllByRole('button', { name: / by /i });
+      expect(first).toHaveTextContent('Pro Plan');
+      expect(second).toHaveTextContent('Premium Access');
+      expect(screen.queryByText('Basic Stream')).not.toBeInTheDocument();
+    });
+
+    it('replaces the URL when status or sort changes and preserves unrelated parameters', async () => {
+      await renderAndLoad('/subscriptions?view=compact&sort=price-desc');
+      const search = screen.getByTestId('subscription-search');
+
+      fireEvent.click(screen.getByRole('button', { name: /show paused subscriptions/i }));
+      expect(search).toHaveTextContent('?view=compact&sort=price-desc&status=Paused');
+      expect(search).toHaveAttribute('data-navigation-type', 'REPLACE');
+
+      fireEvent.click(screen.getByRole('button', { name: /sort by price/i }));
+      expect(search).toHaveTextContent('?view=compact&sort=price-asc&status=Paused');
+      expect(search).toHaveAttribute('data-navigation-type', 'REPLACE');
+    });
+
+    it('uses the default filter and sort for invalid parameters', async () => {
+      await renderAndLoad('/subscriptions?status=Unknown&sort=price-sideways');
+
+      expect(screen.getByRole('button', { name: /show all subscriptions/i }))
+        .toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: /sort by plan name, currently ascending/i }))
+        .toHaveAttribute('aria-pressed', 'true');
+
+      fireEvent.click(screen.getByRole('button', { name: /sort by plan name/i }));
+      expect(screen.getByTestId('subscription-search')).toHaveTextContent('sort=planName-desc');
+    });
+  });
+
   /* ── Filter tabs ──────────────────────────────────────────── */
   describe('Filter tabs', () => {
     it('renders all four filter tabs', async () => {
@@ -500,6 +557,33 @@ describe('Subscriptions page', () => {
       fireEvent.click(screen.getByRole('button', { name: /show active subscriptions/i }));
       expect(screen.queryByText(/no subscriptions yet/i)).not.toBeInTheDocument();
     });
+
+    it('announces the filtered subscription count and status', async () => {
+      await renderAndLoad();
+
+      fireEvent.click(screen.getByRole('button', { name: /show paused subscriptions/i }));
+
+      expect(screen.getByTestId('subscriptions-list-live-region')).toHaveTextContent(
+        '1 subscription, sorted by Plan name ascending, filter Paused.',
+      );
+    });
+  });
+
+  describe('List change announcements', () => {
+    it('announces the sort field and direction outside the subscriptions list', async () => {
+      await renderAndLoad();
+
+      fireEvent.click(screen.getByRole('button', { name: /sort by price/i }));
+
+      const liveRegion = screen.getByTestId('subscriptions-list-live-region');
+      expect(liveRegion).toHaveClass('visually-hidden');
+      expect(liveRegion).toHaveAttribute('role', 'status');
+      expect(liveRegion).toHaveAttribute('aria-live', 'polite');
+      expect(liveRegion).toHaveTextContent(
+        '4 subscriptions, sorted by Price ascending, filter All.',
+      );
+      expect(liveRegion.closest('.subs-table-wrapper')).toBeNull();
+    });
   });
 
   /* ── Empty state ──────────────────────────────────────────── */
@@ -518,35 +602,42 @@ describe('Subscriptions page', () => {
 
   /* ── Keyboard row navigation ──────────────────────────────── */
   describe('Keyboard row navigation', () => {
-    it('all table rows have tabIndex=0', async () => {
+    it('provides a real button to open each subscription', async () => {
       await renderAndLoad();
-      const rows = document.querySelectorAll('.subs-table tbody tr');
-      expect(rows.length).toBeGreaterThan(0);
-      rows.forEach(row => expect(row).toHaveAttribute('tabindex', '0'));
+      expect(screen.getByRole('button', { name: /open premium access/i })).toBeInTheDocument();
     });
 
-    it('Enter key on a row opens the detail view', async () => {
+    it.each(['{Enter}', '{Space}'])('opens a subscription from its semantic button with %s', async (key) => {
+      await renderAndLoad();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const openButton = screen.getByRole('button', { name: /open premium access/i });
+
+      openButton.focus();
+      await user.keyboard(key);
+
+      expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument();
+    });
+
+    it('clicking a row opens the detail view', async () => {
       await renderAndLoad();
       const rows = document.querySelectorAll('.subs-table tbody tr');
-      fireEvent.keyDown(rows[0], { key: 'Enter' });
+      fireEvent.click(rows[0]);
       await waitFor(() =>
         expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
       );
     });
 
-    it('Space key on a row opens the detail view', async () => {
+    it('clicking an action opens its subscription without activating the row handler', async () => {
       await renderAndLoad();
-      const rows = document.querySelectorAll('.subs-table tbody tr');
-      fireEvent.keyDown(rows[0], { key: ' ' });
+      fireEvent.click(screen.getByRole('button', { name: /manage premium access/i }));
       await waitFor(() =>
         expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
       );
     });
 
-    it('other keys (e.g. ArrowDown) do not navigate', async () => {
+    it('Enter on an action does not bubble to the row', async () => {
       await renderAndLoad();
-      const rows = document.querySelectorAll('.subs-table tbody tr');
-      fireEvent.keyDown(rows[0], { key: 'ArrowDown' });
+      fireEvent.keyDown(screen.getByRole('button', { name: /manage premium access/i }), { key: 'Enter' });
       expect(screen.queryByText('Back to all subscriptions')).not.toBeInTheDocument();
     });
   });

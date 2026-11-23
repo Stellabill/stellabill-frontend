@@ -15,9 +15,9 @@ export default function UsageThisPeriod({
 
   return (
     <div style={{
-      background: 'transparent',
+      background: 'var(--color-surface-card)',
       borderRadius: 12,
-      border: '1px solid #FFFFFF1A',
+      border: '1px solid var(--color-border-subtle)',
       padding: '1.5rem'
     }}>
       {/* Header */}
@@ -30,7 +30,7 @@ export default function UsageThisPeriod({
         gap: '0.75rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 17l6-6 4 4 8-8" />
             <path d="M14 7h7v7" />
           </svg>
@@ -38,7 +38,7 @@ export default function UsageThisPeriod({
             margin: 0,
             fontSize: '1.125rem',
             fontWeight: 600,
-            color: '#ffffff'
+            color: 'var(--color-text-primary)'
           }}>
             Usage this period
           </h2>
@@ -50,7 +50,7 @@ export default function UsageThisPeriod({
             style={{
               background: 'none',
               border: 'none',
-              color: '#22d3ee',
+              color: 'var(--color-brand-primary)',
               fontSize: '0.875rem',
               cursor: 'pointer',
               display: 'flex',
@@ -74,7 +74,7 @@ export default function UsageThisPeriod({
       {/* Empty State or Metric Panels */}
       {!hasUsageData ? (
         <p style={{ 
-          color: '#64748b', 
+          color: 'var(--color-text-muted)', 
           margin: '1rem 0 0', 
           textAlign: 'center' 
         }}>
@@ -88,14 +88,14 @@ export default function UsageThisPeriod({
         }}>
           {/* Billing Period Panel */}
           <div style={{
-            background: '#0f0f0f',
+            background: 'var(--color-surface-subtle)',
             borderRadius: 8,
-            border: '1px solid #2a2a2a',
+            border: '1px solid var(--color-border-subtle)',
             padding: '1rem'
           }}>
             <div style={{
               fontSize: '0.75rem',
-              color: '#64748b',
+              color: 'var(--color-text-muted)',
               marginBottom: '0.5rem',
               textTransform: 'uppercase',
               letterSpacing: '0.05em'
@@ -105,7 +105,7 @@ export default function UsageThisPeriod({
             <div style={{
               fontSize: '1rem',
               fontWeight: 600,
-              color: '#ffffff'
+              color: 'var(--color-text-primary)'
             }}>
               {billingPeriod || '—'}
             </div>
@@ -113,14 +113,14 @@ export default function UsageThisPeriod({
 
           {/* Usage Panel */}
           <div style={{
-            background: '#0f0f0f',
+            background: 'var(--color-surface-subtle)',
             borderRadius: 8,
-            border: '1px solid #2a2a2a',
+            border: '1px solid var(--color-border-subtle)',
             padding: '1rem'
           }}>
             <div style={{
               fontSize: '0.75rem',
-              color: '#64748b',
+              color: 'var(--color-text-muted)',
               marginBottom: '0.5rem',
               textTransform: 'uppercase',
               letterSpacing: '0.05em'
@@ -130,7 +130,7 @@ export default function UsageThisPeriod({
             <div style={{
               fontSize: '1rem',
               fontWeight: 600,
-              color: '#ffffff'
+              color: 'var(--color-text-primary)'
             }}>
               {usage || '—'}
             </div>
@@ -138,14 +138,14 @@ export default function UsageThisPeriod({
 
           {/* Estimated Charge Panel */}
           <div style={{
-            background: '#0f0f0f',
+            background: 'var(--color-surface-subtle)',
             borderRadius: 8,
-            border: '1px solid #2a2a2a',
+            border: '1px solid var(--color-border-subtle)',
             padding: '1rem'
           }}>
             <div style={{
               fontSize: '0.75rem',
-              color: '#64748b',
+              color: 'var(--color-text-muted)',
               marginBottom: '0.5rem',
               textTransform: 'uppercase',
               letterSpacing: '0.05em'
@@ -155,7 +155,7 @@ export default function UsageThisPeriod({
             <div style={{
               fontSize: '1rem',
               fontWeight: 600,
-              color: '#ffffff'
+              color: 'var(--color-text-primary)'
             }}>
               {estimatedCharge || '—'}
             </div>

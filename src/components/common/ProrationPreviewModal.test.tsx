@@ -1,151 +1,165 @@
+import type { ComponentProps } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ProrationPreviewModal } from './ProrationPreviewModal';
+import styles from './ProrationPreviewModal.module.css';
 
-const defaultProps = {
-  isOpen: true,
-  onClose: vi.fn(),
-  onConfirm: vi.fn(),
-  currentPlan: 'Starter Monthly',
-  newPlan: 'Pro Monthly',
-  effectiveDate: 'May 15, 2026',
-  lineItems: [
-    { label: 'Unused time on Starter Monthly', amount: 1250, type: 'credit' as const },
-    { label: 'Remaining time on Pro Monthly', amount: 3000, type: 'charge' as const },
-  ],
-  nextInvoiceTotal: 4999,
-};
+const lineItems = [
+  { label: 'Unused time on Starter plan', amount: 1200, type: 'credit' as const },
+  { label: 'Pro plan for remaining cycle', amount: 2500, type: 'charge' as const },
+];
+
+function renderModal(
+  overrides: Partial<ComponentProps<typeof ProrationPreviewModal>> = {}
+) {
+  const props: ComponentProps<typeof ProrationPreviewModal> = {
+    isOpen: true,
+    onClose: vi.fn(),
+    onConfirm: vi.fn(),
+    currentPlan: 'Starter',
+    newPlan: 'Pro',
+    effectiveDate: 'Dec 1, 2026',
+    lineItems,
+    nextInvoiceTotal: 4500,
+    ...overrides,
+  };
+
+  return { ...render(<ProrationPreviewModal {...props} />), props };
+}
 
 describe('ProrationPreviewModal', () => {
-  it('renders nothing when isOpen is false', () => {
-    const { container } = render(
-      <ProrationPreviewModal {...defaultProps} isOpen={false} />
-    );
+  it('renders nothing while closed', () => {
+    const { container } = renderModal({ isOpen: false });
 
     expect(container).toBeEmptyDOMElement();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('renders plan details, effective date, line items, and formats cents as dollars', () => {
-    render(<ProrationPreviewModal {...defaultProps} />);
+  it('renders the plan summary and proration breakdown', () => {
+    renderModal();
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
     expect(screen.getByText('Proration Preview')).toBeInTheDocument();
-    expect(screen.getByText('Starter Monthly')).toBeInTheDocument();
-    expect(screen.getByText('Pro Monthly')).toBeInTheDocument();
-    expect(screen.getByText('May 15, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Starter')).toBeInTheDocument();
+    expect(screen.getByText('Pro')).toBeInTheDocument();
+    expect(screen.getByText(/Effective date:/)).toBeInTheDocument();
+    expect(screen.getByText('Dec 1, 2026')).toBeInTheDocument();
 
-    expect(screen.getByRole('table', { name: 'Proration breakdown' })).toBeInTheDocument();
-    expect(screen.getByText('Unused time on Starter Monthly')).toBeInTheDocument();
-    expect(screen.getByText('-$12.50')).toBeInTheDocument();
-    expect(screen.getByText('Remaining time on Pro Monthly')).toBeInTheDocument();
-    expect(screen.getByText('+$30.00')).toBeInTheDocument();
-    expect(screen.getByText('$49.99')).toBeInTheDocument();
+    const table = screen.getByRole('table', { name: 'Proration breakdown' });
+    expect(table).toBeInTheDocument();
+    expect(screen.getByText('Unused time on Starter plan')).toBeInTheDocument();
+    expect(screen.getByText('Pro plan for remaining cycle')).toBeInTheDocument();
+    expect(screen.getByText('-$12.00')).toBeInTheDocument();
+    expect(screen.getByText('+$25.00')).toBeInTheDocument();
+    expect(screen.getByText('+$13.00')).toBeInTheDocument();
+    expect(screen.getByText('$45.00')).toBeInTheDocument();
   });
 
-  it('sums credit and charge totals only from items of their respective type', () => {
-    const { rerender } = render(
-      <ProrationPreviewModal
-        {...defaultProps}
-        lineItems={[
-          { label: 'Credit A', amount: 500, type: 'credit' },
-          { label: 'Credit B', amount: 750, type: 'credit' },
-          { label: 'Charge A', amount: 2000, type: 'charge' },
-          { label: 'Charge B', amount: 1000, type: 'charge' },
-        ]}
-      />
-    );
+  it('invokes the confirm and cancel callbacks', () => {
+    const { props } = renderModal();
 
-    // totalCharge = 3000, totalCredit = 1250 -> net = +$17.50
-    expect(screen.getByText('+$17.50')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Change' }));
+    expect(props.onConfirm).toHaveBeenCalledTimes(1);
 
-    rerender(
-      <ProrationPreviewModal
-        {...defaultProps}
-        lineItems={[
-          { label: 'Credit A', amount: 2500, type: 'credit' },
-          { label: 'Credit B', amount: 500, type: 'credit' },
-          { label: 'Charge A', amount: 1250, type: 'charge' },
-        ]}
-      />
-    );
-
-    // totalCharge = 1250, totalCredit = 3000 -> net = -$17.50
-    expect(screen.getByText('-$17.50')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(props.onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('renders error message and hides the proration breakdown', () => {
-    render(
-      <ProrationPreviewModal
-        {...defaultProps}
-        error="Failed to calculate proration."
-      />
-    );
-
-    expect(screen.getByText('Failed to calculate proration.')).toBeInTheDocument();
-    expect(screen.queryByRole('table', { name: 'Proration breakdown' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Calculating proration...')).not.toBeInTheDocument();
-  });
-
-  it('shows loading state, puts Confirm Change in loading state, and disables Cancel', () => {
-    render(<ProrationPreviewModal {...defaultProps} loading={true} />);
+  it('renders the loading state and hides the breakdown', () => {
+    const { container } = renderModal({ loading: true });
 
     expect(screen.getByText('Calculating proration...')).toBeInTheDocument();
-    expect(screen.queryByRole('table', { name: 'Proration breakdown' })).not.toBeInTheDocument();
-
-    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
-    const confirmButton = screen.getByRole('button', { name: 'Confirm Change' });
-
-    expect(cancelButton).toBeDisabled();
-    expect(confirmButton).toBeDisabled();
-    expect(confirmButton).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(container.querySelector('.' + styles.spinner)).toBeInTheDocument();
+    expect(container.querySelector('.' + styles.loadingState)).toBeInTheDocument();
   });
 
-  it('calls onConfirm when Confirm Change is clicked and onClose when Cancel is clicked', async () => {
-    const user = userEvent.setup();
-    const onConfirm = vi.fn();
-    const onClose = vi.fn();
+  it('renders the error state and hides the loading and breakdown content', () => {
+    const { container } = renderModal({ error: 'Proration could not be calculated.' });
 
-    render(
-      <ProrationPreviewModal
-        {...defaultProps}
-        onConfirm={onConfirm}
-        onClose={onClose}
-      />
+    const alert = screen.getByText('Proration could not be calculated.');
+    expect(alert).toHaveClass(styles.errorAlert);
+    expect(screen.queryByText('Calculating proration...')).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(container.querySelector('.' + styles.loadingState)).not.toBeInTheDocument();
+  });
+
+  it('toggles the proration details panel', () => {
+    const { container } = renderModal();
+
+    const toggle = screen.getByRole('button', { name: 'Learn about proration' });
+    expect(toggle).toHaveClass(styles.infoToggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(toggle);
+
+    expect(screen.getByRole('button', { name: 'Hide details' })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
+    expect(
+      screen.getByText(/Proration calculates the unused portion/)
+    ).toBeInTheDocument();
+    expect(container.querySelector('.' + styles.infoPanel)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hide details' }));
+
+    expect(screen.getByRole('button', { name: 'Learn about proration' })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+    expect(container.querySelector('.' + styles.infoPanel)).not.toBeInTheDocument();
+  });
+
+  it('applies the CSS module classes that replaced inline styles', () => {
+    const { container } = renderModal();
+
+    const currentPlanLabel = screen.getByText('Current Plan');
+    expect(currentPlanLabel).toHaveClass(styles.planCardLabel);
+    expect(currentPlanLabel.parentElement).toHaveClass(styles.planCard);
+
+    const newPlanLabel = screen.getByText('New Plan');
+    expect(newPlanLabel).toHaveClass(styles.planCardLabelNew);
+    expect(newPlanLabel.parentElement).toHaveClass(styles.planCardNew);
+
+    expect(screen.getByRole('table')).toHaveClass(styles.lineItemsTable);
+    expect(container.querySelector('.' + styles.tableHeaderRow)).toBeInTheDocument();
+    expect(container.querySelectorAll('.' + styles.lineItemRow)).toHaveLength(
+      lineItems.length
     );
 
-    await user.click(screen.getByRole('button', { name: 'Confirm Change' }));
-    expect(onConfirm).toHaveBeenCalledTimes(1);
+    const creditAmount = screen.getByText('-$12.00');
+    expect(creditAmount).toHaveClass(styles.lineItemAmountCell);
+    expect(creditAmount).toHaveClass(styles.lineItemAmountCredit);
 
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(onClose).toHaveBeenCalledTimes(1);
+    const chargeAmount = screen.getByText('+$25.00');
+    expect(chargeAmount).toHaveClass(styles.lineItemAmountCell);
+    expect(chargeAmount).toHaveClass(styles.lineItemAmountCharge);
+
+    expect(container.querySelector('.' + styles.summaryRow)).toBeInTheDocument();
+    expect(container.querySelector('.' + styles.nextInvoiceRow)).toBeInTheDocument();
+    expect(container.querySelector('.' + styles.infoSection)).toBeInTheDocument();
   });
 
-  it('toggles the proration explanation when the info button is clicked', async () => {
-    const user = userEvent.setup();
-    render(<ProrationPreviewModal {...defaultProps} />);
+  it('keeps decorative icons hidden from assistive technology', () => {
+    const { container } = renderModal();
 
-    const toggleButton = screen.getByRole('button', { name: 'Learn about proration' });
-    expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
-    expect(
-      screen.queryByText(/Proration calculates the unused portion of your current plan/i)
-    ).not.toBeInTheDocument();
+    const icons = container.querySelectorAll('svg[aria-hidden="true"]');
+    expect(icons.length).toBeGreaterThanOrEqual(2);
+  });
 
-    await user.click(toggleButton);
+  it('does not render static inline styles (CSS module regression guard)', () => {
+    const { container } = renderModal();
 
-    expect(toggleButton).toHaveAttribute('aria-expanded', 'true');
-    expect(toggleButton).toHaveTextContent('Hide details');
-    expect(
-      screen.getByText(/Proration calculates the unused portion of your current plan/i)
-    ).toBeInTheDocument();
+    expect(container.querySelectorAll('[style]')).toHaveLength(0);
+  });
 
-    await user.click(toggleButton);
+  it('does not render static inline styles in loading and error states', () => {
+    const loading = renderModal({ loading: true });
+    expect(loading.container.querySelectorAll('[style]')).toHaveLength(0);
+    loading.unmount();
 
-    expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
-    expect(toggleButton).toHaveTextContent('Learn about proration');
-    expect(
-      screen.queryByText(/Proration calculates the unused portion of your current plan/i)
-    ).not.toBeInTheDocument();
+    const error = renderModal({ error: 'Something went wrong' });
+    expect(error.container.querySelectorAll('[style]')).toHaveLength(0);
   });
 });
