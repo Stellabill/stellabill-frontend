@@ -13,7 +13,7 @@ Key accessibility features:
 4. **Stable Tooltip Positioning**: Tooltips render on both focus and mouse hover, calculating dynamic coordinate bounds to prevent clipping at SVG boundaries.
 5. **Escape Key Dismissal**: Pressing `Escape` dismisses active tooltips and clears focus.
 6. **Live Region Announcements (`aria-live="polite"`)**: Series point changes announce date, revenue value, percentage/dollar trend relative to previous points, and index progress.
-7. **Screen Reader Summary Overview**: A hidden description element (`.sr-only`) summarizes overall date range, data count, maximum, minimum, and average revenue values.
+7. **Screen Reader Summary Overview**: A hidden description element (`.sr-only`) summarizes the visible series' date range, date count, highest, lowest, and average revenue values.
 8. **Reduced Motion (`prefers-reduced-motion`)**: Pulse animations and transitions are disabled when users opt for reduced motion.
 
 ---
@@ -88,4 +88,4 @@ Verify chart accessibility using Vitest unit tests:
 pnpm test src/components/RevenueChart.test.tsx
 ```
 
-Ensure test coverage maintains >= 95% and automated WCAG checks pass clean.
+Ensure keyboard coverage exercises roving focus, arrow traversal, Escape dismissal, live announcements, and legend Space/Enter activation with `userEvent`.
