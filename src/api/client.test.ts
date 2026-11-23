@@ -230,14 +230,19 @@ describe('client.ts', () => {
       }
     });
 
-    it('simulates error when ?simulate_error is in URL', async () => {
-      vi.stubGlobal('window', { location: { search: '?simulate_error=true' } });
-      
+    it('surfaces server errors returned by the API', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: async () => ({ details: 'Database connection timeout' }),
+      });
+
       try {
         await api('/test');
         expect.fail('Should have thrown');
       } catch (e: unknown) {
-        expect((e as Error).message).toBe('Internal Server Error');
+        expect((e as Error).message).toBe('API error: Internal Server Error');
         expect((e as ApiError).status).toBe(500);
         expect((e as ApiError).technicalDetails).toContain('Database connection timeout');
       }

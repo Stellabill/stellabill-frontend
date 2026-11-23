@@ -24,14 +24,6 @@ export async function api<T>(path: string, options?: ApiRequestOptions): Promise
     throw error;
   }
 
-  // Simulate API error for demo if URL has ?simulate_error
-  if (typeof window !== 'undefined' && window.location.search.includes('simulate_error')) {
-    const error: ApiError = new Error('Internal Server Error');
-    error.status = 500;
-    error.technicalDetails = 'Database connection timeout in the backend service. [Trace: 0x823fa1]';
-    throw error;
-  }
-
   const controller = new AbortController();
   let isTimeout = false;
   const timeoutMs = options?.timeout ?? DEFAULT_TIMEOUT_MS;

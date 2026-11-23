@@ -9,7 +9,7 @@ import ErrorState from "../components/ErrorState";
 import SortBySelect from "../components/SortBySelect";
 import GiftPurchaseModal, { type Plan as GiftPlan } from "../components/GiftPurchaseModal";
 import { addBillingInterval } from "../utils/billingDate";
-import { catalogPlans as mockPlans, type Plan, type PlanInterval } from "../data/catalogPlans";
+import { loadCatalog, catalogPlans, type Plan, type PlanInterval } from "../data/catalogPlans";
 
 type SortField = "name" | "price" | "merchant";
 type SortDirection = "asc" | "desc";
@@ -318,27 +318,12 @@ export default function BrowsePlans() {
 		setLoading(true);
 		setError(null);
 		try {
-			// Simulate API call with potential error
-			await new Promise((resolve, reject) => {
-				setTimeout(() => {
-					if (window.location.search.includes('simulate_error')) {
-						const err: ApiError = new Error('Failed to load plans from catalog');
-						err.status = 500;
-						err.technicalDetails = 'The decentralized plan registry is experiencing high latency. [Error Code: REG-CAT-503]';
-						reject(err);
-					} else {
-						resolve(true);
-					}
-				}, 800);
-			});
-			// No backend is deployed for this demo, so the catalog is sample data.
-			setPlans(mockPlans);
+			setPlans(await loadCatalog());
 			setLoading(false);
 		} catch (err: unknown) {
 			setError(err as Error);
-			// Fallback to mock data on error so UI still shows something if desired, 
-			// but here we want to show the error state primarily.
-			setPlans(mockPlans);
+			// Keep the sample catalog visible while showing the load error and retry action.
+			setPlans(catalogPlans);
 			setLoading(false);
 		}
 	}, []);
