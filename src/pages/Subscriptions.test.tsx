@@ -1,8 +1,10 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
-import type { Subscription } from '../api/client';
+import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom';
+import { subscriptions } from '../api/client';
+import type { Subscription } from '../types/subscription';
 import Subscriptions from './Subscriptions';
 
 /* ─── Module mocks ──────────────────────────────────────────── */
@@ -103,57 +105,72 @@ vi.mock('../components/ErrorState', () => ({
 
 /* ─── Helpers ───────────────────────────────────────────────── */
 
-const FIXTURE_SUBSCRIPTIONS: Subscription[] = [
+const FIXTURE_SUBSCRIPTIONS: (Subscription & { prepaidBalance: number })[] = [
   {
     id: 'SUB-001',
     planName: 'Premium Access',
     merchantName: 'Stellar News',
-    status: 'active',
+    status: 'Active',
     price: 10,
+    currency: 'USDC',
     interval: 'month',
     nextCharge: '2025-02-01',
     prepaidBalance: 30,
     lastPayment: '2025-01-01',
+    subscribedSince: '2025-01-01',
   },
   {
     id: 'SUB-002',
     planName: 'Pro Plan',
     merchantName: 'CloudFlow',
-    status: 'active',
+    status: 'Active',
     price: 25,
+    currency: 'USDC',
     interval: 'month',
     nextCharge: '2025-02-05',
     prepaidBalance: 50,
     lastPayment: '2025-01-05',
+    subscribedSince: '2025-01-05',
   },
   {
     id: 'SUB-003',
     planName: 'Basic Stream',
     merchantName: 'Stellar News',
-    status: 'paused',
+    status: 'Paused',
     price: 5,
+    currency: 'USDC',
     interval: 'month',
     nextCharge: '2025-02-10',
     prepaidBalance: 15,
     lastPayment: '2025-01-10',
+    subscribedSince: '2025-01-10',
   },
   {
     id: 'SUB-004',
     planName: 'Enterprise AI',
     merchantName: 'CloudFlow',
-    status: 'cancelled',
+    status: 'Cancelled',
     price: 100,
+    currency: 'USDC',
     interval: 'month',
     nextCharge: '2025-02-15',
     prepaidBalance: 0,
     lastPayment: '2025-01-15',
+    subscribedSince: '2025-01-15',
   },
 ];
 
-function renderSubscriptions() {
+function RouterState() {
+  const { search } = useLocation();
+  const navigationType = useNavigationType();
+  return <div data-testid="subscription-search" data-navigation-type={navigationType}>{search}</div>;
+}
+
+function renderSubscriptions(initialEntry = '/subscriptions') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Subscriptions />
+      <RouterState />
     </MemoryRouter>,
   );
 }
@@ -169,8 +186,8 @@ async function advanceTimersAndFlush(ms = 2000) {
 }
 
 /** Render the page and wait for the data table to appear. */
-async function renderAndLoad() {
-  const utils = renderSubscriptions();
+async function renderAndLoad(initialEntry?: string) {
+  const utils = renderSubscriptions(initialEntry);
   await advanceTimersAndFlush();
   await waitFor(
     () => expect(screen.getByTestId('subscriptions-table')).toBeInTheDocument(),
@@ -423,6 +440,45 @@ describe('Subscriptions page', () => {
       const dots = document.querySelectorAll('.status-badge__dot');
       // 4 subs × 2 (table + card) = at least 4 dots
       expect(dots.length).toBeGreaterThanOrEqual(4);
+    });
+  });
+
+  describe('Subscription URL state', () => {
+    it('restores the status and sort direction from a deep link', async () => {
+      await renderAndLoad('/subscriptions?status=Active&sort=price-desc');
+
+      expect(screen.getByRole('button', { name: /show active subscriptions/i }))
+        .toHaveAttribute('aria-pressed', 'true');
+      const [first, second] = within(screen.getByTestId('subscriptions-table'))
+        .getAllByRole('button', { name: / by /i });
+      expect(first).toHaveTextContent('Pro Plan');
+      expect(second).toHaveTextContent('Premium Access');
+      expect(screen.queryByText('Basic Stream')).not.toBeInTheDocument();
+    });
+
+    it('replaces the URL when status or sort changes and preserves unrelated parameters', async () => {
+      await renderAndLoad('/subscriptions?view=compact&sort=price-desc');
+      const search = screen.getByTestId('subscription-search');
+
+      fireEvent.click(screen.getByRole('button', { name: /show paused subscriptions/i }));
+      expect(search).toHaveTextContent('?view=compact&sort=price-desc&status=Paused');
+      expect(search).toHaveAttribute('data-navigation-type', 'REPLACE');
+
+      fireEvent.click(screen.getByRole('button', { name: /sort by price/i }));
+      expect(search).toHaveTextContent('?view=compact&sort=price-asc&status=Paused');
+      expect(search).toHaveAttribute('data-navigation-type', 'REPLACE');
+    });
+
+    it('uses the default filter and sort for invalid parameters', async () => {
+      await renderAndLoad('/subscriptions?status=Unknown&sort=price-sideways');
+
+      expect(screen.getByRole('button', { name: /show all subscriptions/i }))
+        .toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: /sort by plan name, currently ascending/i }))
+        .toHaveAttribute('aria-pressed', 'true');
+
+      fireEvent.click(screen.getByRole('button', { name: /sort by plan name/i }));
+      expect(screen.getByTestId('subscription-search')).toHaveTextContent('sort=planName-desc');
     });
   });
 

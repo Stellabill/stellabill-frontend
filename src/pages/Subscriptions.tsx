@@ -1,7 +1,7 @@
 import SwipeableRow from "../components/SwipeableRow";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import PauseSubscriptionModal from "../components/PauseSubscriptionModal";
 import CancelSubscriptionModal from "../components/CancelSubscriptionModal";
 import TopUpModal from "../components/TopUpModal";
@@ -30,7 +30,10 @@ interface SubscriptionWithIcon extends Omit<Subscription, "icon"> {
 
 type StatusType = "Active" | "Paused" | "Cancelled";
 
-type SortField = "planName" | "price" | "nextCharge" | "status";
+const STATUS_FILTERS = ["All", "Active", "Paused", "Cancelled"] as const;
+const SORT_FIELDS = ["planName", "price", "status", "nextCharge"] as const;
+
+type SortField = (typeof SORT_FIELDS)[number];
 type SortDirection = "asc" | "desc";
 
 interface SortState {
@@ -382,12 +385,23 @@ const FIXTURE_DATA: SubscriptionWithIcon[] = [
 export default function Subscriptions() {
   usePageTitle('Subscriptions');
 	const { t } = useTranslation();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const statusParam = searchParams.get("status");
+	const activeFilter = STATUS_FILTERS.find((status) => status === statusParam) ?? "All";
+	const sortParam = searchParams.get("sort");
+	const sort = useMemo<SortState>(() => {
+		const [fieldParam, direction, extra] = sortParam?.split("-") ?? [];
+		const field = SORT_FIELDS.find((candidate) => candidate === fieldParam);
+		if (!field || (direction !== "asc" && direction !== "desc") || extra !== undefined) {
+			return { field: "planName", direction: "asc" };
+		}
+		return { field, direction };
+	}, [sortParam]);
+
 	const [data, setData] = useState<SubscriptionWithIcon[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<ApiError | null>(null);
-	const [activeFilter, setActiveFilter] = useState("All");
 	const [selectedId, setSelectedId] = useState<string | null>(null);
-	const [sort, setSort] = useState<SortState>({ field: "planName", direction: "asc" });
 
 	const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
 	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -416,13 +430,18 @@ export default function Subscriptions() {
 		setToasts((prev) => prev.filter((toast) => toast.id !== id));
 	};
 
-	const handleSortField = useCallback((field: SortField) => {
-		setSort((prev) =>
-			prev.field === field
-				? { field, direction: prev.direction === "asc" ? "desc" : "asc" }
-				: { field, direction: "asc" },
-		);
-	}, []);
+	const updateSearchParam = useCallback((key: "status" | "sort", value: string) => {
+		setSearchParams((current) => {
+			const next = new URLSearchParams(current);
+			next.set(key, value);
+			return next;
+		}, { replace: true });
+	}, [setSearchParams]);
+
+	const handleSortField = (field: SortField) => {
+		const direction = sort.field === field && sort.direction === "asc" ? "desc" : "asc";
+		updateSearchParam("sort", `${field}-${direction}`);
+	};
 
 	const abortRef = useRef<AbortController | null>(null);
 
@@ -933,12 +952,12 @@ export default function Subscriptions() {
 
 			{/* Filter tabs */}
 			<div className="filter-tabs" role="group" aria-label="Filter subscriptions by status">
-				{(["All", "Active", "Paused", "Cancelled"] as const).map((tab) => (
+				{STATUS_FILTERS.map((tab) => (
 					<button
 						key={tab}
 						id={`filter-tab-${tab.toLowerCase()}`}
 						className={`filter-tab${activeFilter === tab ? " active" : ""}`}
-						onClick={() => setActiveFilter(tab)}
+						onClick={() => updateSearchParam("status", tab)}
 						aria-pressed={activeFilter === tab}
 						aria-label={t('subscriptions.tabAriaLabel', { label: tab, count: stats[tab] })}>
 						{t(`subscriptions.tabs.${tab.toLowerCase()}`)} <span>({stats[tab]})</span>
@@ -959,7 +978,7 @@ export default function Subscriptions() {
 						data-testid="sort-toolbar">
 						<span className="sort-toolbar__label" id="sort-toolbar-label">Sort by:</span>
 						<div className="sort-toolbar__buttons" aria-labelledby="sort-toolbar-label">
-							{(["planName", "price", "status", "nextCharge"] as SortField[]).map((f) => (
+							{SORT_FIELDS.map((f) => (
 								<SortButton key={f} field={f} sort={sort} onSort={handleSortField} />
 							))}
 						</div>
