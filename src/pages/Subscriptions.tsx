@@ -43,6 +43,10 @@ interface SubscriptionActionError {
 	technicalDetails?: string;
 }
 
+function isInteractiveTarget(target: EventTarget | null): boolean {
+	return target instanceof Element && target.closest("button, a, [role='menu']") !== null;
+}
+
 function getActionError(error: unknown, fallbackMessage: string): SubscriptionActionError {
 	if (!(error instanceof Error)) return { message: fallbackMessage };
 
@@ -994,27 +998,25 @@ export default function Subscriptions() {
 								<tr
 									key={sub.id}
 									{...getItemProps(sub.id)}
-									tabIndex={0}
 									aria-label={`${sub.planName} by ${sub.merchantName}, ${sub.status}`}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") {
-											e.preventDefault();
-											setSelectedId(sub.id);
-										}
-									}}
-									onClick={() => setSelectedId(sub.id)}
-									role="button">
+									onClick={(e) => {
+										if (!isInteractiveTarget(e.target)) setSelectedId(sub.id);
+									}}>
 									{/* Plan cell */}
 									<td>
-										<div className="subs-table__plan-cell">
-											<div className="subs-table__plan-icon" aria-hidden="true">
+										<button
+											type="button"
+											className="subs-table__plan-cell"
+											onClick={() => setSelectedId(sub.id)}
+											aria-label={`Open ${sub.planName}`}>
+											<span className="subs-table__plan-icon" aria-hidden="true">
 												{sub.icon}
-											</div>
-											<div>
-												<div className="subs-table__plan-name">{sub.planName}</div>
-												<div className="subs-table__merchant">{sub.merchantName}</div>
-											</div>
-										</div>
+											</span>
+											<span className="subs-table__plan-copy">
+												<span className="subs-table__plan-name">{sub.planName}</span>
+												<span className="subs-table__merchant">{sub.merchantName}</span>
+											</span>
+										</button>
 									</td>
 
 									{/* Status */}
@@ -1032,7 +1034,7 @@ export default function Subscriptions() {
 
 									{/* Tags */}
 									<td>
-										<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+										<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
 											{sub.tags?.slice(0, 2).map((tag) => (
 												<Tag
 													key={tag.id}
@@ -1067,14 +1069,12 @@ export default function Subscriptions() {
 
 									{/* Actions */}
 									<td>
-										<div className="subs-table__actions" onClick={(e) => e.stopPropagation()}>
+										<div className="subs-table__actions">
 											<button
+												type="button"
 												className="subs-table__btn subs-table__btn--primary"
 												id={`manage-btn-${sub.id}`}
-												onClick={(e) => {
-													e.stopPropagation();
-													setSelectedId(sub.id);
-												}}
+												onClick={() => setSelectedId(sub.id)}
 												aria-label={`Manage ${sub.planName}`}>
 												{t('subscriptions.table.manage')}
 											</button>
@@ -1183,7 +1183,9 @@ export default function Subscriptions() {
 									tabIndex={-1}
 									role="button"
 									aria-label={`${sub.planName} – ${sub.status}. Tap to manage.`}
-									onClick={() => setSelectedId(sub.id)}>
+									onClick={(e) => {
+										if (!isInteractiveTarget(e.target)) setSelectedId(sub.id);
+									}}>
 									<div className="subs-card__top">
 										<div className="subs-card__plan-info">
 											<div className="subs-card__icon" aria-hidden="true">
@@ -1242,12 +1244,10 @@ export default function Subscriptions() {
 											</span>
 										</span>
 										<button
+											type="button"
 											className="subs-table__btn subs-table__btn--primary"
 											id={`manage-card-btn-${sub.id}`}
-											onClick={(e) => {
-												e.stopPropagation();
-												setSelectedId(sub.id);
-											}}
+											onClick={() => setSelectedId(sub.id)}
 											aria-label={`Open ${sub.planName} from card`}>
 											Manage
 										</button>

@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import type { Subscription } from '../api/client';
@@ -518,35 +519,42 @@ describe('Subscriptions page', () => {
 
   /* ── Keyboard row navigation ──────────────────────────────── */
   describe('Keyboard row navigation', () => {
-    it('all table rows have tabIndex=0', async () => {
+    it('provides a real button to open each subscription', async () => {
       await renderAndLoad();
-      const rows = document.querySelectorAll('.subs-table tbody tr');
-      expect(rows.length).toBeGreaterThan(0);
-      rows.forEach(row => expect(row).toHaveAttribute('tabindex', '0'));
+      expect(screen.getByRole('button', { name: /open premium access/i })).toBeInTheDocument();
     });
 
-    it('Enter key on a row opens the detail view', async () => {
+    it.each(['{Enter}', '{Space}'])('opens a subscription from its semantic button with %s', async (key) => {
+      await renderAndLoad();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const openButton = screen.getByRole('button', { name: /open premium access/i });
+
+      openButton.focus();
+      await user.keyboard(key);
+
+      expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument();
+    });
+
+    it('clicking a row opens the detail view', async () => {
       await renderAndLoad();
       const rows = document.querySelectorAll('.subs-table tbody tr');
-      fireEvent.keyDown(rows[0], { key: 'Enter' });
+      fireEvent.click(rows[0]);
       await waitFor(() =>
         expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
       );
     });
 
-    it('Space key on a row opens the detail view', async () => {
+    it('clicking an action opens its subscription without activating the row handler', async () => {
       await renderAndLoad();
-      const rows = document.querySelectorAll('.subs-table tbody tr');
-      fireEvent.keyDown(rows[0], { key: ' ' });
+      fireEvent.click(screen.getByRole('button', { name: /manage premium access/i }));
       await waitFor(() =>
         expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
       );
     });
 
-    it('other keys (e.g. ArrowDown) do not navigate', async () => {
+    it('Enter on an action does not bubble to the row', async () => {
       await renderAndLoad();
-      const rows = document.querySelectorAll('.subs-table tbody tr');
-      fireEvent.keyDown(rows[0], { key: 'ArrowDown' });
+      fireEvent.keyDown(screen.getByRole('button', { name: /manage premium access/i }), { key: 'Enter' });
       expect(screen.queryByText('Back to all subscriptions')).not.toBeInTheDocument();
     });
   });
