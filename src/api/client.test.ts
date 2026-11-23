@@ -80,8 +80,28 @@ describe('client.ts', () => {
         expect.fail('Should have thrown');
       } catch (e: unknown) {
         expect((e as Error).message).toBe('API error: Bad Request');
+        expect((e as ApiError).kind).toBe('http');
         expect((e as ApiError).status).toBe(400);
         expect((e as ApiError).technicalDetails).toBe('Invalid input data');
+      }
+    });
+
+    it('throws ApiError on non-ok response with json object without details field', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        status: 422,
+        statusText: '',
+        json: async () => ({ error: 'Unprocessable' }),
+      });
+
+      try {
+        await api('/test');
+        expect.fail('Should have thrown');
+      } catch (e: unknown) {
+        expect((e as Error).message).toBe('API error: 422');
+        expect((e as ApiError).kind).toBe('http');
+        expect((e as ApiError).status).toBe(422);
+        expect((e as ApiError).technicalDetails).toBe(JSON.stringify({ error: 'Unprocessable' }));
       }
     });
 
@@ -98,12 +118,13 @@ describe('client.ts', () => {
         expect.fail('Should have thrown');
       } catch (e: unknown) {
         expect((e as Error).message).toBe('API error: Internal Server Error');
+        expect((e as ApiError).kind).toBe('http');
         expect((e as ApiError).status).toBe(500);
         expect((e as ApiError).technicalDetails).toBe('No additional details provided by server.');
       }
     });
 
-    it('throws ApiError with isOffline=true if fetch throws TypeError and navigator is offline', async () => {
+    it('throws ApiError with isOffline=true and kind="network" if fetch throws TypeError and navigator is offline', async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new TypeError('Failed to fetch'));
       vi.stubGlobal('navigator', { onLine: false });
 
@@ -112,8 +133,11 @@ describe('client.ts', () => {
         expect.fail('Should have thrown');
       } catch (e: unknown) {
         expect((e as Error).message).toBe('Network request failed (offline)');
+        expect((e as ApiError).kind).toBe('network');
         expect((e as ApiError).isOffline).toBe(true);
+        expect((e as ApiError).isNetworkError).toBe(true);
       }
+      expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 
     it('throws original error if fetch throws non-TypeError or navigator is online', async () => {
@@ -121,6 +145,13 @@ describe('client.ts', () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(originalError);
 
       await expect(api('/test')).rejects.toThrow('Some other error');
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('wraps non-Error thrown values into an Error', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce('raw string failure');
+
+      await expect(api('/test')).rejects.toThrow('raw string failure');
     });
 
     it('resolves with undefined on 204 No Content response', async () => {
@@ -137,7 +168,7 @@ describe('client.ts', () => {
       expect(result).toBeUndefined();
     });
 
-    it('resolves with undefined for empty response body', async () => {
+    it('resolves with undefined for empty response body via content-length 0', async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -148,7 +179,84 @@ describe('client.ts', () => {
       expect(result).toBeUndefined();
     });
 
-    it('rejects with an ApiError carrying status on HTML 200 response', async () => {
+    it('resolves with undefined when res.text() returns whitespace-only body', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        text: async () => '   ',
+      });
+
+      const result = await api('/test-whitespace');
+      expect(result).toBeUndefined();
+    });
+
+    it('parses valid JSON via res.text() when available', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        text: async () => '{"ok":true}',
+      });
+
+      const result = await api<{ ok: boolean }>('/test-text-json');
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('rejects with kind="parse" when res.text() returns invalid JSON', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        text: async () => '{invalid json',
+      });
+
+      try {
+        await api('/test-bad-json');
+        expect.fail('Should have thrown');
+      } catch (e: unknown) {
+        const err = e as ApiError;
+        expect(err.message).toBe('Unexpected response format');
+        expect(err.kind).toBe('parse');
+        expect(err.status).toBe(200);
+        expect(err.technicalDetails).toBeTruthy();
+      }
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects with kind="parse" when res.json() throws SyntaxError (without res.text)', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => {
+          throw new SyntaxError('Unexpected end of JSON input');
+        },
+      });
+
+      try {
+        await api('/test-json-syntax');
+        expect.fail('Should have thrown');
+      } catch (e: unknown) {
+        const err = e as ApiError;
+        expect(err.message).toBe('Unexpected response format');
+        expect(err.kind).toBe('parse');
+        expect(err.status).toBe(200);
+      }
+    });
+
+    it('rethrows non-SyntaxError from res.json() when res.text is absent', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => {
+          throw new Error('Stream read failure');
+        },
+      });
+
+      await expect(api('/test-json-other-err')).rejects.toThrow('Stream read failure');
+    });
+
+    it('rejects with an ApiError carrying status and kind="parse" on HTML 200 response', async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -164,11 +272,30 @@ describe('client.ts', () => {
         expect.fail('Should have thrown');
       } catch (e: unknown) {
         expect((e as Error).message).toBe('Unexpected response format');
+        expect((e as ApiError).kind).toBe('parse');
         expect((e as ApiError).status).toBe(200);
+        expect((e as ApiError).technicalDetails).toContain('text/html');
       }
     });
 
-    it('rejects with isTimeout when request exceeds timeout', async () => {
+    it('rejects with kind="parse" when content-type header is missing', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        text: async () => 'plain',
+      });
+
+      try {
+        await api('/test-no-ct');
+        expect.fail('Should have thrown');
+      } catch (e: unknown) {
+        expect((e as ApiError).kind).toBe('parse');
+        expect((e as ApiError).technicalDetails).toBe('Expected application/json but received none');
+      }
+    });
+
+    it('rejects with isTimeout and kind="timeout" when request exceeds default timeout', async () => {
       vi.useFakeTimers();
       (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
         (_url: string, options?: RequestInit) =>
@@ -182,11 +309,37 @@ describe('client.ts', () => {
       );
 
       const promise = api('/test-timeout');
-      vi.advanceTimersByTime(15000);
+      const assertion = expect(promise).rejects.toMatchObject({
+        kind: 'timeout',
+        isTimeout: true,
+        message: 'Request timed out',
+      });
+      await vi.advanceTimersByTimeAsync(15000);
+      await assertion;
+      vi.useRealTimers();
+    });
 
-      await expect(promise).rejects.toMatchObject({
+    it('respects custom timeoutMs option with AbortController composition', async () => {
+      vi.useFakeTimers();
+      (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+        (_url: string, options?: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            options?.signal?.addEventListener('abort', () => {
+              const err = new Error('The operation was aborted');
+              err.name = 'AbortError';
+              reject(err);
+            });
+          })
+      );
+
+      const promise = api('/test-custom-timeout', { timeoutMs: 2500 });
+      const assertion = expect(promise).rejects.toMatchObject({
+        kind: 'timeout',
         isTimeout: true,
       });
+      await vi.advanceTimersByTimeAsync(2500);
+      await assertion;
+      expect(global.fetch).toHaveBeenCalledTimes(1);
       vi.useRealTimers();
     });
 
@@ -212,17 +365,216 @@ describe('client.ts', () => {
       await expect(promise).rejects.not.toHaveProperty('isTimeout', true);
     });
 
-    it('throws ApiError with isNetworkError=true if fetch throws TypeError and navigator is online', async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    it('rejects immediately without calling fetch if caller signal is already aborted', async () => {
+      const callerController = new AbortController();
+      callerController.abort('Custom abort reason');
+
+      await expect(
+        api('/test-pre-aborted', { signal: callerController.signal })
+      ).rejects.toMatchObject({
+        name: 'AbortError',
+        message: 'Custom abort reason',
+      });
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('preserves Error instance when caller signal is already aborted with an Error', async () => {
+      const callerController = new AbortController();
+      const customAbortErr = new Error('Aborted by user navigation');
+      customAbortErr.name = 'AbortError';
+      callerController.abort(customAbortErr);
+
+      await expect(
+        api('/test-pre-aborted-err', { signal: callerController.signal })
+      ).rejects.toBe(customAbortErr);
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('throws ApiError with isNetworkError=true and kind="network" after retrying GET on TypeError when online', async () => {
+      vi.useFakeTimers();
+      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new TypeError('Failed to fetch'));
       vi.stubGlobal('navigator', { onLine: true });
 
-      try {
-        await api('/test');
-        expect.fail('Should have thrown');
-      } catch (e: unknown) {
-        expect((e as ApiError).isNetworkError).toBe(true);
-        expect((e as ApiError).isOffline).toBeFalsy();
+      const promise = api('/test', { baseDelayMs: 100 });
+      const assertion = expect(promise).rejects.toMatchObject({
+        kind: 'network',
+        isNetworkError: true,
+      });
+      await vi.runAllTimersAsync();
+      await assertion;
+
+      // Initial attempt + 2 retries = 3 calls
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+      vi.useRealTimers();
+    });
+
+    it('retries GET on transient network error and 502/503/504 with exponential backoff and jitter, then succeeds', async () => {
+      vi.useFakeTimers();
+      const observedDelays: { delayMs: number; attempt: number }[] = [];
+
+      (global.fetch as ReturnType<typeof vi.fn>)
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable',
+          json: async () => ({ details: 'Temporarily overloaded' }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ recovered: true }),
+        });
+
+      const promise = api<{ recovered: boolean }>('/retry-get', {
+        baseDelayMs: 100,
+        maxRetries: 2,
+        jitter: (delayMs, attempt) => {
+          observedDelays.push({ delayMs, attempt });
+          return delayMs;
+        },
+      });
+
+      await vi.advanceTimersByTimeAsync(100);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+
+      await vi.advanceTimersByTimeAsync(200);
+      const result = await promise;
+
+      expect(result).toEqual({ recovered: true });
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+      expect(observedDelays).toEqual([
+        { delayMs: 100, attempt: 0 },
+        { delayMs: 200, attempt: 1 },
+      ]);
+      vi.useRealTimers();
+    });
+
+    it('retries HEAD on 502 and 504 with exponential backoff', async () => {
+      vi.useFakeTimers();
+      (global.fetch as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 502,
+          statusText: 'Bad Gateway',
+          json: async () => ({}),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 504,
+          statusText: 'Gateway Timeout',
+          json: async () => ({}),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 204,
+          headers: new Headers(),
+        });
+
+      const promise = api('/retry-head', {
+        method: 'HEAD',
+        baseDelayMs: 50,
+        jitter: (d) => d,
+      });
+
+      await vi.runAllTimersAsync();
+      const res = await promise;
+      expect(res).toBeUndefined();
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+      vi.useRealTimers();
+    });
+
+    it('does not retry non-idempotent methods (POST, PUT, PATCH, DELETE) on network error or 503', async () => {
+      for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+        (global.fetch as ReturnType<typeof vi.fn>).mockClear();
+        (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable',
+          json: async () => ({ details: 'Busy' }),
+        });
+
+        await expect(api('/mutate', { method })).rejects.toMatchObject({
+          kind: 'http',
+          status: 503,
+        });
+        expect(global.fetch).toHaveBeenCalledTimes(1);
       }
+
+      (global.fetch as ReturnType<typeof vi.fn>).mockClear();
+      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      await expect(api('/mutate', { method: 'POST' })).rejects.toMatchObject({
+        kind: 'network',
+        isNetworkError: true,
+      });
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not retry GET on non-retryable HTTP statuses (400, 404, 500)', async () => {
+      for (const status of [400, 404, 500]) {
+        (global.fetch as ReturnType<typeof vi.fn>).mockClear();
+        (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+          ok: false,
+          status,
+          statusText: 'Error',
+          json: async () => ({}),
+        });
+
+        await expect(api('/no-retry-http')).rejects.toMatchObject({
+          kind: 'http',
+          status,
+        });
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it('aborts retry backoff wait when caller signal aborts during backoff', async () => {
+      vi.useFakeTimers();
+      const callerController = new AbortController();
+
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        statusText: 'Service Unavailable',
+        json: async () => ({}),
+      });
+
+      const promise = api('/abort-during-backoff', {
+        signal: callerController.signal,
+        baseDelayMs: 1000,
+        jitter: (d) => d,
+      });
+
+      // Let first fetch complete and enter backoff wait
+      await vi.advanceTimersByTimeAsync(10);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      callerController.abort();
+
+      await expect(promise).rejects.toMatchObject({
+        name: 'AbortError',
+      });
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      vi.useRealTimers();
+    });
+
+    it('handles zero backoff delay immediately when jitter returns 0', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 502,
+          statusText: 'Bad Gateway',
+          json: async () => ({}),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ ok: true }),
+        });
+
+      const res = await api('/zero-delay', {
+        jitter: () => 0,
+      });
+      expect(res).toEqual({ ok: true });
+      expect(global.fetch).toHaveBeenCalledTimes(2);
     });
 
     it('simulates offline when ?simulate_offline is in URL', async () => {
@@ -233,6 +585,7 @@ describe('client.ts', () => {
         expect.fail('Should have thrown');
       } catch (e: unknown) {
         expect((e as Error).message).toBe('No internet connection');
+        expect((e as ApiError).kind).toBe('network');
         expect((e as ApiError).isOffline).toBe(true);
       }
     });
@@ -245,6 +598,7 @@ describe('client.ts', () => {
         expect.fail('Should have thrown');
       } catch (e: unknown) {
         expect((e as Error).message).toBe('Internal Server Error');
+        expect((e as ApiError).kind).toBe('http');
         expect((e as ApiError).status).toBe(500);
         expect((e as ApiError).technicalDetails).toContain('Database connection timeout');
       }
@@ -348,6 +702,34 @@ describe('client.ts', () => {
       expect(res).toEqual({ success: true });
       vi.useRealTimers();
     });
+
+    it('cancel() simulates failure with ?fail_action', async () => {
+      vi.stubGlobal('window', { location: { search: '?fail_action=true' } });
+      vi.useFakeTimers();
+      const promise = subscriptions.cancel('sub1');
+      vi.runAllTimers();
+      await expect(promise).rejects.toMatchObject({
+        message: 'Action Failed',
+        status: 400,
+      });
+      vi.useRealTimers();
+    });
+
+    it('resume() simulates success and failure with ?fail_action', async () => {
+      vi.useFakeTimers();
+      const okPromise = subscriptions.resume('sub1');
+      vi.runAllTimers();
+      await expect(okPromise).resolves.toEqual({ success: true });
+
+      vi.stubGlobal('window', { location: { search: '?fail_action=true' } });
+      const failPromise = subscriptions.resume('sub1');
+      vi.runAllTimers();
+      await expect(failPromise).rejects.toMatchObject({
+        message: 'Action Failed',
+        status: 400,
+      });
+      vi.useRealTimers();
+    });
   });
 
   describe('plans', () => {
@@ -358,6 +740,27 @@ describe('client.ts', () => {
       });
       await plans.list();
       expect(global.fetch).toHaveBeenCalledWith('/api/plans', expect.any(Object));
+    });
+
+    it('create() sends POST request with payload', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'plan-1' }),
+      });
+      const payload = {
+        usage_enabled: true,
+        trial_period_days: 14,
+        price: 25,
+        price_type: 'flat',
+        interval: 'monthly',
+      };
+      await plans.create(payload);
+      expect(global.fetch).toHaveBeenCalledWith('/api/plans', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        signal: expect.any(Object),
+        headers: { 'Content-Type': 'application/json' },
+      });
     });
   });
 
