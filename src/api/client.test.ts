@@ -263,6 +263,15 @@ describe('client.ts', () => {
       expect(global.fetch).toHaveBeenCalledWith('/api/subscriptions/sub1', expect.any(Object));
     });
 
+    it('payments() calls api with correct path', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ payments: [] }),
+      });
+      await subscriptions.payments('sub1');
+      expect(global.fetch).toHaveBeenCalledWith('/api/subscriptions/sub1/payments', expect.any(Object));
+    });
+
     it('pause() simulates success', async () => {
       vi.useFakeTimers();
       const promise = subscriptions.pause('sub1');

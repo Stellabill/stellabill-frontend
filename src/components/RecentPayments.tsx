@@ -1,35 +1,22 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
+import type { Payment } from '../api/client';
 
-interface Payment {
-    id: string;
-    date: string;
-    amount: string;
-    status: 'success' | 'failed';
-    hash: string;
+export type { Payment };
+
+export interface RecentPaymentsProps {
+    subscriptionId?: string;
+    payments?: Payment[];
+    isLoading?: boolean;
+    error?: string | null;
 }
 
-const MOCK_PAYMENTS: Payment[] = [
-    { id: '1', date: 'Feb 15, 2026', amount: '10 USDC', status: 'success', hash: '0xabc...def123' },
-    { id: '2', date: 'Jan 15, 2026', amount: '10 USDC', status: 'success', hash: '0x123...abc456' },
-    { id: '3', date: 'Dec 15, 2025', amount: '10 USDC', status: 'success', hash: '0x456...def789' },
-    { id: '4', date: 'Dec 1, 2025', amount: '10 USDC', status: 'failed', hash: '' },
-    { id: '5', date: 'Nov 15, 2025', amount: '10 USDC', status: 'success', hash: '0x789...ghi012' },
-];
-
-export default function RecentPayments({ subscriptionId }: { subscriptionId?: string }) {
-    const [loading, setLoading] = useState(true);
-    const [payments, setPayments] = useState<Payment[]>([]);
-
-    useEffect(() => {
-        // Simulate API fetch delay
-        const timer = setTimeout(() => {
-            setPayments(MOCK_PAYMENTS);
-            setLoading(false);
-        }, 1500);
-        return () => clearTimeout(timer);
-    }, [subscriptionId]);
+export default function RecentPayments({
+    subscriptionId,
+    payments = [],
+    isLoading = false,
+    error = null,
+}: RecentPaymentsProps) {
 
     return (
         <div style={{
@@ -81,7 +68,7 @@ export default function RecentPayments({ subscriptionId }: { subscriptionId?: st
                         </tr>
                     </thead>
                     <tbody>
-                        {loading ? (
+                        {isLoading ? (
                             [...Array(5)].map((_, i) => (
                                 <tr key={i} style={{ borderBottom: '1px solid rgba(31, 41, 55, 0.5)' }}>
                                     <td style={{ padding: '1rem 0' }}>
@@ -98,6 +85,12 @@ export default function RecentPayments({ subscriptionId }: { subscriptionId?: st
                                     </td>
                                 </tr>
                             ))
+                        ) : error ? (
+                            <tr>
+                                <td colSpan={4} role="alert" style={{ textAlign: 'center', padding: '2rem 0', color: '#FF6467' }}>
+                                    {error}
+                                </td>
+                            </tr>
                         ) : payments.length > 0 ? (
                             payments.map((payment) => (
                                 <tr key={payment.id} style={{ borderBottom: '1px solid #1f2937' }}>
