@@ -77,6 +77,55 @@ export async function getFreighterConnection(
   }
 }
 
+export function watchFreighter(
+  adapter: FreighterAdapter | undefined,
+  current: { address: string; network: string },
+  onChange: (next: { address: string; network: string }) => void,
+  intervalMs = 3000
+): () => void {
+  const resolvedAdapter = adapter ?? freighterApi;
+  let last = { ...current };
+  let disposed = false;
+  let polling = false;
+
+  const poll = async () => {
+    if (disposed || polling) return;
+    polling = true;
+    try {
+      const next = await readFreighterAccount(resolvedAdapter);
+      if (disposed) return;
+      if (next.address !== last.address || next.network !== last.network) {
+        last = next;
+        onChange(next);
+      }
+    } catch {
+      // Ignore polling errors; the next interval or focus event will retry.
+    } finally {
+      polling = false;
+    }
+  };
+
+  const handleFocus = () => {
+    void poll();
+  };
+
+  const timer = globalThis.setInterval(() => {
+    void poll();
+  }, intervalMs);
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('focus', handleFocus);
+  }
+
+  return () => {
+    disposed = true;
+    globalThis.clearInterval(timer);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('focus', handleFocus);
+    }
+  };
+}
+
 async function readFreighterAccount(
   adapter: FreighterAdapter
 ): Promise<{ address: string; network: string }> {

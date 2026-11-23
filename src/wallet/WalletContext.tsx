@@ -8,9 +8,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { isNetworkMismatch as checkNetworkMismatch } from "../config/network";
 import {
   connectFreighter,
   getFreighterConnection,
+  watchFreighter,
   type FreighterAdapter,
 } from "./freighter";
 
@@ -26,6 +28,7 @@ export interface WalletState {
 }
 
 export interface WalletContextValue extends WalletState {
+  isNetworkMismatch: boolean;
   connect: () => Promise<{ address: string; network: string } | undefined>;
   clearError: () => void;
   cancelConnect: () => void;
@@ -110,6 +113,29 @@ export function WalletProvider({
     };
   }, [adapter, persistedStorage, removePersistedAddress]);
 
+  useEffect(() => {
+    if (wallet.status !== "connected" || !wallet.address || !wallet.network) {
+      return;
+    }
+
+    return watchFreighter(
+      adapter,
+      { address: wallet.address, network: wallet.network },
+      ({ address, network }) => {
+        try {
+          persistedStorage?.setItem(WALLET_STORAGE_KEY, address);
+        } catch {
+          // Wallet state remains usable when browser storage is unavailable.
+        }
+        setWallet((current) =>
+          current.status === "connected"
+            ? { ...current, address, network }
+            : current,
+        );
+      },
+    );
+  }, [adapter, persistedStorage, wallet.address, wallet.network, wallet.status]);
+
   const connect = useCallback(async () => {
     const currentConnectionId = ++connectionId.current;
     setWallet((current) => ({ ...current, status: "connecting", error: null }));
@@ -168,7 +194,14 @@ export function WalletProvider({
   }, [removePersistedAddress]);
 
   const value = useMemo(
-    () => ({ ...wallet, connect, clearError, cancelConnect, disconnect }),
+    () => ({
+      ...wallet,
+      isNetworkMismatch: checkNetworkMismatch(wallet.network),
+      connect,
+      clearError,
+      cancelConnect,
+      disconnect,
+    }),
     [wallet, connect, clearError, cancelConnect, disconnect],
   );
 
