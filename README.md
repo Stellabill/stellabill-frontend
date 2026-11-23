@@ -17,7 +17,7 @@ Web app for **Stellabill**, subscription billing on the Stellar network. Custome
 - Merchant onboarding (business, payout, review)
 - Freighter wallet connect flow
 - Light/dark themes (dark by default), i18n, command palette, accessibility-focused components
-- Design tokens page, brand pack and UI kit (`/design-tokens`, `/brand`, `/ui-kit`)
+- Design tokens page and brand pack (`/design-tokens`, `/brand`)
 
 ## Tech stack
 
@@ -42,8 +42,9 @@ npm run dev        # http://localhost:5173
 | `npm run preview` | Serve the built app locally |
 | `npm test` | Run Vitest |
 | `npm run test:coverage` | Run Vitest with V8 coverage (enforces global thresholds: 65% lines, 67% functions, 85% branches, 65% statements) |
-| `npm run lint` | Run ESLint |
+| `npm run lint` | Run ESLint (configured via `eslint.config.js`) |
 | `npm run storybook` | Component explorer on port 6006 |
+| `npm run build-storybook` | Build static Storybook output |
 
 ## Environment variables
 
