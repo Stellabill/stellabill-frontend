@@ -1,24 +1,27 @@
 import { Outlet, useLocation, useNavigationType } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { getMotionTokens } from '../design/tokens/motion';
 import { transitionTokens, TransitionKind } from '../design/tokens/transitions';
 
 export default function TransitionLayout() {
   const location = useLocation();
   const navigationType = useNavigationType();
+  const shouldReduceMotion = useReducedMotion();
   const hasMounted = useRef(false);
   const [announcement, setAnnouncement] = useState('');
 
   const [prefersReduced, setPrefersReduced] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia
-      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? Boolean(window.matchMedia('(prefers-reduced-motion: reduce)')?.matches)
       : false,
   );
 
   useEffect(() => {
-    if (!window.matchMedia) return;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const updatePreference = () => setPrefersReduced(mediaQuery.matches);
+    if (!mediaQuery) return;
+    const updatePreference = () => setPrefersReduced(Boolean(mediaQuery.matches));
     updatePreference();
     if (mediaQuery.addEventListener) {
       mediaQuery.addEventListener('change', updatePreference);
@@ -28,8 +31,10 @@ export default function TransitionLayout() {
     return () => mediaQuery.removeListener?.(updatePreference);
   }, []);
 
+  const isReducedMotion = Boolean(shouldReduceMotion) || prefersReduced;
+
   const kind: TransitionKind = useMemo(() => {
-    if (prefersReduced) return 'reducedMotion';
+    if (isReducedMotion) return 'reducedMotion';
     switch (navigationType) {
       case 'PUSH':
         return 'forward';
@@ -40,9 +45,11 @@ export default function TransitionLayout() {
       default:
         return 'forward';
     }
-  }, [navigationType, prefersReduced]);
+  }, [navigationType, isReducedMotion]);
 
-  const { duration, easing: rawEasing, distance } = transitionTokens[kind];
+  const motionTokens = getMotionTokens();
+  const { duration: rawDuration, easing: rawEasing, distance } = transitionTokens[kind];
+  const duration = isReducedMotion ? Math.min(rawDuration, motionTokens.entry.duration) : rawDuration;
   const durationRef = useRef(duration);
   durationRef.current = duration;
   const easing = (({ "ease-out": "easeOut", "ease-in": "easeIn", "ease-in-out": "easeInOut", linear: "linear" }) as Record<string, string>)[rawEasing as string] ?? rawEasing;
@@ -109,6 +116,8 @@ export default function TransitionLayout() {
           initial="initial"
           animate="animate"
           exit="exit"
+          transition={isReducedMotion ? { duration: 0 } : undefined}
+          data-transition-duration={duration / 1000}
           style={{ height: '100%' }}
         >
           <Outlet />

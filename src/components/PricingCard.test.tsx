@@ -37,6 +37,34 @@ describe('PricingCard', () => {
     expect(screen.getByText('$45 / mo total for 3 seats')).toBeInTheDocument();
   });
 
+  it('renders singular per-seat total for 1 seat', () => {
+    render(
+      <PricingCard
+        {...defaultProps}
+        pricingMode="per-seat"
+        basePricePerSeat={15}
+        seats={1}
+      />
+    );
+
+    expect(screen.getByText('$15')).toBeInTheDocument();
+    expect(screen.getByText('/ seat / mo')).toBeInTheDocument();
+    expect(screen.getByText('$15 / mo total for 1 seat')).toBeInTheDocument();
+  });
+
+  it('renders plural per-seat total for 5 seats', () => {
+    render(
+      <PricingCard
+        {...defaultProps}
+        pricingMode="per-seat"
+        basePricePerSeat={15}
+        seats={5}
+      />
+    );
+
+    expect(screen.getByText('$75 / mo total for 5 seats')).toBeInTheDocument();
+  });
+
   it('renders custom pricing when basePricePerSeat is null', () => {
     render(
       <PricingCard

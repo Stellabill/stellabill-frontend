@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import RevenueChart, { SeriesData } from '../components/RevenueChart';
+import { generateMockSeries } from '../components/RevenueChart.fixtures';
 
 const meta: Meta<typeof RevenueChart> = {
   title: 'Components/RevenueChart',
@@ -128,18 +129,21 @@ const complexSeries: SeriesData[] = [
 export const Default30D: Story = {
   args: {
     initialTimeRange: '30D',
+    series: generateMockSeries(30),
   },
 };
 
 export const SparseData7D: Story = {
   args: {
     initialTimeRange: '7D',
+    series: generateMockSeries(7),
   },
 };
 
 export const DenseData90D: Story = {
   args: {
     initialTimeRange: '90D',
+    series: generateMockSeries(90),
   },
 };
 

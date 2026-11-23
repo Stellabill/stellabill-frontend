@@ -16,6 +16,8 @@ import './UsageBilling.css';
 import InvoiceList from "../components/InvoiceList";
 import PlanRecommendationBanner from "../components/PlanRecommendationBanner";
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useUsageData } from '../hooks/useUsageData';
+import ErrorState from '../components/ErrorState';
 import { getStatementView } from '../utils/statement';
 import type { StatementEntry, StatementEntryType } from '../utils/statement';
 import Sparkline from '../components/common/Sparkline';
@@ -129,20 +131,9 @@ const PRESET_RANGES: Record<Exclude<UsageRangePreset, 'custom'>, { label: string
 const MIN_USAGE_DATE = new Date(2026, 0, 1);
 const MAX_USAGE_DATE = new Date(2026, 2, 31);
 
-
-interface UsageData {
-    planName: string;
-    billingPeriod: string;
-    usageCount: number;
-    usageLimit: number;
-    unit: string;
-    amount: string;
-    currency: string;
-}
-
 function UsageSkeleton() {
     return (
-        <div className="usage-billing-page" aria-busy="true" aria-label="Loading usage data">
+        <div className="usage-billing-page" role="status" aria-busy="true" aria-label="Loading usage data">
             <div className="skeleton skeleton-breadcrumb" />
             <div className="skeleton skeleton-heading" />
             <div className="skeleton skeleton-subheading" />
@@ -202,111 +193,20 @@ export default function UsageBilling() {
     usePageTitle('Usage & Billing');
     const { id } = useParams<{ id: string }>();
 
-    const [rangePreset, setRangePreset] = useState<UsageRangePreset>('30D');
-    const [customStart, setCustomStart] = useState<string>('2026-03-01');
-    const [customEnd, setCustomEnd] = useState<string>('2026-03-31');
-    const [activeCalendarField, setActiveCalendarField] = useState<'start' | 'end'>('start');
-    const [chartViewMode, setChartViewMode] = useState<'chart' | 'table'>('chart');
-
-    const { rangeStart, rangeEnd } = useMemo(() => {
-        if (rangePreset === 'custom') {
-            return customStart <= customEnd
-                ? { rangeStart: customStart, rangeEnd: customEnd }
-                : { rangeStart: customEnd, rangeEnd: customStart };
-        }
-        const preset = PRESET_RANGES[rangePreset];
-        return { rangeStart: preset.start, rangeEnd: preset.end };
-    }, [rangePreset, customStart, customEnd]);
-
-    const filteredUsageItems = useMemo(
-        () => USAGE_LINE_ITEMS.filter((item) => item.date >= rangeStart && item.date <= rangeEnd),
-        [rangeStart, rangeEnd],
-    );
-
-    const isLoading = false;
-
-    const planName = 'Developer Pro';
-    const usageLimit = 50000;
-    const unit = 'API calls';
-    const currency = 'USDC';
-
-    const usageCount = useMemo(
-        () => filteredUsageItems.reduce((sum, item) => sum + item.quantity, 0),
-        [filteredUsageItems],
-    );
-
-    const totalAmount = useMemo(
-        () => filteredUsageItems.reduce((sum, item) => sum + item.amount, 0),
-        [filteredUsageItems],
-    );
-
-    const formattedAmount = useMemo(
-        () => formatAmount(totalAmount, { currency }),
-        [totalAmount, currency],
-    );
-
-    const billingPeriod = useMemo(
-        () => formatRangeLabel(rangeStart, rangeEnd),
-        [rangeStart, rangeEnd],
-    );
-
-    const chartValues = useMemo(
-        () => filteredUsageItems.map((item) => item.quantity),
-        [filteredUsageItems],
-    );
-
-    const peakUsage = useMemo(
-        () => (chartValues.length > 0 ? Math.max(...chartValues) : 0),
-        [chartValues],
-    );
-
-    const avgUsage = useMemo(
-        () => (chartValues.length > 0 ? Math.round(usageCount / chartValues.length) : 0),
-        [chartValues, usageCount],
-    );
-
-    const handleCustomDateSelect = useCallback(
-        (selected: Date) => {
-            const iso = toIsoDate(selected);
-            if (activeCalendarField === 'start') {
-                setCustomStart(iso);
-                if (iso > customEnd) {
-                    setCustomEnd(iso);
-                }
-                setActiveCalendarField('end');
-            } else {
-                setCustomEnd(iso);
-                if (iso < customStart) {
-                    setCustomStart(iso);
-                }
-            }
-        },
-        [activeCalendarField, customEnd, customStart],
-    );
-
-    const handleExportUsageCsv = useCallback(() => {
-        const csv = buildUsageCsv(filteredUsageItems);
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `usage-line-items-${rangeStart}-to-${rangeEnd}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }, [filteredUsageItems, rangeStart, rangeEnd]);
-
-    const data: UsageData | null = {
-        planName,
-        billingPeriod,
-        usageCount,
-        usageLimit,
-        unit,
-        amount: formattedAmount.number || '0.00',
-        currency,
-    };
+    const { data, isLoading, error } = useUsageData(id);
 
     if (isLoading) return <UsageSkeleton />;
-    if (!data || USAGE_LINE_ITEMS.length === 0) {
+    if (error) {
+        return (
+            <div className="usage-billing-page">
+                <ErrorState
+                    title="Unable to load usage"
+                    message={error.message}
+                />
+            </div>
+        );
+    }
+    if (!data || data.usageCount === 0) {
         return (
             <EmptyUsageState
                 planName={data?.planName ?? "Your Plan"}
@@ -681,7 +581,10 @@ export default function UsageBilling() {
                 <ReceiptPreview receipt={receipt} />
             </div>
 
-            <StatementOfAccount />
+            <StatementOfAccount
+                periodStart={data.currentPeriod.start}
+                periodEnd={data.currentPeriod.end}
+            />
 
             <PastPeriods />
         </div>
@@ -723,7 +626,7 @@ function fmtSigned(value: number, currency: string): string {
   return `+${abs} ${currency}`;
 }
 
-function StatementOfAccount() {
+function StatementOfAccount({ periodStart, periodEnd }: { periodStart: string; periodEnd: string }) {
   const headingId = useId();
 
   // Force light theme on the statement section so that PDF/print output
@@ -731,8 +634,8 @@ function StatementOfAccount() {
   const sectionRef = useScopedTheme<HTMLElement>('light');
 
   // ── Filters ──────────────────────────────────────────────────────────────
-  const [dateStart, setDateStart] = useState('2026-01-01');
-  const [dateEnd, setDateEnd] = useState('2026-12-31');
+  const [dateStart, setDateStart] = useState(periodStart);
+  const [dateEnd, setDateEnd] = useState(periodEnd);
   const [typeFilter, setTypeFilter] = useState<StatementEntryType | 'all'>('all');
   const [sortAsc, setSortAsc] = useState(true);
 
