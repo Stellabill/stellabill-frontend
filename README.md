@@ -57,7 +57,7 @@ npm i -g vercel
 vercel --prod
 ```
 
-CI (`.github/workflows/ci.yml`) installs dependencies and builds on every push and pull request to `main`. Installs use `legacy-peer-deps` (see `.npmrc`) because of an upstream peer range conflict between `i18next-icu` and `intl-messageformat`.
+CI (`.github/workflows/ci.yml`) installs dependencies and builds on every push and pull request to `main`.
 
 ## Documentation
 
