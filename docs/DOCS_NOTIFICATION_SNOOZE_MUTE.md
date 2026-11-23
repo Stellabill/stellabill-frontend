@@ -15,6 +15,13 @@ Users can silence a single noisy notification thread without dismissing it. Two 
 
 Silenced items collapse behind a **Muted (n)** footer section. The count reflects both muted and snoozed items. Expanding the section shows all silenced items with their individual unmute/resume controls.
 
+## Filtering
+
+When notifications are present, the panel provides a category selector and an
+**Unread only** checkbox. Both filters can be combined and apply to active,
+muted, and snoozed notifications. The muted/snoozed count reflects the current
+filter, and a no-matches message appears when nothing qualifies.
+
 ---
 
 ## Anatomy

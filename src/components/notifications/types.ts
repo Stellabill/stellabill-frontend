@@ -14,6 +14,8 @@ export interface BillingNotification {
   targetId?: string;
 }
 
+export type NotificationCategory = BillingNotification["category"];
+
 export const SNOOZE_1H = 60 * 60 * 1000;
 export const SNOOZE_8H = 8 * 60 * 60 * 1000;
 export const SNOOZE_24H = 24 * 60 * 60 * 1000;

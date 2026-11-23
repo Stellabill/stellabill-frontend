@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import type { RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -8,20 +9,38 @@ import {
   X,
 } from "lucide-react";
 import { useRefresh } from "../../hooks/useRefresh";
-import NotificationList, { type NotificationDigestRow } from "./NotificationList";
+import NotificationFilters, {
+  type NotificationCategoryFilter,
+} from "./NotificationFilters";
+import NotificationList, {
+  buildDigestRows,
+  type NotificationDigestRow,
+} from "./NotificationList";
 import type { NotificationsState } from "./store";
-import type { SnoozeDuration } from "./types";
+import type {
+  BillingNotification,
+  SnoozeDuration,
+} from "./types";
+
+function matchesFilters(
+  notification: BillingNotification,
+  category: NotificationCategoryFilter,
+  unreadOnly: boolean,
+) {
+  return (
+    (category === "all" || notification.category === category) &&
+    (!unreadOnly || !notification.isRead)
+  );
+}
 
 interface NotificationPanelProps {
   panelId: string;
   titleId: string;
   panelRef: RefObject<HTMLDivElement>;
   state: NotificationsState;
-  activeDigestRows: NotificationDigestRow[];
-  silencedDigestRows: NotificationDigestRow[];
+  activeNotifications: BillingNotification[];
+  silencedNotifications: BillingNotification[];
   unreadCount: number;
-  silencedCount: number;
-  hasActiveNotifications: boolean;
   allRead: boolean;
   now: number;
   onClose: () => void;
@@ -38,11 +57,9 @@ export default function NotificationPanel({
   titleId,
   panelRef,
   state,
-  activeDigestRows,
-  silencedDigestRows,
+  activeNotifications,
+  silencedNotifications,
   unreadCount,
-  silencedCount,
-  hasActiveNotifications,
   allRead,
   now,
   onClose,
@@ -54,6 +71,37 @@ export default function NotificationPanel({
   onUnmute,
 }: NotificationPanelProps) {
   const { t } = useTranslation();
+  const [category, setCategory] =
+    useState<NotificationCategoryFilter>("all");
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const filteredActiveNotifications = useMemo(
+    () =>
+      activeNotifications.filter((notification) =>
+        matchesFilters(notification, category, unreadOnly),
+      ),
+    [activeNotifications, category, unreadOnly],
+  );
+  const filteredSilencedNotifications = useMemo(
+    () =>
+      silencedNotifications.filter((notification) =>
+        matchesFilters(notification, category, unreadOnly),
+      ),
+    [silencedNotifications, category, unreadOnly],
+  );
+  const activeDigestRows: NotificationDigestRow[] = useMemo(
+    () => buildDigestRows(filteredActiveNotifications),
+    [filteredActiveNotifications],
+  );
+  const silencedDigestRows: NotificationDigestRow[] = useMemo(
+    () => buildDigestRows(filteredSilencedNotifications),
+    [filteredSilencedNotifications],
+  );
+  const hasNotifications =
+    activeNotifications.length + silencedNotifications.length > 0;
+  const hasActiveNotifications = filteredActiveNotifications.length > 0;
+  const hasFilterMatches =
+    filteredActiveNotifications.length + filteredSilencedNotifications.length > 0;
+  const silencedCount = filteredSilencedNotifications.length;
   const {
     pullDistance,
     isRefreshing,
@@ -112,11 +160,26 @@ export default function NotificationPanel({
         </button>
       </div>
 
-      {!hasActiveNotifications && silencedCount === 0 ? (
+      {hasNotifications && (
+        <NotificationFilters
+          category={category}
+          unreadOnly={unreadOnly}
+          onCategoryChange={setCategory}
+          onUnreadOnlyChange={setUnreadOnly}
+        />
+      )}
+
+      {!hasNotifications ? (
         <div className="notifications-empty" role="status">
           <CheckCircle2 size={32} aria-hidden="true" />
           <h3>{t("notifications.emptyTitle")}</h3>
           <p>{t("notifications.emptyDescription")}</p>
+        </div>
+      ) : !hasFilterMatches ? (
+        <div className="notifications-empty notifications-empty-compact" role="status">
+          <CheckCircle2 size={28} aria-hidden="true" />
+          <h3>{t("notifications.filters.noMatchesTitle")}</h3>
+          <p>{t("notifications.filters.noMatchesDescription")}</p>
         </div>
       ) : !hasActiveNotifications && silencedCount > 0 ? (
         <div className="notifications-empty notifications-empty-compact" role="status">

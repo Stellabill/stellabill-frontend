@@ -2,7 +2,6 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell } from "lucide-react";
 import NotificationPanel from "./notifications/NotificationPanel";
-import { buildDigestRows } from "./notifications/NotificationList";
 import { defaultNotifications } from "./notifications/defaults";
 import { useNotifications } from "./notifications/store";
 import type { BillingNotification, SnoozeDuration } from "./notifications/types";
@@ -45,21 +44,12 @@ export default function NotificationsCenter({
     snoozedNotifications,
   } = useNotifications(initialNotifications, getNow);
 
-  const activeDigestRows = useMemo(
-    () => buildDigestRows(activeNotifications),
-    [activeNotifications],
-  );
-  const silencedDigestRows = useMemo(
-    () => buildDigestRows([...mutedNotifications, ...snoozedNotifications]),
-    [mutedNotifications, snoozedNotifications],
-  );
   const unreadCount = useMemo(
     () => activeNotifications.filter((notification) => !notification.isRead).length,
     [activeNotifications],
   );
   const hasActiveNotifications = activeNotifications.length > 0;
   const allRead = hasActiveNotifications && unreadCount === 0;
-  const silencedCount = mutedNotifications.length + snoozedNotifications.length;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -143,11 +133,12 @@ export default function NotificationsCenter({
           titleId={`${panelId}-title`}
           panelRef={panelRef}
           state={state}
-          activeDigestRows={activeDigestRows}
-          silencedDigestRows={silencedDigestRows}
+          activeNotifications={activeNotifications}
+          silencedNotifications={[
+            ...mutedNotifications,
+            ...snoozedNotifications,
+          ]}
           unreadCount={unreadCount}
-          silencedCount={silencedCount}
-          hasActiveNotifications={hasActiveNotifications}
           allRead={allRead}
           now={now}
           onClose={() => {
