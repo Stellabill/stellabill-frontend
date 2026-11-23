@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { usePageTitle } from "../hooks/usePageTitle";
 import type { ApiError } from "../api/client";
 import WalletConnectModal from "../components/WalletConnectModal";
@@ -13,6 +13,11 @@ import { catalogPlans as mockPlans, type Plan, type PlanInterval } from "../data
 
 type SortField = "name" | "price" | "merchant";
 type SortDirection = "asc" | "desc";
+type IntervalFilter = PlanInterval | "All";
+
+function parseIntervalFilter(value: string | null): IntervalFilter {
+	return value === "Monthly" || value === "Yearly" ? value : "All";
+}
 
 const NewspaperIcon = () => (
 	<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -295,11 +300,12 @@ function PlanCard({ plan, onSubscribe, onSendGift }: PlanCardProps) {
 export default function BrowsePlans() {
 	usePageTitle("Browse Plans");
 	const navigate = useNavigate();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const searchQuery = searchParams.get("q") ?? "";
+	const intervalFilter = parseIntervalFilter(searchParams.get("interval"));
 	const [plans, setPlans] = useState<Plan[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<ApiError | null>(null);
-	const [searchQuery, setSearchQuery] = useState("");
-	const [intervalFilter, setIntervalFilter] = useState<PlanInterval | "All">("All");
 	const [sortField, setSortField] = useState<SortField>("name");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 	const [walletModalOpen, setWalletModalOpen] = useState(false);
@@ -411,9 +417,24 @@ export default function BrowsePlans() {
 		}
 	};
 
+	const updateFilters = (query: string, interval: IntervalFilter) => {
+		const next = new URLSearchParams(searchParams);
+		if (query) {
+			next.set("q", query);
+		} else {
+			next.delete("q");
+		}
+		if (interval === "All") {
+			next.delete("interval");
+		} else {
+			next.set("interval", interval);
+		}
+		// Keep the latest filters in the entry that Checkout returns to.
+		setSearchParams(next, { replace: true });
+	};
+
 	const clearFilters = () => {
-		setSearchQuery("");
-		setIntervalFilter("All");
+		updateFilters("", "All");
 		setSortField("name");
 		setSortDirection("asc");
 	};
@@ -469,7 +490,7 @@ export default function BrowsePlans() {
 							type="search"
 							placeholder="Search plans..."
 							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
+							onChange={(e) => updateFilters(e.currentTarget.value, intervalFilter)}
 							style={{
 								width: "100%",
 								padding: "0.75rem 1rem 0.75rem 2.5rem",
@@ -494,7 +515,7 @@ export default function BrowsePlans() {
 					<select
 						value={intervalFilter}
 						onChange={(e) =>
-							setIntervalFilter(e.target.value as PlanInterval | "All")
+							updateFilters(searchQuery, parseIntervalFilter(e.currentTarget.value))
 						}
 						style={{
 							padding: "0.75rem 1rem",
