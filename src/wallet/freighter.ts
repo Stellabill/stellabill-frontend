@@ -17,8 +17,18 @@ export class FreighterConnectionError extends Error {
 
 export type FreighterAdapter = Pick<
   typeof freighterApi,
-  'isConnected' | 'requestAccess' | 'getAddress' | 'getNetwork'
+  'isConnected' | 'requestAccess' | 'getAddress' | 'getNetwork' | 'signTransaction'
 >;
+
+export interface SignTransactionOptions {
+  networkPassphrase?: string;
+  address?: string;
+}
+
+export interface SignedTransactionResult {
+  signedTxXdr: string;
+  signerAddress: string;
+}
 
 const isUserRejection = (error: { code?: number; message?: string }) =>
   error.code === 4001 || /reject|declin|cancel/i.test(error.message ?? '');
@@ -93,4 +103,37 @@ async function readFreighterAccount(
   }
 
   return { address: account.address, network: network.network };
+}
+
+export async function signFreighterTransaction(
+  transactionXdr: string,
+  options?: SignTransactionOptions,
+  adapter: FreighterAdapter = freighterApi
+): Promise<SignedTransactionResult> {
+  try {
+    const result = await adapter.signTransaction(transactionXdr, options);
+    throwForApiError(result.error);
+    if (!result.signedTxXdr) {
+      throw new FreighterConnectionError('unknown');
+    }
+    return {
+      signedTxXdr: result.signedTxXdr,
+      signerAddress: result.signerAddress,
+    };
+  } catch (error) {
+    if (error instanceof FreighterConnectionError) throw error;
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'message' in error &&
+      typeof error.message === 'string' &&
+      isUserRejection({
+        code: 'code' in error && typeof error.code === 'number' ? error.code : undefined,
+        message: error.message,
+      })
+    ) {
+      throw new FreighterConnectionError('user-rejected');
+    }
+    throw new FreighterConnectionError('unknown');
+  }
 }

@@ -1,7 +1,7 @@
 import SwipeableRow from "../components/SwipeableRow";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import PauseSubscriptionModal from "../components/PauseSubscriptionModal";
 import CancelSubscriptionModal from "../components/CancelSubscriptionModal";
 import TopUpModal from "../components/TopUpModal";
@@ -30,7 +30,10 @@ interface SubscriptionWithIcon extends Omit<Subscription, "icon"> {
 
 type StatusType = "Active" | "Paused" | "Cancelled";
 
-type SortField = "planName" | "price" | "nextCharge" | "status";
+const STATUS_FILTERS = ["All", "Active", "Paused", "Cancelled"] as const;
+const SORT_FIELDS = ["planName", "price", "status", "nextCharge"] as const;
+
+type SortField = (typeof SORT_FIELDS)[number];
 type SortDirection = "asc" | "desc";
 
 interface SortState {
@@ -41,6 +44,10 @@ interface SortState {
 interface SubscriptionActionError {
 	message: string;
 	technicalDetails?: string;
+}
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+	return target instanceof Element && target.closest("button, a, [role='menu']") !== null;
 }
 
 function getActionError(error: unknown, fallbackMessage: string): SubscriptionActionError {
@@ -378,12 +385,23 @@ const FIXTURE_DATA: SubscriptionWithIcon[] = [
 export default function Subscriptions() {
   usePageTitle('Subscriptions');
 	const { t } = useTranslation();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const statusParam = searchParams.get("status");
+	const activeFilter = STATUS_FILTERS.find((status) => status === statusParam) ?? "All";
+	const sortParam = searchParams.get("sort");
+	const sort = useMemo<SortState>(() => {
+		const [fieldParam, direction, extra] = sortParam?.split("-") ?? [];
+		const field = SORT_FIELDS.find((candidate) => candidate === fieldParam);
+		if (!field || (direction !== "asc" && direction !== "desc") || extra !== undefined) {
+			return { field: "planName", direction: "asc" };
+		}
+		return { field, direction };
+	}, [sortParam]);
+
 	const [data, setData] = useState<SubscriptionWithIcon[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<ApiError | null>(null);
-	const [activeFilter, setActiveFilter] = useState("All");
 	const [selectedId, setSelectedId] = useState<string | null>(null);
-	const [sort, setSort] = useState<SortState>({ field: "planName", direction: "asc" });
 
 	const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
 	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -412,13 +430,18 @@ export default function Subscriptions() {
 		setToasts((prev) => prev.filter((toast) => toast.id !== id));
 	};
 
-	const handleSortField = useCallback((field: SortField) => {
-		setSort((prev) =>
-			prev.field === field
-				? { field, direction: prev.direction === "asc" ? "desc" : "asc" }
-				: { field, direction: "asc" },
-		);
-	}, []);
+	const updateSearchParam = useCallback((key: "status" | "sort", value: string) => {
+		setSearchParams((current) => {
+			const next = new URLSearchParams(current);
+			next.set(key, value);
+			return next;
+		}, { replace: true });
+	}, [setSearchParams]);
+
+	const handleSortField = (field: SortField) => {
+		const direction = sort.field === field && sort.direction === "asc" ? "desc" : "asc";
+		updateSearchParam("sort", `${field}-${direction}`);
+	};
 
 	const abortRef = useRef<AbortController | null>(null);
 
@@ -929,12 +952,12 @@ export default function Subscriptions() {
 
 			{/* Filter tabs */}
 			<div className="filter-tabs" role="group" aria-label="Filter subscriptions by status">
-				{(["All", "Active", "Paused", "Cancelled"] as const).map((tab) => (
+				{STATUS_FILTERS.map((tab) => (
 					<button
 						key={tab}
 						id={`filter-tab-${tab.toLowerCase()}`}
 						className={`filter-tab${activeFilter === tab ? " active" : ""}`}
-						onClick={() => setActiveFilter(tab)}
+						onClick={() => updateSearchParam("status", tab)}
 						aria-pressed={activeFilter === tab}
 						aria-label={t('subscriptions.tabAriaLabel', { label: tab, count: stats[tab] })}>
 						{t(`subscriptions.tabs.${tab.toLowerCase()}`)} <span>({stats[tab]})</span>
@@ -955,7 +978,7 @@ export default function Subscriptions() {
 						data-testid="sort-toolbar">
 						<span className="sort-toolbar__label" id="sort-toolbar-label">Sort by:</span>
 						<div className="sort-toolbar__buttons" aria-labelledby="sort-toolbar-label">
-							{(["planName", "price", "status", "nextCharge"] as SortField[]).map((f) => (
+							{SORT_FIELDS.map((f) => (
 								<SortButton key={f} field={f} sort={sort} onSort={handleSortField} />
 							))}
 						</div>
@@ -994,27 +1017,25 @@ export default function Subscriptions() {
 								<tr
 									key={sub.id}
 									{...getItemProps(sub.id)}
-									tabIndex={0}
 									aria-label={`${sub.planName} by ${sub.merchantName}, ${sub.status}`}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") {
-											e.preventDefault();
-											setSelectedId(sub.id);
-										}
-									}}
-									onClick={() => setSelectedId(sub.id)}
-									role="button">
+									onClick={(e) => {
+										if (!isInteractiveTarget(e.target)) setSelectedId(sub.id);
+									}}>
 									{/* Plan cell */}
 									<td>
-										<div className="subs-table__plan-cell">
-											<div className="subs-table__plan-icon" aria-hidden="true">
+										<button
+											type="button"
+											className="subs-table__plan-cell"
+											onClick={() => setSelectedId(sub.id)}
+											aria-label={`Open ${sub.planName}`}>
+											<span className="subs-table__plan-icon" aria-hidden="true">
 												{sub.icon}
-											</div>
-											<div>
-												<div className="subs-table__plan-name">{sub.planName}</div>
-												<div className="subs-table__merchant">{sub.merchantName}</div>
-											</div>
-										</div>
+											</span>
+											<span className="subs-table__plan-copy">
+												<span className="subs-table__plan-name">{sub.planName}</span>
+												<span className="subs-table__merchant">{sub.merchantName}</span>
+											</span>
+										</button>
 									</td>
 
 									{/* Status */}
@@ -1032,7 +1053,7 @@ export default function Subscriptions() {
 
 									{/* Tags */}
 									<td>
-										<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+										<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
 											{sub.tags?.slice(0, 2).map((tag) => (
 												<Tag
 													key={tag.id}
@@ -1067,14 +1088,12 @@ export default function Subscriptions() {
 
 									{/* Actions */}
 									<td>
-										<div className="subs-table__actions" onClick={(e) => e.stopPropagation()}>
+										<div className="subs-table__actions">
 											<button
+												type="button"
 												className="subs-table__btn subs-table__btn--primary"
 												id={`manage-btn-${sub.id}`}
-												onClick={(e) => {
-													e.stopPropagation();
-													setSelectedId(sub.id);
-												}}
+												onClick={() => setSelectedId(sub.id)}
 												aria-label={`Manage ${sub.planName}`}>
 												{t('subscriptions.table.manage')}
 											</button>
@@ -1183,7 +1202,9 @@ export default function Subscriptions() {
 									tabIndex={-1}
 									role="button"
 									aria-label={`${sub.planName} – ${sub.status}. Tap to manage.`}
-									onClick={() => setSelectedId(sub.id)}>
+									onClick={(e) => {
+										if (!isInteractiveTarget(e.target)) setSelectedId(sub.id);
+									}}>
 									<div className="subs-card__top">
 										<div className="subs-card__plan-info">
 											<div className="subs-card__icon" aria-hidden="true">
@@ -1242,12 +1263,10 @@ export default function Subscriptions() {
 											</span>
 										</span>
 										<button
+											type="button"
 											className="subs-table__btn subs-table__btn--primary"
 											id={`manage-card-btn-${sub.id}`}
-											onClick={(e) => {
-												e.stopPropagation();
-												setSelectedId(sub.id);
-											}}
+											onClick={() => setSelectedId(sub.id)}
 											aria-label={`Open ${sub.planName} from card`}>
 											Manage
 										</button>

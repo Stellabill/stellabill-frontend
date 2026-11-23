@@ -10,6 +10,7 @@ import ChangelogPanel from "./changelog/ChangelogPanel";
 import FocusOrderVisualizer from "./FocusOrderVisualizer";
 import RouteErrorBoundary from "./RouteErrorBoundary";
 import { LayoutContextType } from "../hooks/useCommandScope";
+import { readJson, writeJson, remove } from "../utils/safeStorage";
 import "../styles/sidebar.css";
 
 const RECENT_COMMANDS_KEY = "sb:recent-commands";
@@ -53,34 +54,18 @@ export function useUnsavedChangesGuard(): UnsavedChangesContextType {
 }
 
 function readRecentCommands(): string[] {
-  try {
-    const raw = localStorage.getItem(RECENT_COMMANDS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return readJson<string[]>(RECENT_COMMANDS_KEY, [], Array.isArray);
 }
 
 function readPinnedCommands(): string[] {
-  try {
-    const raw = localStorage.getItem(PINNED_COMMANDS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return readJson<string[]>(PINNED_COMMANDS_KEY, [], Array.isArray);
 }
 
 function persistPinnedCommands(ids: string[]) {
-  try {
-    if (ids.length === 0) {
-      localStorage.removeItem(PINNED_COMMANDS_KEY);
-    } else {
-      localStorage.setItem(PINNED_COMMANDS_KEY, JSON.stringify(ids));
-    }
-  } catch {
-    // storage unavailable — keep pins in memory only
+  if (ids.length === 0) {
+    remove(PINNED_COMMANDS_KEY);
+  } else {
+    writeJson(PINNED_COMMANDS_KEY, ids);
   }
 }
 
@@ -120,6 +105,17 @@ const mainNav = [
     icon: (
       <svg className="sb-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+    ),
+  },
+  {
+    path: "/wallet",
+    label: "Wallet",
+    icon: (
+      <svg className="sb-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" />
+        <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
+        <path d="M18 12a2 2 0 0 0 0 4h4v-4z" />
       </svg>
     ),
   },
@@ -183,7 +179,10 @@ export default function Layout() {
 
   const requestNavigation = useCallback(async (to: string): Promise<boolean> => {
     const guard = guardRef.current;
-    if (!guard || !guard.isDirty()) return true;
+    if (!guard || !guard.isDirty()) {
+      navigate(to);
+      return true;
+    }
     const confirmed = await guard.confirmLeave();
     if (confirmed) {
       // Page confirmed leaving; navigate now that the guard is cleared.
@@ -228,6 +227,7 @@ export default function Layout() {
       { id: "page-subscriptions", label: "Subscriptions", group: "Pages", keywords: "subscribers customers", perform: () => guardedNavigate("/subscriptions") },
       { id: "page-plans", label: "Plans", group: "Pages", keywords: "pricing billing", perform: () => guardedNavigate("/plans") },
       { id: "page-browse-plans", label: "Browse Plans", group: "Pages", keywords: "catalog explore", perform: () => guardedNavigate("/browse-plans") },
+      { id: "page-wallet", label: "Wallet", group: "Pages", keywords: "transactions history stellar", perform: () => guardedNavigate("/wallet") },
       { id: "page-settings", label: "Settings", group: "Pages", keywords: "preferences account", perform: () => guardedNavigate("/settings") },
       { id: "page-brand", label: "Brand", group: "Pages", keywords: "design tokens", perform: () => guardedNavigate("/brand") },
       { id: "page-design-tokens", label: "Design Tokens", group: "Pages", keywords: "css variables colors spacing typography motion", perform: () => guardedNavigate("/design-tokens") },
@@ -250,11 +250,7 @@ export default function Layout() {
     const baseId = item.id.replace(/^recent-/, "");
     setRecentIds((prev) => {
       const next = [baseId, ...prev.filter((id) => id !== baseId)].slice(0, RECENT_COMMANDS_LIMIT);
-      try {
-        localStorage.setItem(RECENT_COMMANDS_KEY, JSON.stringify(next));
-      } catch {
-        /* storage unavailable — keep recents in memory only */
-      }
+      writeJson(RECENT_COMMANDS_KEY, next);
       return next;
     });
   };
@@ -298,6 +294,12 @@ export default function Layout() {
 
       // Ignore IME composition
       if (event.isComposing || event.keyCode === 229) return;
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setIsPaletteOpen(true);
+        return;
+      }
 
       if (!isInputField) {
         // If a chord is pending, process the second key
@@ -438,6 +440,16 @@ export default function Layout() {
           </RouteErrorBoundary>
         </main>
       </div>
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        items={paletteMode === 'scoped' ? scopedItems : paletteItems}
+        onSelect={handleCommandSelect}
+        onTogglePin={handleTogglePin}
+        mode={paletteMode}
+        onModeChange={setPaletteMode}
+        scopeName={scopeName}
+      />
     </UnsavedChangesContext.Provider>
   );
 }
