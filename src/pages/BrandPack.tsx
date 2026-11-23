@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { usePageTitle } from '../hooks/usePageTitle';
 import Logo from '../components/Branding/Logo';
-import Icon from '../components/Branding/Icon';
+import { Icon } from '../components/common/Icon';
 import { EmptyDashboard, NoTransactions } from '../components/Branding/Illustrations';
 import ThemePreview from '../components/settings/ThemePreview';
 import type { ThemeTokens } from '../types/theme';
