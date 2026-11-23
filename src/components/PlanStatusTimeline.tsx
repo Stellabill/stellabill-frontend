@@ -30,70 +30,14 @@ interface PlanStatusTimelineProps {
     events?: TimelineEvent[];
 }
 
-/* ─── Mock Data ─────────────────────────────────────────────── */
-
-const MOCK_EVENTS: TimelineEvent[] = [
-    {
-        id: '1',
-        type: 'Created',
-        status: 'Subscription created',
-        actor: 'Chukwuemeka',
-        timestamp: 'Feb 10, 2026, 10:30 AM'
-    },
-    {
-        id: '2',
-        type: 'Activated',
-        status: 'Plan activated',
-        actor: 'System',
-        timestamp: 'Feb 10, 2026, 10:31 AM'
-    },
-    {
-        id: '3',
-        type: 'Payment',
-        status: 'Payment successful',
-        actor: 'System',
-        timestamp: 'Feb 15, 2026, 09:00 AM',
-        details: '10 USDC - Period: Feb 15 - Mar 15'
-    },
-    {
-        id: '4',
-        type: 'Paused',
-        status: 'Subscription paused',
-        actor: 'Chukwuemeka',
-        timestamp: 'Mar 01, 2026, 02:45 PM',
-        details: 'User requested pause due to travel'
-    },
-    {
-        id: '5',
-        type: 'Resumed',
-        status: 'Subscription resumed',
-        actor: 'Chukwuemeka',
-        timestamp: 'Mar 10, 2026, 11:20 AM'
-    },
-    {
-        id: '6',
-        type: 'Payment',
-        status: 'Payment successful',
-        actor: 'System',
-        timestamp: 'Mar 15, 2026, 09:00 AM',
-        details: '10 USDC - Period: Mar 15 - Apr 15'
-    },
-    {
-        id: '7',
-        type: 'Cancelled',
-        status: 'Subscription cancelled',
-        actor: 'Chukwuemeka',
-        timestamp: 'Mar 20, 2026, 04:15 PM',
-        details: 'End of contract'
-    }
-];
-
 const EVENT_FILTERS = [
     { label: 'All activity', value: 'All' },
     { label: 'User actions', value: 'User' },
     { label: 'System events', value: 'System' },
     { label: 'Payments', value: 'Payment' }
 ];
+
+const EMPTY_EVENTS: TimelineEvent[] = [];
 
 const EventIcon = ({ type }: { type: TimelineEventType }) => {
     const iconSize = 16;
@@ -249,16 +193,17 @@ function isEventVisible(event: TimelineEvent, filter: string) {
 
 export default function PlanStatusTimeline({
     subscriptionId,
-    events = MOCK_EVENTS
+    events
 }: PlanStatusTimelineProps) {
+    const safeEvents = events ?? EMPTY_EVENTS;
     const [filter, setFilter] = useState('All');
     const [isExpanded, setIsExpanded] = useState(false);
     const INITIAL_COUNT = 3;
 
     const filteredEvents = useMemo(() => {
-        const sortedEvents = [...events].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        const sortedEvents = [...safeEvents].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         return sortedEvents.filter((event) => isEventVisible(event, filter));
-    }, [events, filter]);
+    }, [safeEvents, filter]);
 
     const visibleEvents = isExpanded ? filteredEvents : filteredEvents.slice(0, INITIAL_COUNT);
 
@@ -381,6 +326,10 @@ export default function PlanStatusTimeline({
                             </button>
                         )
                     )}
+                </div>
+            ) : safeEvents.length === 0 ? (
+                <div role="status" style={{ textAlign: 'center', padding: '2rem 0', color: '#64748b', fontSize: '0.95rem' }}>
+                    No plan activity yet
                 </div>
             ) : (
                 <div style={{ textAlign: 'center', padding: '2rem 0', color: '#64748b', fontSize: '0.95rem' }}>
