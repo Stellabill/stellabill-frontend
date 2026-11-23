@@ -3,8 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import OnboardingShell from './Onboarding/OnboardingShell';
 import { ReviewStep } from './common/ReviewStep';
 import { openExternal } from '../utils/openExternal';
+import { isValidEd25519PublicKey } from '../utils/stellarAddress';
 import { SUPPORT_URL } from '../config/links';
 import './Onboarding/OnboardingShell.css';
+
+function parseStoredPayoutAddress(raw: string | null): string | null {
+  if (!raw) return null;
+  let candidate = raw.trim();
+  if (candidate.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(candidate) as { payoutAddress?: unknown; walletAddress?: unknown } | null;
+      if (parsed && typeof parsed.payoutAddress === 'string') {
+        candidate = parsed.payoutAddress.trim();
+      } else if (parsed && typeof parsed.walletAddress === 'string') {
+        candidate = parsed.walletAddress.trim();
+      }
+    } catch {
+      return null;
+    }
+  }
+  const normalized = candidate.toUpperCase();
+  return isValidEd25519PublicKey(normalized) ? normalized : null;
+}
 
 export default function OnboardingReview() {
   const navigate = useNavigate();
@@ -47,8 +67,8 @@ export default function OnboardingReview() {
       return;
     }
 
-    const payout = sessionStorage.getItem('onboardingPayout');
-    if (!isValidPayoutAddress(payout)) {
+    const payout = parseStoredPayoutAddress(sessionStorage.getItem('onboardingPayout'));
+    if (!payout) {
       navigate('/onboarding/payout', {
         replace: true,
         state: { notice: 'Please add a valid payout address before reviewing.', noticeType: 'info' },
@@ -59,7 +79,7 @@ export default function OnboardingReview() {
     setBusinessName(businessData!.businessName || '');
     setWebsite(businessData!.website || '');
     setCountry(businessData!.country || '');
-    setPayoutAddress(payout || '');
+    setPayoutAddress(payout);
     setReady(true);
   }, [navigate]);
 

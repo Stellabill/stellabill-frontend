@@ -41,8 +41,18 @@ npm run dev        # http://localhost:5173
 | `npm run build` | `tsc -b` type check plus build (type errors currently exist in some files) |
 | `npm run preview` | Serve the built app locally |
 | `npm test` | Run Vitest |
+| `npm run test:e2e` | Run Playwright end-to-end tests |
 | `npm run lint` | Run ESLint |
 | `npm run storybook` | Component explorer on port 6006 |
+
+## End-to-end testing
+
+Playwright end-to-end specs live in [`e2e/`](e2e/) and verify the lazy-loaded route tree, `OnboardingPayoutGuard` redirects, merchant onboarding happy path (`/onboarding/business` → `/onboarding/payout` → `/onboarding/review` → `/onboarding-success`), and the browse-plans to checkout flow (`/browse-plans` → `/checkout/:planId` → `/subscriptions`) against a local `vite preview` server with no external network requests.
+
+```bash
+npx playwright install chromium   # one-time browser install
+npm run test:e2e
+```
 
 ## Environment variables
 
