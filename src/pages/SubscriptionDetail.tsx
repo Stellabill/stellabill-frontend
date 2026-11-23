@@ -15,6 +15,7 @@ import ProrationPreviewModal from '../components/common/ProrationPreviewModal';
 import ErrorState from '../components/ErrorState';
 import { subscriptions, type Payment } from '../api/client';
 import type { Subscription } from '../types/subscription';
+import styles from './SubscriptionDetail.module.css';
 
 // ── Mock subscription status type ────────────────────────────────────────────
 type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
@@ -267,16 +268,16 @@ export default function SubscriptionDetail() {
     // ── Loading state ─────────────────────────────────────────────────────────
     if (isLoading) {
         return (
-            <div style={{ padding: '2rem', background: '#0a0a0a', minHeight: '100vh', color: '#f8fafc' }}>
+            <div className={styles.page}>
                 <div
                     role="status"
                     aria-label="Loading subscription"
-                    style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+                    className={styles.skeletonList}
                 >
-                    <div style={{ height: '1rem', width: '180px', background: '#1a1a1a', borderRadius: '6px' }} />
-                    <div style={{ height: '2rem', width: '320px', background: '#1a1a1a', borderRadius: '8px' }} />
-                    <div style={{ height: '120px', width: '100%', background: '#111', borderRadius: '12px' }} />
-                    <div style={{ height: '120px', width: '100%', background: '#111', borderRadius: '12px' }} />
+                    <div className={styles.skeletonLineSm} />
+                    <div className={styles.skeletonLineLg} />
+                    <div className={styles.skeletonCard} />
+                    <div className={styles.skeletonCard} />
                 </div>
             </div>
         );
@@ -285,35 +286,18 @@ export default function SubscriptionDetail() {
     // ── Not-found state ───────────────────────────────────────────────────────
     if (notFound) {
         return (
-            <div style={{ padding: '2rem', background: '#0a0a0a', minHeight: '100vh', color: '#f8fafc' }}>
+            <div className={styles.page}>
                 <div
                     role="alert"
-                    style={{
-                        maxWidth: '480px',
-                        margin: '4rem auto',
-                        padding: '2rem',
-                        borderRadius: '16px',
-                        border: '1px solid #2a2a2a',
-                        background: '#111',
-                        textAlign: 'center',
-                    }}
+                    className={styles.notFoundCard}
                 >
-                    <h1 style={{ margin: '0 0 0.75rem', fontSize: '1.5rem' }}>Subscription not found</h1>
-                    <p style={{ color: '#94a3b8', margin: '0 0 1.5rem' }}>
+                    <h1 className={styles.notFoundTitle}>Subscription not found</h1>
+                    <p className={styles.notFoundMessage}>
                         We couldn&apos;t find a subscription with id <strong>{id}</strong>.
                     </p>
                     <Link
                         to="/subscriptions"
-                        style={{
-                            display: 'inline-block',
-                            padding: '0.625rem 1.25rem',
-                            borderRadius: '12px',
-                            border: '1px solid rgba(0,204,255,0.45)',
-                            background: 'rgba(0,204,255,0.1)',
-                            color: '#00ccff',
-                            fontWeight: 700,
-                            textDecoration: 'none',
-                        }}
+                        className={styles.notFoundBackLink}
                     >
                         Back to Subscriptions
                     </Link>
@@ -325,7 +309,7 @@ export default function SubscriptionDetail() {
     // ── Error state ───────────────────────────────────────────────────────────
     if (loadError) {
         return (
-            <div style={{ padding: '2rem', background: '#0a0a0a', minHeight: '100vh', color: '#f8fafc' }}>
+            <div className={styles.page}>
                 <ErrorState
                     title="Failed to load subscription"
                     message={loadError.message}
@@ -361,21 +345,21 @@ export default function SubscriptionDetail() {
     }
 
     return (
-        <div style={{ padding: '2rem', background: '#0a0a0a', minHeight: '100vh', color: '#f8fafc' }}>
+        <div className={styles.page}>
 
             {/* ── Page header with optional Reactivate CTA ──────────────────── */}
-            <div style={{ marginBottom: '2rem' }}>
+            <div className={styles.headerSection}>
                 <Link
                     to="/subscriptions"
-                    style={{ color: '#94a3b8', textDecoration: 'none', marginBottom: '1rem', display: 'inline-block' }}
+                    className={styles.backLink}
                 >
                     &larr; Back to Subscriptions
                 </Link>
 
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                <div className={styles.headerRow}>
                     <div>
-                        <h1 style={{ margin: '0 0 0.5rem' }}>Subscription {id}</h1>
-                        <p style={{ color: '#64748b', margin: 0 }}>
+                        <h1 className={styles.pageTitle}>Subscription {id}</h1>
+                        <p className={styles.pageSubtitle}>
                             View details and recent payments for this subscription.
                         </p>
                     </div>
@@ -384,21 +368,7 @@ export default function SubscriptionDetail() {
                     {showReactivateCTA && (
                         <button
                             onClick={() => setIsReactivationModalOpen(true)}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.625rem 1.25rem',
-                                borderRadius: '12px',
-                                border: '1px solid rgba(0,204,255,0.45)',
-                                background: 'rgba(0,204,255,0.1)',
-                                color: '#00ccff',
-                                fontWeight: 700,
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
-                                flexShrink: 0,
-                            }}
+                            className={`${styles.ctaButton} ${styles.reactivateButton}`}
                             aria-label="Reactivate this subscription"
                         >
                             {/* Refresh icon */}
@@ -424,21 +394,7 @@ export default function SubscriptionDetail() {
                     {subscriptionStatus === 'active' && (
                         <button
                             onClick={() => setIsDowngradeModalOpen(true)}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.625rem 1.25rem',
-                                borderRadius: '12px',
-                                border: '1px solid rgba(245,158,11,0.35)',
-                                background: 'rgba(245,158,11,0.08)',
-                                color: '#f59e0b',
-                                fontWeight: 700,
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
-                                flexShrink: 0,
-                            }}
+                            className={`${styles.ctaButton} ${styles.downgradeButton}`}
                             aria-label="Downgrade to a lower plan"
                         >
                             <svg
@@ -463,21 +419,7 @@ export default function SubscriptionDetail() {
                     {subscriptionStatus === 'active' && (
                         <button
                             onClick={() => setIsProrationModalOpen(true)}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.625rem 1.25rem',
-                                borderRadius: '12px',
-                                border: '1px solid rgba(34,211,238,0.35)',
-                                background: 'rgba(34,211,238,0.08)',
-                                color: '#22d3ee',
-                                fontWeight: 700,
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
-                                flexShrink: 0,
-                            }}
+                            className={`${styles.ctaButton} ${styles.prorationButton}`}
                             aria-label="Preview proration for plan change"
                         >
                             Preview Proration
@@ -488,18 +430,7 @@ export default function SubscriptionDetail() {
                 {/* Reactivation window notice */}
                 {subscriptionStatus === 'cancelled' && !isWithinWindow && (
                     <div
-                        style={{
-                            marginTop: '1rem',
-                            padding: '0.75rem 1rem',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(251,191,36,0.25)',
-                            background: 'rgba(251,191,36,0.05)',
-                            fontSize: '0.8125rem',
-                            color: '#94a3b8',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                        }}
+                        className={styles.windowNotice}
                         role="status"
                     >
                         <svg
@@ -549,7 +480,7 @@ export default function SubscriptionDetail() {
 
             {/* ── Usage this period ─────────────────────────────────────────── */}
             {isUsageBased && (
-                <div style={{ marginBottom: '2rem' }}>
+                <div className={styles.section}>
                     <UsageThisPeriod
                         billingPeriod={usageData?.billingPeriod}
                         usage={usageData?.usage}
@@ -560,14 +491,14 @@ export default function SubscriptionDetail() {
             )}
 
             {/* ── Billing schedule / schedule-change preview ────────────────── */}
-            <div style={{ marginBottom: '2rem' }}>
-                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '0.75rem' }}>
+            <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>
                     Billing schedule
                 </h2>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Change to:</span>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <div className={styles.scheduleControls}>
+                    <span className={styles.scheduleLabel}>Change to:</span>
+                    <div className={styles.intervalGroup}>
                         {intervalOptions
                             .filter(opt => opt.value !== subscription.currentInterval)
                             .map(opt => (
@@ -577,21 +508,7 @@ export default function SubscriptionDetail() {
                                         setPendingInterval((prev: BillingInterval | null) => prev === opt.value ? null : opt.value)
                                     }
                                     aria-pressed={pendingInterval === opt.value}
-                                    style={{
-                                        padding: '0.375rem 0.875rem',
-                                        borderRadius: '9999px',
-                                        fontSize: '0.8125rem',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                        border: pendingInterval === opt.value
-                                            ? '1px solid rgba(0,204,255,0.6)'
-                                            : '1px solid #2a2a2a',
-                                        background: pendingInterval === opt.value
-                                            ? 'rgba(0,204,255,0.12)'
-                                            : '#111',
-                                        color: pendingInterval === opt.value ? '#00ccff' : '#94a3b8',
-                                        transition: 'all 0.15s ease',
-                                    }}
+                                    className={`${styles.intervalButton} ${pendingInterval === opt.value ? styles.intervalButtonActive : ''}`}
                                 >
                                     {opt.label}
                                 </button>
