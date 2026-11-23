@@ -1,6 +1,11 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import "./ReceiptPrint.css";
 import { useScopedTheme } from "../../hooks/useScopedTheme";
+import {
+  buildReceiptCsv,
+  getReceiptDownloadFileName,
+  resolveReceiptTotals,
+} from "../../utils/statement";
 
 type Money = {
   amount: number;
@@ -93,17 +98,8 @@ function clampTextForReceipt(text: string, maxChars: number): string {
   return t.slice(0, Math.max(0, maxChars - 1)) + "…";
 }
 
-function Spinner({ label }: { label: string }) {
-  return (
-    <span className="rp-spinner" aria-hidden="true">
-      <span className="rp-spinner__dot" />
-      <span className="rp-spinner__sr">{label}</span>
-    </span>
-  );
-}
-
 export default function ReceiptPreview({ receipt }: { receipt: ReceiptData | null }) {
-  const [downloadState, setDownloadState] = useState<"idle" | "compiling" | "ready">("idle");
+  const [downloadState, setDownloadState] = useState<"idle" | "ready">("idle");
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const downloadButtonId = useId();
 
@@ -113,75 +109,42 @@ export default function ReceiptPreview({ receipt }: { receipt: ReceiptData | nul
 
   const hasHistory = !!receipt && receipt.lineItems && receipt.lineItems.length > 0;
 
-  useEffect(() => {
-    if (downloadState !== "idle") return;
-    setDownloadError(null);
-  }, [downloadState]);
-
   const computed = useMemo(() => {
     if (!receipt) return null;
-
-    const currency = receipt.currency;
-    const subtotal = receipt.subtotal ?? null;
-    const taxes = receipt.taxes ?? [];
-    const total = receipt.total ?? null;
-
-    // If missing totals, defensively compute based on items.
-    const derivedSubtotalAmount = receipt.lineItems.reduce((acc, it) => {
-      const lt = it.lineTotal;
-      if (lt && lt.currency === currency) return acc + (Number.isFinite(lt.amount) ? lt.amount : 0);
-      if (it.unitPrice && it.quantity != null) {
-        const q = Number(it.quantity);
-        const up = it.unitPrice;
-        if (up && up.currency === currency) return acc + q * (Number.isFinite(up.amount) ? up.amount : 0);
-      }
-      return acc;
-    }, 0);
-
-    const derivedSubtotal: Money = subtotal ?? { amount: derivedSubtotalAmount, currency };
-
-    const derivedTaxesAmount = taxes.reduce((acc, t) => {
-      if (t.amount?.currency !== currency) return acc;
-      return acc + (Number.isFinite(t.amount.amount) ? t.amount.amount : 0);
-    }, 0);
-
-    const derivedTotal: Money =
-      total ??
-      ({ amount: derivedSubtotal.amount + derivedTaxesAmount, currency } satisfies Money);
-
-    return { subtotal: derivedSubtotal, taxes, total: derivedTotal };
+    return resolveReceiptTotals(receipt);
   }, [receipt]);
 
-  function onDownloadPdf() {
-    if (!receipt) return;
-    if (downloadState === "compiling") return;
+  function onDownloadReceipt() {
+    if (!receipt || !computed) return;
 
     setDownloadError(null);
-    setDownloadState("compiling");
 
-    // Simulate compilation time.
-    const ms = 1200;
-    window.setTimeout(() => {
-      setDownloadState("ready");
+    try {
+      const csv = buildReceiptCsv({
+        ...receipt,
+        subtotal: computed.subtotal,
+        taxes: computed.taxes,
+        total: computed.total,
+      });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
 
-      // Simulate a download action without external dependencies.
       try {
-        const blob = new Blob(["PDF compilation simulated"], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `receipt-${receipt.receiptId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = getReceiptDownloadFileName(receipt);
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      } finally {
         URL.revokeObjectURL(url);
-      } catch {
-        setDownloadError("Unable to start download.");
-        setDownloadState("idle");
       }
 
-      window.setTimeout(() => setDownloadState("idle"), 1200);
-    }, ms);
+      setDownloadState("ready");
+    } catch {
+      setDownloadError("Unable to start download.");
+      setDownloadState("idle");
+    }
   }
 
   if (!receipt || !hasHistory) {
@@ -223,24 +186,11 @@ export default function ReceiptPreview({ receipt }: { receipt: ReceiptData | nul
             type="button"
             id={downloadButtonId}
             className="rp-download"
-            onClick={onDownloadPdf}
-            aria-label={
-              downloadState === "compiling" ? "Compiling PDF" : "Download PDF"
-            }
-            aria-disabled={downloadState === "compiling" ? "true" : "false"}
-            disabled={downloadState === "compiling"}
+            onClick={onDownloadReceipt}
+            aria-label="Download PDF"
           >
-            {downloadState === "compiling" ? (
-              <>
-                <Spinner label="Compiling PDF" />
-                <span>Compiling…</span>
-              </>
-            ) : (
-              <>
-                <span className="rp-download__icon" aria-hidden="true">⬇</span>
-                <span>Download PDF</span>
-              </>
-            )}
+            <span className="rp-download__icon" aria-hidden="true">⬇</span>
+            <span>Download PDF</span>
           </button>
           <div className="rp-live" aria-live="polite" aria-atomic="true">
             {downloadError ? (
@@ -432,7 +382,7 @@ export default function ReceiptPreview({ receipt }: { receipt: ReceiptData | nul
             </div>
 
             <div className="rp-footer__fineprint" aria-label="Receipt fine print">
-              This preview is designed for print-ready output. Download generates a PDF for archival purposes.
+              This preview is designed for print-ready output. Download exports a CSV receipt for archival purposes.
             </div>
           </div>
         </div>

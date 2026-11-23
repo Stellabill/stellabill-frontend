@@ -13,6 +13,10 @@ const createAdapter = (): FreighterAdapter => ({
     network: "PUBLIC",
     networkPassphrase: "Public Global Stellar Network ; September 2015",
   }),
+  signTransaction: vi.fn().mockResolvedValue({
+    signedTxXdr: "AAAA_SIGNED_XDR",
+    signerAddress: publicKey,
+  }),
 });
 
 function WalletConsumer() {

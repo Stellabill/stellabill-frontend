@@ -16,7 +16,13 @@ export const DOCS_URL: string =
 
 export const README_URL = 'https://github.com/Stellabill/stellabill-frontend#readme';
 
-export const GITHUB_REPO_URL = 'https://github.com/Stellabill/stellabill-frontend';
+export const GITHUB_REPO_URL: string =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GITHUB_REPO_URL) ||
+  'https://github.com/Stellabill/stellabill-frontend';
+
+export const DEMO_URL: string =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_DEMO_URL) ||
+  'https://stellabill-frontend-blush.vercel.app';
 
 /**
  * Returns the StellarExpert explorer URL for an account address.

@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState, useRef, createContext, useContext, useCallback } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
-import { type CommandItem } from "./CommandPalette";
+import CommandPalette, { CommandItem } from "./CommandPalette";
 import RouteErrorBoundary from "./RouteErrorBoundary";
 import { LayoutContextType } from "../hooks/useCommandScope";
+import { readJson, writeJson, remove } from "../utils/safeStorage";
 import "../styles/sidebar.css";
+
+const RECENT_COMMANDS_KEY = "sb:recent-commands";
+const RECENT_COMMANDS_LIMIT = 5;
+const PINNED_COMMANDS_KEY = "sb:pinned-commands";
+const PINNED_COMMANDS_LIMIT = 5;
 
 // ------------------------------------------------------------------------------
 // Unsaved-changes guard context
@@ -39,6 +45,22 @@ export function useUnsavedChangesGuard(): UnsavedChangesContextType {
     };
   }
   return ctx;
+}
+
+function readRecentCommands(): string[] {
+  return readJson<string[]>(RECENT_COMMANDS_KEY, [], Array.isArray);
+}
+
+function readPinnedCommands(): string[] {
+  return readJson<string[]>(PINNED_COMMANDS_KEY, [], Array.isArray);
+}
+
+function persistPinnedCommands(ids: string[]) {
+  if (ids.length === 0) {
+    remove(PINNED_COMMANDS_KEY);
+  } else {
+    writeJson(PINNED_COMMANDS_KEY, ids);
+  }
 }
 
 const mainNav = [
@@ -77,6 +99,17 @@ const mainNav = [
     icon: (
       <svg className="sb-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+    ),
+  },
+  {
+    path: "/wallet",
+    label: "Wallet",
+    icon: (
+      <svg className="sb-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" />
+        <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
+        <path d="M18 12a2 2 0 0 0 0 4h4v-4z" />
       </svg>
     ),
   },
@@ -120,9 +153,12 @@ const devNav = [
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [, setScopeName] = useState<string | null>(null);
-  const [, setScopedItems] = useState<CommandItem[]>([]);
-  const [, setPaletteMode] = useState<'global' | 'scoped'>('global');
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => readPinnedCommands());
+  const [scopeName, setScopeName] = useState<string | null>(null);
+  const [scopedItems, setScopedItems] = useState<CommandItem[]>([]);
+  const [paletteMode, setPaletteMode] = useState<'global' | 'scoped'>('global');
 
   // Unsaved-changes guard registry. A single page at a time can own the guard.
   const guardRef = useRef<UnsavedChangesGuard | null>(null);
@@ -132,7 +168,10 @@ export default function Layout() {
 
   const requestNavigation = useCallback(async (to: string): Promise<boolean> => {
     const guard = guardRef.current;
-    if (!guard || !guard.isDirty()) return true;
+    if (!guard || !guard.isDirty()) {
+      navigate(to);
+      return true;
+    }
     const confirmed = await guard.confirmLeave();
     if (confirmed) {
       // Page confirmed leaving; navigate now that the guard is cleared.
@@ -170,6 +209,66 @@ export default function Layout() {
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
 
+  // Catalog of every page and action the palette can surface.
+  const catalog = useMemo<CommandItem[]>(() => {
+    const pages: CommandItem[] = [
+      { id: "page-dashboard", label: "Dashboard", group: "Pages", keywords: "home overview", perform: () => guardedNavigate("/dashboard") },
+      { id: "page-subscriptions", label: "Subscriptions", group: "Pages", keywords: "subscribers customers", perform: () => guardedNavigate("/subscriptions") },
+      { id: "page-plans", label: "Plans", group: "Pages", keywords: "pricing billing", perform: () => guardedNavigate("/plans") },
+      { id: "page-browse-plans", label: "Browse Plans", group: "Pages", keywords: "catalog explore", perform: () => guardedNavigate("/browse-plans") },
+      { id: "page-wallet", label: "Wallet", group: "Pages", keywords: "transactions history stellar", perform: () => guardedNavigate("/wallet") },
+      { id: "page-settings", label: "Settings", group: "Pages", keywords: "preferences account", perform: () => guardedNavigate("/settings") },
+      { id: "page-brand", label: "Brand", group: "Pages", keywords: "design tokens", perform: () => guardedNavigate("/brand") },
+      { id: "page-design-tokens", label: "Design Tokens", group: "Pages", keywords: "css variables colors spacing typography motion", perform: () => guardedNavigate("/design-tokens") },
+    ];
+    const actions: CommandItem[] = [
+      { id: "action-create-plan", label: "Create plan", group: "Actions", hint: "Start a new billing plan", keywords: "add new plan", perform: () => guardedNavigate("/plans/create") },
+      { id: "action-refund", label: "Issue refund", group: "Actions", hint: "Refund a subscription payment", keywords: "money back return reverse", perform: () => guardedNavigate("/subscriptions") },
+      { id: "action-pause", label: "Pause subscription", group: "Actions", hint: "Temporarily stop billing", keywords: "hold suspend freeze", perform: () => guardedNavigate("/subscriptions") },
+      { id: "action-tour", label: "Start product tour", group: "Actions", hint: "Take a guided tour of the dashboard", keywords: "help guide tutorial onboarding walkthrough", perform: () => {
+        // Trigger tour restart by clearing localStorage and reloading
+        localStorage.removeItem('sb:tour-completed');
+        localStorage.removeItem('sb:tour-dismissed');
+        window.location.reload();
+      }},
+    ];
+    return [...pages, ...actions];
+  }, [guardedNavigate]);
+
+  const handleCommandSelect = (item: CommandItem) => {
+    const baseId = item.id.replace(/^recent-/, "");
+    setRecentIds((prev) => {
+      const next = [baseId, ...prev.filter((id) => id !== baseId)].slice(0, RECENT_COMMANDS_LIMIT);
+      writeJson(RECENT_COMMANDS_KEY, next);
+      return next;
+    });
+  };
+
+  const handleTogglePin = (itemId: string) => {
+    setPinnedIds((prev) => {
+      const isPinned = prev.includes(itemId);
+      const next = isPinned ? prev.filter((id) => id !== itemId) : [itemId, ...prev].slice(0, PINNED_COMMANDS_LIMIT);
+      persistPinnedCommands(next);
+      return next;
+    });
+  };
+
+  // Build palette items: each command appears once — in Pinned if pinned,
+  // in Recent if recently used, or in its original group otherwise.
+  const paletteItems = useMemo<CommandItem[]>(() => {
+    const pinned = pinnedIds
+      .map((id) => catalog.find((item) => item.id === id))
+      .filter((item): item is CommandItem => Boolean(item))
+      .map((item) => ({ ...item, group: "Pinned" as const }));
+    const recent = recentIds
+      .map((id) => catalog.find((item) => item.id === id))
+      .filter((item): item is CommandItem => Boolean(item))
+      .filter((item) => !pinnedIds.includes(item.id))
+      .map((item) => ({ ...item, id: `recent-${item.id}`, group: "Recent" as const }));
+    const unpinnedNonRecent = catalog.filter((item) => !pinnedIds.includes(item.id));
+    return [...pinned, ...unpinnedNonRecent, ...recent];
+  }, [catalog, recentIds, pinnedIds]);
+
   // Global keyboard shortcuts
   useEffect(() => {
     let chordTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -184,6 +283,12 @@ export default function Layout() {
 
       // Ignore IME composition
       if (event.isComposing || event.keyCode === 229) return;
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setIsPaletteOpen(true);
+        return;
+      }
 
       if (!isInputField) {
         // If a chord is pending, process the second key
@@ -324,6 +429,16 @@ export default function Layout() {
           </RouteErrorBoundary>
         </main>
       </div>
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        items={paletteMode === 'scoped' ? scopedItems : paletteItems}
+        onSelect={handleCommandSelect}
+        onTogglePin={handleTogglePin}
+        mode={paletteMode}
+        onModeChange={setPaletteMode}
+        scopeName={scopeName}
+      />
     </UnsavedChangesContext.Provider>
   );
 }

@@ -425,6 +425,7 @@ export function RetryScheduleViz({
   const labels  = { ...DEFAULT_LABELS, ...labelOverrides } as RetryScheduleVizLabels;
   const [showAll, setShowAll] = useState(false);
   const [now]    = useState(() => new Date());
+  const listId   = useId();
 
   const allFailed  = attempts.length > 0 && attempts.every((a) => a.status === 'failed');
   const isEmpty    = attempts.length === 0;
@@ -503,6 +504,7 @@ export function RetryScheduleViz({
         tabIndex={0}
       >
         <ol
+          id={listId}
           className="rsv__list"
           aria-label={labels.title}
         >
@@ -525,7 +527,7 @@ export function RetryScheduleViz({
           className="rsv__overflow-btn"
           onClick={showOverflow ? handleShowMore : () => setShowAll(false)}
           aria-expanded={showAll}
-          aria-controls="rsv-list"
+          aria-controls={listId}
         >
           {showOverflow ? (
             <>

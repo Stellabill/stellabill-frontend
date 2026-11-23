@@ -42,6 +42,7 @@ npm run dev        # http://localhost:5173
 | `npm run typecheck` | Run `tsc -b --noEmit` TypeScript type check |
 | `npm run preview` | Serve the built app locally |
 | `npm test` | Run Vitest |
+| `npm run test:coverage` | Run Vitest with V8 coverage (enforces global thresholds: 65% lines, 67% functions, 85% branches, 65% statements) |
 | `npm run lint` | Run ESLint |
 | `npm run storybook` | Component explorer on port 6006 |
 

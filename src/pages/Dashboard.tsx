@@ -1,333 +1,46 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
-import {
-  Users,
-  TrendingUp,
-  AlertCircle,
-  Calendar,
-  Plus,
-  LayoutGrid,
-  ExternalLink,
-  X,
-  Save,
-  RotateCcw,
-} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertCircle, Plus, LayoutGrid, ExternalLink, RotateCcw } from 'lucide-react';
 import { usePageTitle } from '../hooks/usePageTitle';
-import RevenueChart from '../components/RevenueChart';
-import DashboardCard from '../components/Dashboard/DashboardCard';
-import ActivityList, { ActivityType } from '../components/Dashboard/ActivityList';
 import DashboardSkeleton from '../components/Dashboard/DashboardSkeleton';
-import RevenueSplitByPlanPanel from '../components/Dashboard/RevenueSplitByPlanPanel';
-import CardErrorSlot from '../components/Dashboard/CardErrorSlot';
 import OnboardingChecklistWidget from '../components/Dashboard/OnboardingChecklistWidget';
-import HelpHint from '../components/help/HelpHint';
-import ProductTour from '../components/ProductTour/ProductTour';
-import TourCompletion from '../components/ProductTour/TourCompletion';
-import { dashboardTourSteps } from '../components/ProductTour/tourSteps';
-import { useProductTour } from '../hooks/useProductTour';
-import type { PlanRevenueSlice } from '../components/Dashboard/revenueSplitUtils';
-import {
-  useDashboardWidgets,
-  type DashboardFilters,
-  type WidgetId,
-} from '../hooks/useDashboardWidgets';
+import { useDashboardWidgets } from '../hooks/useDashboardWidgets';
+import DashboardFiltersBar from './dashboard/DashboardFiltersBar';
+import DashboardTour from './dashboard/DashboardTour';
+import DashboardWidgetGrid from './dashboard/DashboardWidgetGrid';
+import { buildFailureSummary, MOCK_PLAN_REVENUE } from './dashboard/dashboardData';
+import { useDashboardFilters } from './dashboard/useDashboardFilters';
 import './Dashboard.css';
-
-const DEFAULT_FILTERS: DashboardFilters = {
-  status: 'active',
-  planId: 'pro',
-  range: 'last30Days',
-};
-const SAVED_FILTERS_STORAGE_KEY = 'stellabill.dashboard.savedFilters';
-const FILTER_QUERY_KEYS = ['status', 'planId', 'range', 'filters'] as const;
-
-interface DashboardFilterState {
-  filters: DashboardFilters;
-  announcement: string;
-}
-
-function filtersFromSearchParams(
-  searchParams: URLSearchParams,
-): DashboardFilters | null {
-  if (!FILTER_QUERY_KEYS.some((key) => searchParams.has(key))) return null;
-  if (searchParams.get('filters') === 'none') return {};
-
-  return {
-    ...(searchParams.get('status') === 'active' ? { status: 'active' as const } : {}),
-    ...(searchParams.get('planId') ? { planId: searchParams.get('planId')! } : {}),
-    ...(searchParams.get('range') === 'last30Days'
-      ? { range: 'last30Days' as const }
-      : {}),
-  };
-}
-
-function parseSavedFilters(value: unknown): DashboardFilters {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Saved dashboard filters are invalid.');
-  }
-
-  const saved = value as Record<string, unknown>;
-  if (
-    (saved.status !== undefined && saved.status !== 'active') ||
-    (saved.planId !== undefined && typeof saved.planId !== 'string') ||
-    (saved.range !== undefined && saved.range !== 'last30Days')
-  ) {
-    throw new Error('Saved dashboard filters are invalid.');
-  }
-
-  return {
-    ...(saved.status === 'active' ? { status: 'active' as const } : {}),
-    ...(typeof saved.planId === 'string' ? { planId: saved.planId } : {}),
-    ...(saved.range === 'last30Days' ? { range: 'last30Days' as const } : {}),
-  };
-}
-
-function initialFilterState(searchParams: URLSearchParams): DashboardFilterState {
-  const urlFilters = filtersFromSearchParams(searchParams);
-  if (urlFilters) return { filters: urlFilters, announcement: '' };
-  if (typeof window === 'undefined') {
-    return { filters: DEFAULT_FILTERS, announcement: '' };
-  }
-
-  try {
-    const saved = window.localStorage.getItem(SAVED_FILTERS_STORAGE_KEY);
-    return {
-      filters: saved ? parseSavedFilters(JSON.parse(saved)) : DEFAULT_FILTERS,
-      announcement: '',
-    };
-  } catch {
-    return {
-      filters: DEFAULT_FILTERS,
-      announcement: 'Unable to restore the saved filter view.',
-    };
-  }
-}
-
-function writeFiltersToSearchParams(
-  searchParams: URLSearchParams,
-  filters: DashboardFilters,
-): URLSearchParams {
-  const nextParams = new URLSearchParams(searchParams);
-  FILTER_QUERY_KEYS.forEach((key) => nextParams.delete(key));
-  if (filters.status) nextParams.set('status', filters.status);
-  if (filters.planId) nextParams.set('planId', filters.planId);
-  if (filters.range) nextParams.set('range', filters.range);
-  if (!filters.status && !filters.planId && !filters.range) {
-    nextParams.set('filters', 'none');
-  }
-  return nextParams;
-}
-
-/** Mock plan revenue until /api/merchant/revenue-by-plan is wired. */
-const MOCK_PLAN_REVENUE: PlanRevenueSlice[] = [
-  { planId: 'basic', planName: 'Basic', revenue: 8500, previousRevenue: 7800 },
-  { planId: 'pro', planName: 'Pro', revenue: 19200, previousRevenue: 17600 },
-  { planId: 'business', planName: 'Business', revenue: 9800, previousRevenue: 10200 },
-  { planId: 'enterprise', planName: 'Enterprise', revenue: 5000, previousRevenue: 4200 },
-];
-
-/** Mock 30-day series for KPI sparklines until /api/merchant/metrics is wired. */
-const MOCK_MRR_SERIES = [
-  39.1, 39.4, 39.2, 39.8, 40.1, 40.0, 40.5, 40.3, 40.9, 41.2, 41.0, 41.6,
-  41.4, 41.9, 42.2, 42.0, 42.5, 42.3, 42.8, 42.6, 43.1, 42.9, 43.4, 43.2,
-  43.7, 43.5, 44.0, 44.2, 44.0, 44.5,
-].map((k) => Math.round(k * 1000));
-
-const MOCK_ACTIVE_SUBS_SERIES = [
-  1.18, 1.19, 1.19, 1.2, 1.21, 1.2, 1.22, 1.22, 1.23, 1.24, 1.23, 1.25,
-  1.25, 1.26, 1.26, 1.27, 1.28, 1.27, 1.28, 1.29, 1.29, 1.3, 1.3, 1.31,
-  1.31, 1.32, 1.32, 1.33, 1.33, 1.34,
-].map((k) => Math.round(k * 1000));
-
-/** Human-readable widget labels for the live-region summary banner. */
-const WIDGET_LABELS: Record<WidgetId, string> = {
-  kpi_active_subscriptions: 'Active Subscriptions',
-  kpi_mrr: 'Monthly Recurring Revenue',
-  kpi_failed_charges: 'Failed Charges',
-  kpi_upcoming_renewals: 'Upcoming Renewals',
-  chart_revenue: 'Revenue Growth chart',
-  activity_feed: 'Recent Activity',
-};
 
 export default function Dashboard() {
   usePageTitle('Dashboard');
   const { t } = useTranslation();
   const summaryRegionId = useId();
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [filterState, setFilterState] = useState(() =>
-    initialFilterState(searchParams),
-  );
-  const { filters, announcement: filterAnnouncement } = filterState;
+  const {
+    filters,
+    announcement: filterAnnouncement,
+    activeFilters,
+    removeFilter,
+    resetFilters,
+    saveView,
+  } = useDashboardFilters(MOCK_PLAN_REVENUE);
   const { widgets, loadAll, retryWidget, isInitialLoading, failedWidgetIds } =
     useDashboardWidgets(filters);
-
-  const {
-    isOpen: isTourOpen,
-    showCompletion,
-    closeTour,
-    completeTour,
-    dismissTour,
-    closeCompletion,
-  } = useProductTour();
-
-  const activeFilters = [
-    ...(filters.status
-      ? [{ id: 'status' as const, label: 'Status: Active' }]
-      : []),
-    ...(filters.planId
-      ? [{
-          id: 'planId' as const,
-          label: `Plan: ${MOCK_PLAN_REVENUE.find((plan) => plan.planId === filters.planId)?.planName ?? filters.planId}`,
-        }]
-      : []),
-    ...(filters.range
-      ? [{ id: 'range' as const, label: 'Date: Last 30 Days' }]
-      : []),
-  ];
 
   // Reload widgets whenever the active filter values change.
   useEffect(() => {
     loadAll();
   }, [loadAll]);
 
-  useEffect(() => {
-    const nextParams = writeFiltersToSearchParams(searchParams, filters);
-    if (nextParams.toString() !== searchParams.toString()) {
-      setSearchParams(nextParams, { replace: true });
-    }
-  }, [filters, searchParams, setSearchParams]);
-
-  // ─── Filter chip helpers ────────────────────────────────────────────
-  const removeFilter = (id: keyof DashboardFilters) => {
-    const filter = activeFilters.find((item) => item.id === id);
-    if (!filter) return;
-
-    const nextFilters = { ...filters };
-    delete nextFilters[id];
-    setFilterState({
-      filters: nextFilters,
-      announcement: `Filter ${filter.label} removed.`,
-    });
-  };
-
-  const resetFilters = () => {
-    setFilterState({ filters: {}, announcement: 'All filters reset.' });
-  };
-
-  const saveView = () => {
-    try {
-      window.localStorage.setItem(
-        SAVED_FILTERS_STORAGE_KEY,
-        JSON.stringify(filters),
-      );
-      setFilterState({
-        filters,
-        announcement: 'Filter view saved successfully.',
-      });
-    } catch {
-      setFilterState({
-        filters,
-        announcement: 'Unable to save the filter view. Check browser storage and try again.',
-      });
-    }
-  };
-
   // ─── Initial skeleton ───────────────────────────────────────────────
   if (isInitialLoading) {
     return <DashboardSkeleton />;
   }
 
-  // ─── Per-widget helpers ─────────────────────────────────────────────
-  const w = widgets;
-
-  const kpiError = (id: WidgetId) =>
-    w[id].status === 'error' ? w[id].error?.message ?? 'Failed to load data' : null;
-
-  const kpiOffline = (id: WidgetId) =>
-    w[id].status === 'error' && !!w[id].error?.isOffline;
-
-  const kpiRetrying = (id: WidgetId) => w[id].status === 'loading';
-
   // Polite live-region summary: list all failed widget names
-  const failureSummary =
-    failedWidgetIds.length > 0
-      ? `${failedWidgetIds.length} section${failedWidgetIds.length > 1 ? 's' : ''} failed to load: ${failedWidgetIds.map((id) => WIDGET_LABELS[id]).join(', ')}. Use the Retry buttons to reload individual sections.`
-      : '';
-
-  // ─── Mock activities ────────────────────────────────────────────────
-  const mockActivities = [
-    {
-      id: '1',
-      type: 'payment.succeeded' as ActivityType,
-      description: 'Payment succeeded from John Doe',
-      timestamp: '2 minutes ago',
-      amount: '$29.00',
-      status: 'success',
-      planId: 'pro',
-      subscriptionStatus: 'active',
-      ageInDays: 0,
-    },
-    {
-      id: '2',
-      type: 'subscription.created' as ActivityType,
-      description: 'New subscription: Pro Plan',
-      timestamp: '45 minutes ago',
-      status: 'success',
-      planId: 'pro',
-      subscriptionStatus: 'active',
-      ageInDays: 0,
-    },
-    {
-      id: '3',
-      type: 'payment.failed' as ActivityType,
-      description: 'Payment failed for Sarah Smith',
-      timestamp: '2 hours ago',
-      amount: '$49.00',
-      status: 'failed',
-      planId: 'enterprise',
-      subscriptionStatus: 'active',
-      ageInDays: 0,
-    },
-    {
-      id: '4',
-      type: 'renewal.upcoming' as ActivityType,
-      description: 'Subscription renewing: Enterprise 10',
-      timestamp: 'Tomorrow',
-      status: 'pending',
-      planId: 'enterprise',
-      subscriptionStatus: 'active',
-      ageInDays: 0,
-    },
-    {
-      id: '5',
-      type: 'subscription.cancelled' as ActivityType,
-      description: 'Subscription cancelled: Basic Plan',
-      timestamp: 'Yesterday',
-      status: 'cancelled',
-      planId: 'basic',
-      subscriptionStatus: 'inactive',
-      ageInDays: 1,
-    },
-  ];
-  const filteredActivities = mockActivities
-    .filter((activity) =>
-      (!filters.status || activity.subscriptionStatus === filters.status) &&
-      (!filters.planId || activity.planId === filters.planId) &&
-      (!filters.range || activity.ageInDays <= 30),
-    )
-    .map((activity) => ({
-      id: activity.id,
-      type: activity.type,
-      description: activity.description,
-      timestamp: activity.timestamp,
-      amount: activity.amount,
-      status: activity.status,
-    }));
-  const filteredPlanRevenue = MOCK_PLAN_REVENUE.filter(
-    (plan) => !filters.planId || plan.planId === filters.planId,
-  );
+  const failureSummary = buildFailureSummary(failedWidgetIds);
 
   return (
     <>
@@ -405,204 +118,25 @@ export default function Dashboard() {
       )}
 
       {/* ── Filter Chip Bar ─────────────────────────────────────────── */}
-      {activeFilters.length > 0 && (
-        <div className="dashboard-filter-bar" aria-label="Active filters">
-          <div className="dashboard-filter-chips">
-            <span className="dashboard-filter-label" id="active-filters-label">
-              Active Filters:
-            </span>
-            <ul
-              className="dashboard-filter-list"
-              aria-labelledby="active-filters-label"
-            >
-              {activeFilters.map((filter) => (
-                <li key={filter.id} className="dashboard-filter-chip">
-                  <span>{filter.label}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeFilter(filter.id)}
-                    aria-label={`Remove filter ${filter.label}`}
-                  >
-                    <X size={14} aria-hidden="true" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="dashboard-filter-actions">
-            <button
-              type="button"
-              className="dashboard-filter-action dashboard-filter-action--reset"
-              onClick={resetFilters}
-            >
-              <RotateCcw size={14} aria-hidden="true" />
-              Reset
-            </button>
-            <button
-              type="button"
-              className="dashboard-filter-action dashboard-filter-action--save"
-              onClick={saveView}
-            >
-              <Save size={14} aria-hidden="true" />
-              Save View
-            </button>
-          </div>
-        </div>
-      )}
+      <DashboardFiltersBar
+        activeFilters={activeFilters}
+        onRemove={removeFilter}
+        onReset={resetFilters}
+        onSave={saveView}
+      />
 
       {/* ── Onboarding Checklist ────────────────────────────────────── */}
       <OnboardingChecklistWidget />
 
-      {/* ── KPI Grid ────────────────────────────────────────────────── */}
-      <div
-        className="dashboard-kpi-grid"
-        aria-label="Key performance indicators"
-      >
-        <DashboardCard
-          title={t('dashboard.kpis.activeSubscriptions')}
-          value="1,284"
-          change={12.5}
-          trend="up"
-          icon={<Users size={20} />}
-          helpText={t('dashboard.kpis.activeSubscriptionsHelp')}
-          sparklineData={MOCK_ACTIVE_SUBS_SERIES}
-          target={1500}
-          targetLabel={t('dashboard.kpis.targetLabel')}
-          targetProgress={86}
-          loading={w.kpi_active_subscriptions.status === 'loading'}
-          error={kpiError('kpi_active_subscriptions')}
-          isOfflineError={kpiOffline('kpi_active_subscriptions')}
-          onRetry={() => retryWidget('kpi_active_subscriptions')}
-          retrying={kpiRetrying('kpi_active_subscriptions')}
-        />
-        <DashboardCard
-          title={t('dashboard.kpis.mrr')}
-          value="$42,500"
-          change={8.2}
-          trend="up"
-          icon={<TrendingUp size={20} />}
-          helpText={t('dashboard.kpis.mrrHelp')}
-          sparklineData={MOCK_MRR_SERIES}
-          target={50000}
-          targetLabel={t('dashboard.kpis.targetLabel')}
-          targetProgress={85}
-          loading={w.kpi_mrr.status === 'loading'}
-          error={kpiError('kpi_mrr')}
-          isOfflineError={kpiOffline('kpi_mrr')}
-          onRetry={() => retryWidget('kpi_mrr')}
-          retrying={kpiRetrying('kpi_mrr')}
-        />
-        <DashboardCard
-          title={t('dashboard.kpis.failedCharges')}
-          value="12"
-          change={-4.1}
-          trend="down"
-          icon={<AlertCircle size={20} />}
-          helpText={t('dashboard.kpis.failedChargesHelp')}
-          loading={w.kpi_failed_charges.status === 'loading'}
-          error={kpiError('kpi_failed_charges')}
-          isOfflineError={kpiOffline('kpi_failed_charges')}
-          onRetry={() => retryWidget('kpi_failed_charges')}
-          retrying={kpiRetrying('kpi_failed_charges')}
-        />
-        <DashboardCard
-          title={t('dashboard.kpis.upcomingRenewals')}
-          value="48"
-          trend="neutral"
-          icon={<Calendar size={20} />}
-          helpText={t('dashboard.kpis.upcomingRenewalsHelp')}
-          loading={w.kpi_upcoming_renewals.status === 'loading'}
-          error={kpiError('kpi_upcoming_renewals')}
-          isOfflineError={kpiOffline('kpi_upcoming_renewals')}
-          onRetry={() => retryWidget('kpi_upcoming_renewals')}
-          retrying={kpiRetrying('kpi_upcoming_renewals')}
-        />
-      </div>
-
-      {/* ── Main Content Grid ───────────────────────────────────────── */}
-      <div className="dashboard-main-grid">
-        {/* Chart Section */}
-        <div className="dashboard-panel dashboard-panel--chart">
-          <div className="dashboard-panel__header">
-            <h2 className="dashboard-section-title">
-              Revenue Growth
-              <HelpHint
-                title="Revenue Growth"
-                definition="Total billed revenue per month across all active subscriptions. Use the trend to spot growth or contraction early."
-                example="A spike in February often reflects annual renewals rather than new customer growth."
-                learnMoreUrl="https://github.com/Stellabill/stellabill-frontend/tree/main/docs"
-              />
-            </h2>
-          </div>
-
-          {w.chart_revenue.status === 'error' ? (
-            <CardErrorSlot
-              widgetLabel="Revenue Growth chart"
-              message={w.chart_revenue.error?.message ?? undefined}
-              isOffline={kpiOffline('chart_revenue')}
-              onRetry={() => retryWidget('chart_revenue')}
-              retrying={kpiRetrying('chart_revenue')}
-              className="card-error-slot--chart"
-            />
-          ) : (
-            <div className="dashboard-chart-wrapper">
-              <RevenueChart />
-            </div>
-          )}
-        </div>
-
-        {/* Activity Section */}
-        <div className="dashboard-activity-column">
-          <div className="dashboard-activity-header">
-            <h2 className="dashboard-section-title">Recent Activity</h2>
-            <button className="dashboard-muted-button">
-              Mark all as read
-            </button>
-          </div>
-
-          {w.activity_feed.status === 'error' ? (
-            <CardErrorSlot
-              widgetLabel="Recent Activity"
-              message={w.activity_feed.error?.message ?? undefined}
-              isOffline={kpiOffline('activity_feed')}
-              onRetry={() => retryWidget('activity_feed')}
-              retrying={kpiRetrying('activity_feed')}
-            />
-          ) : (
-            <>
-              <ActivityList
-                activities={filteredActivities}
-                loading={w.activity_feed.status === 'loading'}
-              />
-              <button className="dashboard-load-more">See all activity</button>
-            </>
-          )}
-        </div>
-      </div>
-
-        {/* ── Revenue Split By Plan ───────────────────────────────────── */}
-        <div className="dashboard-revenue-split">
-          <RevenueSplitByPlanPanel plans={filteredPlanRevenue} />
-        </div>
+      <DashboardWidgetGrid
+        widgets={widgets}
+        retryWidget={retryWidget}
+        filters={filters}
+      />
       </div>
 
       {/* Product Tour */}
-      <ProductTour
-        steps={dashboardTourSteps}
-        isOpen={isTourOpen}
-        onClose={closeTour}
-        onComplete={completeTour}
-        onDismiss={dismissTour}
-      />
-
-      {/* Tour Completion Celebration */}
-      <TourCompletion
-        isOpen={showCompletion}
-        onClose={closeCompletion}
-        title="You're all set!"
-        message="You've completed the tour. You're ready to start managing your subscriptions and growing your business."
-        actionLabel="Get started"
-      />
+      <DashboardTour />
     </>
   );
 }

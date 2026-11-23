@@ -1,4 +1,6 @@
 import { ArrowRight, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { formatAmount } from '../utils/amount';
 
 interface Feature {
   text: string
@@ -46,6 +48,8 @@ export default function PricingCard({
   pricingMode = 'flat',
   seats = 1,
 }: PricingCardProps) {
+  const { t } = useTranslation()
+
   // ── Derive displayed price strings ──────────────────────────────────────
   const isPerSeat = pricingMode === 'per-seat' && basePricePerSeat != null
   const isCustom = basePricePerSeat === null
@@ -61,7 +65,8 @@ export default function PricingCard({
   const displaySubtext: string | undefined = (() => {
     if (isPerSeat && typeof basePricePerSeat === 'number' && seats > 0) {
       const total = basePricePerSeat * seats
-      return `$${total.toLocaleString('en-US')} / mo total for ${seats} seat${seats !== 1 ? 's' : ''}`
+      const formattedTotal = formatAmount(total, { minPrecision: 0 }).number
+      return `$${t('pricing.perSeatTotal', { total: formattedTotal, seats })}`
     }
     return priceSubtext
   })()

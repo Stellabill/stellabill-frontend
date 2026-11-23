@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
+import { UNSAFE_NavigationContext } from 'react-router-dom';
 import WalletConnectModal from './WalletConnectModal';
 import WalletDropdown from './WalletDropdown';
 import { Loader2, AlertCircle, ChevronDown } from 'lucide-react';
@@ -12,13 +13,11 @@ export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'err
 interface ConnectButtonProps {
   onConnect?: (address: string) => void;
   onDisconnect?: () => void;
-  onOpenHistory?: () => void;
 }
 
 const ConnectButton: React.FC<ConnectButtonProps> = ({
   onConnect,
   onDisconnect,
-  onOpenHistory,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -36,6 +35,7 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
   const errorMessage = error?.message ?? '';
   const connectionErrorType =
     error instanceof FreighterConnectionError ? error.type : undefined;
+  const navigationContext = useContext(UNSAFE_NavigationContext);
 
   const handleConnectClick = () => {
     clearError();
@@ -61,7 +61,6 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
   const handleDisconnect = () => {
     disconnectWallet();
     setIsDropdownOpen(false);
-    clearError();
     onDisconnect?.();
   };
 
@@ -70,18 +69,19 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleSwitchWallet = () => {
-    setIsDropdownOpen(false);
-    clearError();
-    setIsModalOpen(true);
-  };
-
   const handleOpenHistory = () => {
-    if (onOpenHistory) {
-      onOpenHistory();
+    if (navigationContext?.navigator) {
+      navigationContext.navigator.push('/wallet');
     } else {
       window.location.assign('/wallet');
     }
+  };
+
+  const handleSwitchWallet = () => {
+    disconnectWallet();
+    setIsDropdownOpen(false);
+    clearError();
+    setIsModalOpen(true);
   };
 
   const truncatedAddress = walletAddress 
