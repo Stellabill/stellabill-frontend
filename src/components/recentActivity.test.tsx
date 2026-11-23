@@ -106,9 +106,9 @@ describe("RecentActivity", () => {
 
   it("defaults maxVisible to 8 items", () => {
     const tenItems = Array.from({ length: 10 }, (_, idx) => ({
-      id: `item-${idx}`,
+      id: "item-" + String(idx),
       type: "charge_succeeded" as const,
-      details: `Invoice #${idx + 1}`,
+      details: "Invoice #" + String(idx + 1),
       timestamp: "Today",
       amount: "$10.00",
     }));
