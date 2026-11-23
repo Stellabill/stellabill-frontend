@@ -23,6 +23,7 @@ export interface WalletState {
   address: string | null;
   network: string | null;
   error: Error | null;
+  isReconnecting: boolean;
 }
 
 export interface WalletContextValue extends WalletState {
@@ -50,19 +51,28 @@ const browserStorage = (): WalletStorage | undefined => {
   }
 };
 
+const readSavedAddress = (storage?: WalletStorage): string | null => {
+  try {
+    return storage?.getItem(WALLET_STORAGE_KEY) ?? null;
+  } catch {
+    return null;
+  }
+};
+
 export function WalletProvider({
   children,
   adapter,
   storage,
 }: WalletProviderProps) {
-  const [wallet, setWallet] = useState<WalletState>({
+  const persistedStorage = storage ?? browserStorage();
+  const [wallet, setWallet] = useState<WalletState>(() => ({
     status: "disconnected",
     address: null,
     network: null,
     error: null,
-  });
+    isReconnecting: Boolean(readSavedAddress(persistedStorage)),
+  }));
   const connectionId = useRef(0);
-  const persistedStorage = storage ?? browserStorage();
 
   const removePersistedAddress = useCallback(() => {
     try {
@@ -75,33 +85,55 @@ export function WalletProvider({
   useEffect(() => {
     let isCurrent = true;
     const restoreConnectionId = ++connectionId.current;
-    let savedAddress: string | null = null;
-    try {
-      savedAddress = persistedStorage?.getItem(WALLET_STORAGE_KEY) ?? null;
-    } catch {
+    const savedAddress = readSavedAddress(persistedStorage);
+
+    if (!savedAddress) {
+      setWallet((current) =>
+        current.isReconnecting ? { ...current, isReconnecting: false } : current,
+      );
       return () => {
         isCurrent = false;
       };
     }
 
-    if (!savedAddress) {
-      return () => {
-        isCurrent = false;
-      };
-    }
+    setWallet((current) =>
+      current.status === "connected" || current.isReconnecting
+        ? current
+        : { ...current, isReconnecting: true },
+    );
 
     void getFreighterConnection(adapter)
       .then(({ address, network }) => {
         if (!isCurrent || restoreConnectionId !== connectionId.current) return;
         if (address !== savedAddress) {
           removePersistedAddress();
+          setWallet({
+            status: "disconnected",
+            address: null,
+            network: null,
+            error: null,
+            isReconnecting: false,
+          });
           return;
         }
-        setWallet({ status: "connected", address, network, error: null });
+        setWallet({
+          status: "connected",
+          address,
+          network,
+          error: null,
+          isReconnecting: false,
+        });
       })
       .catch(() => {
         if (isCurrent && restoreConnectionId === connectionId.current) {
           removePersistedAddress();
+          setWallet({
+            status: "disconnected",
+            address: null,
+            network: null,
+            error: null,
+            isReconnecting: false,
+          });
         }
       });
 
@@ -112,7 +144,12 @@ export function WalletProvider({
 
   const connect = useCallback(async () => {
     const currentConnectionId = ++connectionId.current;
-    setWallet((current) => ({ ...current, status: "connecting", error: null }));
+    setWallet((current) => ({
+      ...current,
+      status: "connecting",
+      error: null,
+      isReconnecting: false,
+    }));
     try {
       const { address, network } = await connectFreighter(adapter);
       if (currentConnectionId !== connectionId.current) return;
@@ -121,7 +158,13 @@ export function WalletProvider({
       } catch {
         // Connection state remains usable when browser storage is unavailable.
       }
-      setWallet({ status: "connected", address, network, error: null });
+      setWallet({
+        status: "connected",
+        address,
+        network,
+        error: null,
+        isReconnecting: false,
+      });
       return { address, network };
     } catch (error) {
       if (currentConnectionId !== connectionId.current) return;
@@ -132,6 +175,7 @@ export function WalletProvider({
         address: null,
         network: null,
         error: connectionError,
+        isReconnecting: false,
       });
       throw connectionError;
     }
@@ -145,6 +189,7 @@ export function WalletProvider({
       address: null,
       network: null,
       error: null,
+      isReconnecting: false,
     });
   }, [wallet.status]);
 
@@ -164,6 +209,7 @@ export function WalletProvider({
       address: null,
       network: null,
       error: null,
+      isReconnecting: false,
     });
   }, [removePersistedAddress]);
 

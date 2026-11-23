@@ -16,10 +16,11 @@ const createAdapter = (): FreighterAdapter => ({
 });
 
 function WalletConsumer() {
-  const { status, address, connect, disconnect } = useWallet();
+  const { status, address, isReconnecting, connect, disconnect } = useWallet();
   return (
     <div>
       <span>{`${status}:${address ?? ""}`}</span>
+      <span data-testid="reconnecting">{String(isReconnecting)}</span>
       <button onClick={() => void connect()}>Connect</button>
       <button onClick={disconnect}>Disconnect</button>
     </div>
@@ -89,5 +90,30 @@ describe("WalletProvider", () => {
     fireEvent.click(screen.getByRole("button", { name: "Connect" }));
     expect(await screen.findByText(`connected:${publicKey}`)).toBeInTheDocument();
     expect(unavailableStorage.setItem).toHaveBeenCalledOnce();
+  });
+
+  it("exposes isReconnecting while silently restoring a saved wallet", async () => {
+    let resolveConnected!: (value: { isConnected: boolean }) => void;
+    const adapter = createAdapter();
+    adapter.isConnected = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveConnected = resolve;
+        }),
+    );
+    localStorage.setItem("stellabill.wallet.publicKey", publicKey);
+
+    render(
+      <WalletProvider adapter={adapter}>
+        <WalletConsumer />
+      </WalletProvider>,
+    );
+
+    expect(screen.getByTestId("reconnecting")).toHaveTextContent("true");
+
+    resolveConnected({ isConnected: true });
+
+    expect(await screen.findByText(`connected:${publicKey}`)).toBeInTheDocument();
+    expect(screen.getByTestId("reconnecting")).toHaveTextContent("false");
   });
 });
