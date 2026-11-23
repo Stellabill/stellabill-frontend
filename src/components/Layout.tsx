@@ -10,6 +10,7 @@ import ChangelogPanel from "./changelog/ChangelogPanel";
 import FocusOrderVisualizer from "./FocusOrderVisualizer";
 import RouteErrorBoundary from "./RouteErrorBoundary";
 import { LayoutContextType } from "../hooks/useCommandScope";
+import { readJson, writeJson, remove } from "../utils/safeStorage";
 import "../styles/sidebar.css";
 
 const RECENT_COMMANDS_KEY = "sb:recent-commands";
@@ -53,34 +54,18 @@ export function useUnsavedChangesGuard(): UnsavedChangesContextType {
 }
 
 function readRecentCommands(): string[] {
-  try {
-    const raw = localStorage.getItem(RECENT_COMMANDS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return readJson<string[]>(RECENT_COMMANDS_KEY, [], Array.isArray);
 }
 
 function readPinnedCommands(): string[] {
-  try {
-    const raw = localStorage.getItem(PINNED_COMMANDS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return readJson<string[]>(PINNED_COMMANDS_KEY, [], Array.isArray);
 }
 
 function persistPinnedCommands(ids: string[]) {
-  try {
-    if (ids.length === 0) {
-      localStorage.removeItem(PINNED_COMMANDS_KEY);
-    } else {
-      localStorage.setItem(PINNED_COMMANDS_KEY, JSON.stringify(ids));
-    }
-  } catch {
-    // storage unavailable — keep pins in memory only
+  if (ids.length === 0) {
+    remove(PINNED_COMMANDS_KEY);
+  } else {
+    writeJson(PINNED_COMMANDS_KEY, ids);
   }
 }
 
@@ -250,11 +235,7 @@ export default function Layout() {
     const baseId = item.id.replace(/^recent-/, "");
     setRecentIds((prev) => {
       const next = [baseId, ...prev.filter((id) => id !== baseId)].slice(0, RECENT_COMMANDS_LIMIT);
-      try {
-        localStorage.setItem(RECENT_COMMANDS_KEY, JSON.stringify(next));
-      } catch {
-        /* storage unavailable — keep recents in memory only */
-      }
+      writeJson(RECENT_COMMANDS_KEY, next);
       return next;
     });
   };
