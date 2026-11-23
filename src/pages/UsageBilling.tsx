@@ -17,7 +17,7 @@ import { getStatementView } from '../utils/statement';
 import type { StatementEntry, StatementEntryType } from '../utils/statement';
 
 
-interface UsageData {
+export interface UsageData {
     planName: string;
     billingPeriod: string;
     usageCount: number;
@@ -26,6 +26,16 @@ interface UsageData {
     amount: string;
     currency: string;
 }
+
+const DEFAULT_USAGE_DATA: UsageData = {
+    planName: "Developer Pro",
+    billingPeriod: "Mar 1 – Mar 31, 2026",
+    usageCount: 32450,
+    usageLimit: 50000,
+    unit: "API calls",
+    amount: "16.23",
+    currency: "USDC",
+};
 
 function UsageSkeleton() {
     return (
@@ -85,21 +95,12 @@ function EmptyUsageState({ planName, billingPeriod, id }: { planName: string; bi
     );
 }
 
-export default function UsageBilling() {
+export default function UsageBilling({ usageData = DEFAULT_USAGE_DATA }: { usageData?: UsageData | null }) {
     usePageTitle('Usage & Billing');
     const { id } = useParams<{ id: string }>();
 
     const isLoading = false;
-
-    const data: UsageData | null = {
-        planName: "Developer Pro",
-        billingPeriod: "Mar 1 – Mar 31, 2026",
-        usageCount: 32450,
-        usageLimit: 50000,
-        unit: "API calls",
-        amount: "16.23",
-        currency: "USDC",
-    };
+    const data = usageData;
 
     if (isLoading) return <UsageSkeleton />;
     if (!data || data.usageCount === 0) {
@@ -365,7 +366,7 @@ const typeColors: Record<StatementEntryType, string> = {
 };
 
 /** Format a number as a signed currency string. */
-function fmtSigned(value: number, currency: string): string {
+export function fmtSigned(value: number, currency: string): string {
   const abs = Math.abs(value).toFixed(2);
   if (value === 0) return `0.00 ${currency}`;
   if (value < 0) return `-${abs} ${currency}`;
