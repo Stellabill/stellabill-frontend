@@ -11,7 +11,10 @@ import {
 import {
   connectFreighter,
   getFreighterConnection,
+  signFreighterTransaction,
   type FreighterAdapter,
+  type SignedTransactionResult,
+  type SignTransactionOptions,
 } from "./freighter";
 
 const WALLET_STORAGE_KEY = "stellabill.wallet.publicKey";
@@ -27,6 +30,10 @@ export interface WalletState {
 
 export interface WalletContextValue extends WalletState {
   connect: () => Promise<{ address: string; network: string } | undefined>;
+  signTransaction: (
+    transactionXdr: string,
+    options?: SignTransactionOptions,
+  ) => Promise<SignedTransactionResult>;
   clearError: () => void;
   cancelConnect: () => void;
   disconnect: () => void;
@@ -167,9 +174,15 @@ export function WalletProvider({
     });
   }, [removePersistedAddress]);
 
+  const signTransaction = useCallback(
+    (transactionXdr: string, options?: SignTransactionOptions) =>
+      signFreighterTransaction(transactionXdr, options, adapter),
+    [adapter],
+  );
+
   const value = useMemo(
-    () => ({ ...wallet, connect, clearError, cancelConnect, disconnect }),
-    [wallet, connect, clearError, cancelConnect, disconnect],
+    () => ({ ...wallet, connect, signTransaction, clearError, cancelConnect, disconnect }),
+    [wallet, connect, signTransaction, clearError, cancelConnect, disconnect],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

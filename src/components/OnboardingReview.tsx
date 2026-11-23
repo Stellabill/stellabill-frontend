@@ -4,9 +4,16 @@ import OnboardingShell from './Onboarding/OnboardingShell';
 import { ReviewStep } from './common/ReviewStep';
 import { openExternal } from '../utils/openExternal';
 import { SUPPORT_URL } from '../config/links';
+import { onboarding } from '../api/client';
+import type { OnboardingBusiness } from '../api/client';
+import { isValidEd25519PublicKey } from '../utils/stellarAddress';
 import './Onboarding/OnboardingShell.css';
 
-export default function OnboardingReview() {
+interface OnboardingReviewProps {
+  client?: Pick<typeof onboarding, 'submit'>;
+}
+
+export default function OnboardingReview({ client = onboarding }: OnboardingReviewProps) {
   const navigate = useNavigate();
   const [businessName, setBusinessName] = useState('');
   const [website, setWebsite] = useState('');
@@ -31,6 +38,15 @@ export default function OnboardingReview() {
       }
     }
 
+    let business: OnboardingBusiness | null = null;
+    if (businessData) {
+      business = {
+        businessName: businessData.businessName || '',
+        website: businessData.website || '',
+        country: businessData.country || '',
+      };
+    }
+
     const businessValid = !!(
       businessData &&
       typeof businessData.businessName === 'string' &&
@@ -48,7 +64,7 @@ export default function OnboardingReview() {
     }
 
     const payout = sessionStorage.getItem('onboardingPayout');
-    if (!isValidPayoutAddress(payout)) {
+    if (!payout || !isValidEd25519PublicKey(payout)) {
       navigate('/onboarding/payout', {
         replace: true,
         state: { notice: 'Please add a valid payout address before reviewing.', noticeType: 'info' },
@@ -56,9 +72,9 @@ export default function OnboardingReview() {
       return;
     }
 
-    setBusinessName(businessData!.businessName || '');
-    setWebsite(businessData!.website || '');
-    setCountry(businessData!.country || '');
+    setBusinessName(business!.businessName);
+    setWebsite(business!.website);
+    setCountry(business!.country);
     setPayoutAddress(payout || '');
     setReady(true);
   }, [navigate]);
@@ -92,16 +108,8 @@ export default function OnboardingReview() {
     setErrorMessage('');
     setLoading(true);
     try {
-      await new Promise<void>((resolve, reject) => {
-        window.setTimeout(() => {
-          // Stubbed submit: fails only when explicitly simulated via sessionStorage.
-          if (sessionStorage.getItem('onboardingSubmitFail') === '1') {
-            reject(new Error('Submit failed'));
-            return;
-          }
-          resolve();
-        }, 1000);
-      });
+      const business: OnboardingBusiness = { businessName, website, country };
+      await client.submit({ business, payout: payoutAddress });
       sessionStorage.removeItem('onboardingBusiness');
       sessionStorage.removeItem('onboardingPayout');
       navigate('/onboarding-success');
