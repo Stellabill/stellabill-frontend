@@ -1,5 +1,7 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import FeatureComparison from "./FeatureComparison";
+
+const matrix = () => within(screen.getByRole('table'));
 
 describe("FeatureComparison", () => {
   beforeEach(() => {
@@ -11,24 +13,21 @@ describe("FeatureComparison", () => {
   });
 
   test("renders all three plan column headers", () => {
-    expect(screen.getByText("Free")).toBeInTheDocument();
-    expect(screen.getByText("Pro")).toBeInTheDocument();
-    expect(screen.getByText("Enterprise")).toBeInTheDocument();
+    expect(matrix().getByRole('columnheader', { name: 'Free' })).toBeInTheDocument();
+    expect(matrix().getByRole('columnheader', { name: 'Pro' })).toBeInTheDocument();
+    expect(matrix().getByRole('columnheader', { name: 'Enterprise' })).toBeInTheDocument();
   });
 
   test("renders group header labels", () => {
-    expect(screen.getByText("Billing")).toBeInTheDocument();
-    expect(screen.getByText("Integrations")).toBeInTheDocument();
-    expect(screen.getByText("Support")).toBeInTheDocument();
-    expect(screen.getByText("Enterprise")).toBeInTheDocument(); // group label
+    for (const name of ['Billing', 'Integrations', 'Support', 'Enterprise']) {
+      expect(matrix().getByRole('button', { name })).toBeInTheDocument();
+    }
   });
 
   test("renders feature rows within groups", () => {
-    expect(screen.getByText("Recurring billing")).toBeInTheDocument();
-    expect(screen.getByText("Usage-based billing")).toBeInTheDocument();
-    expect(screen.getByText("Webhooks")).toBeInTheDocument();
-    expect(screen.getByText("Priority support")).toBeInTheDocument();
-    expect(screen.getByText("Custom SLAs")).toBeInTheDocument();
+    for (const name of ['Recurring billing', 'Usage-based billing', 'Webhooks', 'Priority support', 'Custom SLAs']) {
+      expect(matrix().getByRole('rowheader', { name })).toBeInTheDocument();
+    }
   });
 
   test("renders checkmark for included features", () => {
@@ -42,11 +41,11 @@ describe("FeatureComparison", () => {
   });
 
   test("renders text value for string features", () => {
-    expect(screen.getByText("Basic")).toBeInTheDocument();
+    expect(matrix().getByText("Basic")).toBeInTheDocument();
   });
 
   test("group toggles collapse features on click", () => {
-    const groupToggle = screen.getByText("Billing").closest("button");
+    const groupToggle = matrix().getByRole('button', { name: 'Billing' });
     expect(groupToggle).toBeInTheDocument();
     expect(groupToggle).toHaveAttribute("aria-expanded", "true");
 
@@ -58,13 +57,13 @@ describe("FeatureComparison", () => {
   });
 
   test("group toggle has aria-controls pointing to group element", () => {
-    const groupToggle = screen.getByText("Billing").closest("button");
+    const groupToggle = matrix().getByRole('button', { name: 'Billing' });
     const controlsId = groupToggle?.getAttribute("aria-controls");
-    expect(controlsId).toBe("group-Billing");
+    expect(controlsId).toBe("group-pricing.groups.billing");
   });
 
   test("each group toggle has chevron icon", () => {
-    const billingToggle = screen.getByText("Billing").closest("button");
+    const billingToggle = matrix().getByRole('button', { name: 'Billing' });
     expect(billingToggle?.querySelector("svg")).toBeInTheDocument();
   });
 
@@ -92,9 +91,10 @@ describe("FeatureComparison", () => {
   });
 
   test("each mobile card has a plan name heading", () => {
-    expect(screen.getByText("Free")).toBeInTheDocument();
-    expect(screen.getByText("Pro")).toBeInTheDocument();
-    expect(screen.getByText("Enterprise")).toBeInTheDocument();
+    const cards = within(screen.getByRole('list', { name: 'Plan feature cards' }));
+    for (const name of ['Free', 'Pro', 'Enterprise']) {
+      expect(cards.getByRole('heading', { name })).toBeInTheDocument();
+    }
   });
 
   test("table has region role with accessible label", () => {

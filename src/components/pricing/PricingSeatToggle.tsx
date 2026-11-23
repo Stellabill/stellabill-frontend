@@ -1,3 +1,4 @@
+import { Trans, useTranslation } from 'react-i18next'
 /**
  * PricingSeatToggle
  *
@@ -57,6 +58,7 @@ function writeToUrl(mode: PricingMode, seats: number) {
 }
 
 export default function PricingSeatToggle({ onChange }: PricingSeatToggleProps) {
+  const { t } = useTranslation()
   const init = readFromUrl()
   const [mode, setMode] = useState<PricingMode>(init.mode)
   const [seats, setSeats] = useState<number>(init.seats)
@@ -112,7 +114,7 @@ export default function PricingSeatToggle({ onChange }: PricingSeatToggleProps) 
       {/* ── Mode toggle ──────────────────────────────────────────────── */}
       <div
         role="radiogroup"
-        aria-label="Pricing mode"
+        aria-label={t('pricing.mode.label')}
         className={styles.toggle}
       >
         <button
@@ -124,7 +126,7 @@ export default function PricingSeatToggle({ onChange }: PricingSeatToggleProps) 
           onKeyDown={(e) => handleModeKey(e, 'flat')}
           type="button"
         >
-          Flat rate
+          {t('pricing.mode.flat')}
         </button>
 
         <button
@@ -136,7 +138,7 @@ export default function PricingSeatToggle({ onChange }: PricingSeatToggleProps) 
           onKeyDown={(e) => handleModeKey(e, 'per-seat')}
           type="button"
         >
-          Per seat
+          {t('pricing.mode.perSeat')}
         </button>
       </div>
 
@@ -146,14 +148,14 @@ export default function PricingSeatToggle({ onChange }: PricingSeatToggleProps) 
         aria-hidden={mode !== 'per-seat'}
       >
         <span className={styles.stepperLabel} id={`${announcerId}-lbl`}>
-          Number of seats
+          {t('pricing.seats.label')}
         </span>
 
         <div className={styles.stepper} role="group" aria-labelledby={`${announcerId}-lbl`}>
           <button
             type="button"
             className={styles.stepBtn}
-            aria-label="Remove one seat"
+            aria-label={t('pricing.seats.remove')}
             onClick={() => step(-1)}
             disabled={seats <= MIN_SEATS}
             tabIndex={mode === 'per-seat' ? 0 : -1}
@@ -169,7 +171,7 @@ export default function PricingSeatToggle({ onChange }: PricingSeatToggleProps) 
             value={seatInput}
             min={MIN_SEATS}
             max={MAX_SEATS}
-            aria-label="Number of seats"
+            aria-label={t('pricing.seats.label')}
             aria-describedby={`${announcerId}-lbl`}
             tabIndex={mode === 'per-seat' ? 0 : -1}
             onChange={(e) => setSeatInput(e.target.value)}
@@ -185,7 +187,7 @@ export default function PricingSeatToggle({ onChange }: PricingSeatToggleProps) 
           <button
             type="button"
             className={styles.stepBtn}
-            aria-label="Add one seat"
+            aria-label={t('pricing.seats.add')}
             onClick={() => step(1)}
             disabled={seats >= MAX_SEATS}
             tabIndex={mode === 'per-seat' ? 0 : -1}
@@ -202,15 +204,14 @@ export default function PricingSeatToggle({ onChange }: PricingSeatToggleProps) 
           aria-atomic="true"
           className={styles.srOnly}
         >
-          {mode === 'per-seat' ? `${seats} seat${seats !== 1 ? 's' : ''} selected` : ''}
+          {mode === 'per-seat' ? t('pricing.seats.selected', { count: seats }) : ''}
         </span>
       </div>
 
       {/* ── Seat definition microcopy ─────────────────────────────────── */}
       {mode === 'per-seat' && (
         <p className={styles.seatDefinition}>
-          A <strong>seat</strong> is one active team member who can log in and
-          manage subscriptions. Prices shown are per seat/month.
+          <Trans t={t} i18nKey="pricing.seats.definition" components={[<strong />]} />
         </p>
       )}
     </div>

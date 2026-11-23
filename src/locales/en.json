@@ -43,7 +43,8 @@
       "manage": "Manage",
       "prepaid": "Prepaid",
       "coverage": "Coverage",
-      "lastPayment": "Last payment"
+      "lastPayment": "Last payment",
+      "tags": "Tags"
     },
     "status": {
       "active": "Active",
@@ -112,5 +113,122 @@
     "selectExample": "{gender, select, male {He liked} female {She liked} other {They liked}} your post",
     "selectOrdinalExample": "You finished {rank, selectordinal, one {{rank}st} two {{rank}nd} few {{rank}rd} other {{rank}th}}",
     "combinedExample": "{gender, select, male {He has} female {She has} other {They have}} {count, plural, one {1 invoice} other {{count} invoices}}"
+  },
+  "landing": {
+    "hero": {
+      "tag": "Built on Soroban Smart Contracts",
+      "headline": "<0>Recurring USDC Billing for the</0> <1>Stellar Ecosystem</1>",
+      "subtitle": "Infrastructure-grade subscription billing powered by prepaid vaults. Users deposit USDC, smart contracts release funds on intervals—no forced debits, just low-fee, fast settlement.",
+      "actionsLabel": "Primary calls to action",
+      "primaryAction": "Start accepting subscriptions",
+      "secondaryAction": "View pricing"
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "prepaid": {
+        "question": "What is prepaid balance?",
+        "answer": "Prepaid balance is a credit you load into your Stellabill account in USDC on the Stellar network. Subscription charges are automatically deducted from this balance each billing cycle, so you never miss a payment."
+      },
+      "cancellation": {
+        "question": "How does cancellation work?",
+        "answer": "You can cancel any subscription at any time from your dashboard. Once cancelled, you will retain access until the end of your current billing period. Any remaining prepaid balance can be withdrawn back to your wallet."
+      },
+      "wallets": {
+        "question": "Which wallets are supported?",
+        "answer": "Stellabill works with any Stellar-compatible wallet including Freighter, Lobstr, and Albedo. Users need USDC on Stellar and a small XLM reserve for transaction fees."
+      }
+    },
+    "metrics": {
+      "label": "Key performance metrics",
+      "headline": "\"Infrastructure-grade <0>billing</0> for Web3 SaaS\"",
+      "uptime": {
+        "label": "UPTIME",
+        "value": "99.9%"
+      },
+      "settlement": {
+        "label": "SETTLEMENT",
+        "value": "<2s"
+      },
+      "fee": {
+        "label": "AVG FEE",
+        "value": "$0.01"
+      },
+      "trusted": "TRUSTED BY BUILDERS IN THE STELLAR ECOSYSTEM"
+    }
+  },
+  "pricing": {
+    "plans": {
+      "free": {
+        "title": "Free",
+        "tagline": "For individuals and side projects getting started.",
+        "buttonText": "Get started free"
+      },
+      "pro": {
+        "title": "Pro",
+        "tagline": "For growing teams that need advanced billing and analytics.",
+        "buttonText": "Start free trial"
+      },
+      "enterprise": {
+        "title": "Enterprise",
+        "tagline": "For large organizations with custom compliance needs.",
+        "priceLabel": "Custom",
+        "priceSubtext": "Volume discounts & dedicated SLAs",
+        "buttonText": "Contact sales"
+      }
+    },
+    "features": {
+      "subscriptionLimit": "Up to 50 active subscriptions",
+      "basicBilling": "Basic recurring billing",
+      "webhooks": "Webhooks",
+      "community": "Community support",
+      "unlimited": "Unlimited subscriptions",
+      "usage": "Usage-based billing",
+      "priority": "Priority support",
+      "analytics": "Advanced analytics",
+      "customWebhooks": "Custom webhooks",
+      "everythingPro": "Everything in Pro",
+      "slas": "Custom SLAs",
+      "volume": "Volume pricing",
+      "whiteLabel": "White-label options",
+      "dedicatedSupport": "Dedicated support team",
+      "recurring": "Recurring billing",
+      "api": "API access",
+      "dedicated": "Dedicated team"
+    },
+    "title": "Plans & pricing",
+    "subtitle": "USDC-based plans with no hidden fees.",
+    "printCta": "Ready to get started? Visit <0>stellabill.com/pricing</0>",
+    "popular": "Most popular",
+    "perSeat": "/ seat / mo",
+    "perMonth": "/mo",
+    "total": "{count, plural, one {{amount} / mo total for # seat} other {{amount} / mo total for # seats}}",
+    "mode": {
+      "label": "Pricing mode",
+      "flat": "Flat rate",
+      "perSeat": "Per seat"
+    },
+    "seats": {
+      "label": "Number of seats",
+      "remove": "Remove one seat",
+      "add": "Add one seat",
+      "selected": "{count, plural, one {# seat selected} other {# seats selected}}",
+      "definition": "A <0>seat</0> is one active team member who can log in and manage subscriptions. Prices shown are per seat/month."
+    },
+    "comparison": {
+      "title": "Feature comparison",
+      "label": "Feature comparison table",
+      "caption": "Side-by-side feature comparison of Free, Pro, and Enterprise plans",
+      "features": "Features",
+      "cardsLabel": "Plan feature cards",
+      "included": "Included",
+      "excluded": "Not included",
+      "basic": "Basic"
+    },
+    "groups": {
+      "billing": "Billing",
+      "integrations": "Integrations",
+      "support": "Support",
+      "enterprise": "Enterprise"
+    }
   }
 }

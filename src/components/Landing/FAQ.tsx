@@ -1,30 +1,11 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import styles from './FAQ.module.css'
 
-interface FAQItem {
-  question: string
-  answer: string
-}
-
-const faqData: FAQItem[] = [
-  {
-    question: 'What is prepaid balance?',
-    answer:
-      'Prepaid balance is a credit you load into your Stellabill account in USDC on the Stellar network. Subscription charges are automatically deducted from this balance each billing cycle, so you never miss a payment.',
-  },
-  {
-    question: 'How does cancellation work?',
-    answer:
-      'You can cancel any subscription at any time from your dashboard. Once cancelled, you will retain access until the end of your current billing period. Any remaining prepaid balance can be withdrawn back to your wallet.',
-  },
-  {
-    question: 'Which wallets are supported?',
-    answer:
-      'Stellabill works with any Stellar-compatible wallet including Freighter, Lobstr, and Albedo. Users need USDC on Stellar and a small XLM reserve for transaction fees.',
-  },
-]
+const faqItems = ['prepaid', 'cancellation', 'wallets'] as const
 
 export default function FAQ() {
+  const { t } = useTranslation()
   const [expandedIndex, setExpandedIndex] = useState<number | null>(2)
 
   const toggle = (index: number) => {
@@ -33,9 +14,9 @@ export default function FAQ() {
 
   return (
     <section className={styles.faqSection} id="faq">
-      <h2 className={styles.faqHeading}>Frequently asked questions</h2>
+      <h2 className={styles.faqHeading}>{t('landing.faq.title')}</h2>
       <div className={styles.accordionList} role="list">
-        {faqData.map((item, index) => {
+        {faqItems.map((item, index) => {
           const isExpanded = expandedIndex === index
           const panelId = `faq-panel-${index}`
           const buttonId = `faq-button-${index}`
@@ -53,7 +34,7 @@ export default function FAQ() {
                 aria-expanded={isExpanded}
                 aria-controls={panelId}
               >
-                <span>{item.question}</span>
+                <span>{t(`landing.faq.${item}.question`)}</span>
                 <svg
                   className={`${styles.chevron} ${isExpanded ? styles.chevronExpanded : ''}`}
                   xmlns="http://www.w3.org/2000/svg"
@@ -76,7 +57,7 @@ export default function FAQ() {
                 aria-labelledby={buttonId}
                 className={`${styles.answerWrapper} ${isExpanded ? styles.answerWrapperExpanded : ''}`}
               >
-                <p className={styles.answer}>{item.answer}</p>
+                <p className={styles.answer}>{t(`landing.faq.${item}.answer`)}</p>
               </div>
             </div>
           )
