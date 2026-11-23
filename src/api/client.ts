@@ -220,3 +220,13 @@ export const plans = {
   create: (payload: CreatePlanPayload) =>
     api<unknown>('/plans', { method: 'POST', body: JSON.stringify(payload) }),
 }
+
+export {
+  walletTransactions,
+  WALLET_TRANSACTION_FIXTURES,
+  DEFAULT_WALLET_TRANSACTIONS_LIMIT,
+  filterWalletTransactions,
+  paginateWalletTransactions,
+  extractCounterpartyAddress,
+} from './walletTransactions'
+

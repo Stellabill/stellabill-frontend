@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import WalletTransactionFilterPanel from '../components/WalletTransactionFilterPanel';
 import { WalletTransaction } from '../types/walletTransaction';
