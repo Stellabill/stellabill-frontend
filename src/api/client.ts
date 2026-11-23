@@ -1,4 +1,5 @@
 import { Subscription } from '@/types/subscription'
+import { reportError } from '@/utils/errorReporter'
 
 const API_BASE = '/api'
 
@@ -21,6 +22,12 @@ export async function api<T>(path: string, options?: ApiRequestOptions): Promise
   if (typeof window !== 'undefined' && window.location.search.includes('simulate_offline')) {
     const error: ApiError = new Error('No internet connection');
     error.isOffline = true;
+    reportError(error, {
+      source: 'api',
+      endpoint: path,
+      method: options?.method ?? 'GET',
+      metadata: { isOffline: true },
+    });
     throw error;
   }
 
@@ -29,6 +36,13 @@ export async function api<T>(path: string, options?: ApiRequestOptions): Promise
     const error: ApiError = new Error('Internal Server Error');
     error.status = 500;
     error.technicalDetails = 'Database connection timeout in the backend service. [Trace: 0x823fa1]';
+    reportError(error, {
+      source: 'api',
+      endpoint: path,
+      method: options?.method ?? 'GET',
+      status: error.status,
+      metadata: { technicalDetails: error.technicalDetails },
+    });
     throw error;
   }
 
@@ -119,6 +133,12 @@ export async function api<T>(path: string, options?: ApiRequestOptions): Promise
     if (isTimeout) {
       const error: ApiError = new Error('Request timed out');
       error.isTimeout = true;
+      reportError(error, {
+        source: 'api',
+        endpoint: path,
+        method: options?.method ?? 'GET',
+        metadata: { isTimeout: true },
+      });
       throw error;
     }
 
@@ -136,6 +156,18 @@ export async function api<T>(path: string, options?: ApiRequestOptions): Promise
       }
       apiError.isNetworkError = true;
     }
+
+    reportError(apiError, {
+      source: 'api',
+      endpoint: path,
+      method: options?.method ?? 'GET',
+      status: apiError.status,
+      metadata: {
+        ...(apiError.technicalDetails ? { technicalDetails: apiError.technicalDetails } : {}),
+        ...(apiError.isOffline ? { isOffline: true } : {}),
+        ...(apiError.isNetworkError ? { isNetworkError: true } : {}),
+      },
+    });
 
     throw apiError;
   } finally {
