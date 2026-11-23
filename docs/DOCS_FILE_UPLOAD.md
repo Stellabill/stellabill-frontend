@@ -21,6 +21,7 @@ Issue #292 - Branch: uiux/file-upload-component
 
 - variant: logo or csv or avatar (default csv)
 - onFileSelect: callback receiving the File object
+- uploader: optional `(file, onProgress, signal) => Promise<void>` handler that drives real upload progress and supports cancellation via `AbortSignal` (`simulatedUploader` is exported from `FileUpload.tsx` for stories only)
 - maxSizeBytes: number, default 10485760 (10 MB)
 - className: extra class on root div
 
