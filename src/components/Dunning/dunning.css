@@ -20,7 +20,8 @@
 .dunning-secondary:hover { background: rgba(203,213,225,0.05); }
 .dunning-retry {
   background: #f97316;
-  color: #fff;
+  /* Dark text keeps the primary CTA at WCAG AA contrast on orange. */
+  color: #0b1220;
   padding: 8px 12px;
   border: none;
   border-radius: 6px;

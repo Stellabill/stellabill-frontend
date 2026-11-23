@@ -1,3 +1,4 @@
+import { Trans, useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import styles from './Hero.module.css';
 
@@ -41,6 +42,7 @@ const Hero: React.FC<HeroProps> = ({
     onPrimaryClick,
     onSecondaryClick,
 }) => {
+    const { t } = useTranslation();
     const reducedMotion = usePrefersReducedMotion();
     const particles = reducedMotion ? [] : generateParticles();
 
@@ -83,28 +85,28 @@ const Hero: React.FC<HeroProps> = ({
                     >
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                     </svg>
-                    <span>Built on Soroban Smart Contracts</span>
+                    <span>{t('landing.hero.tag')}</span>
                 </div>
 
                 <h1 id="hero-headline" className={styles.headline}>
-                    <span className={styles.headlineLine1}>Recurring USDC Billing for the</span>
-                    <span className={styles.headlineAccent}>Stellar Ecosystem</span>
+                    <Trans t={t} i18nKey="landing.hero.headline" components={[
+                        <span className={styles.headlineLine1} />,
+                        <span className={styles.headlineAccent} />,
+                    ]} />
                 </h1>
 
                 <p className={styles.subtitle}>
-                    Infrastructure-grade subscription billing powered by prepaid vaults.
-                    Users deposit USDC, smart contracts release funds on intervals—no
-                    forced debits, just low-fee, fast settlement.
+                    {t('landing.hero.subtitle')}
                 </p>
 
-                <div className={styles.ctaContainer} role="group" aria-label="Primary calls to action">
+                <div className={styles.ctaContainer} role="group" aria-label={t('landing.hero.actionsLabel')}>
                     <a
                         className={styles.primaryCta}
                         href={primaryHref}
                         onClick={onPrimaryClick}
                         data-testid="hero-primary-cta"
                     >
-                        <span>Start accepting subscriptions</span>
+                        <span>{t('landing.hero.primaryAction')}</span>
                         <svg
                             width="20"
                             height="20"
@@ -127,7 +129,7 @@ const Hero: React.FC<HeroProps> = ({
                         onClick={onSecondaryClick}
                         data-testid="hero-secondary-cta"
                     >
-                        View pricing
+                        {t('landing.hero.secondaryAction')}
                     </a>
                 </div>
             </div>

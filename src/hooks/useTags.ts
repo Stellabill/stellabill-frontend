@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { readJson, writeJson } from '../utils/safeStorage';
 
 export interface TagOption {
   id: string;
@@ -37,29 +38,17 @@ export function normalizeLabelForComparison(label: string): string {
  * Loads tags store from localStorage or returns default
  */
 function loadTagsStore(): TagsStore {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch {
-    // Silently fail and use defaults
-  }
-  return {
+  return readJson<TagsStore>(STORAGE_KEY, {
     tags: DEFAULT_TAGS,
     subscriptionTags: {},
-  };
+  });
 }
 
 /**
  * Saves tags store to localStorage
  */
 function saveTagsStore(store: TagsStore): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  } catch {
-    // Silently fail if storage is unavailable
-  }
+  writeJson(STORAGE_KEY, store);
 }
 
 /**

@@ -1,4 +1,7 @@
+import { useTranslation } from 'react-i18next';
 import { ArrowRight, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { formatAmount } from '../utils/amount';
 
 interface Feature {
   text: string
@@ -40,12 +43,15 @@ export default function PricingCard({
   buttonArrow = true,
   onButtonClick,
   isPopular = false,
-  isPopularLabel = 'Most popular',
+  isPopularLabel,
   useGradientButton = false,
   basePricePerSeat,
   pricingMode = 'flat',
   seats = 1,
 }: PricingCardProps) {
+  const { t } = useTranslation()
+
+  const { t, i18n } = useTranslation()
   // ── Derive displayed price strings ──────────────────────────────────────
   const isPerSeat = pricingMode === 'per-seat' && basePricePerSeat != null
   const isCustom = basePricePerSeat === null
@@ -61,18 +67,20 @@ export default function PricingCard({
   const displaySubtext: string | undefined = (() => {
     if (isPerSeat && typeof basePricePerSeat === 'number' && seats > 0) {
       const total = basePricePerSeat * seats
-      return `$${total.toLocaleString('en-US')} / mo total for ${seats} seat${seats !== 1 ? 's' : ''}`
+      const formattedTotal = formatAmount(total, { minPrecision: 0 }).number
+      return `$${t('pricing.perSeatTotal', { total: formattedTotal, seats })}`
+      return t('pricing.total', { count: seats, amount: new Intl.NumberFormat(i18n.language, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(total) })
     }
     return priceSubtext
   })()
 
-  const perSeatLabel = isPerSeat ? '/ seat / mo' : '/mo'
+  const perSeatLabel = t(isPerSeat ? 'pricing.perSeat' : 'pricing.perMonth')
   return (
     <div className="relative flex-1 min-w-[300px] max-w-[380px] h-full group">
       {/* Most popular tag */}
       {isPopular && (
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-linear-to-r from-cyan-400 to-teal-500 text-black px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap z-10 shadow-[0_0_20px_rgba(34,211,238,0.4)] tracking-wide uppercase">
-          {isPopularLabel}
+          {isPopularLabel ?? t('pricing.popular')}
         </div>
       )}
 
