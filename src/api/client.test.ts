@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { api, subscriptions, plans } from './client';
+import { api, subscriptions, plans, onboarding } from './client';
 import type { ApiError } from './client';
+import {
+  setErrorReporterAdapter,
+  resetErrorReporterAdapter,
+  REDACTED_ADDRESS,
+  type ErrorReportPayload,
+} from '@/utils/errorReporter';
 
 describe('client.ts', () => {
   let originalFetch: typeof global.fetch;
@@ -21,6 +27,7 @@ describe('client.ts', () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
+    resetErrorReporterAdapter();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -242,6 +249,43 @@ describe('client.ts', () => {
         expect((e as ApiError).technicalDetails).toContain('Database connection timeout');
       }
     });
+
+    it('reports API errors to the errorReporter adapter with route context and scrubbed wallet addresses', async () => {
+      const reports: ErrorReportPayload[] = [];
+      setErrorReporterAdapter({
+        report(payload) {
+          reports.push(payload);
+        },
+      });
+
+      const walletAddress = 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H';
+      vi.stubGlobal('window', {
+        location: {
+          search: '',
+          pathname: '/wallet',
+        },
+      });
+
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        json: async () => ({
+          details: 'Wallet ' + walletAddress + ' has no active subscriptions',
+        }),
+      });
+
+      await expect(api('/subscriptions/' + walletAddress)).rejects.toThrow('API error: Not Found');
+
+      expect(reports).toHaveLength(1);
+      expect(reports[0].source).toBe('api');
+      expect(reports[0].route).toBe('/wallet');
+      expect(reports[0].status).toBe(404);
+      expect(reports[0].endpoint).toBe('/subscriptions/' + REDACTED_ADDRESS);
+      expect(reports[0].metadata).toEqual({
+        technicalDetails: 'Wallet ' + REDACTED_ADDRESS + ' has no active subscriptions',
+      });
+    });
   });
 
   describe('subscriptions', () => {
@@ -261,6 +305,15 @@ describe('client.ts', () => {
       });
       await subscriptions.get('sub1');
       expect(global.fetch).toHaveBeenCalledWith('/api/subscriptions/sub1', expect.any(Object));
+    });
+
+    it('payments() calls api with correct path', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ payments: [] }),
+      });
+      await subscriptions.payments('sub1');
+      expect(global.fetch).toHaveBeenCalledWith('/api/subscriptions/sub1/payments', expect.any(Object));
     });
 
     it('pause() simulates success', async () => {
@@ -305,6 +358,29 @@ describe('client.ts', () => {
       });
       await plans.list();
       expect(global.fetch).toHaveBeenCalledWith('/api/plans', expect.any(Object));
+    });
+  });
+
+  describe('onboarding', () => {
+    it('submits business and payout data', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        headers: new Headers(),
+      });
+      const payload = {
+        business: { businessName: 'Test Business', website: 'example.com', country: 'US' },
+        payout: 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7',
+      };
+
+      await onboarding.submit(payload);
+
+      expect(global.fetch).toHaveBeenCalledWith('/api/onboarding', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        signal: expect.any(Object),
+        headers: { 'Content-Type': 'application/json' },
+      });
     });
   });
 });

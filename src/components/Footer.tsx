@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import Logo from "./Branding/Logo";
 import { Send, Check, Github, ExternalLink } from "lucide-react";
+import { DOCS_URL, GITHUB_REPO_URL, SUPPORT_URL, DEMO_URL } from "../config/links";
 
 interface LinkItem {
   label: string;
@@ -22,10 +23,10 @@ const PRODUCT_LINKS: LinkItem[] = [
 ];
 
 const RESOURCES_LINKS: LinkItem[] = [
-  { label: "Documentation", href: "https://github.com/Stellabill/stellabill-frontend#readme", isExternal: true },
-  { label: "Source code", href: "https://github.com/Stellabill/stellabill-frontend", isExternal: true },
+  { label: "Documentation", href: DOCS_URL, isExternal: true },
+  { label: "Source code", href: GITHUB_REPO_URL, isExternal: true },
   { label: "Stellar Network", href: "https://stellar.org", isExternal: true },
-  { label: "Report an issue", href: "https://github.com/Stellabill/stellabill-frontend/issues", isExternal: true },
+  { label: "Report an issue", href: SUPPORT_URL, isExternal: true },
 ];
 
 const LEGAL_LINKS: LinkItem[] = [
@@ -116,7 +117,7 @@ const Footer: React.FC = () => {
             </div>
 
             <div className="flex items-center space-x-4">
-              <a href="https://github.com/Stellabill/stellabill-frontend" target="_blank" rel="noopener noreferrer" aria-label="Stellabill on GitHub" className="p-2.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded-xl transition-all">
+              <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" aria-label="Stellabill on GitHub" className="p-2.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded-xl transition-all">
                 <Github size={20} />
               </a>
             </div>
@@ -135,7 +136,7 @@ const Footer: React.FC = () => {
           <p className="text-slate-500 text-sm">
             © {new Date().getFullYear()} Stellabill. Built on the Stellar Network.
           </p>
-          <a href="https://stellabill-frontend-blush.vercel.app" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-slate-300 text-xs transition-colors">
+          <a href={DEMO_URL} target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-slate-300 text-xs transition-colors">
             Live demo: stellabill-frontend-blush.vercel.app
           </a>
         </div>
@@ -145,4 +146,3 @@ const Footer: React.FC = () => {
 };
 
 export default Footer;
-;

@@ -58,3 +58,45 @@ export function buildBillingSchedule(anchor: Date, interval: BillingInterval, co
   }
   return schedule;
 }
+
+export interface BillingPeriod {
+  start: Date;
+  end: Date;
+}
+
+export function parseBillingDate(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+export function formatBillingDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
+}
+
+export function getCurrentBillingPeriod(
+  anchor: Date,
+  interval: BillingInterval,
+  now: Date = new Date(),
+): BillingPeriod {
+  const normalizedAnchor = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+  const nowTime = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  let index = 0;
+  let start = addBillingInterval(normalizedAnchor, interval, index);
+  let end = addBillingInterval(normalizedAnchor, interval, index + 1);
+  let guard = 0;
+
+  while (end.getTime() <= nowTime) {
+    index += 1;
+    start = addBillingInterval(normalizedAnchor, interval, index);
+    end = addBillingInterval(normalizedAnchor, interval, index + 1);
+    guard += 1;
+    if (guard > 10000) {
+      throw new RangeError('getCurrentBillingPeriod: no period containing the current date');
+    }
+  }
+
+  return { start, end };
+}
