@@ -13,6 +13,8 @@ const { useCommandScopeMock } = vi.hoisted(() => ({
 vi.mock('../api/client', () => ({
   subscriptions: {
     get: vi.fn(),
+    payments: vi.fn(),
+    reactivate: vi.fn(),
   },
 }));
 
@@ -128,6 +130,8 @@ function setSubscriptionResponse(subscription: Subscription = activeSubscription
 describe('SubscriptionDetail', () => {
   beforeEach(() => {
     vi.mocked(subscriptions.get).mockReset();
+    vi.mocked(subscriptions.reactivate).mockReset();
+    vi.mocked(subscriptions.payments).mockReset().mockResolvedValue({ payments: [] });
     useCommandScopeMock.mockClear();
   });
 
@@ -224,6 +228,8 @@ describe('SubscriptionDetail', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-11-23T12:00:00.000Z'));
     setSubscriptionResponse(cancelledSubscription);
+    const request = deferred<{ id: string; status: 'Active' }>();
+    vi.mocked(subscriptions.reactivate).mockReturnValue(request.promise);
 
     renderPage();
     await act(async () => {
@@ -234,12 +240,46 @@ describe('SubscriptionDetail', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Reactivation' }));
 
     expect(screen.getByRole('button', { name: 'Reactivating...' })).toBeInTheDocument();
+    expect(subscriptions.reactivate).toHaveBeenCalledWith('sub-42', {
+      startDate: expect.any(String),
+    });
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1200);
+      request.resolve({ id: 'sub-42', status: 'Active' });
+      await request.promise;
     });
 
     expect(screen.queryByRole('dialog', { name: 'Reactivate subscription' })).not.toBeInTheDocument();
+    // The subscription is active again, so the reactivate CTA disappears.
+    expect(
+      screen.queryByRole('button', { name: 'Reactivate this subscription' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('surfaces a reactivation API error and keeps the modal open', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-23T12:00:00.000Z'));
+    setSubscriptionResponse(cancelledSubscription);
+    const error = Object.assign(new Error('API error: Internal Server Error'), {
+      status: 500,
+      technicalDetails: 'billing service unavailable',
+    });
+    vi.mocked(subscriptions.reactivate).mockRejectedValue(error);
+
+    renderPage();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reactivate this subscription' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm Reactivation' }));
+    });
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Reactivation failed: API error: Internal Server Error');
+    expect(alert).toHaveTextContent('billing service unavailable');
+    expect(screen.getByRole('dialog', { name: 'Reactivate subscription' })).toBeInTheDocument();
   });
 
   it('sets downgrade loading while confirming and clears it when complete', async () => {

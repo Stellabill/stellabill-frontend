@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { api, subscriptions, plans, onboarding } from './client';
-import type { ApiError } from './client';
+import { FIXTURE_MUTATION_DELAY_MS } from './client';
+import type { ApiError, SubscriptionStatusChange } from './client';
 import {
   setErrorReporterAdapter,
   resetErrorReporterAdapter,
@@ -316,37 +317,143 @@ describe('client.ts', () => {
       expect(global.fetch).toHaveBeenCalledWith('/api/subscriptions/sub1/payments', expect.any(Object));
     });
 
-    it('pause() simulates success', async () => {
-      vi.useFakeTimers();
-      const promise = subscriptions.pause('sub1');
-      vi.runAllTimers();
-      const res = await promise;
-      expect(res).toEqual({ success: true });
-      vi.useRealTimers();
-    });
-    
-    it('pause() simulates failure with ?fail_action', async () => {
-      vi.stubGlobal('window', { location: { search: '?fail_action=true' } });
-      vi.useFakeTimers();
-      const promise = subscriptions.pause('sub1');
-      vi.runAllTimers();
-      try {
-        await promise;
-        expect.fail('Should have thrown');
-      } catch (e: unknown) {
-        expect((e as Error).message).toBe('Action Failed');
-        expect((e as ApiError).status).toBe(400);
-      }
+  });
+
+  describe('subscriptions (typed mutations)', () => {
+    type FetchMock = ReturnType<typeof vi.fn>;
+
+    function jsonResponse(body: unknown, status = 200, statusText = 'OK') {
+      return {
+        ok: status >= 200 && status < 300,
+        status,
+        statusText,
+        json: async () => body,
+      };
+    }
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
       vi.useRealTimers();
     });
 
-    it('cancel() simulates success', async () => {
-      vi.useFakeTimers();
-      const promise = subscriptions.cancel('sub1');
-      vi.runAllTimers();
-      const res = await promise;
-      expect(res).toEqual({ success: true });
-      vi.useRealTimers();
+    const cases = [
+      { action: 'pause', status: 'Paused', call: () => subscriptions.pause('sub 1') },
+      { action: 'resume', status: 'Active', call: () => subscriptions.resume('sub 1') },
+      { action: 'cancel', status: 'Cancelled', call: () => subscriptions.cancel('sub 1') },
+      {
+        action: 'reactivate',
+        status: 'Active',
+        call: () =>
+          subscriptions.reactivate('sub 1', { startDate: '2026-12-01T00:00:00.000Z' }),
+      },
+    ] as const;
+
+    describe.each(cases)('$action()', ({ action, status, call }) => {
+      it('POSTs to the action endpoint and returns the typed status change', async () => {
+        (global.fetch as FetchMock).mockResolvedValueOnce(
+          jsonResponse({ id: 'sub 1', status }),
+        );
+
+        const result: SubscriptionStatusChange = await call();
+
+        expect(result).toEqual({ id: 'sub 1', status });
+        const [url, init] = (global.fetch as FetchMock).mock.calls[0];
+        expect(url).toBe(`/api/subscriptions/sub%201/${action}`);
+        expect(init.method).toBe('POST');
+        expect(init.headers['Content-Type']).toBe('application/json');
+        if (action === 'reactivate') {
+          expect(JSON.parse(init.body)).toEqual({ startDate: '2026-12-01T00:00:00.000Z' });
+        } else {
+          expect(init.body).toBeUndefined();
+        }
+      });
+
+      it('maps a 404 to an ApiError with status and details', async () => {
+        (global.fetch as FetchMock).mockResolvedValueOnce(
+          jsonResponse({ details: 'Subscription not found' }, 404, 'Not Found'),
+        );
+
+        await expect(call()).rejects.toMatchObject({
+          message: 'API error: Not Found',
+          status: 404,
+          technicalDetails: 'Subscription not found',
+        });
+      });
+
+      it('maps a 500 to an ApiError with status and details', async () => {
+        (global.fetch as FetchMock).mockResolvedValueOnce(
+          jsonResponse({ error: 'boom' }, 500, 'Internal Server Error'),
+        );
+
+        const err = (await call().catch((e: unknown) => e)) as ApiError;
+        expect(err.status).toBe(500);
+        expect(err.message).toBe('API error: Internal Server Error');
+        expect(err.technicalDetails).toBe(JSON.stringify({ error: 'boom' }));
+      });
+
+      it('flags network failures with isNetworkError', async () => {
+        (global.fetch as FetchMock).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+        const err = (await call().catch((e: unknown) => e)) as ApiError;
+        expect(err.isNetworkError).toBe(true);
+        expect(err.status).toBeUndefined();
+      });
+
+      it('resolves locally in fixture mode without calling fetch', async () => {
+        vi.stubEnv('VITE_USE_FIXTURES', 'true');
+        vi.useFakeTimers();
+
+        const promise = call();
+        await vi.advanceTimersByTimeAsync(FIXTURE_MUTATION_DELAY_MS);
+
+        await expect(promise).resolves.toEqual({ id: 'sub 1', status });
+        expect(global.fetch).not.toHaveBeenCalled();
+      });
+
+      it('rejects with a 400 ApiError in fixture mode with ?fail_action', async () => {
+        vi.stubEnv('VITE_USE_FIXTURES', 'true');
+        vi.stubGlobal('window', { location: { search: '?fail_action=true' } });
+        vi.useFakeTimers();
+
+        const promise = call();
+        const assertion = expect(promise).rejects.toMatchObject({
+          message: 'Action Failed',
+          status: 400,
+        });
+        await vi.advanceTimersByTimeAsync(FIXTURE_MUTATION_DELAY_MS);
+        await assertion;
+        expect(global.fetch).not.toHaveBeenCalled();
+      });
+    });
+
+    it('list() maps a network failure to an ApiError', async () => {
+      (global.fetch as FetchMock).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      const err = (await subscriptions.list().catch((e: unknown) => e)) as ApiError;
+      expect(err.isNetworkError).toBe(true);
+    });
+
+    it('get() maps a 404 to an ApiError', async () => {
+      (global.fetch as FetchMock).mockResolvedValueOnce(
+        jsonResponse({ details: 'missing' }, 404, 'Not Found'),
+      );
+      await expect(subscriptions.get('nope')).rejects.toMatchObject({ status: 404 });
+    });
+
+    it('get() maps a 500 to an ApiError', async () => {
+      (global.fetch as FetchMock).mockResolvedValueOnce(
+        jsonResponse({ details: 'db down' }, 500, 'Internal Server Error'),
+      );
+      await expect(subscriptions.get('sub1')).rejects.toMatchObject({
+        status: 500,
+        technicalDetails: 'db down',
+      });
+    });
+
+    it('list() forwards request options such as an abort signal', async () => {
+      (global.fetch as FetchMock).mockResolvedValueOnce(jsonResponse({ subscriptions: [] }));
+      const controller = new AbortController();
+      await subscriptions.list({ signal: controller.signal });
+      expect((global.fetch as FetchMock).mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
     });
   });
 

@@ -1,4 +1,4 @@
-import { Subscription } from '@/types/subscription'
+import type { Subscription, SubscriptionStatus } from '@/types/subscription'
 import { reportError } from '@/utils/errorReporter'
 
 const API_BASE = '/api'
@@ -186,67 +186,130 @@ export interface Payment {
   hash: string;
 }
 
+/* ─── Subscriptions client ──────────────────────────────────────────────────
+ *
+ * Endpoints the frontend expects (all under the `/api` prefix that
+ * `vite.config.ts` proxies to the backend in development):
+ *
+ *   GET  /subscriptions                    -> SubscriptionListResponse
+ *   GET  /subscriptions/:id                -> Subscription          (404 if unknown)
+ *   GET  /subscriptions/:id/payments       -> { payments: Payment[] }
+ *   POST /subscriptions/:id/pause          -> SubscriptionStatusChange
+ *   POST /subscriptions/:id/resume         -> SubscriptionStatusChange
+ *   POST /subscriptions/:id/cancel         -> SubscriptionStatusChange
+ *   POST /subscriptions/:id/reactivate     body: ReactivateSubscriptionRequest
+ *                                          -> SubscriptionStatusChange
+ *
+ * Mutations send `Content-Type: application/json`. Non-2xx responses become
+ * an `ApiError` with `status` and `technicalDetails` (the body's `details`
+ * field, or the whole JSON body); network failures set `isNetworkError` /
+ * `isOffline` and timeouts set `isTimeout`. See `api()` above.
+ *
+ * When `VITE_USE_FIXTURES` is set (hosted demo, no backend) mutations resolve
+ * locally through `fixtureSubscriptionMutations` instead of calling the
+ * network. Append `?fail_action` to the URL to exercise the error path there.
+ * Reads are not intercepted here: pages decide how to source fixture lists.
+ */
+
+/** Response of `GET /subscriptions`. */
+export interface SubscriptionListResponse {
+  subscriptions: Subscription[];
+}
+
+/** Response of `GET /subscriptions/:id/payments`. */
+export interface SubscriptionPaymentsResponse {
+  payments: Payment[];
+}
+
+/** Response of every subscription state mutation. */
+export interface SubscriptionStatusChange {
+  id: string;
+  status: SubscriptionStatus;
+}
+
+/** Body of `POST /subscriptions/:id/reactivate`. */
+export interface ReactivateSubscriptionRequest {
+  /** ISO-8601 timestamp at which billing restarts. */
+  startDate: string;
+}
+
+export type SubscriptionMutation = 'pause' | 'resume' | 'cancel' | 'reactivate';
+
+const MUTATION_RESULT_STATUS: Record<SubscriptionMutation, SubscriptionStatus> = {
+  pause: 'Paused',
+  resume: 'Active',
+  cancel: 'Cancelled',
+  reactivate: 'Active',
+};
+
+/** Simulated latency for fixture-mode mutations, in ms. */
+export const FIXTURE_MUTATION_DELAY_MS = 800;
+
+function subscriptionPath(id: string, suffix = ''): string {
+  return `/subscriptions/${encodeURIComponent(id)}${suffix}`;
+}
+
+function isFixtureMode(): boolean {
+  return Boolean(import.meta.env.VITE_USE_FIXTURES);
+}
+
+/**
+ * Local stand-in for the mutation endpoints, used when `VITE_USE_FIXTURES` is
+ * set so the hosted demo keeps working without a backend.
+ */
+export function fixtureSubscriptionMutations(
+  action: SubscriptionMutation,
+  id: string,
+): Promise<SubscriptionStatusChange> {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
+        const error: ApiError = new Error('Action Failed');
+        error.status = 400;
+        error.technicalDetails =
+          'The subscription is already in the requested state or pending a transaction.';
+        reject(error);
+        return;
+      }
+      resolve({ id, status: MUTATION_RESULT_STATUS[action] });
+    }, FIXTURE_MUTATION_DELAY_MS);
+  });
+}
+
+function mutate(
+  action: SubscriptionMutation,
+  id: string,
+  body?: ReactivateSubscriptionRequest,
+  options?: ApiRequestOptions,
+): Promise<SubscriptionStatusChange> {
+  if (isFixtureMode()) {
+    return fixtureSubscriptionMutations(action, id);
+  }
+  return api<SubscriptionStatusChange>(subscriptionPath(id, `/${action}`), {
+    ...options,
+    method: 'POST',
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+}
+
 export const subscriptions = {
-  list: () => api<{ subscriptions: Subscription[] }>('/subscriptions'),
+  list: (options?: ApiRequestOptions) =>
+    api<SubscriptionListResponse>('/subscriptions', options),
   get: (id: string, options?: ApiRequestOptions) =>
-    api<Subscription>(`/subscriptions/${encodeURIComponent(id)}`, options),
+    api<Subscription>(subscriptionPath(id), options),
   payments: (id: string, options?: ApiRequestOptions) =>
-    api<{ payments: Payment[] }>(`/subscriptions/${encodeURIComponent(id)}/payments`, options),
-  pause: (id: string) => {
-    // Simulating API call for development/demonstration
-    return new Promise((resolve, reject) => {
-      console.log(`Simulating pause for subscription: ${id}`);
-      
-      // Allow simulation of action failure via query param
-      if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
-        setTimeout(() => {
-          const error: ApiError = new Error('Action Failed');
-          error.status = 400;
-          error.technicalDetails = 'The subscription is already in the requested state or pending a transaction.';
-          reject(error);
-        }, 800);
-        return;
-      }
-
-      setTimeout(() => resolve({ success: true }), 800);
-    });
-  },
-  cancel: (id: string) => {
-    // Simulating API call for development/demonstration
-    return new Promise((resolve, reject) => {
-      console.log(`Simulating cancel for subscription: ${id}`);
-
-      if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
-        setTimeout(() => {
-          const error: ApiError = new Error('Action Failed');
-          error.status = 400;
-          error.technicalDetails = 'The subscription is already in the requested state or pending a transaction.';
-          reject(error);
-        }, 1000);
-        return;
-      }
-
-      setTimeout(() => resolve({ success: true }), 1000);
-    });
-  },
-  resume: (id: string) => {
-    // Simulating API call for development/demonstration
-    return new Promise((resolve, reject) => {
-      console.log(`Simulating resume for subscription: ${id}`);
-
-      if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
-        setTimeout(() => {
-          const error: ApiError = new Error('Action Failed');
-          error.status = 400;
-          error.technicalDetails = 'The subscription is already in the requested state or pending a transaction.';
-          reject(error);
-        }, 800);
-        return;
-      }
-
-      setTimeout(() => resolve({ success: true }), 800);
-    });
-  },
+    api<SubscriptionPaymentsResponse>(subscriptionPath(id, '/payments'), options),
+  pause: (id: string, options?: ApiRequestOptions) =>
+    mutate('pause', id, undefined, options),
+  resume: (id: string, options?: ApiRequestOptions) =>
+    mutate('resume', id, undefined, options),
+  cancel: (id: string, options?: ApiRequestOptions) =>
+    mutate('cancel', id, undefined, options),
+  reactivate: (
+    id: string,
+    request: ReactivateSubscriptionRequest,
+    options?: ApiRequestOptions,
+  ) => mutate('reactivate', id, request, options),
 }
 
 export interface CreatePlanPayload {
