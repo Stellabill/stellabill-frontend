@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import NotificationsCenter, {
   BillingNotification,
@@ -83,6 +83,10 @@ vi.mock('react-i18next', () => ({
         'notifications.snooze.announceSnoozed24h': `${title} snoozed for 1 day`,
         'notifications.snooze.announceMuted': `${title} muted`,
         'notifications.snooze.announceResumed': `${title} notifications resumed`,
+        'notifications.loadMore': 'Load more',
+        'notifications.loadingMore': 'Loading...',
+        'notifications.fetchError': 'Could not load notifications',
+        'notifications.retry': 'Retry',
       };
       return translations[key] ?? key;
     },
@@ -606,5 +610,128 @@ describe('NotificationsCenter — screen reader labels', () => {
     const toggle = screen.getByRole('button', { name: /muted/i });
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// fetchNotifications provider (pagination, empty response, rejection/retry)
+// ---------------------------------------------------------------------------
+
+describe('NotificationsCenter — fetchNotifications provider', () => {
+  it('loads more notifications via fetchNotifications and hides button when next is null', async () => {
+    const fetchNotifications = vi
+      .fn()
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 'fetched-1',
+            type: 'info',
+            title: 'Fetched notification 1',
+            message: 'First paged item',
+            timestamp: 'Just now',
+            isRead: false,
+            category: 'plan-change',
+          },
+        ],
+        next: 'cursor-2',
+      })
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 'fetched-2',
+            type: 'warning',
+            title: 'Fetched notification 2',
+            message: 'Second paged item',
+            timestamp: 'Just now',
+            isRead: false,
+            category: 'low-balance',
+          },
+        ],
+        next: null,
+      });
+
+    render(
+      <NotificationsCenter
+        initialNotifications={singleNotification}
+        fetchNotifications={fetchNotifications}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /open billing notifications/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+    await waitFor(() => {
+      expect(screen.getByText('Fetched notification 1')).toBeInTheDocument();
+    });
+    expect(fetchNotifications).toHaveBeenNthCalledWith(1, null);
+    expect(screen.getByRole('button', { name: 'Load more' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+    await waitFor(() => {
+      expect(screen.getByText('Fetched notification 2')).toBeInTheDocument();
+    });
+    expect(fetchNotifications).toHaveBeenNthCalledWith(2, 'cursor-2');
+    expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
+  });
+
+  it('handles an empty response by hiding load-more while keeping existing notifications', async () => {
+    const fetchNotifications = vi.fn().mockResolvedValueOnce({
+      items: [],
+      next: null,
+    });
+
+    render(
+      <NotificationsCenter
+        initialNotifications={singleNotification}
+        fetchNotifications={fetchNotifications}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /open billing notifications/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Charge failed for Pro Seat')).toBeInTheDocument();
+  });
+
+  it('renders a retry row on rejection and retries when clicked', async () => {
+    const fetchNotifications = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Network error'))
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 'recovered-1',
+            type: 'info',
+            title: 'Recovered notification',
+            message: 'Loaded after retry',
+            timestamp: 'Just now',
+            isRead: false,
+            category: 'plan-change',
+          },
+        ],
+        next: null,
+      });
+
+    render(
+      <NotificationsCenter
+        initialNotifications={singleNotification}
+        fetchNotifications={fetchNotifications}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /open billing notifications/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Could not load notifications');
+    });
+
+    const retryButton = screen.getByRole('button', { name: 'Retry' });
+    fireEvent.click(retryButton);
+    await waitFor(() => {
+      expect(screen.getByText('Recovered notification')).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(fetchNotifications).toHaveBeenCalledTimes(2);
   });
 });
