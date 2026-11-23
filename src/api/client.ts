@@ -178,10 +178,20 @@ export async function api<T>(path: string, options?: ApiRequestOptions): Promise
   }
 }
 
+export interface Payment {
+  id: string;
+  date: string;
+  amount: string;
+  status: 'success' | 'failed';
+  hash: string;
+}
+
 export const subscriptions = {
   list: () => api<{ subscriptions: Subscription[] }>('/subscriptions'),
   get: (id: string, options?: ApiRequestOptions) =>
     api<Subscription>(`/subscriptions/${encodeURIComponent(id)}`, options),
+  payments: (id: string, options?: ApiRequestOptions) =>
+    api<{ payments: Payment[] }>(`/subscriptions/${encodeURIComponent(id)}/payments`, options),
   pause: (id: string) => {
     // Simulating API call for development/demonstration
     return new Promise((resolve, reject) => {

@@ -13,7 +13,7 @@ import DowngradeConfirmModal, { type PlanFeature } from '../components/Downgrade
 import TrialCountdownBanner from '../components/TrialCountdownBanner';
 import ProrationPreviewModal from '../components/common/ProrationPreviewModal';
 import ErrorState from '../components/ErrorState';
-import { subscriptions } from '../api/client';
+import { subscriptions, type Payment } from '../api/client';
 import type { Subscription } from '../types/subscription';
 
 // ── Mock subscription status type ────────────────────────────────────────────
@@ -34,6 +34,11 @@ export default function SubscriptionDetail() {
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<{ status?: number; message: string } | null>(null);
     const [notFound, setNotFound] = useState(false);
+
+    // ── Recent payments fetch state ───────────────────────────────────────────
+    const [payments, setPayments] = useState<Payment[]>([]);
+    const [paymentsLoading, setPaymentsLoading] = useState(true);
+    const [paymentsError, setPaymentsError] = useState<string | null>(null);
 
     // ── Schedule-change preview state ─────────────────────────────────────────
     const [pendingInterval, setPendingInterval] = useState<BillingInterval | null>(null);
@@ -113,6 +118,9 @@ export default function SubscriptionDetail() {
         setLoadError(null);
         setNotFound(false);
         setSubscriptionData(null);
+        setPaymentsLoading(true);
+        setPaymentsError(null);
+        setPayments([]);
 
         subscriptions
             .get(id, { signal: controller.signal })
@@ -139,6 +147,23 @@ export default function SubscriptionDetail() {
             .finally(() => {
                 if (cancelled) return;
                 setIsLoading(false);
+            });
+
+        subscriptions
+            .payments(id, { signal: controller.signal })
+            .then((data) => {
+                if (cancelled) return;
+                setPayments(data?.payments ?? []);
+            })
+            .catch((err: unknown) => {
+                if (cancelled) return;
+                setPaymentsError(
+                    err instanceof Error ? err.message : 'Failed to load recent payments.',
+                );
+            })
+            .finally(() => {
+                if (cancelled) return;
+                setPaymentsLoading(false);
             });
 
         return () => {
@@ -586,7 +611,12 @@ export default function SubscriptionDetail() {
                 )}
             </div>
 
-            <RecentPayments subscriptionId={id} />
+            <RecentPayments
+                subscriptionId={id}
+                payments={payments}
+                isLoading={paymentsLoading}
+                error={paymentsError}
+            />
             <PlanStatusTimeline subscriptionId={id} />
 
             {/* ── Reactivation modal ────────────────────────────────────────── */}
