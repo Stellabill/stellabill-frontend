@@ -1,4 +1,5 @@
 import { Subscription } from '@/types/subscription'
+import { generateGiftCode } from '@/utils/giftCode'
 
 const API_BASE = '/api'
 
@@ -219,4 +220,50 @@ export const plans = {
   list: () => api<{ plans: unknown[] }>('/plans'),
   create: (payload: CreatePlanPayload) =>
     api<unknown>('/plans', { method: 'POST', body: JSON.stringify(payload) }),
+}
+
+export interface GiftPurchasePayload {
+  planId: string;
+  recipientEmail: string;
+  recipientName?: string;
+  duration: number;
+  message?: string;
+  deliveryMethod: 'email' | 'manual' | 'scheduled';
+  deliveryDate?: string;
+}
+
+export interface GiftPurchaseResponse {
+  code: string;
+  expiresOn: string;
+}
+
+export const gifts = {
+  purchase: (payload: GiftPurchasePayload): Promise<GiftPurchaseResponse> => {
+    void payload;
+    return new Promise((resolve, reject) => {
+      if (typeof window !== 'undefined' && window.location.search.includes('simulate_offline')) {
+        const error: ApiError = new Error('No internet connection');
+        error.isOffline = true;
+        reject(error);
+        return;
+      }
+
+      if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
+        setTimeout(() => {
+          const error: ApiError = new Error('Gift purchase failed');
+          error.status = 400;
+          error.technicalDetails = 'Unable to process gift purchase at this time.';
+          reject(error);
+        }, 50);
+        return;
+      }
+
+      setTimeout(() => {
+        resolve({
+          code: generateGiftCode(),
+          expiresOn: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+      }, 50);
+    });
+  },
 }

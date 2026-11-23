@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, type ChangeEvent } from "react";
 import { useModalFocus } from "../hooks/useModalFocus";
 import { X, Gift, ArrowRight, ArrowLeft, Check, Copy, Share2, Mail, MessageSquare, Link as LinkIcon, Loader2 } from "lucide-react";
 import { copyToClipboard } from "../utils/clipboard";
-import { generateGiftCode } from "../utils/giftCode";
+import { gifts, type GiftPurchasePayload, type GiftPurchaseResponse } from "../api/client";
 import "./GiftPurchaseModal.css";
 
 export interface Plan {
@@ -29,6 +29,7 @@ interface GiftPurchaseModalProps {
   onClose: () => void;
   plan: Plan | null;
   onPurchaseComplete?: (giftCode: string) => void;
+  purchaseGift?: (payload: GiftPurchasePayload) => Promise<GiftPurchaseResponse>;
 }
 
 type PurchaseStep = "details" | "review" | "complete";
@@ -50,9 +51,11 @@ export default function GiftPurchaseModal({
   onClose,
   plan,
   onPurchaseComplete,
+  purchaseGift = gifts.purchase,
 }: GiftPurchaseModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
+  const isSubmittingRef = useRef(false);
   
   const [step, setStep] = useState<PurchaseStep>("details");
   const [recipientName, setRecipientName] = useState("");
@@ -126,21 +129,33 @@ export default function GiftPurchaseModal({
   };
 
   const handlePurchase = async () => {
+    if (!plan || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsProcessing(true);
     setErrors({});
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const { code } = await purchaseGift({
+        planId: plan.id,
+        recipientName: recipientName.trim() || undefined,
+        recipientEmail: recipientEmail.trim(),
+        duration,
+        message: message.trim() || undefined,
+        deliveryMethod,
+      });
 
-      const code = generateGiftCode();
       setGiftCode(code);
       setStep("complete");
 
       onPurchaseComplete?.(code);
     } catch (error) {
-      setErrors({ purchase: "Gift purchase failed. Please try again." });
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Gift purchase failed. Please try again.";
+      setErrors({ purchase: message });
     } finally {
+      isSubmittingRef.current = false;
       setIsProcessing(false);
     }
   };
