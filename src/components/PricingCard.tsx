@@ -1,7 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Check } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { formatAmount } from '../utils/amount';
 
 interface Feature {
   text: string
@@ -65,9 +63,14 @@ export default function PricingCard({
   const displaySubtext: string | undefined = (() => {
     if (isPerSeat && typeof basePricePerSeat === 'number' && seats > 0) {
       const total = basePricePerSeat * seats
-      const formattedTotal = formatAmount(total, { minPrecision: 0 }).number
-      return `$${t('pricing.perSeatTotal', { total: formattedTotal, seats })}`
-      return t('pricing.total', { count: seats, amount: new Intl.NumberFormat(i18n.language, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(total) })
+      return t('pricing.total', {
+        count: seats,
+        amount: new Intl.NumberFormat(i18n.language, {
+          style: 'currency',
+          currency: 'USD',
+          maximumFractionDigits: 0,
+        }).format(total),
+      })
     }
     return priceSubtext
   })()
