@@ -50,6 +50,14 @@ const WalletPill: React.FC<WalletPillProps> = ({
     : resolvedExpectedNetwork;
   const hasMismatch = isNetworkMismatch(resolvedWalletNetwork, resolvedExpectedNetwork);
 
+  const resolvedExpectedNetwork = expectedNetwork
+    ? normalizeNetwork(expectedNetwork)
+    : getExpectedNetwork();
+  const resolvedWalletNetwork = network
+    ? normalizeNetwork(network)
+    : resolvedExpectedNetwork;
+  const hasMismatch = isNetworkMismatch(resolvedWalletNetwork, resolvedExpectedNetwork);
+
   // Truncate address: GABC...XYZ9
   const truncatedAddress = currentAddress.length > 10
     ? `${currentAddress.slice(0, 4)}...${currentAddress.slice(-4)}`
