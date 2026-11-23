@@ -26,6 +26,48 @@ export interface StatementView {
   openingBalance: number;
 }
 
+export interface ReceiptMoney {
+  amount: number;
+  currency: string;
+}
+
+export interface ReceiptLineItem {
+  id?: string;
+  description: string;
+  quantity?: number;
+  unitPrice?: ReceiptMoney;
+  lineTotal?: ReceiptMoney;
+}
+
+export interface ReceiptTax {
+  label: string;
+  amount: ReceiptMoney;
+}
+
+export interface ReceiptDocument {
+  receiptId: string;
+  issueDate: string;
+  merchantName: string;
+  merchantBrand?: string;
+  merchantAddress?: string;
+  merchantEmail?: string;
+  merchantPhone?: string;
+  merchantTaxId?: string;
+  clientName: string;
+  clientAddress?: string;
+  clientEmail?: string;
+  clientTaxId?: string;
+  currency: string;
+  lineItems: ReceiptLineItem[];
+  subtotal?: ReceiptMoney;
+  taxes?: ReceiptTax[];
+  total?: ReceiptMoney;
+  paymentMethod: string;
+  transactionKey: string;
+  reference: string;
+  terms?: string;
+}
+
 const DEFAULT_DECIMALS = 7;
 
 function toMinorUnits(amount: number, scale: number): number {
@@ -94,74 +136,119 @@ export function getStatementView(
   };
 }
 
-export interface InvoiceCsvLineItem {
-  description: string;
-  quantity?: number;
-  unitPrice?: string;
-  lineTotal: string;
+export function resolveReceiptTotals(receipt: ReceiptDocument): {
+  subtotal: ReceiptMoney;
+  taxes: ReceiptTax[];
+  total: ReceiptMoney;
+} {
+  const currency = receipt.currency;
+  const taxes = receipt.taxes ?? [];
+
+  const derivedSubtotalAmount = receipt.lineItems.reduce((acc, item) => {
+    if (item.lineTotal && item.lineTotal.currency === currency) {
+      return acc + (Number.isFinite(item.lineTotal.amount) ? item.lineTotal.amount : 0);
+    }
+    if (item.unitPrice && item.quantity != null && item.unitPrice.currency === currency) {
+      const quantity = Number(item.quantity);
+      const unitPrice = item.unitPrice.amount;
+      return acc + quantity * (Number.isFinite(unitPrice) ? unitPrice : 0);
+    }
+    return acc;
+  }, 0);
+
+  const subtotal = receipt.subtotal ?? { amount: derivedSubtotalAmount, currency };
+  const derivedTaxesAmount = taxes.reduce((acc, tax) => {
+    if (tax.amount.currency !== currency) return acc;
+    return acc + (Number.isFinite(tax.amount.amount) ? tax.amount.amount : 0);
+  }, 0);
+  const total = receipt.total ?? {
+    amount: subtotal.amount + derivedTaxesAmount,
+    currency,
+  };
+
+  return { subtotal, taxes, total };
 }
 
-export interface InvoiceCsvSummaryItem {
-  label: string;
-  amount: string;
+export function getReceiptDownloadFileName(
+  receipt: Pick<ReceiptDocument, 'receiptId'>,
+): string {
+  const safeId = receipt.receiptId
+    .trim()
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return `receipt-${safeId || 'unknown'}.csv`;
 }
 
-export interface InvoiceCsvData {
-  id: string;
-  total: string;
-  lineItems?: InvoiceCsvLineItem[];
-  subtotal?: string;
-  taxes?: InvoiceCsvSummaryItem[];
-  credits?: InvoiceCsvSummaryItem[];
-}
-
-export function escapeCsvCell(value: string | number | null | undefined): string {
-  if (value === null || value === undefined) return '';
-  const str = String(value);
-  if (/[",\r\n]/.test(str)) {
-    return `"${str.replace(/"/g, '""')}"`;
+function escapeCsvValue(value: string | number | undefined | null): string {
+  const raw = value == null ? '' : String(value);
+  if (/[",\r\n]/.test(raw)) {
+    return `"${raw.replace(/"/g, '""')}"`;
   }
-  return str;
+  return raw;
 }
 
-export function buildInvoiceCsv(invoice: InvoiceCsvData): string {
-  const header = 'Description,Quantity,Unit Price,Line Total';
-  const rows = (invoice.lineItems ?? []).map((item) =>
-    [
-      escapeCsvCell(item.description),
-      escapeCsvCell(item.quantity ?? ''),
-      escapeCsvCell(item.unitPrice ?? ''),
-      escapeCsvCell(item.lineTotal),
-    ].join(','),
+function formatReceiptMoney(money: ReceiptMoney | undefined): string {
+  if (!money) return '';
+  return `${money.amount} ${money.currency}`;
+}
+
+export function buildReceiptCsv(receipt: ReceiptDocument): string {
+  const { subtotal, taxes, total } = resolveReceiptTotals(receipt);
+  const merchantName = receipt.merchantBrand
+    ? `${receipt.merchantBrand} — ${receipt.merchantName}`
+    : receipt.merchantName;
+
+  const metadata: Array<[string, string | undefined]> = [
+    ['Receipt', receipt.receiptId],
+    ['Issue Date', receipt.issueDate],
+    ['Merchant', merchantName],
+    ['Merchant Address', receipt.merchantAddress],
+    ['Merchant Email', receipt.merchantEmail],
+    ['Merchant Phone', receipt.merchantPhone],
+    ['Merchant Tax ID', receipt.merchantTaxId],
+    ['Bill To', receipt.clientName],
+    ['Client Address', receipt.clientAddress],
+    ['Client Email', receipt.clientEmail],
+    ['Client Tax ID', receipt.clientTaxId],
+    ['Currency', receipt.currency],
+    ['Reference', receipt.reference],
+    ['Payment Method', receipt.paymentMethod],
+    ['Transaction Key', receipt.transactionKey],
+    ['Terms', receipt.terms ?? 'Standard billing terms apply.'],
+  ];
+
+  const lines: string[] = metadata.map(([label, value]) =>
+    [escapeCsvValue(label), escapeCsvValue(value)].join(','),
   );
 
-  const summaryRows: string[] = [];
-  if (invoice.subtotal) {
-    summaryRows.push(`Subtotal,,,${escapeCsvCell(invoice.subtotal)}`);
-  }
-  if (invoice.taxes) {
-    for (const tax of invoice.taxes) {
-      summaryRows.push(`${escapeCsvCell(tax.label)},,,${escapeCsvCell(tax.amount)}`);
-    }
-  }
-  if (invoice.credits) {
-    for (const credit of invoice.credits) {
-      summaryRows.push(`${escapeCsvCell(credit.label)},,,${escapeCsvCell(credit.amount)}`);
-    }
-  }
-  summaryRows.push(`Total,,,${escapeCsvCell(invoice.total)}`);
+  lines.push('');
+  lines.push(
+    ['Description', 'Quantity', 'Unit Price', 'Line Total'].map(escapeCsvValue).join(','),
+  );
 
-  return `${header}\n${rows.join('\n')}\n\n${summaryRows.join('\n')}`;
-}
+  for (const item of receipt.lineItems) {
+    lines.push(
+      [
+        escapeCsvValue(item.description),
+        escapeCsvValue(item.quantity),
+        escapeCsvValue(formatReceiptMoney(item.unitPrice)),
+        escapeCsvValue(formatReceiptMoney(item.lineTotal)),
+      ].join(','),
+    );
+  }
 
-export function downloadCsvFile(filename: string, csvContent: string): void {
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  lines.push('');
+  lines.push([escapeCsvValue('Subtotal'), escapeCsvValue(formatReceiptMoney(subtotal))].join(','));
+
+  for (const tax of taxes) {
+    lines.push(
+      [escapeCsvValue(tax.label), escapeCsvValue(formatReceiptMoney(tax.amount))].join(','),
+    );
+  }
+
+  lines.push([escapeCsvValue('Total'), escapeCsvValue(formatReceiptMoney(total))].join(','));
+  lines.push('');
+
+  return lines.join('\n');
 }

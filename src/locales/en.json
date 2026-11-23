@@ -83,6 +83,16 @@
     "allReadDescription": "There are no unread billing events right now.",
     "allSilencedTitle": "All notifications silenced",
     "allSilencedDescription": "{count, plural, one {1 notification is muted or snoozed} other {{count} notifications are muted or snoozed}}",
+    "filters": {
+      "category": "Category",
+      "allCategories": "All categories",
+      "failedCharges": "Failed charges",
+      "lowBalance": "Low balance",
+      "planChanges": "Plan changes",
+      "unreadOnly": "Unread only",
+      "noMatchesTitle": "No notifications match these filters",
+      "noMatchesDescription": "Try a different category or turn off unread only."
+    },
     "snooze": {
       "triggerLabel": "Snooze or mute: {{title}}",
       "triggerLabelSnoozed": "Snoozed — {{title}}. Open to change",
@@ -106,6 +116,9 @@
       "announceMuted": "{{title}} muted",
       "announceResumed": "{{title}} notifications resumed"
     }
+  },
+  "pricing": {
+    "perSeatTotal": "{total} / mo total for {seats, plural, one {# seat} other {# seats}}"
   },
   "icu": {
     "pluralExample": "{count, plural, =0 {No items} one {1 item} other {{count} items}}",

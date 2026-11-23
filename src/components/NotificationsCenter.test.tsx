@@ -48,6 +48,15 @@ vi.mock('react-i18next', () => ({
           count === 1
             ? '1 notification is muted or snoozed'
             : `${count} notifications are muted or snoozed`,
+        'notifications.filters.category': 'Category',
+        'notifications.filters.allCategories': 'All categories',
+        'notifications.filters.failedCharges': 'Failed charges',
+        'notifications.filters.lowBalance': 'Low balance',
+        'notifications.filters.planChanges': 'Plan changes',
+        'notifications.filters.unreadOnly': 'Unread only',
+        'notifications.filters.noMatchesTitle': 'No notifications match these filters',
+        'notifications.filters.noMatchesDescription':
+          'Try a different category or turn off unread only.',
 
         // Snooze / mute keys
         'notifications.snooze.triggerLabel': `Snooze or mute: ${title}`,
@@ -196,6 +205,31 @@ describe('NotificationsCenter — original behaviour', () => {
     openPanel(manyNotifications);
     const list = screen.getByRole('list', { name: /billing notification list/i });
     expect(within(list).getAllByRole('listitem')).toHaveLength(14);
+  });
+
+  it('combines category and unread filters on the notification list', () => {
+    openPanel(manyNotifications);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), {
+      target: { value: 'plan-change' },
+    });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Unread only' }));
+
+    const list = screen.getByRole('list', { name: /billing notification list/i });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(list).getByText('Billing event 3')).toBeInTheDocument();
+    expect(within(list).queryByText('Billing event 6')).not.toBeInTheDocument();
+  });
+
+  it('filters silenced notifications and shows an empty-filter state', () => {
+    openPanel(singleNotification);
+    fireEvent.click(screen.getByRole('button', { name: /snooze or mute/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /1 hour/i }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), {
+      target: { value: 'low-balance' },
+    });
+
+    expect(screen.getByText('No notifications match these filters')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /muted/i })).not.toBeInTheDocument();
   });
 
   it('closes with Escape and returns focus to the trigger', () => {

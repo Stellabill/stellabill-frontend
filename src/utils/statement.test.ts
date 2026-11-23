@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildReceiptCsv,
   computeStatementBalances,
+  getReceiptDownloadFileName,
   getStatementView,
-  escapeCsvCell,
-  buildInvoiceCsv,
+  resolveReceiptTotals,
+  type ReceiptDocument,
   type StatementEntry,
 } from './statement';
 
@@ -126,30 +128,96 @@ describe('getStatementView', () => {
   });
 });
 
-describe('invoice CSV helpers', () => {
-  it('escapes commas and quotes in CSV cells', () => {
-    expect(escapeCsvCell('simple')).toBe('simple');
-    expect(escapeCsvCell('a, b')).toBe('"a, b"');
-    expect(escapeCsvCell('say "hi"')).toBe('"say ""hi"""');
+const receipt: ReceiptDocument = {
+  receiptId: 'RCPT/001234567',
+  issueDate: 'Mar 31, 2026',
+  merchantName: 'Stellabill',
+  merchantBrand: 'Stellabill Billing',
+  merchantAddress: '123 Nebula Avenue, Suite 100',
+  merchantEmail: 'billing@stellabill.example',
+  clientName: 'Developer, Pro',
+  clientEmail: 'client@company.example',
+  currency: 'USDC',
+  lineItems: [
+    {
+      description: 'API usage for Mar 1 – Mar 31, 2026',
+      quantity: 100,
+      unitPrice: { amount: 0.1, currency: 'USDC' },
+      lineTotal: { amount: 10, currency: 'USDC' },
+    },
+    {
+      description: 'Usage adjustment "rounding"',
+      quantity: 1,
+      unitPrice: { amount: 2.5, currency: 'USDC' },
+      lineTotal: { amount: 2.5, currency: 'USDC' },
+    },
+  ],
+  taxes: [{ label: 'Network fee, protocol', amount: { amount: 1, currency: 'USDC' } }],
+  paymentMethod: 'Prepaid balance',
+  transactionKey: 'TX-8F2A9C0D3E',
+  reference: 'Billing period Mar 1 – Mar 31, 2026',
+  terms: 'Non-refundable services rendered in full.',
+};
+
+describe('resolveReceiptTotals', () => {
+  it('derives subtotal and total from line items when totals are missing', () => {
+    const totals = resolveReceiptTotals(receipt);
+
+    expect(totals.subtotal).toEqual({ amount: 12.5, currency: 'USDC' });
+    expect(totals.total).toEqual({ amount: 13.5, currency: 'USDC' });
+    expect(totals.taxes).toEqual(receipt.taxes);
   });
 
-  it('builds CSV with line items, taxes, credits, and total', () => {
-    const csv = buildInvoiceCsv({
-      id: 'INV-1',
-      subtotal: '100.00',
-      total: '105.00',
-      lineItems: [
-        { description: 'Pro Plan, Monthly', quantity: 1, unitPrice: '100.00', lineTotal: '100.00' },
-      ],
-      taxes: [{ label: 'VAT', amount: '10.00' }],
-      credits: [{ label: 'Promo', amount: '5.00' }],
+  it('preserves explicit subtotal and total values', () => {
+    const totals = resolveReceiptTotals({
+      ...receipt,
+      subtotal: { amount: 12, currency: 'USDC' },
+      total: { amount: 13, currency: 'USDC' },
     });
 
-    expect(csv).toContain('Description,Quantity,Unit Price,Line Total');
-    expect(csv).toContain('"Pro Plan, Monthly",1,100.00,100.00');
-    expect(csv).toContain('Subtotal,,,100.00');
-    expect(csv).toContain('VAT,,,10.00');
-    expect(csv).toContain('Promo,,,5.00');
-    expect(csv).toContain('Total,,,105.00');
+    expect(totals.subtotal.amount).toBe(12);
+    expect(totals.total.amount).toBe(13);
+  });
+});
+
+describe('getReceiptDownloadFileName', () => {
+  it('creates a deterministic CSV filename from the receipt id', () => {
+    expect(getReceiptDownloadFileName(receipt)).toBe('receipt-RCPT-001234567.csv');
+  });
+
+  it('falls back to a safe filename when the receipt id is empty', () => {
+    expect(getReceiptDownloadFileName({ receiptId: '   ' })).toBe('receipt-unknown.csv');
+  });
+});
+
+describe('buildReceiptCsv', () => {
+  it('includes header metadata, line items, and totals', () => {
+    const csv = buildReceiptCsv(receipt);
+
+    expect(csv).toContain('Receipt,RCPT/001234567');
+    expect(csv).toContain('Issue Date,"Mar 31, 2026"');
+    expect(csv).toContain('Merchant,Stellabill Billing — Stellabill');
+    expect(csv).toContain('Bill To,"Developer, Pro"');
+    expect(csv).toContain('"API usage for Mar 1 – Mar 31, 2026"');
+    expect(csv).toContain('"Usage adjustment ""rounding"""');
+    expect(csv).toContain('Subtotal,12.5 USDC');
+    expect(csv).toContain('"Network fee, protocol",1 USDC');
+    expect(csv).toContain('Total,13.5 USDC');
+  });
+
+  it('escapes commas, quotes, and newlines for CSV output', () => {
+    const csv = buildReceiptCsv({
+      ...receipt,
+      lineItems: [
+        {
+          description: 'Line with, comma and "quotes"\nand newline',
+          quantity: 1,
+          lineTotal: { amount: 1, currency: 'USDC' },
+        },
+      ],
+    });
+
+    expect(csv).toContain('"Line with, comma and ""quotes""\nand newline"');
+    expect(csv).toContain('"Network fee, protocol",1 USDC');
   });
 });

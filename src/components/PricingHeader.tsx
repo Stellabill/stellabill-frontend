@@ -31,7 +31,7 @@ export default function PricingHeader({ onToggleChange }: Props) {
       <div style={styles.container}>
         {/* Heading */}
         <h1 style={styles.heading}>
-          <span style={{ color: "#FFFFFF" }}>
+          <span style={{ color: "var(--color-text-primary)" }}>
             Simple, transparent
           </span>
           <br />
@@ -89,7 +89,7 @@ export default function PricingHeader({ onToggleChange }: Props) {
 const styles: { [key: string]: React.CSSProperties } = {
   section: {
     position: "relative",
-    backgroundColor: "#04070D",
+    backgroundColor: "var(--color-surface-canvas)",
     padding: "120px 20px 80px",
     textAlign: "center",
     overflow: "hidden",
@@ -103,7 +103,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     width: "900px",
     height: "600px",
     background:
-      "radial-gradient(circle at center, rgba(0, 212, 255, 0.12), transparent 70%)",
+      "radial-gradient(circle at center, var(--color-brand-glow), transparent 70%)",
     pointerEvents: "none",
   },
 
@@ -122,14 +122,14 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 
   gradientText: {
-    background: "linear-gradient(90deg, #22D3EE 0%, #34D399 100%)",
+    background: "var(--color-brand-gradient)",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
   },
 
   subtext: {
     fontSize: "clamp(16px, 2vw, 20px)",
-    color: "#9CA3AF",
+    color: "var(--color-text-muted)",
     maxWidth: "600px",
     margin: "0 auto 48px",
   },
@@ -141,17 +141,17 @@ const styles: { [key: string]: React.CSSProperties } = {
 
   toggleContainer: {
     display: "flex",
-    background: "#FFFFFF0D",
-    borderRadius: "16777200px",
+    background: "var(--color-surface-control)",
+    borderRadius: "var(--radius-full)",
     padding: "6px",
-    border: "1px solid rgba(255,255,255,0.08)",
+    border: "1px solid var(--color-border-subtle)",
     gap: "6px",
     flexWrap: "wrap",
   },
 
   segment: {
     padding: "12px 24px",
-    borderRadius: "999px",
+    borderRadius: "var(--radius-full)",
     fontSize: "16px",
     fontWeight: 600,
     cursor: "pointer",
@@ -161,13 +161,13 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 
   activeSegment: {
-    background: "linear-gradient(90deg, #22D3EE 0%, #34D399 100%)",
-    color: "#041015",
-    boxShadow: "0 6px 20px rgba(34, 211, 238, 0.25)",
+    background: "var(--color-brand-gradient)",
+    color: "var(--color-brand-on)",
+    boxShadow: "var(--shadow-brand)",
   },
 
   inactiveSegment: {
     background: "transparent",
-    color: "#FFFFFF",
+    color: "var(--color-text-primary)",
   },
 };

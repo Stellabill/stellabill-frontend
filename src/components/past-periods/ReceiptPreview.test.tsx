@@ -42,6 +42,36 @@ const BASE_RECEIPT: ReceiptData = {
   terms: "Non-refundable services rendered in full.",
 };
 
+const originalCreateObjectURL = Object.getOwnPropertyDescriptor(URL, "createObjectURL");
+const originalRevokeObjectURL = Object.getOwnPropertyDescriptor(URL, "revokeObjectURL");
+
+function readBlobText(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+}
+
+function stubObjectUrls(url = "blob:mock-url") {
+  const createObjectURLMock = vi.fn(() => url);
+  const revokeObjectURLMock = vi.fn();
+
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    writable: true,
+    value: createObjectURLMock,
+  });
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    writable: true,
+    value: revokeObjectURLMock,
+  });
+
+  return { createObjectURLMock, revokeObjectURLMock };
+}
+
 describe("ReceiptPreview", () => {
   beforeEach(() => {
     vi.useRealTimers();
@@ -50,6 +80,18 @@ describe("ReceiptPreview", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
+
+    if (originalCreateObjectURL) {
+      Object.defineProperty(URL, "createObjectURL", originalCreateObjectURL);
+    } else {
+      delete (URL as { createObjectURL?: unknown }).createObjectURL;
+    }
+
+    if (originalRevokeObjectURL) {
+      Object.defineProperty(URL, "revokeObjectURL", originalRevokeObjectURL);
+    } else {
+      delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
+    }
   });
 
   it("renders the empty billing receipt state for missing data", () => {
@@ -79,36 +121,63 @@ describe("ReceiptPreview", () => {
     expect(safeCurrencyParse("   ")).toBeNull();
   });
 
-  it("invokes window.print() via the print root when Download PDF is clicked and resets on afterprint", async () => {
+  it("downloads a CSV receipt immediately and revokes the object URL", async () => {
     const user = userEvent.setup();
-    const printSpy = vi.spyOn(window, "print").mockImplementation(() => undefined);
+    const { createObjectURLMock, revokeObjectURLMock } = stubObjectUrls("blob:receipt-download");
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined);
 
-    const { container } = render(<ReceiptPreview receipt={BASE_RECEIPT} />);
-    expect(container.querySelector(".invoice-print-root")).toBeInTheDocument();
+    const createdAnchors: HTMLAnchorElement[] = [];
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tagName, options) => {
+      const element = originalCreateElement(tagName, options);
+      if (String(tagName).toLowerCase() === "a") {
+        createdAnchors.push(element as HTMLAnchorElement);
+      }
+      return element;
+    });
+
+    render(<ReceiptPreview receipt={BASE_RECEIPT} />);
+    const button = screen.getByRole("button", { name: /Download PDF/i });
 
     const button = screen.getByRole("button", { name: /Download PDF/i });
     await user.click(button);
 
-    expect(printSpy).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Download started.")).toBeInTheDocument();
+    expect(createObjectURLMock).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURLMock).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURLMock).toHaveBeenCalledWith("blob:receipt-download");
 
-    window.dispatchEvent(new Event("afterprint"));
+    const blob = createObjectURLMock.mock.calls[0][0] as Blob;
+    expect(blob.type).toContain("text/csv");
+
+    const csv = await readBlobText(blob);
+    expect(csv).toContain(BASE_RECEIPT.receiptId);
+    expect(csv).toContain("API usage for Mar 1 – Mar 31, 2026");
+    expect(csv).toContain("Usage adjustment / rounding");
+    expect(csv).toContain("16.23 USDC");
+
+    expect(createdAnchors).toHaveLength(1);
+    expect(createdAnchors[0].download).toBe("receipt-RCPT-001234567.csv");
+    expect(clickSpy).toHaveBeenCalledTimes(1);
 
     await waitFor(() => {
       expect(screen.queryByText("Download started.")).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: /Download PDF/i })).not.toBeDisabled();
   });
 
-  it("shows an error alert if window.print() throws", async () => {
+  it("revokes the object URL even when the download click fails", async () => {
     const user = userEvent.setup();
-    vi.spyOn(window, "print").mockImplementation(() => {
-      throw new Error("Print unavailable");
+    const { revokeObjectURLMock } = stubObjectUrls("blob:failing-download");
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {
+      throw new Error("click failed");
     });
 
     render(<ReceiptPreview receipt={BASE_RECEIPT} />);
+
     await user.click(screen.getByRole("button", { name: /Download PDF/i }));
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Unable to open print dialog.");
+    expect(revokeObjectURLMock).toHaveBeenCalledWith("blob:failing-download");
+    expect(screen.getByRole("alert")).toHaveTextContent("Unable to start download.");
   });
 });
