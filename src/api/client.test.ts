@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { api, subscriptions, plans } from './client';
+import { api, subscriptions, plans, onboarding } from './client';
 import type { ApiError } from './client';
 
 describe('client.ts', () => {
@@ -305,6 +305,29 @@ describe('client.ts', () => {
       });
       await plans.list();
       expect(global.fetch).toHaveBeenCalledWith('/api/plans', expect.any(Object));
+    });
+  });
+
+  describe('onboarding', () => {
+    it('submits business and payout data', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        headers: new Headers(),
+      });
+      const payload = {
+        business: { businessName: 'Test Business', website: 'example.com', country: 'US' },
+        payout: 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7',
+      };
+
+      await onboarding.submit(payload);
+
+      expect(global.fetch).toHaveBeenCalledWith('/api/onboarding', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        signal: expect.any(Object),
+        headers: { 'Content-Type': 'application/json' },
+      });
     });
   });
 });
