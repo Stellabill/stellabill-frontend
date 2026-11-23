@@ -16,9 +16,33 @@ afterEach(() => {
 describe('FamilyPlanSettings', () => {
   it('renders the seeded members with their active and pending counts', () => {
     render(<FamilyPlanSettings />)
-    expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
     expect(screen.getByText('2 active')).toBeInTheDocument()
     expect(screen.getByText('2 pending')).toBeInTheDocument()
+  })
+
+  it('renders the owner row and each member row with name, email, and status label', () => {
+    render(<FamilyPlanSettings />)
+
+    expect(screen.getByText('You (Admin)')).toBeInTheDocument()
+    expect(screen.getByText('Owner')).toBeInTheDocument()
+    expect(screen.getByText('admin@acme.com')).toBeInTheDocument()
+
+    expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
+    expect(screen.getByText('alice@example.com')).toBeInTheDocument()
+    expect(screen.getByText('Active')).toBeInTheDocument()
+
+    expect(screen.getByText('Bob Smith')).toBeInTheDocument()
+    expect(screen.getByText('bob@example.com')).toBeInTheDocument()
+
+    expect(screen.getByText('Charlie Lee')).toBeInTheDocument()
+    expect(screen.getByText('charlie@example.com')).toBeInTheDocument()
+
+    expect(screen.getAllByText('Pending')).toHaveLength(2)
+  })
+
+  it('renders the Add Member button', () => {
+    render(<FamilyPlanSettings />)
+    expect(screen.getByRole('button', { name: /add member/i })).toBeInTheDocument()
   })
 
   it('adds a pending member, updates the badge, and never logs the email', async () => {
