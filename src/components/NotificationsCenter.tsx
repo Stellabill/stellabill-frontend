@@ -2,9 +2,16 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell } from "lucide-react";
 import NotificationPanel from "./notifications/NotificationPanel";
-import { defaultNotifications } from "./notifications/defaults";
+import {
+  defaultFetchNotifications,
+  defaultNotifications,
+} from "./notifications/defaults";
 import { useNotifications } from "./notifications/store";
-import type { BillingNotification, SnoozeDuration } from "./notifications/types";
+import type {
+  BillingNotification,
+  FetchNotificationsFn,
+  SnoozeDuration,
+} from "./notifications/types";
 import "./NotificationsCenter.css";
 
 export {
@@ -15,6 +22,8 @@ export {
 export type {
   BillingNotification,
   BillingNotificationType,
+  FetchNotificationsFn,
+  FetchNotificationsResult,
   NotificationSilenceState,
   SnoozeDuration,
 } from "./notifications/types";
@@ -23,11 +32,13 @@ interface NotificationsCenterProps {
   initialNotifications?: BillingNotification[];
   /** Override Date.now() for deterministic tests */
   getNow?: () => number;
+  fetchNotifications?: FetchNotificationsFn;
 }
 
 export default function NotificationsCenter({
   initialNotifications = defaultNotifications,
   getNow = Date.now,
+  fetchNotifications = defaultFetchNotifications,
 }: NotificationsCenterProps) {
   const { t } = useTranslation();
   const panelId = useId();
@@ -35,6 +46,12 @@ export default function NotificationsCenter({
   const panelRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [liveMessage, setLiveMessage] = useState("");
+  const hasCustomFetcher = fetchNotifications !== defaultFetchNotifications;
+  const [nextCursor, setNextCursor] = useState<string | null | undefined>(
+    hasCustomFetcher ? undefined : null,
+  );
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const {
     state,
     dispatch,
@@ -105,6 +122,36 @@ export default function NotificationsCenter({
     );
   };
 
+  const handleLoadMore = async () => {
+    if (isLoadingMore) return;
+    setIsLoadingMore(true);
+    setFetchError(false);
+    try {
+      const result = await fetchNotifications(nextCursor ?? null);
+      if (result.items.length > 0) {
+        dispatch({ type: "append-notifications", items: result.items });
+      }
+      setNextCursor(result.next ?? null);
+    } catch {
+      setFetchError(true);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setFetchError(false);
+    try {
+      const result = await fetchNotifications(null);
+      if (result.items.length > 0) {
+        dispatch({ type: "append-notifications", items: result.items });
+      }
+      setNextCursor(result.next ?? null);
+    } catch {
+      setFetchError(true);
+    }
+  };
+
   return (
     <div className="notifications-center">
       <span className="notifications-live-region" aria-live="polite" aria-atomic="true">
@@ -151,6 +198,11 @@ export default function NotificationsCenter({
           onSnooze={snoozeNotification}
           onMute={muteNotification}
           onUnmute={unmuteNotification}
+          hasMore={nextCursor !== null}
+          isLoadingMore={isLoadingMore}
+          fetchError={fetchError}
+          onLoadMore={handleLoadMore}
+          onRefreshNotifications={handleRefresh}
         />
       )}
     </div>
