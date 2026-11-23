@@ -229,17 +229,18 @@ function StatusBadge({ status }: { status: StatusType }) {
 const SKELETON_ROWS = 4;
 
 function SkeletonTable() {
+	const { t } = useTranslation();
 	return (
-		<div className="subs-loading-wrapper" aria-busy="true" aria-label="Loading subscriptions" role="status">
-			<table className="subs-table" aria-label="Loading subscriptions">
+		<div className="subs-loading-wrapper" aria-busy="true" aria-label={t('aria.loadingSubscriptions')} role="status">
+			<table className="subs-table" aria-label={t('aria.loadingSubscriptions')}>
 				<thead>
 				<tr>
-					<th scope="col">Plan</th>
-					<th scope="col">Status</th>
-					<th scope="col">Price</th>
-					<th scope="col">Next Charge</th>
-					<th scope="col">Prepaid Balance</th>
-					<th scope="col">Actions</th>
+					<th scope="col">{t('subscriptions.table.plan')}</th>
+					<th scope="col">{t('subscriptions.table.status')}</th>
+					<th scope="col">{t('subscriptions.table.price')}</th>
+					<th scope="col">{t('subscriptions.table.nextCharge')}</th>
+					<th scope="col">{t('subscriptions.table.prepaidBalance')}</th>
+					<th scope="col">{t('subscriptions.table.actions')}</th>
 				</tr>
 				</thead>
 				<tbody>
@@ -268,8 +269,9 @@ function SkeletonTable() {
 }
 
 function SkeletonCards() {
+	const { t } = useTranslation();
 	return (
-		<div className="subs-loading-cards" aria-busy="true" aria-label="Loading subscriptions" role="status">
+		<div className="subs-loading-cards" aria-busy="true" aria-label={t('aria.loadingSubscriptions')} role="status">
 			{Array.from({ length: SKELETON_ROWS }).map((_, i) => (
 				<div key={i} className="subs-loading-card" aria-hidden="true">
 					<div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
@@ -1006,7 +1008,7 @@ export default function Subscriptions() {
 								<th scope="col">{t('subscriptions.table.plan')}</th>
 								<th scope="col">{t('subscriptions.table.status')}</th>
 								<th scope="col">{t('subscriptions.table.price')}</th>
-								<th scope="col">Tags</th>
+								<th scope="col">{t('subscriptions.table.tags')}</th>
 								<th scope="col">{t('subscriptions.table.nextCharge')}</th>
 								<th scope="col">{t('subscriptions.table.prepaidBalance')}</th>
 								<th scope="col">
