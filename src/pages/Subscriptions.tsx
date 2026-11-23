@@ -1,4 +1,4 @@
-import SwipeableRow from "../components/SwipeableRow";
+import SwipeableRow, { type SwipeAction } from "../components/SwipeableRow";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -17,15 +17,29 @@ import { ToastContainer, type ToastOptions } from "../components/TransactionToas
 import { useRefresh } from "../hooks/useRefresh";
 import { useFlip } from "../hooks/useFlip";
 import { useTags } from "../hooks/useTags";
-import { formatAmount } from "../utils/amount";
+import { formatAmount, roundAmount } from "../utils/amount";
+import Amount from "../components/common/Amount";
 import "./Subscriptions.css";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface SubscriptionWithIcon extends Omit<Subscription, "icon"> {
 	icon: React.ReactNode;
-	prepaidBalance: number;
-	coverage: string;
+	coveragePayments: number;
 	tags?: TagOption[]; // Tags are managed separately via the useTags hook
+}
+
+/* ─── Balance helpers ────────────────────────────────────────── */
+/**
+ * How many full payments the current prepaid balance covers. Arithmetic is
+ * always done on raw numbers; the human-readable coverage text is derived at
+ * render time only.
+ */
+function coveragePaymentsFor(balance: number, price: number): number {
+	return price > 0 ? Math.floor(balance / price) : 0;
+}
+
+function coverageLabel(count: number): string {
+	return `~${count} payment${count === 1 ? "" : "s"}`;
 }
 
 type StatusType = "Active" | "Paused" | "Cancelled";
@@ -321,7 +335,7 @@ const FIXTURE_DATA: SubscriptionWithIcon[] = [
 		currency: "USDC",
 		interval: "month",
 		prepaidBalance: 30,
-		coverage: "~3 payments",
+		coveragePayments: 3,
 		nextCharge: "Mar 15, 2026",
 		lastPayment: "Feb 15, 2026",
 		subscribedSince: "Dec 15, 2025",
@@ -336,7 +350,7 @@ const FIXTURE_DATA: SubscriptionWithIcon[] = [
 		currency: "USDC",
 		interval: "month",
 		prepaidBalance: 75,
-		coverage: "~3 payments",
+		coveragePayments: 3,
 		nextCharge: "Mar 20, 2026",
 		lastPayment: "Feb 20, 2026",
 		subscribedSince: "Feb 20, 2026",
@@ -351,7 +365,7 @@ const FIXTURE_DATA: SubscriptionWithIcon[] = [
 		currency: "USDC",
 		interval: "month",
 		prepaidBalance: 5,
-		coverage: "~1 payment",
+		coveragePayments: 1,
 		nextCharge: "Apr 01, 2026",
 		lastPayment: "Mar 01, 2026",
 		subscribedSince: "Jan 01, 2026",
@@ -366,7 +380,7 @@ const FIXTURE_DATA: SubscriptionWithIcon[] = [
 		currency: "USDC",
 		interval: "month",
 		prepaidBalance: 0,
-		coverage: "0 payments",
+		coveragePayments: 0,
 		nextCharge: "N/A",
 		lastPayment: "Feb 28, 2026",
 		subscribedSince: "Nov 15, 2025",
@@ -423,13 +437,14 @@ export default function Subscriptions() {
 	const abortRef = useRef<AbortController | null>(null);
 
 	const mapSubscription = useCallback((sub: Subscription): SubscriptionWithIcon => {
-		const balance = typeof sub.prepaidBalance === "number" ? sub.prepaidBalance : 0;
-		const payments = sub.price > 0 ? Math.floor(balance / sub.price) : 0;
+		const balance = typeof sub.prepaidBalance === "number" && Number.isFinite(sub.prepaidBalance)
+			? sub.prepaidBalance
+			: 0;
 		return {
 			...sub,
 			icon: <IconCloud />,
 			prepaidBalance: balance,
-			coverage: payments === 1 ? "~1 payment" : `~${payments} payments`,
+			coveragePayments: coveragePaymentsFor(balance, sub.price),
 		};
 	}, []);
 
@@ -501,14 +516,13 @@ export default function Subscriptions() {
 			setData((prev) =>
 				prev.map((sub) => {
 					if (sub.id !== selectedId) return sub;
-					const currentNum = sub.prepaidBalance || 0;
-					const updatedNum = currentNum + amount;
-					const coverageCount = sub.price > 0 ? Math.floor(updatedNum / sub.price) : 0;
-					const coverageStr = `~${coverageCount} payment${coverageCount === 1 ? "" : "s"}`;
+					// Keep balances numeric end-to-end. Round at USDC's on-chain
+					// precision (7 decimals) so repeated top-ups cannot drift.
+					const updatedBalance = roundAmount(sub.prepaidBalance + amount, 7, "half-up");
 					return {
 						...sub,
-						prepaidBalance: updatedNum,
-						coverage: coverageStr,
+						prepaidBalance: updatedBalance,
+						coveragePayments: coveragePaymentsFor(updatedBalance, sub.price),
 					};
 				}),
 			);
@@ -802,7 +816,14 @@ export default function Subscriptions() {
 							</div>
 							<div className="detail-item">
 								<span className="detail-label">Prepaid balance</span>
-								<span className="detail-value">{selectedSub.prepaidBalance}</span>
+								<span className="detail-value">
+									<Amount
+										value={selectedSub.prepaidBalance}
+										currency={selectedSub.currency}
+										minPrecision={0}
+										data-testid="detail-prepaid-balance"
+									/>
+								</span>
 							</div>
 						</div>
 
@@ -893,7 +914,7 @@ export default function Subscriptions() {
 					onConfirm={handleCancelConfirm}
 					onOfferSelected={handleOfferSelected}
 					isLoading={isActionLoading}
-					balance={formatAmount(selectedSub.prepaidBalance).number}
+					balance={formatAmount(selectedSub.prepaidBalance, { minPrecision: 0 }).number}
 					endDate={selectedSub.nextCharge || "N/A"}
 					error={cancelError}
 				/>
@@ -1061,7 +1082,12 @@ export default function Subscriptions() {
 									<td>
 											<span className="subs-table__meta-cell">
 												<IconWallet />
-												{formatAmount(sub.prepaidBalance).number} {sub.currency}
+												<Amount
+													value={sub.prepaidBalance}
+													currency={sub.currency}
+													minPrecision={0}
+													data-testid={`prepaid-balance-${sub.id}`}
+												/>
 											</span>
 									</td>
 
@@ -1134,8 +1160,8 @@ export default function Subscriptions() {
 							style={{ transform: `translateY(${pullDistance}px)` }}
 						>
 						{filteredData.map((sub) => {
-							const leadingActions: any[] = [];
-							const trailingActions: any[] = [];
+							const leadingActions: SwipeAction[] = [];
+							const trailingActions: SwipeAction[] = [];
 
 							if (sub.status === "Active") {
 								trailingActions.push({
@@ -1183,7 +1209,13 @@ export default function Subscriptions() {
 									tabIndex={-1}
 									role="button"
 									aria-label={`${sub.planName} – ${sub.status}. Tap to manage.`}
-									onClick={() => setSelectedId(sub.id)}>
+									onClick={() => setSelectedId(sub.id)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" || e.key === " ") {
+											e.preventDefault();
+											setSelectedId(sub.id);
+										}
+									}}>
 									<div className="subs-card__top">
 										<div className="subs-card__plan-info">
 											<div className="subs-card__icon" aria-hidden="true">
@@ -1218,11 +1250,18 @@ export default function Subscriptions() {
 									<div className="subs-card__meta">
 										<div className="subs-card__meta-item">
 											<span className="subs-card__meta-label">{t('subscriptions.table.prepaid')}</span>
-											<span className="subs-card__meta-value">{formatAmount(sub.prepaidBalance).number} {sub.currency}</span>
+											<span className="subs-card__meta-value">
+												<Amount
+													value={sub.prepaidBalance}
+													currency={sub.currency}
+													minPrecision={0}
+													data-testid={`prepaid-balance-card-${sub.id}`}
+												/>
+											</span>
 										</div>
 										<div className="subs-card__meta-item">
 											<span className="subs-card__meta-label">{t('subscriptions.table.coverage')}</span>
-											<span className="subs-card__meta-value">{sub.coverage}</span>
+											<span className="subs-card__meta-value">{coverageLabel(sub.coveragePayments)}</span>
 										</div>
 										<div className="subs-card__meta-item">
 											<span className="subs-card__meta-label">{t('subscriptions.table.nextCharge')}</span>

@@ -1,7 +1,8 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import type { Subscription } from '../api/client';
+import { subscriptions } from '../api/client';
+import type { Subscription } from '@/types/subscription';
 import Subscriptions from './Subscriptions';
 
 /* ─── Module mocks ──────────────────────────────────────────── */
@@ -35,10 +36,6 @@ vi.mock('../api/client', () => ({
     technicalDetails?: string;
     isOffline?: boolean;
   },
-}));
-
-vi.mock('../utils/amount', () => ({
-  formatAmount: (value: number) => `${value} USDC`,
 }));
 
 vi.mock('../components/PauseSubscriptionModal', () => ({
@@ -107,8 +104,9 @@ const FIXTURE_SUBSCRIPTIONS: Subscription[] = [
     id: 'SUB-001',
     planName: 'Premium Access',
     merchantName: 'Stellar News',
-    status: 'active',
+    status: 'Active',
     price: 10,
+    currency: 'USDC',
     interval: 'month',
     nextCharge: '2025-02-01',
     prepaidBalance: 30,
@@ -118,8 +116,9 @@ const FIXTURE_SUBSCRIPTIONS: Subscription[] = [
     id: 'SUB-002',
     planName: 'Pro Plan',
     merchantName: 'CloudFlow',
-    status: 'active',
+    status: 'Active',
     price: 25,
+    currency: 'USDC',
     interval: 'month',
     nextCharge: '2025-02-05',
     prepaidBalance: 50,
@@ -129,8 +128,9 @@ const FIXTURE_SUBSCRIPTIONS: Subscription[] = [
     id: 'SUB-003',
     planName: 'Basic Stream',
     merchantName: 'Stellar News',
-    status: 'paused',
+    status: 'Paused',
     price: 5,
+    currency: 'USDC',
     interval: 'month',
     nextCharge: '2025-02-10',
     prepaidBalance: 15,
@@ -140,8 +140,9 @@ const FIXTURE_SUBSCRIPTIONS: Subscription[] = [
     id: 'SUB-004',
     planName: 'Enterprise AI',
     merchantName: 'CloudFlow',
-    status: 'cancelled',
+    status: 'Cancelled',
     price: 100,
+    currency: 'USDC',
     interval: 'month',
     nextCharge: '2025-02-15',
     prepaidBalance: 0,
@@ -305,27 +306,25 @@ describe('Subscriptions page', () => {
     });
 
     it('ignores a late response from a superseded refresh (race)', async () => {
-      let resolveFirst: (value: { subscriptions: Subscription[] }) => void = () => {};
-      const firstPromise = new Promise<{ subscriptions: Subscription[] }>(res => {
-        resolveFirst = res;
+      await renderAndLoad();
+
+      let resolveStale: (value: { subscriptions: Subscription[] }) => void = () => {};
+      const stalePromise = new Promise<{ subscriptions: Subscription[] }>(res => {
+        resolveStale = res;
       });
       vi.mocked(subscriptions.list)
-        .mockReturnValueOnce(firstPromise)
+        .mockReturnValueOnce(stalePromise)
         .mockResolvedValueOnce({ subscriptions: FIXTURE_SUBSCRIPTIONS });
 
-      renderSubscriptions();
-      await advanceTimersAndFlush();
-
-      // Trigger a refresh which supersedes the first in-flight request.
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /retry/i }));
-        await Promise.resolve();
-      });
+      // First refresh starts an in-flight request...
+      fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
+      // ...which a second refresh supersedes.
+      fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
       await advanceTimersAndFlush();
 
       // Now resolve the stale first request with different data.
       await act(async () => {
-        resolveFirst({
+        resolveStale({
           subscriptions: [
             {
               ...FIXTURE_SUBSCRIPTIONS[0],
@@ -342,6 +341,7 @@ describe('Subscriptions page', () => {
         { timeout: 3000 },
       );
       expect(screen.queryByText('Stale Plan')).not.toBeInTheDocument();
+      expect(screen.getAllByText('Premium Access').length).toBeGreaterThan(0);
     });
   });
 
@@ -843,6 +843,102 @@ describe('Subscriptions page', () => {
     });
   });
 
+  /* ── Prepaid balance formatting ───────────────────────────── */
+  describe('Prepaid balance formatting', () => {
+    it('renders the table balance with Amount formatting and currency', async () => {
+      await renderAndLoad();
+
+      const balance = screen.getByTestId('prepaid-balance-SUB-001');
+      expect(balance).toHaveTextContent('30 USDC');
+      expect(balance).toHaveAttribute('aria-label', '30 USDC');
+      expect(screen.getByTestId('prepaid-balance-SUB-002')).toHaveTextContent('50 USDC');
+      expect(screen.getByTestId('prepaid-balance-SUB-003')).toHaveTextContent('15 USDC');
+    });
+
+    it('marks a zero balance without rendering a raw number', async () => {
+      await renderAndLoad();
+      const balance = screen.getByTestId('prepaid-balance-SUB-004');
+      expect(balance).toHaveTextContent('0 USDC');
+      expect(balance).toHaveAttribute('data-amount-zero', 'true');
+    });
+
+    it('formats the mobile card balance with currency', async () => {
+      await renderAndLoad();
+      expect(screen.getByTestId('prepaid-balance-card-SUB-001')).toHaveTextContent('30 USDC');
+      expect(screen.getByTestId('prepaid-balance-card-SUB-002')).toHaveTextContent('50 USDC');
+    });
+
+    it('formats the detail-view balance with currency', async () => {
+      await renderAndLoad();
+      fireEvent.click(screen.getByRole('button', { name: /manage premium access/i }));
+      await waitFor(() =>
+        expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
+      );
+
+      expect(screen.getByTestId('detail-prepaid-balance')).toHaveTextContent('30 USDC');
+      expect(screen.getByTestId('detail-prepaid-balance')).toHaveAttribute('aria-label', '30 USDC');
+    });
+
+    it('uses the subscription currency instead of hard-coding USDC', async () => {
+      vi.mocked(subscriptions.list).mockResolvedValue({
+        subscriptions: [
+          { ...FIXTURE_SUBSCRIPTIONS[0], currency: 'EUR', prepaidBalance: 12.5 },
+        ],
+      });
+      await renderAndLoad();
+
+      const balance = screen.getByTestId('prepaid-balance-SUB-001');
+      expect(balance).toHaveTextContent('12.5 EUR');
+      expect(balance).toHaveAttribute('aria-label', '12.5 EUR');
+    });
+
+    it('rounds balances through Amount rather than concatenating strings', async () => {
+      vi.mocked(subscriptions.list).mockResolvedValue({
+        subscriptions: [
+          { ...FIXTURE_SUBSCRIPTIONS[0], prepaidBalance: 12.505 },
+        ],
+      });
+      await renderAndLoad();
+
+      // Default precision is 2 with half-up rounding; no string arithmetic involved.
+      expect(screen.getByTestId('prepaid-balance-SUB-001')).toHaveTextContent('12.51 USDC');
+    });
+  });
+
+  /* ── Top-up flow ──────────────────────────────────────────── */
+  describe('Top-up flow', () => {
+    async function topUp(amount: string) {
+      await renderAndLoad();
+      fireEvent.click(screen.getByRole('button', { name: /manage premium access/i }));
+      await waitFor(() =>
+        expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
+      );
+      fireEvent.click(screen.getByRole('button', { name: /top up balance/i }));
+      fireEvent.change(screen.getByLabelText(/top up amount/i), {
+        target: { value: amount },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /review top up/i }));
+      fireEvent.click(screen.getByRole('button', { name: /confirm top up/i }));
+      await advanceTimersAndFlush();
+    }
+
+    it('adds the top-up to the numeric balance and re-formats it', async () => {
+      await topUp('10');
+
+      const balance = screen.getByTestId('detail-prepaid-balance');
+      expect(balance).toHaveTextContent('40 USDC');
+      expect(balance).toHaveAttribute('aria-label', '40 USDC');
+      expect(screen.getByText(/your balance has been updated to 40/i)).toBeInTheDocument();
+    });
+
+    it('derives the coverage count again from the new numeric balance', async () => {
+      await topUp('10');
+
+      // Premium Access costs 10 USDC/month, so 40 USDC covers ~4 payments.
+      expect(screen.getByText(/covers approximately/i)).toHaveTextContent('4');
+    });
+  });
+
   /* ── Accessibility ────────────────────────────────────────── */
   describe('Accessibility (ARIA)', () => {
     it('the main data table has an accessible aria-label', async () => {
@@ -887,7 +983,8 @@ describe('Subscriptions page', () => {
 
     it('visually-hidden "Actions" text is present for screen readers', async () => {
       await renderAndLoad();
-      const hidden = document.querySelector('.visually-hidden');
+      const table = screen.getByRole('table', { name: /my subscriptions/i });
+      const hidden = table.querySelector('.visually-hidden');
       expect(hidden).toBeInTheDocument();
       expect(hidden?.textContent).toBe('Actions');
     });
