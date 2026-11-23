@@ -27,7 +27,7 @@ describe('filterActivities', () => {
 
   it('filters by age in days', () => {
     const result = filterActivities(MOCK_ACTIVITIES, { range: 'last30Days' });
-    expect(result.map((activity) => activity.id)).toEqual(['1', '2', '3', '4']);
+    expect(result.map((activity) => activity.id)).toEqual(['1', '2', '3', '4', '5']);
   });
 
   it('drops internal-only fields from the returned activities', () => {

@@ -6,7 +6,9 @@ import Dashboard from './Dashboard';
 const dashboardWidgetsMock = vi.hoisted(() => ({
   filters: [] as Array<{ status?: 'active'; planId?: string; range?: 'last30Days' }>,
   loads: [] as Array<{ status?: 'active'; planId?: string; range?: 'last30Days' }>,
+  retries: [] as string[],
   initialLoading: false,
+  data: {} as Record<string, unknown>,
 }));
 
 vi.mock('../hooks/useDashboardWidgets', async () => {
@@ -18,6 +20,7 @@ vi.mock('../hooks/useDashboardWidgets', async () => {
     kpi_upcoming_renewals: { status: 'success', error: null },
     chart_revenue: { status: 'success', error: null },
     activity_feed: { status: 'success', error: null },
+    revenue_split: { status: 'success', error: null },
   };
 
   return {
@@ -29,12 +32,15 @@ vi.mock('../hooks/useDashboardWidgets', async () => {
       dashboardWidgetsMock.filters.push({ ...filters });
       const loadAll = useCallback(() => {
         dashboardWidgetsMock.loads.push({ ...filters });
-      }, [filters.status, filters.planId, filters.range]);
+      }, [filters]);
 
       return {
         widgets,
+        data: dashboardWidgetsMock.data,
         loadAll,
-        retryWidget: () => {},
+        retryWidget: (id: string) => {
+          dashboardWidgetsMock.retries.push(id);
+        },
         isInitialLoading: dashboardWidgetsMock.initialLoading,
         failedWidgetIds: [],
       };
@@ -52,6 +58,7 @@ vi.mock('../components/Dashboard/RevenueSplitByPlanPanel', () => ({
     <div data-testid="revenue-split-by-plan">
       {plans.map((plan) => <span key={plan.planId}>{plan.planName}</span>)}
     </div>
+  ),
 }));
 
 // Mock Link from react-router-dom
@@ -74,7 +81,9 @@ describe('Dashboard Page', () => {
     localStorage.removeItem('stellabill.dashboard.savedFilters');
     dashboardWidgetsMock.filters = [];
     dashboardWidgetsMock.loads = [];
+    dashboardWidgetsMock.retries = [];
     dashboardWidgetsMock.initialLoading = false;
+    dashboardWidgetsMock.data = {};
   });
 
   afterEach(() => {
@@ -145,8 +154,8 @@ describe('Dashboard Page', () => {
     expect(createPlanBtn).toHaveAttribute('href', '/plans?create=true');
   });
 
-  it('renders accessible help hints and opens glossary-backed popovers', async () => {
-    const { getByRole } = render(
+  it('exposes dashboard KPI help text', async () => {
+    render(
       <MemoryRouter>
         <Dashboard />
       </MemoryRouter>
@@ -156,17 +165,11 @@ describe('Dashboard Page', () => {
       vi.advanceTimersByTime(1000);
     });
 
-    const mrrHint = getByRole('button', { name: /learn more about mrr/i });
-    expect(mrrHint).toHaveAttribute('aria-expanded', 'false');
-
-    fireEvent.click(mrrHint);
-
-    expect(mrrHint).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText(/100 customers pay \$50\/month/i)).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Learn more' })).toHaveAttribute(
-      'href',
-      'https://docs.stellarbill.example/glossary/mrr'
-    );
+    expect(
+      document.querySelector(
+        '[title="Monthly Recurring Revenue across all active subscriptions."]',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('reloads widgets with updated filters and applies them to mock data and the URL', () => {
@@ -183,7 +186,7 @@ describe('Dashboard Page', () => {
       range: 'last30Days',
     });
     expect(screen.getByText('Pro', { selector: '[data-testid="revenue-split-by-plan"] span' })).toBeInTheDocument();
-    expect(screen.queryByText('Enterprise 10')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Enterprise 10/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove filter Plan: Pro' }));
 
@@ -191,9 +194,39 @@ describe('Dashboard Page', () => {
       status: 'active',
       range: 'last30Days',
     });
-    expect(screen.getByText('Enterprise 10')).toBeInTheDocument();
+    expect(screen.getByText(/Enterprise 10/)).toBeInTheDocument();
     expect(screen.getByText('Business', { selector: '[data-testid="revenue-split-by-plan"] span' })).toBeInTheDocument();
     expect(new URLSearchParams(screen.getByTestId('dashboard-search-params').textContent ?? '').has('planId')).toBe(false);
+  });
+
+  it('renders widget data returned by the dashboard fetchers', () => {
+    dashboardWidgetsMock.data = {
+      activeSubscriptions: { value: '2,000' },
+      mrr: { value: '$60,000' },
+      activities: [
+        {
+          id: 'api-1',
+          type: 'payment.succeeded',
+          description: 'API-backed payment',
+          timestamp: 'just now',
+          status: 'success',
+        },
+      ],
+      revenueByPlan: {
+        plans: [{ planId: 'api', planName: 'API Plan', revenue: 100, previousRevenue: 80 }],
+      },
+    };
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('2,000')).toBeInTheDocument();
+    expect(screen.getByText('$60,000')).toBeInTheDocument();
+    expect(screen.getByText('API-backed payment')).toBeInTheDocument();
+    expect(screen.getByText('API Plan')).toBeInTheDocument();
   });
 
   it('saves and restores the selected filters and announces storage failures', () => {

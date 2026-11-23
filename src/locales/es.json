@@ -176,8 +176,7 @@
     "recentActivity": "Actividad reciente",
     "markAllAsRead": "Marcar todo como leído",
     "seeAllActivity": "Ver toda la actividad",
-    "unavailable": "Panel no disponible",
-    "simulateError": "El servicio de indicadores no está disponible. [Código de error: MET-500]"
+    "unavailable": "Panel no disponible"
   },
   "aria": {
     "loadingSubscriptions": "Cargando suscripciones",

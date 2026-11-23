@@ -20,8 +20,7 @@
     "recentActivity": "Recent Activity",
     "markAllAsRead": "Mark all as read",
     "seeAllActivity": "See all activity",
-    "unavailable": "Dashboard Unavailable",
-    "simulateError": "The metrics service is currently unavailable. [Error Code: MET-500]"
+    "unavailable": "Dashboard Unavailable"
   },
   "subscriptions": {
     "pageTitle": "My subscriptions",

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { api, subscriptions, plans, onboarding } from './client';
+import { api, subscriptions, plans, onboarding, dashboard } from './client';
 import { FIXTURE_MUTATION_DELAY_MS } from './client';
 import type { ApiError, SubscriptionStatusChange } from './client';
 import {
@@ -811,6 +811,7 @@ describe('client.ts', () => {
     });
 
     it('cancel() simulates failure with ?fail_action', async () => {
+      vi.stubEnv('VITE_USE_FIXTURES', 'true');
       vi.stubGlobal('window', { location: { search: '?fail_action=true' } });
       vi.useFakeTimers();
       const promise = subscriptions.cancel('sub1');
@@ -823,10 +824,11 @@ describe('client.ts', () => {
     });
 
     it('resume() simulates success and failure with ?fail_action', async () => {
+      vi.stubEnv('VITE_USE_FIXTURES', 'true');
       vi.useFakeTimers();
       const okPromise = subscriptions.resume('sub1');
       vi.runAllTimers();
-      await expect(okPromise).resolves.toEqual({ success: true });
+      await expect(okPromise).resolves.toEqual({ id: 'sub1', status: 'Active' });
 
       vi.stubGlobal('window', { location: { search: '?fail_action=true' } });
       const failPromise = subscriptions.resume('sub1');
@@ -891,6 +893,87 @@ describe('client.ts', () => {
         signal: expect.any(Object),
         headers: { 'Content-Type': 'application/json' },
       });
+    });
+  });
+
+  describe('dashboard', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    const filters = { status: 'active' as const, planId: 'pro', range: 'last30Days' as const };
+
+    it('metrics() requests the metrics endpoint with filters and an abort signal', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        text: async () => JSON.stringify({
+          activeSubscriptions: { value: '1' },
+          mrr: { value: '$1' },
+          failedCharges: { value: '0' },
+          upcomingRenewals: { value: '0' },
+          revenue: [],
+        }),
+      });
+      const controller = new AbortController();
+
+      const result = await dashboard.metrics(filters, { signal: controller.signal });
+
+      expect(result.activeSubscriptions.value).toBe('1');
+      const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe('/api/merchant/metrics?status=active&planId=pro&range=last30Days');
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it('activity() and revenueByPlan() request their endpoints with filters', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          text: async () => JSON.stringify({ activities: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          text: async () => JSON.stringify({ plans: [] }),
+        });
+
+      await dashboard.activity(filters);
+      await dashboard.revenueByPlan(filters);
+
+      expect((global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe(
+        '/api/merchant/activity?status=active&planId=pro&range=last30Days',
+      );
+      expect((global.fetch as ReturnType<typeof vi.fn>).mock.calls[1][0]).toBe(
+        '/api/merchant/revenue-by-plan?status=active&planId=pro&range=last30Days',
+      );
+    });
+
+    it('resolves filtered fixture data without a network request in fixture mode', async () => {
+      vi.stubEnv('VITE_USE_FIXTURES', 'true');
+
+      const metrics = await dashboard.metrics(filters);
+      const activity = await dashboard.activity(filters);
+      const revenue = await dashboard.revenueByPlan(filters);
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(metrics.activeSubscriptions.value).toBeTruthy();
+      expect(activity.activities).toHaveLength(2);
+      expect(revenue.plans.every((plan) => plan.planId === 'pro')).toBe(true);
+    });
+
+    it('rejects fixture reads when the caller has already aborted', async () => {
+      vi.stubEnv('VITE_USE_FIXTURES', 'true');
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(dashboard.metrics(filters, { signal: controller.signal })).rejects.toMatchObject({
+        name: 'AbortError',
+      });
+      expect(global.fetch).not.toHaveBeenCalled();
     });
   });
 });

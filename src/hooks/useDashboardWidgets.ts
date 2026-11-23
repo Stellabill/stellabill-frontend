@@ -1,5 +1,13 @@
-import { useCallback, useReducer } from 'react';
-import type { ApiError } from '../api/client';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import {
+  dashboard,
+  type ApiError,
+  type DashboardActivity,
+  type DashboardFilters as DashboardApiFilters,
+  type DashboardMetric,
+  type DashboardRevenueByPlanResponse,
+  type DashboardRevenuePoint,
+} from '../api/client';
 
 // ─── Widget identifiers ────────────────────────────────────────────────────
 
@@ -9,13 +17,10 @@ export type WidgetId =
   | 'kpi_failed_charges'
   | 'kpi_upcoming_renewals'
   | 'chart_revenue'
-  | 'activity_feed';
+  | 'activity_feed'
+  | 'revenue_split';
 
-export interface DashboardFilters {
-  status?: 'active';
-  planId?: string;
-  range?: 'last30Days';
-}
+export type DashboardFilters = DashboardApiFilters;
 
 // ─── Per-widget state ──────────────────────────────────────────────────────
 
@@ -28,15 +33,27 @@ export interface WidgetState {
 
 type WidgetsState = Record<WidgetId, WidgetState>;
 
+/** Payloads fetched by the widget fetchers, keyed by the widget that owns them. */
+export interface DashboardWidgetData {
+  activeSubscriptions?: DashboardMetric;
+  mrr?: DashboardMetric;
+  failedCharges?: DashboardMetric;
+  upcomingRenewals?: DashboardMetric;
+  revenueSeries?: DashboardRevenuePoint[];
+  activities?: DashboardActivity[];
+  revenueByPlan?: DashboardRevenueByPlanResponse;
+}
+
 const DEFAULT_WIDGET_STATE: WidgetState = { status: 'idle', error: null };
 
-const ALL_WIDGET_IDS: WidgetId[] = [
+export const ALL_WIDGET_IDS: WidgetId[] = [
   'kpi_active_subscriptions',
   'kpi_mrr',
   'kpi_failed_charges',
   'kpi_upcoming_renewals',
   'chart_revenue',
   'activity_feed',
+  'revenue_split',
 ];
 
 function buildInitialState(): WidgetsState {
@@ -71,61 +88,73 @@ function reducer(state: WidgetsState, action: Action): WidgetsState {
   }
 }
 
-// ─── Fake per-widget fetch helpers ────────────────────────────────────────
-//
-// In production each would call a real API endpoint.  For now they reuse the
-// same simulate_error / simulate_offline query-string flags that the existing
-// Dashboard uses, but each widget can fail independently (so the pattern can
-// be demonstrated by adding e.g. ?fail_kpi_mrr=1 in the URL).
+// ─── API-backed fetch helpers ─────────────────────────────────────────────
 
-function makeWidgetError(message: string, opts: Partial<ApiError> = {}): ApiError {
-  const err = new Error(message) as ApiError;
-  Object.assign(err, opts);
-  return err;
+function isAbortError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === 'AbortError' || error.message === 'The operation was aborted')
+  );
+}
+
+function toApiError(error: unknown): ApiError {
+  if (error instanceof Error) return error as ApiError;
+  const apiError = new Error(String(error)) as ApiError;
+  apiError.kind = 'network';
+  return apiError;
 }
 
 async function fetchWidget(
-  widgetId: WidgetId,
-  _filters: DashboardFilters,
-): Promise<void> {
-  // Honour per-widget failure simulation: ?fail_<widget_id>=1
-  const search =
-    typeof window !== 'undefined' ? window.location.search : '';
-
-  if (search.includes(`fail_${widgetId}`)) {
-    await delay(400 + Math.random() * 400);
-    throw makeWidgetError(`Could not load ${widgetId.replace(/_/g, ' ')}`, {
-      status: 503,
-      technicalDetails: `Simulated failure for ${widgetId}`,
-    });
+  id: WidgetId,
+  filters: DashboardFilters,
+  signal: AbortSignal,
+): Promise<DashboardWidgetData> {
+  switch (id) {
+    case 'kpi_active_subscriptions': {
+      const response = await dashboard.metrics(filters, { signal });
+      return { activeSubscriptions: response?.activeSubscriptions };
+    }
+    case 'kpi_mrr': {
+      const response = await dashboard.metrics(filters, { signal });
+      return { mrr: response?.mrr };
+    }
+    case 'kpi_failed_charges': {
+      const response = await dashboard.metrics(filters, { signal });
+      return { failedCharges: response?.failedCharges };
+    }
+    case 'kpi_upcoming_renewals': {
+      const response = await dashboard.metrics(filters, { signal });
+      return { upcomingRenewals: response?.upcomingRenewals };
+    }
+    case 'chart_revenue': {
+      const response = await dashboard.metrics(filters, { signal });
+      return { revenueSeries: response?.revenue };
+    }
+    case 'activity_feed': {
+      const response = await dashboard.activity(filters, { signal });
+      return { activities: response?.activities };
+    }
+    case 'revenue_split': {
+      const response = await dashboard.revenueByPlan(filters, { signal });
+      return { revenueByPlan: response };
+    }
   }
-
-  // Global simulate_offline / simulate_error flags still work for all widgets
-  if (search.includes('simulate_offline')) {
-    await delay(300);
-    throw makeWidgetError('No internet connection', { isOffline: true });
-  }
-
-  if (search.includes('simulate_error')) {
-    await delay(300);
-    throw makeWidgetError('Internal Server Error', {
-      status: 500,
-      technicalDetails: 'Metrics service timeout [Trace: MET-500]',
-    });
-  }
-
-  // Happy-path: simulate a short network round-trip
-  await delay(200 + Math.random() * 300);
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
+function abortWidget(
+  controllers: Map<WidgetId, AbortController>,
+  id: WidgetId,
+): void {
+  controllers.get(id)?.abort();
+  controllers.delete(id);
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────
 
 export interface UseDashboardWidgetsReturn {
   widgets: WidgetsState;
+  /** Data returned by the widget fetchers. */
+  data: DashboardWidgetData;
   /** Kick off a fresh load of all widgets. */
   loadAll: () => void;
   /** Retry a single failed widget. */
@@ -140,40 +169,94 @@ export function useDashboardWidgets(
   filters: DashboardFilters,
 ): UseDashboardWidgetsReturn {
   const [widgets, dispatch] = useReducer(reducer, undefined, buildInitialState);
+  const [data, setData] = useState<DashboardWidgetData>({});
+
+  const controllersRef = useRef<Map<WidgetId, AbortController>>(new Map());
+  const generationRef = useRef(0);
+  const mountedRef = useRef(true);
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+  const filtersKey = JSON.stringify(filters);
+
+  const abortAll = useCallback(() => {
+    controllersRef.current.forEach((controller) => controller.abort());
+    controllersRef.current.clear();
+  }, []);
 
   const loadWidget = useCallback(
-    async (id: WidgetId) => {
+    async (id: WidgetId, generation: number) => {
+      abortWidget(controllersRef.current, id);
+      const controller = new AbortController();
+      controllersRef.current.set(id, controller);
       dispatch({ type: 'LOAD', widgetId: id });
+
+      const isCurrent = () =>
+        mountedRef.current &&
+        generationRef.current === generation &&
+        controllersRef.current.get(id) === controller;
+
       try {
-        await fetchWidget(id, filters);
+        const patch = await fetchWidget(id, filtersRef.current, controller.signal);
+        if (!isCurrent()) return;
+        setData((previous) => ({ ...previous, ...patch }));
         dispatch({ type: 'SUCCESS', widgetId: id });
-      } catch (err) {
-        dispatch({ type: 'ERROR', widgetId: id, error: err as ApiError });
+      } catch (error) {
+        if (isAbortError(error) || !isCurrent()) return;
+        dispatch({ type: 'ERROR', widgetId: id, error: toApiError(error) });
+      } finally {
+        if (controllersRef.current.get(id) === controller) {
+          controllersRef.current.delete(id);
+        }
       }
     },
-    [filters],
+    [],
   );
 
   const loadAll = useCallback(() => {
+    const generation = ++generationRef.current;
+    abortAll();
+    setData({});
     dispatch({ type: 'RESET_ALL' });
-    // Fire all widget fetches in parallel — each resolves/rejects independently
-    ALL_WIDGET_IDS.forEach((id) => loadWidget(id));
-  }, [loadWidget]);
+    ALL_WIDGET_IDS.forEach((id) => {
+      void loadWidget(id, generation);
+    });
+  }, [abortAll, loadWidget]);
 
   const retryWidget = useCallback(
     (id: WidgetId) => {
-      loadWidget(id);
+      void loadWidget(id, generationRef.current);
     },
     [loadWidget],
   );
 
-  const isInitialLoading = ALL_WIDGET_IDS.every(
-    (id) => widgets[id].status === 'idle' || widgets[id].status === 'loading',
+  // A filter change invalidates every in-flight response, even before the
+  // consumer's effect has started the next load.
+  useEffect(() => {
+    generationRef.current += 1;
+    abortAll();
+  }, [filtersKey, abortAll]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      generationRef.current += 1;
+      abortAll();
+    };
+  }, [abortAll]);
+
+  const isInitialLoading = useMemo(
+    () =>
+      ALL_WIDGET_IDS.every(
+        (id) => widgets[id].status === 'idle' || widgets[id].status === 'loading',
+      ),
+    [widgets],
   );
 
-  const failedWidgetIds = ALL_WIDGET_IDS.filter(
-    (id) => widgets[id].status === 'error',
+  const failedWidgetIds = useMemo(
+    () => ALL_WIDGET_IDS.filter((id) => widgets[id].status === 'error'),
+    [widgets],
   );
 
-  return { widgets, loadAll, retryWidget, isInitialLoading, failedWidgetIds };
+  return { widgets, data, loadAll, retryWidget, isInitialLoading, failedWidgetIds };
 }

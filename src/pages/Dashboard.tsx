@@ -26,8 +26,14 @@ export default function Dashboard() {
     resetFilters,
     saveView,
   } = useDashboardFilters(MOCK_PLAN_REVENUE);
-  const { widgets, loadAll, retryWidget, isInitialLoading, failedWidgetIds } =
-    useDashboardWidgets(filters);
+  const {
+    widgets,
+    data,
+    loadAll,
+    retryWidget,
+    isInitialLoading,
+    failedWidgetIds,
+  } = useDashboardWidgets(filters);
 
   // Reload widgets whenever the active filter values change.
   useEffect(() => {
@@ -132,6 +138,7 @@ export default function Dashboard() {
         widgets={widgets}
         retryWidget={retryWidget}
         filters={filters}
+        data={data}
       />
       </div>
 
