@@ -47,7 +47,15 @@ npm run dev        # http://localhost:5173
 
 ## Environment variables
 
-None are required to run the demo. The dev server proxies `/api` to `http://localhost:8080` (see `vite.config.ts`) for an optional Stellabill backend. Never commit `.env` files.
+Copy `.env.example` to `.env.local` to customize any variable. All variables are optional; the dev server proxies `/api` to `http://localhost:8080` (see `vite.config.ts`) for an optional Stellabill backend. Never commit `.env` or `.env.local` files.
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `VITE_STELLAR_NETWORK` | `Testnet` | Sets the expected Stellar network (`Testnet` or `Mainnet`; also accepts `mainnet`, `public`, `pubnet`, `livenet`) |
+| `VITE_USE_FIXTURES` | Unset (falsy) | When truthy (e.g. `true`), loads local fixture data on the Subscriptions page instead of fetching `/api/subscriptions` |
+| `VITE_SUPPORT_URL` | `https://github.com/Stellabill/stellabill-frontend/issues` | Overrides the external support URL |
+| `VITE_STELLAR_WALLETS_DOCS_URL` | `https://docs.stellar.org/wallets` | Overrides the Stellar wallets documentation URL |
+| `VITE_DOCS_URL` | `https://github.com/Stellabill/stellabill-frontend/tree/main/docs` | Overrides the project documentation URL |
 
 ## Deployment
 
