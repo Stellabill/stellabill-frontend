@@ -13,7 +13,7 @@ import DowngradeConfirmModal, { type PlanFeature } from '../components/Downgrade
 import TrialCountdownBanner from '../components/TrialCountdownBanner';
 import ProrationPreviewModal from '../components/common/ProrationPreviewModal';
 import ErrorState from '../components/ErrorState';
-import { subscriptions, type Payment } from '../api/client';
+import { subscriptions, type ApiError, type Payment } from '../api/client';
 import type { Subscription } from '../types/subscription';
 import styles from './SubscriptionDetail.module.css';
 
@@ -47,6 +47,10 @@ export default function SubscriptionDetail() {
     // ── Reactivation state ────────────────────────────────────────────────────
     const [isReactivationModalOpen, setIsReactivationModalOpen] = useState(false);
     const [isReactivating, setIsReactivating] = useState(false);
+    const [reactivationError, setReactivationError] = useState<{
+        message: string;
+        technicalDetails?: string;
+    } | null>(null);
 
     // ── Proration preview state ────────────────────────────────────────────────
     const [isProrationModalOpen, setIsProrationModalOpen] = useState(false);
@@ -79,16 +83,29 @@ export default function SubscriptionDetail() {
         navigate(`/subscriptions/${id}/usage`);
     };
 
-    // Reactivation handler — swap out the console.log for your API call
+    // Reactivation goes through the typed subscriptions client. Errors keep
+    // the modal open and are surfaced in an alert under the header.
     const handleReactivateConfirm = async (startDate: Date) => {
+        if (!id) return;
         setIsReactivating(true);
+        setReactivationError(null);
         try {
-            console.log('Reactivating subscription', id, 'with start date', startDate.toISOString());
-            // TODO: await api.subscriptions.reactivate(id, { startDate })
-            await new Promise(resolve => setTimeout(resolve, 1200));
+            const result = await subscriptions.reactivate(id, {
+                startDate: startDate.toISOString(),
+            });
+            setSubscriptionData((prev) =>
+                prev ? { ...prev, status: result.status, cancelledAt: null } : prev,
+            );
             setIsReactivationModalOpen(false);
         } catch (err) {
-            console.error('Reactivation failed:', err);
+            const apiError = err as ApiError;
+            setReactivationError({
+                message:
+                    apiError instanceof Error && apiError.message
+                        ? apiError.message
+                        : 'Failed to reactivate subscription. Please try again.',
+                technicalDetails: apiError?.technicalDetails,
+            });
         } finally {
             setIsReactivating(false);
         }
@@ -346,6 +363,27 @@ export default function SubscriptionDetail() {
 
     return (
         <div className={styles.page}>
+
+            {reactivationError && (
+                <div
+                    role="alert"
+                    style={{
+                        marginBottom: '1.5rem',
+                        padding: '0.875rem 1rem',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(239,68,68,0.45)',
+                        background: 'rgba(239,68,68,0.08)',
+                        color: '#fca5a5',
+                    }}
+                >
+                    <strong>Reactivation failed:</strong> {reactivationError.message}
+                    {reactivationError.technicalDetails && (
+                        <div style={{ marginTop: '0.25rem', fontSize: '0.85rem', color: '#94a3b8' }}>
+                            {reactivationError.technicalDetails}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* ── Page header with optional Reactivate CTA ──────────────────── */}
             <div className={styles.headerSection}>
