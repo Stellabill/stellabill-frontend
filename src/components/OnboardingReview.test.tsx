@@ -53,9 +53,9 @@ describe('OnboardingReview', () => {
     seedValidOnboarding();
 
     // Force Intl.DisplayNames to throw
-    Intl.DisplayNames = vi.fn().mockImplementation(() => {
+    vi.spyOn(Intl, 'DisplayNames').mockImplementation(function () {
       throw new Error('Intl not supported');
-    }) as any;
+    });
 
     renderReview();
 
