@@ -209,7 +209,7 @@
 /* Relative delta: "+2 d", "now", "−3 h" */
 .rsv__delta {
   font-size: var(--text-xs, 0.75rem);
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted, #94a3b8);
   line-height: 1.2;
 }
 
@@ -282,7 +282,7 @@
 /* Probability label (visually hidden, accessible via aria-label) */
 .rsv__prob-label {
   font-size: 10px;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted, #94a3b8);
   line-height: 1;
 }
 
@@ -376,7 +376,7 @@
   gap: var(--space-1, 0.25rem);
   font-size: var(--text-xs, 0.75rem);
   font-weight: var(--font-medium, 500);
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted, #94a3b8);
   cursor: pointer;
   border-radius: 999px;
   padding: 2px var(--space-2, 0.5rem);

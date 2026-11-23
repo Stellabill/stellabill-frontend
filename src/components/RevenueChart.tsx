@@ -132,8 +132,18 @@ export default function RevenueChart({
     const startDate = data[0].date;
     const endDate = data[data.length - 1].date;
     const seriesNames = activeSeries.map(s => s.name).join(', ');
+    const values = activeSeries.flatMap(seriesItem =>
+      seriesItem.data.map(point => ({ ...point, seriesName: seriesItem.name })),
+    );
+    const highest = values.reduce((highestPoint, point) =>
+      point.revenue > highestPoint.revenue ? point : highestPoint,
+    );
+    const lowest = values.reduce((lowestPoint, point) =>
+      point.revenue < lowestPoint.revenue ? point : lowestPoint,
+    );
+    const average = values.reduce((total, point) => total + point.revenue, 0) / values.length;
     
-    return `Revenue chart summary from ${startDate} to ${endDate}: ${data.length} data points showing ${seriesNames}. Use Left and Right arrow keys to explore individual data points. Press Escape to dismiss tooltip.`;
+    return `Revenue chart summary from ${startDate} to ${endDate}: ${data.length} dates showing ${seriesNames}. Highest revenue is $${highest.revenue.toLocaleString()} for ${highest.seriesName} on ${highest.date}. Lowest revenue is $${lowest.revenue.toLocaleString()} for ${lowest.seriesName} on ${lowest.date}. Average revenue is $${Math.round(average).toLocaleString()}. Use arrow keys to explore individual data points. Press Escape to dismiss tooltip.`;
   }, [data, visibleSeries]);
   
   return (
@@ -440,6 +450,16 @@ export function LineChart({ data, series }: LineChartProps) {
   const visibleSeries = series.filter(s => s.visible);
   const allSeries = series;
 
+  // A series can be hidden from the legend while one of its points has focus.
+  // Clear that focus so the first remaining visible point becomes the roving tab stop.
+  useEffect(() => {
+    if (focusedPoint && !visibleSeries.some(s => s.id === focusedPoint.seriesId)) {
+      setFocusedPoint(null);
+      setHoveredPoint(null);
+      setAnnouncement('');
+    }
+  }, [focusedPoint, visibleSeries]);
+
   // Reset refs when data or series changes (track refs for ALL series)
   useEffect(() => {
     const newMap = new Map();
@@ -580,6 +600,8 @@ export function LineChart({ data, series }: LineChartProps) {
       case 'Escape':
         e.preventDefault();
         setFocusedPoint(null);
+        setHoveredPoint(null);
+        setAnnouncement('');
         pointRefs.current.get(seriesId)?.[pointIndex]?.blur();
         return;
       default:
@@ -800,6 +822,7 @@ export function LineChart({ data, series }: LineChartProps) {
                   onMouseEnter={isVisible ? () => setHoveredPoint({ seriesId: seriesItem.id, index: point.pointIndex }) : undefined}
                   onMouseLeave={isVisible ? () => setHoveredPoint(null) : undefined}
                   onFocus={isVisible ? () => setFocusedPoint({ seriesId: seriesItem.id, index: point.pointIndex }) : undefined}
+                  onBlur={isVisible ? () => setFocusedPoint(null) : undefined}
                   onKeyDown={isVisible ? (e) => handleKeyDown(e, seriesItem.id, point.pointIndex) : undefined}
                   role={isVisible ? 'button' : undefined}
                   tabIndex={isRovingTabTarget ? 0 : -1}
