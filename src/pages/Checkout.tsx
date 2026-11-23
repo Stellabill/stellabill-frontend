@@ -5,23 +5,12 @@ import { useWallet } from '../wallet/WalletContext';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { findCatalogPlan, type PlanInterval } from '../data/catalogPlans';
 import { addBillingInterval } from '../utils/billingDate';
+import styles from './Checkout.module.css';
 
 const INTERVAL_LABELS: Record<PlanInterval, string> = {
   Monthly: 'month',
   Yearly: 'year',
 };
-
-const cardStyle = {
-  maxWidth: 560,
-  margin: '0 auto',
-  padding: '2rem',
-  background: '#161B22',
-  borderRadius: 16,
-  border: '1px solid #30363D',
-  color: '#e2e8f0',
-} as const;
-
-const linkStyle = { color: '#4FD1C5' } as const;
 
 export default function Checkout() {
   usePageTitle('Checkout');
@@ -41,11 +30,11 @@ export default function Checkout() {
 
   if (!plan) {
     return (
-      <div style={{ padding: '2rem' }}>
-        <div style={cardStyle}>
-          <h1 style={{ marginTop: 0 }}>Plan not found</h1>
-          <p style={{ color: '#94a3b8' }}>The plan you are trying to subscribe to does not exist.</p>
-          <Link to="/browse-plans" style={linkStyle}>
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <h1 className={styles.title}>Plan not found</h1>
+          <p className={styles.mutedText}>The plan you are trying to subscribe to does not exist.</p>
+          <Link to="/browse-plans" className={styles.link}>
             Back to Browse Plans
           </Link>
         </div>
@@ -79,20 +68,20 @@ export default function Checkout() {
   };
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <div style={cardStyle}>
-        <h1 style={{ marginTop: 0 }}>Confirm subscription</h1>
-        <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem 1.5rem', margin: '0 0 1.5rem' }}>
-          <dt style={{ color: '#94a3b8' }}>Plan</dt>
-          <dd style={{ margin: 0 }}>
-            {plan.name} <span style={{ color: '#94a3b8' }}>by {plan.merchant}</span>
+    <div className={styles.page}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>Confirm subscription</h1>
+        <dl className={styles.detailsList}>
+          <dt className={styles.detailTerm}>Plan</dt>
+          <dd className={styles.detailValue}>
+            {plan.name} <span className={styles.mutedText}>by {plan.merchant}</span>
           </dd>
-          <dt style={{ color: '#94a3b8' }}>Price</dt>
-          <dd style={{ margin: 0 }}>
+          <dt className={styles.detailTerm}>Price</dt>
+          <dd className={styles.detailValue}>
             {plan.price} {plan.currency} per {INTERVAL_LABELS[plan.interval]}
           </dd>
-          <dt style={{ color: '#94a3b8' }}>First charge</dt>
-          <dd style={{ margin: 0 }}>{firstChargeDate ? firstChargeDate.toLocaleDateString() : '—'}</dd>
+          <dt className={styles.detailTerm}>First charge</dt>
+          <dd className={styles.detailValue}>{firstChargeDate ? firstChargeDate.toLocaleDateString() : '—'}</dd>
         </dl>
         <AmountInput
           label="Initial prepaid deposit"
@@ -104,28 +93,20 @@ export default function Checkout() {
           error={error ?? undefined}
         />
         {walletError && !isWalletConnected && (
-          <p role="alert" style={{ color: '#ef4444' }}>
+          <p role="alert" className={styles.errorAlert}>
             {walletError.message}
           </p>
         )}
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1.5rem' }}>
+        <div className={styles.actions}>
           <button
             type="button"
             onClick={handleConfirm}
             disabled={submitting || status === 'connecting'}
-            style={{
-              padding: '0.75rem 1.5rem',
-              borderRadius: 8,
-              border: 'none',
-              background: 'linear-gradient(135deg, #67d5f0, #5ce0b8)',
-              color: '#0f172a',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className={styles.confirmButton}
           >
             {!isWalletConnected ? 'Connect wallet' : submitting ? 'Confirming…' : 'Confirm subscription'}
           </button>
-          <Link to="/browse-plans" style={linkStyle}>
+          <Link to="/browse-plans" className={styles.link}>
             Cancel
           </Link>
         </div>
