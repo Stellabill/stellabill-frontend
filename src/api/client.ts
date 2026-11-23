@@ -287,3 +287,15 @@ export {
   extractCounterpartyAddress,
 } from './walletTransactions'
 
+export type GiftRedeemResult =
+  | { status: 'ok' }
+  | { status: 'already-redeemed' }
+  | { status: 'expired'; expiredOn?: string };
+
+export const gifts = {
+  redeem: (code: string) =>
+    api<GiftRedeemResult>('/gifts/redeem', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+};
