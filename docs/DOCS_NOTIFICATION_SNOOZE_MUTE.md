@@ -106,7 +106,9 @@ The live region uses `aria-atomic="true"` so the full sentence is read on every 
 
 ## State model
 
-State lives in `NotificationsCenter` as a `Map<string, NotificationSilenceState>`:
+Notification data and silence state are managed by the reducer in
+`src/components/notifications/store.ts`. The silence map is keyed by
+notification ID:
 
 ```ts
 // expiresAt = number  → snoozed until that Unix ms timestamp
