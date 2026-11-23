@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Filter, X, RotateCcw, Bookmark, Calendar, DollarSign, User, Check, ChevronDown } from 'lucide-react';
+import React from 'react';
+import { Filter, X, RotateCcw, User, Check, ChevronDown } from 'lucide-react';
 import Tag from './Tag';
-import {
-  WalletTransaction,
-  WalletTransactionFilterState,
-  TransactionType,
-  INITIAL_FILTER_STATE,
-  SavedFilter
-} from '../types/walletTransaction';
+import { WalletTransaction } from '../types/walletTransaction';
+import { TRANSACTION_TYPE_OPTIONS } from './walletTransactionFilterUtils';
+import { useWalletTransactionFilters } from './useWalletTransactionFilters';
+import { WalletTransactionRangeControls } from './WalletTransactionRangeControls';
+import { WalletTransactionSavedFilters } from './WalletTransactionSavedFilters';
 import './WalletTransactionFilterPanel.css';
 
 export interface WalletTransactionFilterPanelProps {
@@ -16,129 +14,30 @@ export interface WalletTransactionFilterPanelProps {
   className?: string;
 }
 
-const TRANSACTION_TYPE_OPTIONS: { type: TransactionType; label: string; color: 'blue' | 'green' | 'yellow' | 'purple' | 'red' }[] = [
-  { type: 'charge_succeeded', label: 'Charge Succeeded', color: 'blue' },
-  { type: 'new_subscription', label: 'New Subscription', color: 'green' },
-  { type: 'subscription_paused', label: 'Paused', color: 'yellow' },
-  { type: 'subscription_resumed', label: 'Resumed', color: 'purple' },
-  { type: 'subscription_cancelled', label: 'Cancelled', color: 'red' },
-];
-
 export const WalletTransactionFilterPanel: React.FC<WalletTransactionFilterPanelProps> = ({
   transactions,
   onFilteredTransactionsChange,
   className = '',
 }) => {
-  const [filters, setFilters] = useState<WalletTransactionFilterState>(INITIAL_FILTER_STATE);
-  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
-  const [saveFilterName, setSaveFilterName] = useState('');
-  const [isSavingFilter, setIsSavingFilter] = useState(false);
-  const [isPanelExpanded, setIsPanelExpanded] = useState(true);
-  const [announcement, setAnnouncement] = useState('');
-
-  // Apply filters to transactions
-  const filteredTransactions = React.useMemo(() => {
-    return transactions.filter((tx) => {
-      // Type filter
-      if (filters.types.length > 0 && !filters.types.includes(tx.type)) {
-        return false;
-      }
-
-      // Date range filter
-      if (filters.startDate) {
-        const txDate = new Date(tx.timestamp).getTime();
-        const startDate = new Date(filters.startDate).getTime();
-        if (!isNaN(startDate) && txDate < startDate) return false;
-      }
-      if (filters.endDate) {
-        const txDate = new Date(tx.timestamp).getTime();
-        // include the entire end date day by setting to end of day
-        const endDate = new Date(filters.endDate);
-        endDate.setHours(23, 59, 59, 999);
-        if (!isNaN(endDate.getTime()) && txDate > endDate.getTime()) return false;
-      }
-
-      // Amount range filter
-      if (filters.minAmount !== '' && !isNaN(Number(filters.minAmount))) {
-        if (tx.amount < Number(filters.minAmount)) return false;
-      }
-      if (filters.maxAmount !== '' && !isNaN(Number(filters.maxAmount))) {
-        if (tx.amount > Number(filters.maxAmount)) return false;
-      }
-
-      // Counterparty filter
-      if (filters.counterparty.trim() !== '') {
-        const query = filters.counterparty.trim().toLowerCase();
-        const matchCounterparty = tx.counterparty.toLowerCase().includes(query);
-        const matchDetails = tx.details.toLowerCase().includes(query);
-        if (!matchCounterparty && !matchDetails) return false;
-      }
-
-      return true;
-    });
-  }, [transactions, filters]);
-
-  // Calculate active filter count
-  const activeFilterCount =
-    filters.types.length +
-    (filters.startDate ? 1 : 0) +
-    (filters.endDate ? 1 : 0) +
-    (filters.minAmount ? 1 : 0) +
-    (filters.maxAmount ? 1 : 0) +
-    (filters.counterparty ? 1 : 0);
-
-  // Notify parent component and announce live region update
-  useEffect(() => {
-    onFilteredTransactionsChange?.(filteredTransactions);
-    const countMsg = `Filter updated: showing ${filteredTransactions.length} of ${transactions.length} transactions.`;
-    setAnnouncement(countMsg);
-  }, [filteredTransactions, transactions.length, onFilteredTransactionsChange]);
-
-  const handleTypeToggle = (type: TransactionType) => {
-    setFilters((prev) => {
-      const exists = prev.types.includes(type);
-      return {
-        ...prev,
-        types: exists ? prev.types.filter((t) => t !== type) : [...prev.types, type],
-      };
-    });
-  };
-
-  const handleClearAll = () => {
-    setFilters(INITIAL_FILTER_STATE);
-  };
-
-  const handleRemoveChip = (key: keyof WalletTransactionFilterState | 'type', value?: string) => {
-    if (key === 'type' && value) {
-      setFilters((prev) => ({
-        ...prev,
-        types: prev.types.filter((t) => t !== (value as TransactionType)),
-      }));
-    } else {
-      setFilters((prev) => ({
-        ...prev,
-        [key]: key === 'types' ? [] : '',
-      }));
-    }
-  };
-
-  const handleSaveFilterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!saveFilterName.trim()) return;
-
-    const newSavedFilter: SavedFilter = {
-      id: Date.now().toString(),
-      name: saveFilterName.trim(),
-      filter: { ...filters },
-    };
-    setSavedFilters((prev) => [...prev, newSavedFilter]);
-    setSaveFilterName('');
-    setIsSavingFilter(false);
-  };
-
-  const handleApplySavedFilter = (saved: SavedFilter) => {
-    setFilters(saved.filter);
-  };
+  const {
+    filters,
+    setFilters,
+    savedFilters,
+    saveFilterName,
+    setSaveFilterName,
+    isSavingFilter,
+    setIsSavingFilter,
+    isPanelExpanded,
+    setIsPanelExpanded,
+    announcement,
+    filteredTransactions,
+    activeFilterCount,
+    handleTypeToggle,
+    handleClearAll,
+    handleRemoveChip,
+    handleSaveFilterSubmit,
+    handleApplySavedFilter,
+  } = useWalletTransactionFilters({ transactions, onFilteredTransactionsChange });
 
   return (
     <section className={`wallet-filter-panel ${className}`} aria-labelledby="wallet-filter-heading">
@@ -276,72 +175,16 @@ export const WalletTransactionFilterPanel: React.FC<WalletTransactionFilterPanel
             </div>
           </div>
 
-          {/* Date Range & Amount Range Grid */}
-          <div className="wallet-filter-panel__grid">
-            {/* Date Range */}
-            <div className="wallet-filter-panel__group">
-              <label className="wallet-filter-panel__group-label" htmlFor="tx-filter-start-date">
-                <Calendar size={14} className="wallet-filter-panel__inline-icon" aria-hidden="true" />
-                Date Range
-              </label>
-              <div className="wallet-filter-panel__range-inputs">
-                <input
-                  id="tx-filter-start-date"
-                  type="date"
-                  className="wallet-filter-panel__input"
-                  value={filters.startDate}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, startDate: e.target.value }))}
-                  aria-label="Start date"
-                />
-                <span className="wallet-filter-panel__range-separator" aria-hidden="true">
-                  to
-                </span>
-                <input
-                  id="tx-filter-end-date"
-                  type="date"
-                  className="wallet-filter-panel__input"
-                  value={filters.endDate}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, endDate: e.target.value }))}
-                  aria-label="End date"
-                />
-              </div>
-            </div>
-
-            {/* Amount Range */}
-            <div className="wallet-filter-panel__group">
-              <label className="wallet-filter-panel__group-label" htmlFor="tx-filter-min-amount">
-                <DollarSign size={14} className="wallet-filter-panel__inline-icon" aria-hidden="true" />
-                Amount Range (XLM)
-              </label>
-              <div className="wallet-filter-panel__range-inputs">
-                <input
-                  id="tx-filter-min-amount"
-                  type="number"
-                  placeholder="Min"
-                  min="0"
-                  step="any"
-                  className="wallet-filter-panel__input"
-                  value={filters.minAmount}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, minAmount: e.target.value }))}
-                  aria-label="Minimum amount"
-                />
-                <span className="wallet-filter-panel__range-separator" aria-hidden="true">
-                  to
-                </span>
-                <input
-                  id="tx-filter-max-amount"
-                  type="number"
-                  placeholder="Max"
-                  min="0"
-                  step="any"
-                  className="wallet-filter-panel__input"
-                  value={filters.maxAmount}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, maxAmount: e.target.value }))}
-                  aria-label="Maximum amount"
-                />
-              </div>
-            </div>
-          </div>
+          <WalletTransactionRangeControls
+            startDate={filters.startDate}
+            endDate={filters.endDate}
+            minAmount={filters.minAmount}
+            maxAmount={filters.maxAmount}
+            onStartDateChange={(startDate) => setFilters((prev) => ({ ...prev, startDate }))}
+            onEndDateChange={(endDate) => setFilters((prev) => ({ ...prev, endDate }))}
+            onMinAmountChange={(minAmount) => setFilters((prev) => ({ ...prev, minAmount }))}
+            onMaxAmountChange={(maxAmount) => setFilters((prev) => ({ ...prev, maxAmount }))}
+          />
 
           {/* Counterparty / Address Filter */}
           <div className="wallet-filter-panel__group">
@@ -371,62 +214,17 @@ export const WalletTransactionFilterPanel: React.FC<WalletTransactionFilterPanel
             </div>
           </div>
 
-          {/* Bottom Actions Bar: Save Filter & Saved Filter List */}
-          <div className="wallet-filter-panel__bottom-bar">
-            {!isSavingFilter ? (
-              <button
-                type="button"
-                className="wallet-filter-panel__save-trigger"
-                onClick={() => setIsSavingFilter(true)}
-                disabled={activeFilterCount === 0}
-                title={activeFilterCount === 0 ? 'Apply filters to save' : 'Save current filter preset'}
-              >
-                <Bookmark size={14} />
-                <span>Save Current Filter Preset</span>
-              </button>
-            ) : (
-              <form className="wallet-filter-panel__save-form" onSubmit={handleSaveFilterSubmit}>
-                <input
-                  type="text"
-                  placeholder="Preset name (e.g. High Value)"
-                  className="wallet-filter-panel__input wallet-filter-panel__save-input"
-                  value={saveFilterName}
-                  onChange={(e) => setSaveFilterName(e.target.value)}
-                  autoFocus
-                  required
-                />
-                <button type="submit" className="wallet-filter-panel__btn-primary">
-                  Save
-                </button>
-                <button
-                  type="button"
-                  className="wallet-filter-panel__btn-secondary"
-                  onClick={() => setIsSavingFilter(false)}
-                >
-                  Cancel
-                </button>
-              </form>
-            )}
-
-            {savedFilters.length > 0 && (
-              <div className="wallet-filter-panel__saved-presets">
-                <span className="wallet-filter-panel__presets-label">Presets:</span>
-                <div className="wallet-filter-panel__presets-list">
-                  {savedFilters.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      className="wallet-filter-panel__preset-btn"
-                      onClick={() => handleApplySavedFilter(preset)}
-                      aria-label={`Apply preset filter: ${preset.name}`}
-                    >
-                      {preset.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <WalletTransactionSavedFilters
+            isSavingFilter={isSavingFilter}
+            saveFilterName={saveFilterName}
+            activeFilterCount={activeFilterCount}
+            savedFilters={savedFilters}
+            onStartSaving={() => setIsSavingFilter(true)}
+            onCancelSaving={() => setIsSavingFilter(false)}
+            onSaveFilterNameChange={setSaveFilterName}
+            onSaveFilterSubmit={handleSaveFilterSubmit}
+            onApplySavedFilter={handleApplySavedFilter}
+          />
         </div>
       )}
 
