@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePageTitle } from "../hooks/usePageTitle";
 import type { ApiError } from "../api/client";
@@ -8,6 +8,8 @@ import { FreighterConnectionError } from "../wallet/freighter";
 import ErrorState from "../components/ErrorState";
 import SortBySelect from "../components/SortBySelect";
 import GiftPurchaseModal, { type Plan as GiftPlan } from "../components/GiftPurchaseModal";
+import { ToastContainer, type ToastOptions } from "../components/TransactionToast";
+import { copyToClipboard } from "../utils/clipboard";
 import { addBillingInterval } from "../utils/billingDate";
 import { catalogPlans as mockPlans, type Plan, type PlanInterval } from "../data/catalogPlans";
 
@@ -305,6 +307,12 @@ export default function BrowsePlans() {
 	const [walletModalOpen, setWalletModalOpen] = useState(false);
 	const [giftModalOpen, setGiftModalOpen] = useState(false);
 	const [selectedPlanForGift, setSelectedPlanForGift] = useState<Plan | null>(null);
+	const [toasts, setToasts] = useState<ToastOptions[]>([]);
+	const toastId = useRef(0);
+
+	const removeToast = useCallback((id: string) => {
+		setToasts((prev) => prev.filter((toast) => toast.id !== id));
+	}, []);
 	const {
 		status,
 		error: walletError,
@@ -397,8 +405,29 @@ export default function BrowsePlans() {
 	};
 
 	const handleGiftPurchaseComplete = (giftCode: string) => {
-		console.log("Gift purchased with code:", giftCode);
-		// Could show a toast notification here
+		toastId.current += 1;
+		const id = `gift-${toastId.current}`;
+		setToasts((prev) => [
+			...prev,
+			{
+				id,
+				status: "success",
+				title: "Gift created",
+				message: "Your gift subscription is ready to share.",
+				actionText: "Copy Code",
+				onAction: () => {
+					void copyToClipboard(giftCode).then((copied) => {
+						if (copied) {
+							setToasts((current) =>
+								current.map((t) =>
+									t.id === id ? { ...t, actionText: "Copied!" } : t,
+								),
+							);
+						}
+					});
+				},
+			},
+		]);
 	};
 
 	const handleWalletConnect = async () => {
@@ -662,6 +691,7 @@ export default function BrowsePlans() {
 					plan={selectedPlanForGift}
 					onPurchaseComplete={handleGiftPurchaseComplete}
 				/>
+				<ToastContainer toasts={toasts} removeToast={removeToast} />
 			</div>
 		</div>
 	);
