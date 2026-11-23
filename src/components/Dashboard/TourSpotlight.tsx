@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useProductTour, TourStepInfo } from "./ProductTourProvider";
 import styles from "./ProductTour.module.css";
-import { X } from "lucide-react";
 
 interface TourSpotlightProps {
   step: TourStepInfo;

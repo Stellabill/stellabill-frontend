@@ -50,7 +50,7 @@ export default function Plans() {
             Continue where you left off
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {drafts.map((draft, index) => (
+            {drafts.map((draft) => (
               <div
                 key={draft.id}
                 style={{

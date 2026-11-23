@@ -7,7 +7,7 @@ import { useWallet } from "../wallet/WalletContext";
 import { FreighterConnectionError } from "../wallet/freighter";
 import ErrorState from "../components/ErrorState";
 import SortBySelect from "../components/SortBySelect";
-import GiftPurchaseModal, { type Plan as GiftPlan } from "../components/GiftPurchaseModal";
+import GiftPurchaseModal from "../components/GiftPurchaseModal";
 import { addBillingInterval } from "../utils/billingDate";
 import { catalogPlans as mockPlans, type Plan, type PlanInterval } from "../data/catalogPlans";
 

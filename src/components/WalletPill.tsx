@@ -24,10 +24,18 @@ const WalletPill: React.FC<WalletPillProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
+  const resolvedExpectedNetwork = expectedNetwork
+    ? normalizeNetwork(expectedNetwork)
+    : getExpectedNetwork();
+  const resolvedWalletNetwork = network
+    ? normalizeNetwork(network)
+    : resolvedExpectedNetwork;
+  const hasMismatch = isNetworkMismatch(resolvedWalletNetwork, resolvedExpectedNetwork);
+
   // Truncate address: GABC...XYZ9
-  const truncatedAddress = currentAddress.length > 10 
-    ? `${currentAddress.slice(0, 4)}...${currentAddress.slice(-4)}`
-    : currentAddress;
+  const truncatedAddress = address.length > 10 
+    ? `${address.slice(0, 4)}...${address.slice(-4)}`
+    : address;
 
   return (
     <div className="relative inline-block">
@@ -71,10 +79,12 @@ const WalletPill: React.FC<WalletPillProps> = ({
 
       <WalletDropdown 
         isOpen={isOpen} 
-        address={currentAddress} 
+        address={address} 
         onClose={() => setIsOpen(false)} 
         onDisconnect={onDisconnect}
         triggerRef={triggerRef}
+        network={network}
+        expectedNetwork={expectedNetwork}
       />
     </div>
   );

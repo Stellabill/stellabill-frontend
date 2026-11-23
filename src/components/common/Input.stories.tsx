@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Input } from './Input';
-import { Mail, Search, DollarSign, Lock } from 'lucide-react';
+import { Search, DollarSign, Lock } from 'lucide-react';
 
 const meta: Meta<typeof Input> = {
   title: 'Components/Common/Input',

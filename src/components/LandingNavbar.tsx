@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId, RefObject } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 import WalletPill from './WalletPill'
 import WalletConnectModal from './WalletConnectModal'
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -7,13 +7,19 @@ import LocaleSwitcher from './LocaleSwitcher';
 import { Menu, X, Github, Rocket, Zap, BookOpen, MessageSquare, ChevronRight } from 'lucide-react';
 import { useWallet } from '../wallet/WalletContext';
 import { FreighterConnectionError } from '../wallet/freighter';
+import type { UseWalletConnectionOptions } from '../hooks/useWalletConnection';
 
 export interface LandingNavbarProps extends UseWalletConnectionOptions {}
 
-export default function LandingNavbar(props: LandingNavbarProps = {}) {
+export default function LandingNavbar(_props: LandingNavbarProps = {}) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
+  const toggleButtonRef = useRef<HTMLButtonElement>(null)
+  const drawerRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const drawerId = useId()
+  const closeDrawer = () => setIsMobileMenuOpen(false)
   const {
     status,
     address,
@@ -171,7 +177,7 @@ export default function LandingNavbar(props: LandingNavbarProps = {}) {
               className={`site-navbar__mobile-drawer fixed inset-y-0 right-0 w-full max-w-xs z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
                   isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
               }`}
-              inert={isMobileMenuOpen ? undefined : ''}
+              {...(!isMobileMenuOpen ? ({ inert: '' } as Record<string, string>) : {})}
               aria-hidden={!isMobileMenuOpen}
           >
             <div className="flex flex-col h-full">

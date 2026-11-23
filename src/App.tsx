@@ -27,7 +27,6 @@ const DesignTokens = lazy(() => import("./pages/DesignTokens"));
 const WalletDetailView = lazy(() => import("./pages/WalletDetailView"));
 
 const ONBOARDING_BUSINESS_KEY = "onboardingBusiness";
-const ONBOARDING_PAYOUT_KEY = "onboardingPayout";
 
 function hasStoredBusiness(): boolean {
   if (typeof window === "undefined") return false;

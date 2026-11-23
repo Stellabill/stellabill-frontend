@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import "./ReceiptPrint.css";
 import { useScopedTheme } from "../../hooks/useScopedTheme";
 

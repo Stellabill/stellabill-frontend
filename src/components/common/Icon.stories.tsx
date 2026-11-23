@@ -22,6 +22,9 @@ const icons = [
 ];
 
 export const RTLMirrorAudit: Story = {
+  args: {
+    src: arrow,
+  },
   render: () => (
     <div>
         <h2>LTR Direction (Default)</h2>

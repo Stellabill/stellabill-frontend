@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Copy, ExternalLink, LogOut, Check, CreditCard } from 'lucide-react';
+import { Copy, ExternalLink, LogOut, Check, CreditCard, AlertTriangle, Clock } from 'lucide-react';
+import {
+  explorerAccountUrl,
+  getExpectedNetwork,
+  isNetworkMismatch,
+  normalizeNetwork,
+  type StellarNetwork,
+} from '../config/network';
 
 interface WalletDropdownProps {
   isOpen: boolean;
@@ -10,6 +17,8 @@ interface WalletDropdownProps {
   onOpenHistory?: () => void;
   triggerRef?: React.RefObject<HTMLButtonElement | null>;
   id?: string;
+  network?: StellarNetwork | 'testnet' | 'mainnet' | 'public' | (string & {});
+  expectedNetwork?: StellarNetwork | 'testnet' | 'mainnet' | 'public' | (string & {});
 }
 
 const WalletDropdown: React.FC<WalletDropdownProps> = ({
@@ -17,11 +26,14 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
   address,
   onClose,
   onDisconnect,
+  onSwitchWallet,
   onOpenHistory,
   triggerRef,
   id = 'wallet-dropdown',
+  network,
+  expectedNetwork,
 }) => {
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const menuRef = useRef<HTMLDivElement>(null);
 
   const getMenuItems = useCallback((): HTMLElement[] => {
@@ -77,10 +89,19 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
     : resolvedExpectedNetwork;
   const hasMismatch = isNetworkMismatch(resolvedWalletNetwork, resolvedExpectedNetwork);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('error');
+    }
+    setTimeout(() => setCopyStatus('idle'), 2000);
+  };
+
+  const handleSwitchWallet = () => {
+    onClose();
+    onSwitchWallet?.();
   };
 
   const handleDisconnect = () => {

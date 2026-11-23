@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     PlusCircle,
     PlayCircle,
@@ -248,7 +248,7 @@ function isEventVisible(event: TimelineEvent, filter: string) {
 }
 
 export default function PlanStatusTimeline({
-    subscriptionId,
+    subscriptionId: _subscriptionId,
     events = MOCK_EVENTS
 }: PlanStatusTimelineProps) {
     const [filter, setFilter] = useState('All');

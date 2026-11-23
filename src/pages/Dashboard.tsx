@@ -499,7 +499,6 @@ export default function Dashboard() {
           trend="down"
           icon={<AlertCircle size={20} />}
           helpText={t('dashboard.kpis.failedChargesHelp')}
-          helpTermId="dunning"
           loading={w.kpi_failed_charges.status === 'loading'}
           error={kpiError('kpi_failed_charges')}
           isOfflineError={kpiOffline('kpi_failed_charges')}

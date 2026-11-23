@@ -19,6 +19,7 @@ export interface Subscription {
   amount?: number;
   billingDay?: number;
   usageBased?: boolean;
+  prepaidBalance?: number;
   usage?: {
     billingPeriod: string;
     usage: string;

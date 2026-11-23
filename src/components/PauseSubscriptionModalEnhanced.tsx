@@ -24,7 +24,7 @@ export default function PauseSubscriptionModalEnhanced({
   currentNextChargeDate = 'April 15, 2026',
   estimatedNextCharge = '50',
   currency = 'USDC',
-  subscriptionId
+  subscriptionId: _subscriptionId
 }: PauseSubscriptionModalEnhancedProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const initialFocusRef = useRef<HTMLButtonElement>(null);

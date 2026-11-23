@@ -6,6 +6,10 @@ import { openExternal } from '../utils/openExternal';
 import { SUPPORT_URL } from '../config/links';
 import './Onboarding/OnboardingShell.css';
 
+function isValidPayoutAddress(address: string | null): address is string {
+  return typeof address === 'string' && address.trim().length > 0;
+}
+
 export default function OnboardingReview() {
   const navigate = useNavigate();
   const [businessName, setBusinessName] = useState('');

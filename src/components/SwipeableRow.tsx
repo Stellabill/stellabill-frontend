@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from "react";
-import { motion, useMotionValue, useTransform, animate, useReducedMotion } from "framer-motion";
+import { motion, useMotionValue, animate, useReducedMotion } from "framer-motion";
 import "./SwipeableRow.css";
 
 export interface SwipeAction {
@@ -39,7 +39,7 @@ export default function SwipeableRow({
 	const leftBound = trailingActions.length > 0 ? -trailingWidth : 0;
 	const rightBound = leadingActions.length > 0 ? leadingWidth : 0;
 
-	const handleDragEnd = (event: any, info: any) => {
+	const handleDragEnd = (_event: any, info: any) => {
 		const currentX = x.get();
 		const velocity = info.velocity.x;
 

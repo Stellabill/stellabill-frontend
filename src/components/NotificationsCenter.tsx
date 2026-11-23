@@ -578,7 +578,7 @@ export default function NotificationsCenter({
       else groups.set(key, [item]);
     }
 
-    const groupRows: NotificationDigestRow[] = Array.from(groups.entries())
+    const groupRows = Array.from(groups.entries())
       .map(([key, bucket]) => {
         // Sorted newest first (by rank, falling back to stable insertion order)
         const ordered = [...bucket].sort((a, b) => {
@@ -614,7 +614,7 @@ export default function NotificationsCenter({
         return bTop - aTop;
       });
 
-    const singletonRows: NotificationDigestRow[] = singletons
+    const singletonRows = singletons
       .sort((a, b) => {
         const aRank = a.timestampRank ?? Number.MIN_SAFE_INTEGER;
         const bRank = b.timestampRank ?? Number.MIN_SAFE_INTEGER;
@@ -641,16 +641,6 @@ export default function NotificationsCenter({
     while (si < singletonRows.length) merged.push(singletonRows[si++]);
     return merged;
   };
-
-  const activeDigestRows = useMemo(
-    () => buildDigestRows(activeNotifications),
-    [activeNotifications],
-  );
-
-  const mutedDigestRows = useMemo(
-    () => buildDigestRows([...mutedNotifications, ...snoozedNotifications]),
-    [mutedNotifications, snoozedNotifications],
-  );
 
   const toggleDigestExpanded = (key: string) => {
     setDigestExpanded((prev) => {
@@ -697,6 +687,16 @@ export default function NotificationsCenter({
     () => notifications.filter((n) => isSnoozed(n.id)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [notifications, silenceMap, now],
+  );
+
+  const activeDigestRows = useMemo(
+    () => buildDigestRows(activeNotifications),
+    [activeNotifications],
+  );
+
+  const mutedDigestRows = useMemo(
+    () => buildDigestRows([...mutedNotifications, ...snoozedNotifications]),
+    [mutedNotifications, snoozedNotifications],
   );
 
   const unreadCount = useMemo(

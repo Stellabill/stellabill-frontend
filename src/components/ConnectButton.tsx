@@ -12,11 +12,13 @@ export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'err
 interface ConnectButtonProps {
   onConnect?: (address: string) => void;
   onDisconnect?: () => void;
+  onOpenHistory?: () => void;
 }
 
 const ConnectButton: React.FC<ConnectButtonProps> = ({
   onConnect,
   onDisconnect,
+  onOpenHistory,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -59,7 +61,7 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
   const handleDisconnect = () => {
     disconnectWallet();
     setIsDropdownOpen(false);
-    setConnectionErrorType(undefined);
+    clearError();
     onDisconnect?.();
   };
 
@@ -68,19 +70,18 @@ const ConnectButton: React.FC<ConnectButtonProps> = ({
     setIsModalOpen(true);
   };
 
+  const handleSwitchWallet = () => {
+    setIsDropdownOpen(false);
+    clearError();
+    setIsModalOpen(true);
+  };
+
   const handleOpenHistory = () => {
     if (onOpenHistory) {
       onOpenHistory();
-    } else if (navigationContext?.navigator) {
-      navigationContext.navigator.push('/wallet');
     } else {
       window.location.assign('/wallet');
     }
-  };
-
-  const handleRetry = () => {
-    clearError();
-    setIsModalOpen(true);
   };
 
   const truncatedAddress = walletAddress 

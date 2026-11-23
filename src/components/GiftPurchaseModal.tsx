@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, type ChangeEvent } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useModalFocus } from "../hooks/useModalFocus";
 import { X, Gift, ArrowRight, ArrowLeft, Check, Copy, Share2, Mail, MessageSquare, Link as LinkIcon, Loader2 } from "lucide-react";
 import { copyToClipboard } from "../utils/clipboard";
@@ -237,7 +237,7 @@ export default function GiftPurchaseModal({
 
         {/* Step Indicator */}
         <div className="gift-steps" role="tablist" aria-label="Gift purchase steps">
-          <div className={`gift-step ${step === "details" ? "active" : step !== "details" ? "complete" : ""}`}>
+          <div className={`gift-step ${step === "details" ? "active" : "complete"}`}>
             <span className="gift-step-number">1</span>
             <span className="gift-step-label">Gift Details</span>
           </div>

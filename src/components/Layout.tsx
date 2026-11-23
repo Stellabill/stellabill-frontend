@@ -1,21 +1,10 @@
 import { useEffect, useMemo, useState, useRef, createContext, useContext, useCallback } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { CircleHelp, Sparkles } from "lucide-react";
-import LandingNavbar from "./LandingNavbar";
-import CommandPalette, { CommandItem } from "./CommandPalette";
-import KeyboardShortcutsOverlay from "./KeyboardShortcutsOverlay";
-import KeyboardChordIndicator from "./KeyboardChordIndicator";
-import HelpSidebar from "./help/HelpSidebar";
-import ChangelogPanel from "./changelog/ChangelogPanel";
-import FocusOrderVisualizer from "./FocusOrderVisualizer";
+import { Sparkles } from "lucide-react";
+import { type CommandItem } from "./CommandPalette";
 import RouteErrorBoundary from "./RouteErrorBoundary";
 import { LayoutContextType } from "../hooks/useCommandScope";
 import "../styles/sidebar.css";
-
-const RECENT_COMMANDS_KEY = "sb:recent-commands";
-const RECENT_COMMANDS_LIMIT = 5;
-const PINNED_COMMANDS_KEY = "sb:pinned-commands";
-const PINNED_COMMANDS_LIMIT = 5;
 
 // ------------------------------------------------------------------------------
 // Unsaved-changes guard context
@@ -50,38 +39,6 @@ export function useUnsavedChangesGuard(): UnsavedChangesContextType {
     };
   }
   return ctx;
-}
-
-function readRecentCommands(): string[] {
-  try {
-    const raw = localStorage.getItem(RECENT_COMMANDS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function readPinnedCommands(): string[] {
-  try {
-    const raw = localStorage.getItem(PINNED_COMMANDS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function persistPinnedCommands(ids: string[]) {
-  try {
-    if (ids.length === 0) {
-      localStorage.removeItem(PINNED_COMMANDS_KEY);
-    } else {
-      localStorage.setItem(PINNED_COMMANDS_KEY, JSON.stringify(ids));
-    }
-  } catch {
-    // storage unavailable — keep pins in memory only
-  }
 }
 
 const mainNav = [
@@ -163,17 +120,9 @@ const devNav = [
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
-  const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
-  const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
-  const [isQAOverlayOpen, setIsQAOverlayOpen] = useState(false);
-  const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
-  const [pinnedIds, setPinnedIds] = useState<string[]>(() => readPinnedCommands());
-  const [scopeName, setScopeName] = useState<string | null>(null);
-  const [scopedItems, setScopedItems] = useState<CommandItem[]>([]);
-  const [paletteMode, setPaletteMode] = useState<'global' | 'scoped'>('global');
-  const [showScopeToast, setShowScopeToast] = useState(false);
+  const [, setScopeName] = useState<string | null>(null);
+  const [, setScopedItems] = useState<CommandItem[]>([]);
+  const [, setPaletteMode] = useState<'global' | 'scoped'>('global');
 
   // Unsaved-changes guard registry. A single page at a time can own the guard.
   const guardRef = useRef<UnsavedChangesGuard | null>(null);
@@ -215,74 +164,11 @@ export default function Layout() {
     registerScope, clearScope
   }), [registerScope, clearScope]);
 
-  const [pendingChordKey, setPendingChordKey] = useState<string | null>(null);
+  const [, setPendingChordKey] = useState<string | null>(null);
   const pendingChordKeyRef = useRef<string | null>(null);
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
-
-  // Catalog of every page and action the palette can surface.
-  const catalog = useMemo<CommandItem[]>(() => {
-    const pages: CommandItem[] = [
-      { id: "page-dashboard", label: "Dashboard", group: "Pages", keywords: "home overview", perform: () => guardedNavigate("/dashboard") },
-      { id: "page-subscriptions", label: "Subscriptions", group: "Pages", keywords: "subscribers customers", perform: () => guardedNavigate("/subscriptions") },
-      { id: "page-plans", label: "Plans", group: "Pages", keywords: "pricing billing", perform: () => guardedNavigate("/plans") },
-      { id: "page-browse-plans", label: "Browse Plans", group: "Pages", keywords: "catalog explore", perform: () => guardedNavigate("/browse-plans") },
-      { id: "page-settings", label: "Settings", group: "Pages", keywords: "preferences account", perform: () => guardedNavigate("/settings") },
-      { id: "page-brand", label: "Brand", group: "Pages", keywords: "design tokens", perform: () => guardedNavigate("/brand") },
-      { id: "page-design-tokens", label: "Design Tokens", group: "Pages", keywords: "css variables colors spacing typography motion", perform: () => guardedNavigate("/design-tokens") },
-    ];
-    const actions: CommandItem[] = [
-      { id: "action-create-plan", label: "Create plan", group: "Actions", hint: "Start a new billing plan", keywords: "add new plan", perform: () => guardedNavigate("/plans/create") },
-      { id: "action-refund", label: "Issue refund", group: "Actions", hint: "Refund a subscription payment", keywords: "money back return reverse", perform: () => guardedNavigate("/subscriptions") },
-      { id: "action-pause", label: "Pause subscription", group: "Actions", hint: "Temporarily stop billing", keywords: "hold suspend freeze", perform: () => guardedNavigate("/subscriptions") },
-      { id: "action-tour", label: "Start product tour", group: "Actions", hint: "Take a guided tour of the dashboard", keywords: "help guide tutorial onboarding walkthrough", perform: () => {
-        // Trigger tour restart by clearing localStorage and reloading
-        localStorage.removeItem('sb:tour-completed');
-        localStorage.removeItem('sb:tour-dismissed');
-        window.location.reload();
-      }},
-    ];
-    return [...pages, ...actions];
-  }, [guardedNavigate]);
-
-  const handleCommandSelect = (item: CommandItem) => {
-    const baseId = item.id.replace(/^recent-/, "");
-    setRecentIds((prev) => {
-      const next = [baseId, ...prev.filter((id) => id !== baseId)].slice(0, RECENT_COMMANDS_LIMIT);
-      try {
-        localStorage.setItem(RECENT_COMMANDS_KEY, JSON.stringify(next));
-      } catch {
-        /* storage unavailable — keep recents in memory only */
-      }
-      return next;
-    });
-  };
-
-  const handleTogglePin = (itemId: string) => {
-    setPinnedIds((prev) => {
-      const isPinned = prev.includes(itemId);
-      const next = isPinned ? prev.filter((id) => id !== itemId) : [itemId, ...prev].slice(0, PINNED_COMMANDS_LIMIT);
-      persistPinnedCommands(next);
-      return next;
-    });
-  };
-
-  // Build palette items: each command appears once — in Pinned if pinned,
-  // in Recent if recently used, or in its original group otherwise.
-  const paletteItems = useMemo<CommandItem[]>(() => {
-    const pinned = pinnedIds
-      .map((id) => catalog.find((item) => item.id === id))
-      .filter((item): item is CommandItem => Boolean(item))
-      .map((item) => ({ ...item, group: "Pinned" as const }));
-    const recent = recentIds
-      .map((id) => catalog.find((item) => item.id === id))
-      .filter((item): item is CommandItem => Boolean(item))
-      .filter((item) => !pinnedIds.includes(item.id))
-      .map((item) => ({ ...item, id: `recent-${item.id}`, group: "Recent" as const }));
-    const unpinnedNonRecent = catalog.filter((item) => !pinnedIds.includes(item.id));
-    return [...pinned, ...unpinnedNonRecent, ...recent];
-  }, [catalog, recentIds, pinnedIds]);
 
   // Global keyboard shortcuts
   useEffect(() => {

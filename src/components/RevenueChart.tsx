@@ -600,8 +600,8 @@ export function LineChart({ data, series }: LineChartProps) {
     if (!activePoint || !data[activePoint.index]) return null;
     
     const seriesItem = seriesPoints.find(s => s.id === activePoint.seriesId);
-    const point = seriesItem?.points.find(p => p.pointIndex === activePoint.index);
-    if (!point) return null;
+    const point = seriesItem?.points.find(p => p && p.pointIndex === activePoint.index);
+    if (!seriesItem || !point) return null;
     
     const tooltipWidth = 140;
     const tooltipHeight = 70;
@@ -723,9 +723,10 @@ export function LineChart({ data, series }: LineChartProps) {
         
         {/* Lines for each series */}
         {seriesPoints.map(seriesItem => {
-          if (seriesItem.points.length <= 1) return null;
+          const validPoints = seriesItem.points.filter((p): p is NonNullable<typeof p> => p !== null);
+          if (validPoints.length <= 1) return null;
           
-          const pathData = seriesItem.points.map((p, i) => 
+          const pathData = validPoints.map((p, i) => 
             `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
           ).join(' ');
           
@@ -758,6 +759,7 @@ export function LineChart({ data, series }: LineChartProps) {
         {/* Data points for each series (hidden series are non-interactive with pattern fill) */}
         {seriesPoints.map(seriesItem =>
           seriesItem.points.map((point, i) => {
+            if (!point) return null;
             const isVisible = seriesItem.visible;
             const isActivePoint = isVisible && activePoint?.seriesId === seriesItem.id && activePoint?.index === point.pointIndex;
             const isFocusedPoint = isVisible && focusedPoint?.seriesId === seriesItem.id && focusedPoint?.index === point.pointIndex;
