@@ -1,8 +1,14 @@
-﻿import React, { useCallback, useRef, useState } from "react";
+﻿import React, { useCallback, useEffect, useRef, useState } from "react";
 import "./FileUpload.css";
 
 export type FileUploadVariant = "logo" | "csv" | "avatar";
 export type FileUploadState = "idle" | "dragover" | "uploading" | "success" | "error";
+
+export type FileUploadUploader = (
+  file: File,
+  onProgress: (progress: number) => void,
+  signal: AbortSignal
+) => Promise<void>;
 
 export interface CsvRow {
   [key: string]: string;
@@ -11,9 +17,45 @@ export interface CsvRow {
 export interface FileUploadProps {
   variant?: FileUploadVariant;
   onFileSelect?: (file: File) => void | Promise<void>;
+  uploader?: FileUploadUploader;
   maxSizeBytes?: number;
   className?: string;
 }
+
+/**
+ * Simulated uploader for Storybook stories only.
+ */
+export const simulatedUploader: FileUploadUploader = (
+  _file,
+  onProgress,
+  signal
+) =>
+  new Promise<void>((resolve, reject) => {
+    let current = 0;
+    const interval = setInterval(() => {
+      if (signal.aborted) {
+        clearInterval(interval);
+        reject(new DOMException("Upload aborted", "AbortError"));
+        return;
+      }
+      current = Math.min(90, current + 10);
+      onProgress(current);
+      if (current >= 90) {
+        clearInterval(interval);
+        onProgress(100);
+        resolve();
+      }
+    }, 80);
+
+    signal.addEventListener(
+      "abort",
+      () => {
+        clearInterval(interval);
+        reject(new DOMException("Upload aborted", "AbortError"));
+      },
+      { once: true }
+    );
+  });
 
 const ACCEPT_MAP: Record<FileUploadVariant, string> = {
   logo: "image/png,image/jpeg,image/svg+xml,image/webp",
@@ -42,6 +84,7 @@ function parseCsvPreview(text: string): { headers: string[]; rows: string[][] } 
 export const FileUpload: React.FC<FileUploadProps> = ({
   variant = "csv",
   onFileSelect,
+  uploader,
   maxSizeBytes = 10 * 1024 * 1024,
   className = "",
 }) => {
@@ -52,9 +95,18 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   const [csvPreview, setCsvPreview] = useState<{ headers: string[]; rows: string[][] } | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const accept = ACCEPT_MAP[variant];
 
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   const reset = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     setUploadState("idle");
     setProgress(0);
     setErrorMessage(null);
@@ -87,17 +139,14 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         return;
       }
 
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       setSelectedFileName(file.name);
       setUploadState("uploading");
       setProgress(0);
-
-      // Simulate progress
-      const interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 90) { clearInterval(interval); return 90; }
-          return prev + 10;
-        });
-      }, 80);
+      setErrorMessage(null);
 
       try {
         // CSV preview
@@ -112,18 +161,33 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           setPreviewUrl(url);
         }
 
+        if (uploader) {
+          const handleProgress = (value: number) => {
+            if (controller.signal.aborted) return;
+            setProgress(Math.min(100, Math.max(0, value)));
+          };
+          await uploader(file, handleProgress, controller.signal);
+        }
+
         if (onFileSelect) await onFileSelect(file);
 
-        clearInterval(interval);
+        if (controller.signal.aborted) return;
+        abortControllerRef.current = null;
         setProgress(100);
         setUploadState("success");
-      } catch {
-        clearInterval(interval);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        abortControllerRef.current = null;
+        setProgress(0);
         setUploadState("error");
-        setErrorMessage("Upload failed due to a network error. Please try again.");
+        setErrorMessage(
+          err instanceof Error && err.message
+            ? err.message
+            : "Upload failed due to a network error. Please try again."
+        );
       }
     },
-    [accept, maxSizeBytes, onFileSelect, variant]
+    [accept, maxSizeBytes, onFileSelect, uploader, variant]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -230,6 +294,20 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           </div>
         )}
       </div>
+
+      {uploadState === "uploading" && (
+        <div className="fu-uploading-actions">
+          <button
+            type="button"
+            className="fu-cancel-btn"
+            onClick={reset}
+            aria-label="Cancel upload"
+            data-testid="file-upload-cancel"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Status live region */}
       <div

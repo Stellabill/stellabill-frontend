@@ -7,13 +7,11 @@ import user from "./assets/Icon (4).svg";
 import RevenueSplitByPlanPanel from "./Dashboard/RevenueSplitByPlanPanel";
 import type { PlanRevenueSlice } from "./Dashboard/revenueSplitUtils";
 
-const MOCK_PLAN_REVENUE: PlanRevenueSlice[] = [
-  { planId: "basic", planName: "Basic", revenue: 320, previousRevenue: 290 },
-  { planId: "pro", planName: "Pro", revenue: 720, previousRevenue: 680 },
-  { planId: "enterprise", planName: "Enterprise", revenue: 200, previousRevenue: 150 },
-];
+export interface MerchantDashboardProps {
+  plans?: PlanRevenueSlice[];
+}
 
-export default function MerchantDashboard() {
+export default function MerchantDashboard({ plans = [] }: MerchantDashboardProps) {
   return (
     <>
       <section className="dashboard">
@@ -71,7 +69,7 @@ export default function MerchantDashboard() {
 
       <div className="merchant-revenue-split">
         <RevenueSplitByPlanPanel
-          plans={MOCK_PLAN_REVENUE}
+          plans={plans}
           periodLabel="this month"
           previousPeriodLabel="vs last month"
         />
