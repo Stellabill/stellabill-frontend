@@ -366,7 +366,7 @@ const typeColors: Record<StatementEntryType, string> = {
 };
 
 /** Format a number as a signed currency string. */
-export function fmtSigned(value: number, currency: string): string {
+function fmtSigned(value: number, currency: string): string {
   const abs = Math.abs(value).toFixed(2);
   if (value === 0) return `0.00 ${currency}`;
   if (value < 0) return `-${abs} ${currency}`;

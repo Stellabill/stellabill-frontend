@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
-import UsageBilling, { fmtSigned, type UsageData } from './UsageBilling';
+import UsageBilling, { type UsageData } from './UsageBilling';
 
 vi.mock('../hooks/usePageTitle', () => ({
   usePageTitle: vi.fn(),
@@ -103,16 +103,12 @@ describe('UsageBilling', () => {
     expect(dataRows()[0]).toHaveTextContent('2026-04-15');
   });
 
-  it('formats zero and negative amounts for the currency', () => {
-    render(
-      <>
-        <span>{fmtSigned(0, 'USDC')}</span>
-        <span>{fmtSigned(-15.2, 'USDC')}</span>
-      </>,
-    );
+  it('renders zero and negative amounts with the currency', () => {
+    renderPage();
 
-    expect(screen.getByText('0.00 USDC')).toBeInTheDocument();
-    expect(screen.getByText('-15.20 USDC')).toBeInTheDocument();
+    const statement = screen.getByRole('region', { name: 'Statement entries' });
+    expect(within(statement).getAllByText('0.00 USDC').length).toBeGreaterThan(0);
+    expect(within(statement).getByText('-15.20 USDC')).toBeInTheDocument();
   });
 
   it('links back to the subscription detail route', () => {
