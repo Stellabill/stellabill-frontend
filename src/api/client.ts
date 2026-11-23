@@ -268,3 +268,12 @@ export const onboarding = {
   submit: (payload: OnboardingSubmission) =>
     api<void>('/onboarding', { method: 'POST', body: JSON.stringify(payload) }),
 }
+export {
+  walletTransactions,
+  WALLET_TRANSACTION_FIXTURES,
+  DEFAULT_WALLET_TRANSACTIONS_LIMIT,
+  filterWalletTransactions,
+  paginateWalletTransactions,
+  extractCounterpartyAddress,
+} from './walletTransactions'
+
