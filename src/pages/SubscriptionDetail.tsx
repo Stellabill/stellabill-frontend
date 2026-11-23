@@ -1,7 +1,8 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useCommandScope } from '../hooks/useCommandScope';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useSubscriptionActions } from '../hooks/useSubscriptionActions';
 import type { CommandItem } from '../components/CommandPalette';
 import RecentPayments from '../components/RecentPayments';
 import UsageThisPeriod from '../components/UsageThisPeriod';
@@ -13,6 +14,7 @@ import DowngradeConfirmModal, { type PlanFeature } from '../components/Downgrade
 import TrialCountdownBanner from '../components/TrialCountdownBanner';
 import ProrationPreviewModal from '../components/common/ProrationPreviewModal';
 import ErrorState from '../components/ErrorState';
+import { ToastContainer } from '../components/TransactionToast';
 import { subscriptions } from '../api/client';
 import type { Subscription } from '../types/subscription';
 
@@ -28,6 +30,7 @@ const REACTIVATION_WINDOW_DAYS = 30;
 export default function SubscriptionDetail() {
     usePageTitle('Subscription Details');
     const { id } = useParams();
+    const navigate = useNavigate();
 
     // ── Subscription fetch state ──────────────────────────────────────────────
     const [subscriptionData, setSubscriptionData] = useState<Subscription | null>(null);
@@ -40,14 +43,24 @@ export default function SubscriptionDetail() {
 
     // ── Reactivation state ────────────────────────────────────────────────────
     const [isReactivationModalOpen, setIsReactivationModalOpen] = useState(false);
-    const [isReactivating, setIsReactivating] = useState(false);
 
     // ── Proration preview state ────────────────────────────────────────────────
     const [isProrationModalOpen, setIsProrationModalOpen] = useState(false);
 
     // ── Downgrade state ───────────────────────────────────────────────────────
     const [isDowngradeModalOpen, setIsDowngradeModalOpen] = useState(false);
-    const [isDowngrading, setIsDowngrading] = useState(false);
+
+    const {
+        pendingAction,
+        isPending,
+        toasts,
+        removeToast,
+        downgrade,
+        reactivate,
+    } = useSubscriptionActions();
+
+    const isReactivating = pendingAction === 'reactivate';
+    const isDowngrading = pendingAction === 'downgrade';
 
     const downgradeLostFeatures: PlanFeature[] = [
         { id: 'api-calls',   label: 'Unlimited API calls (limited to 10k/mo on Basic)' },
@@ -57,35 +70,64 @@ export default function SubscriptionDetail() {
     ];
 
     const handleDowngradeConfirm = async () => {
-        setIsDowngrading(true);
-        try {
-            console.log('Downgrading subscription', id, 'to Basic plan');
-            await new Promise(resolve => setTimeout(resolve, 1200));
-            setIsDowngradeModalOpen(false);
-        } catch (err) {
-            console.error('Downgrade failed:', err);
-        } finally {
-            setIsDowngrading(false);
-        }
+        if (!id) return;
+        const previousSnapshot = subscriptionData;
+        await downgrade(
+            id,
+            { planName: 'Basic' },
+            {
+                onOptimistic: () => {
+                    setSubscriptionData((prev) =>
+                        prev
+                            ? {
+                                  ...prev,
+                                  planName: 'Basic',
+                                  price: 20,
+                                  amount: 20,
+                              }
+                            : prev,
+                    );
+                },
+                onRollback: () => {
+                    setSubscriptionData(previousSnapshot);
+                },
+                onSuccess: () => {
+                    setIsDowngradeModalOpen(false);
+                },
+            },
+        );
     };
 
-    const handleViewFullUsage = () => {
-        navigate(`/subscriptions/${id}/usage`);
-    };
+    const handleViewFullUsage = useCallback(() => {
+        navigate('/subscriptions/' + String(id) + '/usage');
+    }, [navigate, id]);
 
-    // Reactivation handler — swap out the console.log for your API call
     const handleReactivateConfirm = async (startDate: Date) => {
-        setIsReactivating(true);
-        try {
-            console.log('Reactivating subscription', id, 'with start date', startDate.toISOString());
-            // TODO: await api.subscriptions.reactivate(id, { startDate })
-            await new Promise(resolve => setTimeout(resolve, 1200));
-            setIsReactivationModalOpen(false);
-        } catch (err) {
-            console.error('Reactivation failed:', err);
-        } finally {
-            setIsReactivating(false);
-        }
+        if (!id) return;
+        const previousSnapshot = subscriptionData;
+        await reactivate(
+            id,
+            { startDate: startDate.toISOString() },
+            {
+                onOptimistic: () => {
+                    setSubscriptionData((prev) =>
+                        prev
+                            ? {
+                                  ...prev,
+                                  status: 'Active',
+                                  cancelledAt: null,
+                              }
+                            : prev,
+                    );
+                },
+                onRollback: () => {
+                    setSubscriptionData(previousSnapshot);
+                },
+                onSuccess: () => {
+                    setIsReactivationModalOpen(false);
+                },
+            },
+        );
     };
 
     const intervalOptions: { label: string; value: BillingInterval }[] = [
@@ -95,8 +137,6 @@ export default function SubscriptionDetail() {
         { label: 'Quarterly', value: 'quarterly' },
         { label: 'Yearly', value: 'yearly' },
     ];
-
-    const navigate = useNavigate();
 
     // ── Fetch subscription on mount / id change ───────────────────────────────
     useEffect(() => {
@@ -235,7 +275,7 @@ export default function SubscriptionDetail() {
         });
 
         return actions;
-    }, [showReactivateCTA, subscriptionStatus, navigate]);
+    }, [showReactivateCTA, subscriptionStatus, navigate, handleViewFullUsage]);
     
     useCommandScope(`Subscription ${id || 'Detail'}`, scopedActions);
 
@@ -359,6 +399,7 @@ export default function SubscriptionDetail() {
                     {showReactivateCTA && (
                         <button
                             onClick={() => setIsReactivationModalOpen(true)}
+                            disabled={isPending}
                             style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -370,7 +411,8 @@ export default function SubscriptionDetail() {
                                 color: '#00ccff',
                                 fontWeight: 700,
                                 fontSize: '0.9rem',
-                                cursor: 'pointer',
+                                cursor: isPending ? 'not-allowed' : 'pointer',
+                                opacity: isPending ? 0.6 : 1,
                                 transition: 'all 0.15s ease',
                                 flexShrink: 0,
                             }}
@@ -399,6 +441,7 @@ export default function SubscriptionDetail() {
                     {subscriptionStatus === 'active' && (
                         <button
                             onClick={() => setIsDowngradeModalOpen(true)}
+                            disabled={isPending}
                             style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -410,7 +453,8 @@ export default function SubscriptionDetail() {
                                 color: '#f59e0b',
                                 fontWeight: 700,
                                 fontSize: '0.9rem',
-                                cursor: 'pointer',
+                                cursor: isPending ? 'not-allowed' : 'pointer',
+                                opacity: isPending ? 0.6 : 1,
                                 transition: 'all 0.15s ease',
                                 flexShrink: 0,
                             }}
@@ -438,6 +482,7 @@ export default function SubscriptionDetail() {
                     {subscriptionStatus === 'active' && (
                         <button
                             onClick={() => setIsProrationModalOpen(true)}
+                            disabled={isPending}
                             style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -449,7 +494,8 @@ export default function SubscriptionDetail() {
                                 color: '#22d3ee',
                                 fontWeight: 700,
                                 fontSize: '0.9rem',
-                                cursor: 'pointer',
+                                cursor: isPending ? 'not-allowed' : 'pointer',
+                                opacity: isPending ? 0.6 : 1,
                                 transition: 'all 0.15s ease',
                                 flexShrink: 0,
                             }}
@@ -632,6 +678,8 @@ export default function SubscriptionDetail() {
                 comparePlansHref="/plans"
                 isLoading={isDowngrading}
             />
+
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
         </div>
     );
 }

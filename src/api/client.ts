@@ -146,64 +146,55 @@ export async function api<T>(path: string, options?: ApiRequestOptions): Promise
   }
 }
 
+export interface ReactivateSubscriptionPayload {
+  startDate: string;
+}
+
+export interface DowngradeSubscriptionPayload {
+  planName?: string;
+}
+
+function simulateAction(): Promise<{ success: boolean }> {
+  return new Promise((resolve, reject) => {
+    if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
+      setTimeout(() => {
+        const error: ApiError = new Error('Action Failed');
+        error.status = 400;
+        error.technicalDetails = 'The subscription is already in the requested state or pending a transaction.';
+        reject(error);
+      }, 800);
+      return;
+    }
+
+    setTimeout(() => resolve({ success: true }), 800);
+  });
+}
+
 export const subscriptions = {
   list: () => api<{ subscriptions: Subscription[] }>('/subscriptions'),
   get: (id: string, options?: ApiRequestOptions) =>
-    api<Subscription>(`/subscriptions/${encodeURIComponent(id)}`, options),
+    api<Subscription>('/subscriptions/' + encodeURIComponent(id), options),
   pause: (id: string) => {
-    // Simulating API call for development/demonstration
-    return new Promise((resolve, reject) => {
-      console.log(`Simulating pause for subscription: ${id}`);
-      
-      // Allow simulation of action failure via query param
-      if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
-        setTimeout(() => {
-          const error: ApiError = new Error('Action Failed');
-          error.status = 400;
-          error.technicalDetails = 'The subscription is already in the requested state or pending a transaction.';
-          reject(error);
-        }, 800);
-        return;
-      }
-
-      setTimeout(() => resolve({ success: true }), 800);
-    });
+    void id;
+    return simulateAction();
   },
   cancel: (id: string) => {
-    // Simulating API call for development/demonstration
-    return new Promise((resolve, reject) => {
-      console.log(`Simulating cancel for subscription: ${id}`);
-
-      if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
-        setTimeout(() => {
-          const error: ApiError = new Error('Action Failed');
-          error.status = 400;
-          error.technicalDetails = 'The subscription is already in the requested state or pending a transaction.';
-          reject(error);
-        }, 1000);
-        return;
-      }
-
-      setTimeout(() => resolve({ success: true }), 1000);
-    });
+    void id;
+    return simulateAction();
   },
   resume: (id: string) => {
-    // Simulating API call for development/demonstration
-    return new Promise((resolve, reject) => {
-      console.log(`Simulating resume for subscription: ${id}`);
-
-      if (typeof window !== 'undefined' && window.location.search.includes('fail_action')) {
-        setTimeout(() => {
-          const error: ApiError = new Error('Action Failed');
-          error.status = 400;
-          error.technicalDetails = 'The subscription is already in the requested state or pending a transaction.';
-          reject(error);
-        }, 800);
-        return;
-      }
-
-      setTimeout(() => resolve({ success: true }), 800);
-    });
+    void id;
+    return simulateAction();
+  },
+  reactivate: (id: string, payload?: ReactivateSubscriptionPayload) => {
+    void id;
+    void payload;
+    return simulateAction();
+  },
+  downgrade: (id: string, payload?: DowngradeSubscriptionPayload) => {
+    void id;
+    void payload;
+    return simulateAction();
   },
 }
 

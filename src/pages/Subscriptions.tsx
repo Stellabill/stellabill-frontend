@@ -1,7 +1,7 @@
-import SwipeableRow from "../components/SwipeableRow";
+import SwipeableRow, { type SwipeAction } from "../components/SwipeableRow";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PauseSubscriptionModal from "../components/PauseSubscriptionModal";
 import CancelSubscriptionModal from "../components/CancelSubscriptionModal";
 import TopUpModal from "../components/TopUpModal";
@@ -13,7 +13,8 @@ import ErrorState from "../components/ErrorState";
 import Tag from "../components/Tag";
 import AddTagPopover, { TagOption } from "../components/AddTagPopover";
 import { usePageTitle } from '../hooks/usePageTitle';
-import { ToastContainer, type ToastOptions } from "../components/TransactionToast";
+import { ToastContainer } from "../components/TransactionToast";
+import { useSubscriptionActions, type SubscriptionActionError } from "../hooks/useSubscriptionActions";
 import { useRefresh } from "../hooks/useRefresh";
 import { useFlip } from "../hooks/useFlip";
 import { useTags } from "../hooks/useTags";
@@ -38,19 +39,11 @@ interface SortState {
 	direction: SortDirection;
 }
 
-interface SubscriptionActionError {
-	message: string;
-	technicalDetails?: string;
-}
-
-function getActionError(error: unknown, fallbackMessage: string): SubscriptionActionError {
-	if (!(error instanceof Error)) return { message: fallbackMessage };
-
-	const technicalDetails =
-		"technicalDetails" in error && typeof error.technicalDetails === "string"
-			? error.technicalDetails
-			: undefined;
-	return { message: error.message || fallbackMessage, technicalDetails };
+function normalizeStatus(status: string): StatusType {
+	const lower = status.toLowerCase();
+	if (lower === "paused") return "Paused";
+	if (lower === "cancelled") return "Cancelled";
+	return "Active";
 }
 
 /* ─── Sort helpers ───────────────────────────────────────────── */
@@ -378,6 +371,7 @@ const FIXTURE_DATA: SubscriptionWithIcon[] = [
 export default function Subscriptions() {
   usePageTitle('Subscriptions');
 	const { t } = useTranslation();
+	const navigate = useNavigate();
 	const [data, setData] = useState<SubscriptionWithIcon[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<ApiError | null>(null);
@@ -388,29 +382,21 @@ export default function Subscriptions() {
 	const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
 	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 	const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
-	const [isActionLoading, setIsActionLoading] = useState(false);
 	const [pauseError, setPauseError] = useState<SubscriptionActionError | null>(null);
 	const [cancelError, setCancelError] = useState<SubscriptionActionError | null>(null);
-	const [resumeLoadingId, setResumeLoadingId] = useState<string | null>(null);
-	const [toasts, setToasts] = useState<ToastOptions[]>([]);
-	const toastId = useRef(0);
 
-	const addToast = (status: ToastOptions["status"], title: string, message?: string) => {
-		toastId.current += 1;
-		const id = `subscription-${toastId.current}`;
-		setToasts((prev) => [...prev, { id, status, title, message }]);
-		return id;
-	};
+	const {
+		pendingAction,
+		pendingId,
+		isPending: isActionLoading,
+		toasts,
+		removeToast,
+		pause,
+		cancel,
+		resume,
+	} = useSubscriptionActions();
 
-	const updateToast = (id: string, status: ToastOptions["status"], title: string, message?: string) => {
-		setToasts((prev) =>
-			prev.map((toast) => toast.id === id ? { ...toast, status, title, message } : toast),
-		);
-	};
-
-	const removeToast = (id: string) => {
-		setToasts((prev) => prev.filter((toast) => toast.id !== id));
-	};
+	const resumeLoadingId = pendingAction === "resume" ? pendingId : null;
 
 	const handleSortField = useCallback((field: SortField) => {
 		setSort((prev) =>
@@ -427,6 +413,7 @@ export default function Subscriptions() {
 		const payments = sub.price > 0 ? Math.floor(balance / sub.price) : 0;
 		return {
 			...sub,
+			status: normalizeStatus(sub.status),
 			icon: <IconCloud />,
 			prepaidBalance: balance,
 			coverage: payments === 1 ? "~1 payment" : `~${payments} payments`,
@@ -516,9 +503,10 @@ export default function Subscriptions() {
 		[selectedId],
 	);
 
-	const handleViewFullUsage = () => {
-		/* TODO: Navigate to full usage page */
-	};
+	const handleViewFullUsage = useCallback(() => {
+		if (!selectedId) return;
+		navigate('/subscriptions/' + selectedId + '/usage');
+	}, [navigate, selectedId]);
 
 	const filteredData = useMemo(() => {
 		const filtered = activeFilter === "All" ? data : data.filter((sub) => sub.status === activeFilter);
@@ -590,44 +578,64 @@ export default function Subscriptions() {
 
 	const handlePauseConfirm = async () => {
 		if (!selectedId) return;
-		setIsActionLoading(true);
+		const targetId = selectedId;
+		const prevSub = data.find((s) => s.id === targetId);
+		const prevStatus = prevSub?.status ?? "Active";
 		setPauseError(null);
-		try {
-			await subscriptions.pause(selectedId);
-			setData((prev) =>
-				prev.map((sub) =>
-					sub.id === selectedId ? { ...sub, status: "Paused" as const } : sub,
-				),
-			);
-			addToast("success", "Subscription paused", "Your subscription has been paused.");
-			setIsPauseModalOpen(false);
-		} catch (err) {
-			setPauseError(getActionError(err, "Failed to pause subscription. Please try again."));
-		} finally {
-			setIsActionLoading(false);
-		}
+		await pause(targetId, {
+			onOptimistic: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === targetId ? { ...sub, status: "Paused" as const } : sub,
+					),
+				);
+			},
+			onRollback: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === targetId ? { ...sub, status: prevStatus } : sub,
+					),
+				);
+			},
+			onSuccess: () => {
+				setIsPauseModalOpen(false);
+			},
+			onError: (err) => {
+				setPauseError(err);
+			},
+		});
 	};
 
 	const handleCancelConfirm = async () => {
 		if (!selectedId) return;
-		setIsActionLoading(true);
+		const targetId = selectedId;
+		const prevSub = data.find((s) => s.id === targetId);
+		const prevStatus = prevSub?.status ?? "Active";
 		setCancelError(null);
-		try {
-			await subscriptions.cancel(selectedId);
-			setData((prev) =>
-				prev.map((sub) =>
-					sub.id === selectedId
-						? { ...sub, status: "Cancelled" as const }
-						: sub,
-				),
-			);
-			addToast("success", "Subscription cancelled", "Your subscription has been cancelled.");
-			setIsCancelModalOpen(false);
-		} catch (err) {
-			setCancelError(getActionError(err, "Failed to cancel subscription. Please try again."));
-		} finally {
-			setIsActionLoading(false);
-		}
+		await cancel(targetId, {
+			onOptimistic: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === targetId
+							? { ...sub, status: "Cancelled" as const }
+							: sub,
+					),
+				);
+			},
+			onRollback: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === targetId ? { ...sub, status: prevStatus } : sub,
+					),
+				);
+			},
+			onSuccess: () => {
+				setIsCancelModalOpen(false);
+			},
+			onError: (err) => {
+				setCancelError(err);
+			},
+		});
 	};
 
 	const handleOfferSelected = (offerId: string) => {
@@ -643,23 +651,25 @@ export default function Subscriptions() {
 	};
 
 	const handleResume = async (id: string) => {
-		if (resumeLoadingId !== null) return;
-		setResumeLoadingId(id);
-		const pendingToastId = addToast("pending", "Resuming subscription", "Please wait while we resume your subscription.");
-		try {
-			await subscriptions.resume(id);
-			setData((prev) =>
-				prev.map((sub) =>
-					sub.id === id ? { ...sub, status: "Active" as const } : sub,
-				),
-			);
-			updateToast(pendingToastId, "success", "Subscription resumed", "Your subscription is active again.");
-		} catch (err) {
-			const actionError = getActionError(err, "Failed to resume subscription. Please try again.");
-			updateToast(pendingToastId, "error", actionError.message, actionError.technicalDetails);
-		} finally {
-			setResumeLoadingId(null);
-		}
+		if (isActionLoading) return;
+		const prevSub = data.find((s) => s.id === id);
+		const prevStatus = prevSub?.status ?? "Paused";
+		await resume(id, {
+			onOptimistic: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === id ? { ...sub, status: "Active" as const } : sub,
+					),
+				);
+			},
+			onRollback: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === id ? { ...sub, status: prevStatus } : sub,
+					),
+				);
+			},
+		});
 	};
 
 	/* ── Loading state ─────────────────────────────────────────── */
@@ -809,9 +819,10 @@ export default function Subscriptions() {
 						<div className="detail-actions-sidebar">
 							<h4>Actions</h4>
 							<div className="action-btn-stack">
-								{selectedSub.status === "Active" && (
+								{selectedSub.status === "Active" && resumeLoadingId !== selectedSub.id && (
 									<button
 										className="detail-action-btn detail-action-btn--pause"
+										disabled={isActionLoading}
 										onClick={() => {
 											setPauseError(null);
 											setIsPauseModalOpen(true);
@@ -820,11 +831,11 @@ export default function Subscriptions() {
 										Pause subscription
 									</button>
 								)}
-								{selectedSub.status === "Paused" && (
+								{(selectedSub.status === "Paused" || resumeLoadingId === selectedSub.id) && (
 									<button
 										className="detail-action-btn detail-action-btn--resume"
 										onClick={() => handleResume(selectedSub.id)}
-										disabled={resumeLoadingId !== null}
+										disabled={isActionLoading}
 										aria-label={`Resume ${selectedSub.planName} subscription`}>
 										{resumeLoadingId === selectedSub.id ? "Resuming..." : "Resume subscription"}
 									</button>
@@ -832,6 +843,7 @@ export default function Subscriptions() {
 								{selectedSub.status !== "Cancelled" && (
 									<button
 										className="detail-action-btn"
+										disabled={isActionLoading}
 										onClick={() => {
 											setCancelError(null);
 											setIsCancelModalOpen(true);
@@ -1134,29 +1146,31 @@ export default function Subscriptions() {
 							style={{ transform: `translateY(${pullDistance}px)` }}
 						>
 						{filteredData.map((sub) => {
-							const leadingActions: any[] = [];
-							const trailingActions: any[] = [];
+							const leadingActions: SwipeAction[] = [];
+							const trailingActions: SwipeAction[] = [];
 
-							if (sub.status === "Active") {
+							if (sub.status === "Active" && resumeLoadingId !== sub.id) {
 								trailingActions.push({
 									id: "pause",
 									label: "Pause",
 									icon: <IconPause />,
 									backgroundColor: "#f59e0b", // amber-500
 									color: "#fff",
+									disabled: isActionLoading,
 									onClick: () => {
 										setSelectedId(sub.id);
 										setPauseError(null);
 										setIsPauseModalOpen(true);
 									}
 								});
-							} else if (sub.status === "Paused") {
+							} else if (sub.status === "Paused" || resumeLoadingId === sub.id) {
 								trailingActions.push({
 									id: "resume",
 									label: resumeLoadingId === sub.id ? "Resuming..." : "Resume",
 									icon: <IconPlay />,
 									backgroundColor: "#10b981", // emerald-500
 									color: "#fff",
+									disabled: isActionLoading,
 									onClick: () => handleResume(sub.id)
 								});
 							}
@@ -1168,6 +1182,7 @@ export default function Subscriptions() {
 									icon: <IconX />,
 									backgroundColor: "#ef4444", // red-500
 									color: "#fff",
+									disabled: isActionLoading,
 									onClick: () => {
 										setSelectedId(sub.id);
 										setCancelError(null);
@@ -1183,6 +1198,12 @@ export default function Subscriptions() {
 									tabIndex={-1}
 									role="button"
 									aria-label={`${sub.planName} – ${sub.status}. Tap to manage.`}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" || e.key === " ") {
+											e.preventDefault();
+											setSelectedId(sub.id);
+										}
+									}}
 									onClick={() => setSelectedId(sub.id)}>
 									<div className="subs-card__top">
 										<div className="subs-card__plan-info">
