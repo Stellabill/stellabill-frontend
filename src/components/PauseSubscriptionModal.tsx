@@ -1,5 +1,5 @@
-import { useRef, MouseEvent, useState } from 'react';
-import { useModalFocus } from '../hooks/useModalFocus';
+import { useRef, useState } from 'react';
+import Modal from './common/Modal';
 import DatePickerCalendar from './DatePickerCalendar';
 import PauseSchedulePreview from './PauseSchedulePreview';
 import { addBillingInterval } from '../utils/billingDate';
@@ -29,14 +29,9 @@ export default function PauseSubscriptionModal({
     estimatedNextCharge = '50',
     currency = 'USDC',
 }: PauseSubscriptionModalProps) {
-    const modalRef = useRef<HTMLDivElement>(null);
     const initialFocusRef = useRef<HTMLButtonElement>(null);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [activeTab, setActiveTab] = useState<'simple' | 'scheduled'>('simple');
-
-    useModalFocus(modalRef, { isOpen, onClose, initialFocusRef, closeOnEscape: !isLoading });
-
-    if (!isOpen) return null;
 
     const presets = [
         {
@@ -122,16 +117,18 @@ export default function PauseSubscriptionModal({
             : 'Pause subscription';
 
     return (
-        <div
-            className="pause-modal-overlay"
-            onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && !isLoading && onClose()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="pause-modal-title"
-            aria-describedby="pause-modal-description"
-            aria-busy={isLoading}
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            unstyled
+            labelledBy="pause-modal-title"
+            describedBy="pause-modal-description"
+            initialFocusRef={initialFocusRef}
+            closeOnBackdrop={!isLoading}
+            closeOnEscape={!isLoading}
+            busy={isLoading}
+            contentClassName={`pause-modal-content${showSchedule ? ' pause-modal-enhanced' : ''}`}
         >
-            <div className={`pause-modal-content${showSchedule ? ' pause-modal-enhanced' : ''}`} ref={modalRef}>
                 <button
                     className="pause-close-btn"
                     onClick={onClose}
@@ -268,7 +265,6 @@ export default function PauseSubscriptionModal({
                         </p>
                     </div>
                 )}
-            </div>
-        </div>
+        </Modal>
     );
 }
