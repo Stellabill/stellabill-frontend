@@ -188,7 +188,7 @@ export default function GiftRedeemSuccess() {
         </section>
 
         <div className="gift-success-actions">
-          <Link to="/plans/new" className="gift-btn-primary">
+          <Link to="/plans/create" className="gift-btn-primary">
             <svg
               width="20"
               height="20"

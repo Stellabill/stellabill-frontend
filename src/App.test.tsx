@@ -14,7 +14,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import App from './App';
 
@@ -107,6 +107,23 @@ describe('App – redirects', () => {
   it('redirects "/onboarding" to "/onboarding/business"', () => {
     renderAt('/onboarding');
     expect(screen.getByTestId('page-onboarding-business')).toBeInTheDocument();
+  });
+
+  it('redirects "/plans/new" to "/plans/create"', async () => {
+    function LocationDisplay() {
+      const location = useLocation();
+      return <div data-testid="location-pathname">{location.pathname}</div>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/plans/new']}>
+        <App />
+        <LocationDisplay />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('page-create-plan')).toBeInTheDocument();
+    expect(screen.getByTestId('location-pathname')).toHaveTextContent('/plans/create');
   });
 
   it('redirects an unknown path to "/dashboard"', () => {
