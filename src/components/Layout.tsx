@@ -124,6 +124,17 @@ const mainNav = [
     ),
   },
   {
+    path: "/wallet",
+    label: "Wallet",
+    icon: (
+      <svg className="sb-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" />
+        <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
+        <path d="M18 12a2 2 0 0 0 0 4h4v-4z" />
+      </svg>
+    ),
+  },
+  {
     path: "/settings",
     label: "Settings",
     icon: (
@@ -183,7 +194,10 @@ export default function Layout() {
 
   const requestNavigation = useCallback(async (to: string): Promise<boolean> => {
     const guard = guardRef.current;
-    if (!guard || !guard.isDirty()) return true;
+    if (!guard || !guard.isDirty()) {
+      navigate(to);
+      return true;
+    }
     const confirmed = await guard.confirmLeave();
     if (confirmed) {
       // Page confirmed leaving; navigate now that the guard is cleared.
@@ -228,6 +242,7 @@ export default function Layout() {
       { id: "page-subscriptions", label: "Subscriptions", group: "Pages", keywords: "subscribers customers", perform: () => guardedNavigate("/subscriptions") },
       { id: "page-plans", label: "Plans", group: "Pages", keywords: "pricing billing", perform: () => guardedNavigate("/plans") },
       { id: "page-browse-plans", label: "Browse Plans", group: "Pages", keywords: "catalog explore", perform: () => guardedNavigate("/browse-plans") },
+      { id: "page-wallet", label: "Wallet", group: "Pages", keywords: "transactions history stellar", perform: () => guardedNavigate("/wallet") },
       { id: "page-settings", label: "Settings", group: "Pages", keywords: "preferences account", perform: () => guardedNavigate("/settings") },
       { id: "page-brand", label: "Brand", group: "Pages", keywords: "design tokens", perform: () => guardedNavigate("/brand") },
       { id: "page-design-tokens", label: "Design Tokens", group: "Pages", keywords: "css variables colors spacing typography motion", perform: () => guardedNavigate("/design-tokens") },
@@ -298,6 +313,12 @@ export default function Layout() {
 
       // Ignore IME composition
       if (event.isComposing || event.keyCode === 229) return;
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setIsPaletteOpen(true);
+        return;
+      }
 
       if (!isInputField) {
         // If a chord is pending, process the second key
@@ -438,6 +459,16 @@ export default function Layout() {
           </RouteErrorBoundary>
         </main>
       </div>
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        items={paletteMode === 'scoped' ? scopedItems : paletteItems}
+        onSelect={handleCommandSelect}
+        onTogglePin={handleTogglePin}
+        mode={paletteMode}
+        onModeChange={setPaletteMode}
+        scopeName={scopeName}
+      />
     </UnsavedChangesContext.Provider>
   );
 }
