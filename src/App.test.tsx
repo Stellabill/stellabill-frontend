@@ -64,7 +64,7 @@ vi.mock('./pages/GiftRedeemSuccess', () => ({ default: () => <div data-testid="p
 vi.mock('./pages/Dashboard', () => ({ default: () => <div data-testid="page-dashboard" /> }));
 vi.mock('./pages/BrowsePlans', () => ({ default: () => <div data-testid="page-browse-plans" /> }));
 vi.mock('./pages/Checkout', () => ({ default: () => <div data-testid="page-checkout" /> }));
-vi.mock('./pages/Plans', () => ({ default: () => <div data-testid="page-plans" /> }));
+vi.mock('./pages/MerchantPlans', () => ({ default: () => <div data-testid="page-plans" /> }));
 vi.mock('./pages/CreatePlan', () => ({ default: () => <div data-testid="page-create-plan" /> }));
 vi.mock('./pages/Subscriptions', () => ({ default: () => <div data-testid="page-subscriptions" /> }));
 vi.mock('./pages/SubscriptionDetail', () => ({ default: () => <div data-testid="page-subscription-detail" /> }));
