@@ -220,3 +220,19 @@ export const plans = {
   create: (payload: CreatePlanPayload) =>
     api<unknown>('/plans', { method: 'POST', body: JSON.stringify(payload) }),
 }
+
+export interface OnboardingBusiness {
+  businessName: string;
+  website: string;
+  country: string;
+}
+
+export interface OnboardingSubmission {
+  business: OnboardingBusiness;
+  payout: string;
+}
+
+export const onboarding = {
+  submit: (payload: OnboardingSubmission) =>
+    api<void>('/onboarding', { method: 'POST', body: JSON.stringify(payload) }),
+}
