@@ -668,3 +668,107 @@ export const gifts = {
       body: JSON.stringify({ code }),
     }),
 };
+
+export interface OrganizationProfile {
+  name: string;
+  domain: string;
+  email: string;
+  timezone: string;
+  currency: string;
+  language: string;
+}
+
+export interface OrganizationMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'member' | 'viewer';
+  avatar?: string;
+  joinedAt: string;
+}
+
+export interface Organization extends OrganizationProfile {
+  id: string;
+  avatarUrl: string | null;
+  members: OrganizationMember[];
+}
+
+export interface OrganizationAvatar {
+  avatarUrl: string;
+}
+
+export interface AvatarUploadOptions {
+  onProgress?: (percent: number) => void;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+}
+
+/** Multipart upload uses XHR for real upload progress; the browser sets the boundary. */
+function uploadOrganizationAvatar(file: File, options: AvatarUploadOptions = {}): Promise<OrganizationAvatar> {
+  return new Promise((resolve, reject) => {
+    if (options.signal?.aborted) {
+      reject(createAbortError(options.signal.reason));
+      return;
+    }
+    const xhr = new XMLHttpRequest();
+    const cleanup = () => options.signal?.removeEventListener('abort', abort);
+    const fail = (message: string, kind: ApiErrorKind, status?: number) => {
+      cleanup();
+      const error: ApiError = Object.assign(new Error(message), { kind, status });
+      reportError(error, { source: 'api', endpoint: '/organization/avatar', method: 'POST', status });
+      reject(error);
+    };
+    const abort = () => xhr.abort();
+    xhr.open('POST', API_BASE + '/organization/avatar');
+    xhr.timeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && event.total > 0) {
+        options.onProgress?.(Math.min(100, Math.round(event.loaded / event.total * 100)));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        fail('Avatar upload failed', 'http', xhr.status);
+        return;
+      }
+      let result: OrganizationAvatar;
+      try {
+        result = JSON.parse(xhr.responseText) as OrganizationAvatar;
+        if (typeof result?.avatarUrl !== 'string' || !result.avatarUrl.trim() || result.avatarUrl.startsWith('blob:')) {
+          throw new Error('Expected a persisted avatar URL');
+        }
+      } catch {
+        fail('Invalid avatar upload response', 'parse', xhr.status);
+        return;
+      }
+      cleanup();
+      resolve(result);
+    };
+    xhr.onerror = () => fail('Avatar upload failed. Check your connection.', 'network');
+    xhr.ontimeout = () => fail('Avatar upload timed out', 'timeout');
+    xhr.onabort = () => {
+      cleanup();
+      reject(createAbortError(options.signal?.reason));
+    };
+    options.signal?.addEventListener('abort', abort, { once: true });
+    const body = new FormData();
+    body.append('avatar', file);
+    try {
+      xhr.send(body);
+    } catch {
+      fail('Avatar upload could not start', 'network');
+    }
+  });
+}
+
+/** Current authenticated organization; responses include the persisted member list. */
+export const organization = {
+  get: (options?: ApiRequestOptions) => api<Organization>('/organization', options),
+  update: (profile: OrganizationProfile, options?: ApiRequestOptions) =>
+    api<Organization>('/organization', { ...options, method: 'PUT', body: JSON.stringify(profile) }),
+  delete: (options?: ApiRequestOptions) =>
+    api<void>('/organization', { ...options, method: 'DELETE' }),
+  uploadAvatar: uploadOrganizationAvatar,
+  removeAvatar: (options?: ApiRequestOptions) =>
+    api<void>('/organization/avatar', { ...options, method: 'DELETE' }),
+};

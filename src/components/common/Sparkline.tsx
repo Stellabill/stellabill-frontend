@@ -1,4 +1,3 @@
-import React from "react";
 import { SPARKLINE_DEFAULT_COLOR } from "@/tokens/chartPalette";
 
 interface SparklineProps {

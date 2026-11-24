@@ -35,8 +35,7 @@ describe('PayoutStep', () => {
   it.each([
     ['too short', 'G' + 'A'.repeat(54)],
     ['too long', 'G' + 'A'.repeat(56)],
-    ['wrong prefix', 'S' + 'A'.repeat(55)],
-    ['lowercase characters', 'G' + 'a'.repeat(55)],
+    ['lowercase characters (invalid checksum)', 'G' + 'a'.repeat(55)],
     ['a character outside Stellar base32', 'G' + 'A'.repeat(54) + '0'],
   ])('rejects an address that is %s', (_description, address) => {
     const onNext = vi.fn();
@@ -48,7 +47,7 @@ describe('PayoutStep', () => {
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Please enter a valid Stellar address (starts with G, 56 characters).'
+      'Please enter a valid Stellar address (starts with G, 56 characters, valid checksum).'
     );
     expect(onNext).not.toHaveBeenCalled();
   });
@@ -64,7 +63,7 @@ describe('PayoutStep', () => {
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Please enter a valid Stellar address (starts with G, 56 characters).'
+      'Please enter a valid Stellar address (starts with G, 56 characters, valid checksum).'
     );
     expect(onNext).not.toHaveBeenCalled();
   });

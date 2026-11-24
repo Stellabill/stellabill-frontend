@@ -1,5 +1,8 @@
 import { renderHook, act } from '@testing-library/react';
+import { vi } from 'vitest';
 import { useTags, normalizeLabelForComparison } from './useTags';
+
+const STORAGE_KEY = 'stellabill_tags_store';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -295,5 +298,113 @@ describe('useTags', () => {
     const { result: result2 } = renderHook(() => useTags());
     expect(result2.current.getAllTags()).toHaveLength(4);
     expect(result2.current.getSubscriptionTags('sub-1')).toHaveLength(1);
+  });
+});
+
+describe('useTags cross-tab sync', () => {
+  const externalStore = {
+    tags: [
+      { id: 't-external', label: 'External Tag', color: 'green' },
+      { id: 't-second', label: 'Second Tag', color: 'purple' },
+    ],
+    subscriptionTags: { 'sub-external': ['t-external'] },
+  };
+
+  /**
+   * Simulates a write from another tab: the browser persists the value first
+   * and then fires a `storage` event on every *other* open document.
+   */
+  function writeFromAnotherTab(key: string, value: string | null) {
+    if (value === null) {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, value);
+    }
+
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key,
+        oldValue: null,
+        newValue: value,
+      })
+    );
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('applies tag edits made in another tab without a reload', () => {
+    const { result } = renderHook(() => useTags());
+    expect(result.current.getAllTags()).toHaveLength(3);
+
+    act(() => {
+      writeFromAnotherTab(STORAGE_KEY, JSON.stringify(externalStore));
+    });
+
+    expect(result.current.getAllTags()).toHaveLength(2);
+    expect(result.current.getAllTags()[0]).toMatchObject({
+      id: 't-external',
+      label: 'External Tag',
+      color: 'green',
+    });
+  });
+
+  it('applies subscription tag assignments made in another tab', () => {
+    const { result } = renderHook(() => useTags());
+
+    act(() => {
+      writeFromAnotherTab(STORAGE_KEY, JSON.stringify(externalStore));
+    });
+
+    const subTags = result.current.getSubscriptionTags('sub-external');
+    expect(subTags).toHaveLength(1);
+    expect(subTags[0].id).toBe('t-external');
+  });
+
+  it('ignores storage events for unrelated keys', () => {
+    const { result } = renderHook(() => useTags());
+
+    act(() => {
+      writeFromAnotherTab('some_other_key', JSON.stringify(externalStore));
+    });
+
+    expect(result.current.getAllTags()).toHaveLength(3);
+    expect(result.current.getAllTags()[0].label).toBe('Priority');
+  });
+
+  it('falls back to the defaults when another tab clears storage', () => {
+    const { result } = renderHook(() => useTags());
+
+    act(() => {
+      writeFromAnotherTab(STORAGE_KEY, JSON.stringify(externalStore));
+    });
+    expect(result.current.getAllTags()).toHaveLength(2);
+
+    act(() => {
+      writeFromAnotherTab(STORAGE_KEY, null);
+    });
+
+    expect(result.current.getAllTags()).toHaveLength(3);
+  });
+
+  it('removes the storage listener on unmount', () => {
+    const addSpy = vi.spyOn(window, 'addEventListener');
+    const removeSpy = vi.spyOn(window, 'removeEventListener');
+
+    try {
+      const { unmount } = renderHook(() => useTags());
+
+      const addCall = addSpy.mock.calls.find(([type]) => type === 'storage');
+      expect(addCall).toBeDefined();
+      const handler = addCall?.[1];
+
+      unmount();
+
+      expect(removeSpy).toHaveBeenCalledWith('storage', handler);
+    } finally {
+      addSpy.mockRestore();
+      removeSpy.mockRestore();
+    }
   });
 });

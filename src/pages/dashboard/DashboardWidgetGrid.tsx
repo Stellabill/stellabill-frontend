@@ -113,6 +113,7 @@ export default function DashboardWidgetGrid({
           trend={data?.failedCharges?.trend ?? 'down'}
           icon={<AlertCircle size={20} />}
           helpText={t('dashboard.kpis.failedChargesHelp')}
+          loading={w.kpi_failed_charges.status === 'loading'}
           loading={stateFor('kpi_failed_charges').status === 'loading'}
           error={kpiError('kpi_failed_charges')}
           isOfflineError={kpiOffline('kpi_failed_charges')}

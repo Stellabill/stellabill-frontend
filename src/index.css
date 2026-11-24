@@ -116,6 +116,12 @@ textarea {
   color: #adbed4;
 }
 
+.breadcrumb__link:focus-visible {
+  outline: none;
+  border-radius: 3px;
+  box-shadow: var(--focus-ring-shadow);
+}
+
 .breadcrumb__icon {
   display: inline-flex;
   align-items: center;

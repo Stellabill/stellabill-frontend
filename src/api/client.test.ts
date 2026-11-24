@@ -591,9 +591,14 @@ describe('client.ts', () => {
       }
     });
 
-    it('simulates error when ?simulate_error is in URL', async () => {
-      vi.stubGlobal('window', { location: { search: '?simulate_error=true' } });
-      
+    it('surfaces server errors returned by the API', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: async () => ({ details: 'Database connection timeout' }),
+      });
+
       try {
         await api('/test');
         expect.fail('Should have thrown');
@@ -896,6 +901,33 @@ describe('client.ts', () => {
     });
   });
 
+  describe('gifts', () => {
+    it('purchase() returns a generated gift code and expiresOn ISO date', async () => {
+      const result = await gifts.purchase({
+        planId: '1',
+        recipientEmail: 'recipient@example.com',
+        duration: 12,
+        deliveryMethod: 'email',
+      });
+
+      expect(result.code).toMatch(/^GIFT-[A-Z0-9]{6}-[A-Z0-9]{6}$/);
+      expect(Number.isNaN(Date.parse(result.expiresOn))).toBe(false);
+    });
+
+    it('purchase() rejects with ApiError when ?fail_action is in URL', async () => {
+      vi.stubGlobal('window', { location: { search: '?fail_action=true' } });
+
+      await expect(
+        gifts.purchase({
+          planId: '1',
+          recipientEmail: 'recipient@example.com',
+          duration: 12,
+          deliveryMethod: 'email',
+        })
+      ).rejects.toMatchObject({
+        message: 'Gift purchase failed',
+        status: 400,
+      });
   describe('dashboard', () => {
     afterEach(() => {
       vi.unstubAllEnvs();
