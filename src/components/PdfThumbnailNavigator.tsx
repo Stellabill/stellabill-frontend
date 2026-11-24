@@ -17,6 +17,9 @@ export const PdfThumbnailNavigator: React.FC<PdfThumbnailNavigatorProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
+  // Trim stale refs when the page count shrinks so no detached nodes linger
+  itemRefs.current = itemRefs.current.slice(0, numPages);
+
   useEffect(() => {
     // Keep current page indicator anchored/visible when page changes
     const currentBtn = itemRefs.current[currentPage - 1];
@@ -74,11 +77,11 @@ export const PdfThumbnailNavigator: React.FC<PdfThumbnailNavigatorProps> = ({
 
   return (
     <>
-      <nav 
-        className={`pdf-thumbnail-navigator ${className}`} 
+      <nav
+        className={`pdf-thumbnail-navigator ${className}`}
         aria-label="PDF pages"
       >
-        <div 
+        <div
           className="pdf-thumbnail-navigator-rail"
           ref={containerRef}
           role="tablist"

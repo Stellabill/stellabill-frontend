@@ -32,6 +32,7 @@ export interface InvoicePreviewModalProps {
   invoice?: InvoiceWithBreakdown | null;
   itemsPerPage?: number;
   paper?: PaperSize;
+  numPages?: number;
 }
 
 export const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
@@ -41,6 +42,7 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   invoice,
   itemsPerPage = DEFAULT_ITEMS_PER_PAGE,
   paper: initialPaper = 'a4',
+  numPages: numPagesProp,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [paper, setPaper] = useState<PaperSize>(initialPaper);
@@ -66,7 +68,10 @@ export const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
     () => paginateLineItems(resolvedInvoice?.lineItems ?? [], itemsPerPage),
     [resolvedInvoice, itemsPerPage],
   );
-  const numPages = pages.length;
+  const numPages = Math.max(
+    1,
+    numPagesProp ?? pages.length,
+  );
   const safePage = Math.min(Math.max(1, currentPage), numPages);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useState, useId } from 'react';
+import { useState, useId } from 'react';
 import { Sparkles, HelpCircle, X, ArrowRight, Check } from 'lucide-react';
 import { readJson, writeJson } from '../utils/safeStorage';
 
@@ -21,7 +21,7 @@ export default function PlanRecommendationBanner({
   currentLimit,
   recommendedLimit = 150000,
   costDelta = "+$29/mo",
-  currency = "USDC",
+  currency: _currency = "USDC",
   consecutiveMonthsOverThreshold = 2,
   thresholdPct = 80,
   onUpgrade,

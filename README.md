@@ -17,7 +17,7 @@ Web app for **Stellabill**, subscription billing on the Stellar network. Custome
 - Merchant onboarding (business, payout, review)
 - Freighter wallet connect flow
 - Light/dark themes (dark by default), i18n, command palette, accessibility-focused components
-- Design tokens page, brand pack and UI kit (`/design-tokens`, `/brand`, `/ui-kit`)
+- Design tokens page and brand pack (`/design-tokens`, `/brand`)
 
 ## Tech stack
 
@@ -38,12 +38,25 @@ npm run dev        # http://localhost:5173
 | --- | --- |
 | `npm run dev` | Start the Vite dev server |
 | `npx vite build` | Production build to `dist/` (used by CI and Vercel) |
-| `npm run build` | `tsc -b` type check plus build (type errors currently exist in some files) |
+| `npm run build` | `tsc -b` type check plus production build |
+| `npm run typecheck` | Run `tsc -b --noEmit` TypeScript type check |
 | `npm run preview` | Serve the built app locally |
 | `npm test` | Run Vitest |
 | `npm run test:coverage` | Run Vitest with V8 coverage (enforces global thresholds: 65% lines, 67% functions, 85% branches, 65% statements) |
+| `npm run test:e2e` | Run Playwright end-to-end tests |
 | `npm run lint` | Run ESLint |
+| `npm run lint` | Run ESLint (configured via `eslint.config.js`) |
 | `npm run storybook` | Component explorer on port 6006 |
+| `npm run build-storybook` | Build static Storybook output |
+
+## End-to-end testing
+
+Playwright end-to-end specs live in [`e2e/`](e2e/) and verify the lazy-loaded route tree, `OnboardingPayoutGuard` redirects, merchant onboarding happy path (`/onboarding/business` → `/onboarding/payout` → `/onboarding/review` → `/onboarding-success`), and the browse-plans to checkout flow (`/browse-plans` → `/checkout/:planId` → `/subscriptions`) against a local `vite preview` server with no external network requests.
+
+```bash
+npx playwright install chromium   # one-time browser install
+npm run test:e2e
+```
 
 ## Environment variables
 
@@ -66,7 +79,7 @@ npm i -g vercel
 vercel --prod
 ```
 
-CI (`.github/workflows/ci.yml`) installs dependencies and builds on every push and pull request to `main`. Installs use `legacy-peer-deps` (see `.npmrc`) because of an upstream peer range conflict between `i18next-icu` and `intl-messageformat`.
+CI (`.github/workflows/ci.yml`) installs dependencies and builds on every push and pull request to `main`.
 
 ## Documentation
 

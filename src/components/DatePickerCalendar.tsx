@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import './DatePickerCalendar.css';
 
 interface DatePickerCalendarProps {
@@ -46,11 +46,14 @@ export default function DatePickerCalendar({
   };
 
   // Check if date is disabled
-  const isDateDisabled = (day: number): boolean => {
-    const date = new Date(year, month, day);
+  const isDateObjDisabled = (date: Date): boolean => {
     if (minDate && date < minDate) return true;
     if (maxDate && date > maxDate) return true;
     return false;
+  };
+
+  const isDateDisabled = (day: number): boolean => {
+    return isDateObjDisabled(new Date(year, month, day));
   };
 
   // Check if date is today
@@ -92,7 +95,6 @@ export default function DatePickerCalendar({
   const handleKeyDown = (e: React.KeyboardEvent, day: number) => {
     if (isDateDisabled(day)) return;
 
-    const currentDate = new Date(year, month, day);
     let newDate: Date | null = null;
 
     switch (e.key) {
@@ -121,7 +123,7 @@ export default function DatePickerCalendar({
         return;
     }
 
-    if (newDate && !isDateDisabled(newDate)) {
+    if (newDate && !isDateObjDisabled(newDate)) {
       // Handle month changes
       if (newDate.getMonth() !== month) {
         setCurrentMonth(newDate);

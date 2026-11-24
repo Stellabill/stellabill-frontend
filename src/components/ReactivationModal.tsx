@@ -19,8 +19,8 @@
  * • RTL-safe
  */
 
-import { useRef, MouseEvent, useState, useEffect } from 'react';
-import { useModalFocus } from '../hooks/useModalFocus';
+import { useRef, useState, useEffect } from 'react';
+import Modal from './common/Modal';
 import DatePickerCalendar from './DatePickerCalendar';
 import './ReactivationModal.css';
 
@@ -130,7 +130,6 @@ export default function ReactivationModal({
   isLoading = false,
   maxDaysAhead = 90,
 }: ReactivationModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
   const initialFocusRef = useRef<HTMLButtonElement>(null);
 
   const [mode, setMode] = useState<StartDateMode>('today');
@@ -143,15 +142,6 @@ export default function ReactivationModal({
       setCustomDate(null);
     }
   }, [isOpen]);
-
-  useModalFocus(modalRef, {
-    isOpen,
-    onClose,
-    initialFocusRef,
-    closeOnEscape: !isLoading,
-  });
-
-  if (!isOpen) return null;
 
   // ── Derived state ──────────────────────────────────────────────────────────
 
@@ -199,21 +189,18 @@ export default function ReactivationModal({
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      className="reactivation-modal-overlay"
-      onClick={(e: MouseEvent<HTMLDivElement>) =>
-        e.target === e.currentTarget && handleDismiss()
-      }
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="reactivation-modal-title"
-      aria-describedby="reactivation-modal-description"
+    <Modal
+      isOpen={isOpen}
+      onClose={handleDismiss}
+      unstyled
+      labelledBy="reactivation-modal-title"
+      describedBy="reactivation-modal-description"
+      initialFocusRef={initialFocusRef}
+      closeOnBackdrop={!isLoading}
+      closeOnEscape={!isLoading}
+      busy={isLoading}
+      contentClassName="reactivation-modal-content"
     >
-      <div
-        className="reactivation-modal-content"
-        ref={modalRef}
-        aria-busy={isLoading}
-      >
         {/* Close */}
         <button
           className="reactivation-close-btn"
@@ -459,7 +446,6 @@ export default function ReactivationModal({
             )}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

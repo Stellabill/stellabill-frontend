@@ -216,7 +216,7 @@ function HeatmapRamp({ theme }: { theme: "light" | "dark" }) {
 /* ─── Series Overlap component ────────────────────────────────────────────── */
 
 const buildOverlapSeries = (): SeriesData[] =>
-  CHART_PALETTE.map((swatch, i) => ({
+  CHART_PALETTE.map((_, i) => ({
     id: `series-${i + 1}`,
     name: `Series ${i + 1}`,
     color: seriesVar(i),

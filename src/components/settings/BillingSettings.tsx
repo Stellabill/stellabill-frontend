@@ -3,6 +3,9 @@ import { Save, CreditCard, Plus, Trash2, Download } from 'lucide-react'
 import ConfirmDialog from '../common/ConfirmDialog'
 import DangerZone, { DangerZoneItem } from '../common/DangerZone'
 import { FieldLabelWithHelp } from '../common/FieldHelpPopover'
+import { ToastContainer } from '../TransactionToast'
+import { useSubscriptionActions } from '../../hooks/useSubscriptionActions'
+import type { SubscriptionStatus } from '../../types/subscription'
 
 interface PaymentMethod {
   id: string
@@ -112,10 +115,19 @@ export default function BillingSettings({ onSave }: BillingSettingsProps = {}) {
     setPendingRemovalId(null)
   }
 
-  const confirmCancelSubscription = () => {
-    // TODO: Wire up real subscription cancellation
-    console.log('Cancelling subscription...')
-    setShowCancelSubscription(false)
+  const confirmCancelSubscription = async () => {
+    const previousStatus = subscriptionStatus
+    await cancel(subscriptionId, {
+      onOptimistic: () => {
+        setSubscriptionStatus('Cancelled')
+      },
+      onRollback: () => {
+        setSubscriptionStatus(previousStatus)
+      },
+      onSuccess: () => {
+        setShowCancelSubscription(false)
+      },
+    })
   }
 
   return (
@@ -530,9 +542,15 @@ export default function BillingSettings({ onSave }: BillingSettingsProps = {}) {
         <DangerZone description="Destructive billing actions. These cannot be undone — read each warning carefully.">
           <DangerZoneItem
             title="Cancel subscription"
-            description="Cancel your active subscription. Your remaining prepaid balance can be withdrawn before the end of the current billing period."
-            actionLabel="Cancel subscription"
+            description={
+              subscriptionStatus === 'Cancelled'
+                ? 'Your subscription has been cancelled.'
+                : 'Cancel your active subscription. Your remaining prepaid balance can be withdrawn before the end of the current billing period.'
+            }
+            actionLabel={subscriptionStatus === 'Cancelled' ? 'Subscription cancelled' : 'Cancel subscription'}
+            actionAriaLabel="Cancel subscription: Cancel subscription"
             actionIcon={<Trash2 size={14} aria-hidden="true" />}
+            disabled={isPending || subscriptionStatus === 'Cancelled'}
             onAction={() => setShowCancelSubscription(true)}
           />
         </DangerZone>
@@ -569,9 +587,13 @@ export default function BillingSettings({ onSave }: BillingSettingsProps = {}) {
         ]}
         confirmLabel="Cancel subscription"
         cancelLabel="Keep subscription"
+        loadingLabel="Cancelling..."
+        isLoading={isCancelling}
         onClose={() => setShowCancelSubscription(false)}
         onConfirm={confirmCancelSubscription}
       />
+
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
 
       {/* Add Payment Method Modal */}
       {showAddPaymentMethod && (

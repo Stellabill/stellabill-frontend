@@ -1,4 +1,4 @@
-import { Icon } from "./icon";
+import { Icon } from "../common/Icon";
 import styles from "./past-periods.module.css";
 
 export function PastPeriods() {
@@ -11,7 +11,7 @@ export function PastPeriods() {
           className={styles.button}
           aria-label="Export past periods"
         >
-          <Icon aria-hidden="true" /> Export
+          <Icon name="Download" size={16} color="white" strokeWidth={1.33333} /> Export
         </button>
       </div>
 

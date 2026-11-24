@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useState, useRef, createContext, useContext, useCallback } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { CircleHelp, Sparkles } from "lucide-react";
-import LandingNavbar from "./LandingNavbar";
+import { Sparkles } from "lucide-react";
 import CommandPalette, { CommandItem } from "./CommandPalette";
-import KeyboardShortcutsOverlay from "./KeyboardShortcutsOverlay";
-import KeyboardChordIndicator from "./KeyboardChordIndicator";
-import HelpSidebar from "./help/HelpSidebar";
-import ChangelogPanel from "./changelog/ChangelogPanel";
-import FocusOrderVisualizer from "./FocusOrderVisualizer";
 import RouteErrorBoundary from "./RouteErrorBoundary";
 import { LayoutContextType } from "../hooks/useCommandScope";
 import { useCommands } from "../hooks/useCommands";
@@ -53,6 +47,8 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [recentIds, setRecentIds] = useState<string[]>(() => readRecentCommands());
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => readPinnedCommands());
   const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
@@ -60,7 +56,6 @@ export default function Layout() {
   const [scopeName, setScopeName] = useState<string | null>(null);
   const [scopedItems, setScopedItems] = useState<CommandItem[]>([]);
   const [paletteMode, setPaletteMode] = useState<'global' | 'scoped'>('global');
-  const [showScopeToast, setShowScopeToast] = useState(false);
 
   // Unsaved-changes guard registry. A single page at a time can own the guard.
   const guardRef = useRef<UnsavedChangesGuard | null>(null);
@@ -107,7 +102,7 @@ export default function Layout() {
     registerScope, clearScope
   }), [registerScope, clearScope]);
 
-  const [pendingChordKey, setPendingChordKey] = useState<string | null>(null);
+  const [, setPendingChordKey] = useState<string | null>(null);
   const pendingChordKeyRef = useRef<string | null>(null);
 
   const isActive = (path: string) =>

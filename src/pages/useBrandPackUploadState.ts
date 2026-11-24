@@ -122,7 +122,6 @@ export function useBrandPackUploadState(inputRef: React.RefObject<HTMLInputEleme
     (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       event.stopPropagation();
-      setDragActive(false);
       const file = event.dataTransfer.files?.[0];
       if (file) {
         void processFile(file);
