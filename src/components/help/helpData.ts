@@ -220,11 +220,6 @@ export const routeHelpContexts: RouteHelpContext[] = [
     topAnswerIds: ['plan-create', 'plan-types'],
   },
   {
-    routePattern: '/plans/new',
-    pageTitle: 'Create a plan',
-    topAnswerIds: ['plan-create', 'plan-types'],
-  },
-  {
     routePattern: '/browse-plans',
     pageTitle: 'Browse plans',
     topAnswerIds: ['plan-browse', 'plan-types', 'sub-create'],

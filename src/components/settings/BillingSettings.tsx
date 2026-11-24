@@ -3,6 +3,9 @@ import { Save, CreditCard, Plus, Trash2, Download } from 'lucide-react'
 import ConfirmDialog from '../common/ConfirmDialog'
 import DangerZone, { DangerZoneItem } from '../common/DangerZone'
 import { FieldLabelWithHelp } from '../common/FieldHelpPopover'
+import { ToastContainer } from '../TransactionToast'
+import { useSubscriptionActions } from '../../hooks/useSubscriptionActions'
+import type { SubscriptionStatus } from '../../types/subscription'
 
 interface PaymentMethod {
   id: string
@@ -14,7 +17,7 @@ interface PaymentMethod {
   addedAt: string
 }
 
-interface BillingPreferences {
+export interface BillingPreferences {
   billingCycle: 'monthly' | 'yearly'
   autoPay: boolean
   emailInvoices: boolean
@@ -30,7 +33,13 @@ interface BillingPreferences {
   }
 }
 
-export default function BillingSettings() {
+export type BillingPrefs = BillingPreferences
+
+export interface BillingSettingsProps {
+  onSave?: (prefs: BillingPreferences) => Promise<void>
+}
+
+export default function BillingSettings({ onSave }: BillingSettingsProps = {}) {
   const [billingPrefs, setBillingPrefs] = useState<BillingPreferences>({
     billingCycle: 'monthly',
     autoPay: true,
@@ -69,15 +78,27 @@ export default function BillingSettings() {
   ])
 
   const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [showAddPaymentMethod, setShowAddPaymentMethod] = useState(false)
   const [pendingRemovalId, setPendingRemovalId] = useState<string | null>(null)
   const [showCancelSubscription, setShowCancelSubscription] = useState(false)
 
   const pendingRemoval = paymentMethods.find((m) => m.id === pendingRemovalId) ?? null
 
-  const handleSave = () => {
-    console.log('Saving billing preferences:', billingPrefs)
-    setIsEditing(false)
+  const handleSave = async () => {
+    setIsSaving(true)
+    setSaveStatus(null)
+    try {
+      await onSave?.(billingPrefs)
+      setSaveStatus({ type: 'success', message: 'Saved' })
+      setIsEditing(false)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save billing preferences'
+      setSaveStatus({ type: 'error', message })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleSetDefaultPaymentMethod = (id: string) => {
@@ -94,10 +115,19 @@ export default function BillingSettings() {
     setPendingRemovalId(null)
   }
 
-  const confirmCancelSubscription = () => {
-    // TODO: Wire up real subscription cancellation
-    console.log('Cancelling subscription...')
-    setShowCancelSubscription(false)
+  const confirmCancelSubscription = async () => {
+    const previousStatus = subscriptionStatus
+    await cancel(subscriptionId, {
+      onOptimistic: () => {
+        setSubscriptionStatus('Cancelled')
+      },
+      onRollback: () => {
+        setSubscriptionStatus(previousStatus)
+      },
+      onSuccess: () => {
+        setShowCancelSubscription(false)
+      },
+    })
   }
 
   return (
@@ -121,7 +151,11 @@ export default function BillingSettings() {
             </h3>
           </div>
           <button
-            onClick={() => setIsEditing(!isEditing)}
+            onClick={() => {
+              setIsEditing(!isEditing)
+              setSaveStatus(null)
+            }}
+            disabled={isSaving}
             style={{
               padding: '0.5rem 1rem',
               borderRadius: '6px',
@@ -275,6 +309,7 @@ export default function BillingSettings() {
             <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button
                 onClick={() => setIsEditing(false)}
+                disabled={isSaving}
                 style={{
                   padding: '0.75rem 1.5rem',
                   borderRadius: '6px',
@@ -282,13 +317,16 @@ export default function BillingSettings() {
                   background: 'transparent',
                   color: 'var(--color-text-muted)',
                   fontSize: '0.875rem',
-                  cursor: 'pointer',
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  opacity: isSaving ? 0.6 : 1,
                 }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
+                disabled={isSaving}
+                aria-label="Save Changes"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -300,12 +338,27 @@ export default function BillingSettings() {
                   color: 'var(--color-brand-on)',
                   fontSize: '0.875rem',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  opacity: isSaving ? 0.6 : 1,
                 }}
               >
                 <Save size={16} />
-                Save Changes
+                {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
+            </div>
+          )}
+
+          {saveStatus && (
+            <div
+              role={saveStatus.type === 'error' ? 'alert' : 'status'}
+              style={{
+                marginTop: '1rem',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                color: saveStatus.type === 'error' ? '#ef4444' : '#10b981',
+              }}
+            >
+              {saveStatus.message}
             </div>
           )}
         </div>
@@ -489,9 +542,15 @@ export default function BillingSettings() {
         <DangerZone description="Destructive billing actions. These cannot be undone — read each warning carefully.">
           <DangerZoneItem
             title="Cancel subscription"
-            description="Cancel your active subscription. Your remaining prepaid balance can be withdrawn before the end of the current billing period."
-            actionLabel="Cancel subscription"
+            description={
+              subscriptionStatus === 'Cancelled'
+                ? 'Your subscription has been cancelled.'
+                : 'Cancel your active subscription. Your remaining prepaid balance can be withdrawn before the end of the current billing period.'
+            }
+            actionLabel={subscriptionStatus === 'Cancelled' ? 'Subscription cancelled' : 'Cancel subscription'}
+            actionAriaLabel="Cancel subscription: Cancel subscription"
             actionIcon={<Trash2 size={14} aria-hidden="true" />}
+            disabled={isPending || subscriptionStatus === 'Cancelled'}
             onAction={() => setShowCancelSubscription(true)}
           />
         </DangerZone>
@@ -528,9 +587,13 @@ export default function BillingSettings() {
         ]}
         confirmLabel="Cancel subscription"
         cancelLabel="Keep subscription"
+        loadingLabel="Cancelling..."
+        isLoading={isCancelling}
         onClose={() => setShowCancelSubscription(false)}
         onConfirm={confirmCancelSubscription}
       />
+
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
 
       {/* Add Payment Method Modal */}
       {showAddPaymentMethod && (

@@ -205,7 +205,8 @@ export default function ReceiptPreview({ receipt }: { receipt: ReceiptData | nul
       </header>
 
       <div className="rp-preview" aria-label="Receipt preview container">
-        <div className="rp-paper" ref={paperRef} role="region" aria-label="Receipt document" tabIndex={0}>
+        <InvoicePrintRoot showTrigger={false} onAfterPrint={handleAfterPrint}>
+          <div className="rp-paper" ref={paperRef} role="region" aria-label="Receipt document" tabIndex={0}>
           {/* Header area */}
           <div className="rp-doc-header">
             <div className="rp-doc-brand">
@@ -386,6 +387,7 @@ export default function ReceiptPreview({ receipt }: { receipt: ReceiptData | nul
             </div>
           </div>
         </div>
+        </InvoicePrintRoot>
       </div>
     </section>
   );

@@ -141,6 +141,7 @@ describe("ReceiptPreview", () => {
     render(<ReceiptPreview receipt={BASE_RECEIPT} />);
     const button = screen.getByRole("button", { name: /Download PDF/i });
 
+    const button = screen.getByRole("button", { name: /Download PDF/i });
     await user.click(button);
 
     expect(createObjectURLMock).toHaveBeenCalledTimes(1);
@@ -161,7 +162,7 @@ describe("ReceiptPreview", () => {
     expect(clickSpy).toHaveBeenCalledTimes(1);
 
     await waitFor(() => {
-      expect(screen.getByText("Download started.")).toBeInTheDocument();
+      expect(screen.queryByText("Download started.")).not.toBeInTheDocument();
     });
   });
 

@@ -18,6 +18,7 @@ interface GiftPurchaseModalProps {
   onClose: () => void;
   plan: Plan | null;
   onPurchaseComplete?: (giftCode: string) => void;
+  purchaseGift?: (payload: GiftPurchasePayload) => Promise<GiftPurchaseResponse>;
 }
 
 export default function GiftPurchaseModal({
@@ -25,6 +26,7 @@ export default function GiftPurchaseModal({
   onClose,
   plan,
   onPurchaseComplete,
+  purchaseGift = gifts.purchase,
 }: GiftPurchaseModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
@@ -74,21 +76,33 @@ export default function GiftPurchaseModal({
   };
 
   const handlePurchase = async () => {
+    if (!plan || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsProcessing(true);
     setErrors({});
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const { code } = await purchaseGift({
+        planId: plan.id,
+        recipientName: recipientName.trim() || undefined,
+        recipientEmail: recipientEmail.trim(),
+        duration,
+        message: message.trim() || undefined,
+        deliveryMethod,
+      });
 
-      const code = generateGiftCode();
       setGiftCode(code);
       setStep("complete");
 
       onPurchaseComplete?.(code);
     } catch (error) {
-      setErrors({ purchase: "Gift purchase failed. Please try again." });
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Gift purchase failed. Please try again.";
+      setErrors({ purchase: message });
     } finally {
+      isSubmittingRef.current = false;
       setIsProcessing(false);
     }
   };

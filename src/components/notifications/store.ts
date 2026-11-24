@@ -17,7 +17,8 @@ export type NotificationsAction =
   | { type: "mute"; id: string }
   | { type: "unmute"; id: string }
   | { type: "toggle-digest"; key: string }
-  | { type: "toggle-muted" };
+  | { type: "toggle-muted" }
+  | { type: "append-notifications"; items: BillingNotification[] };
 
 export function createNotificationsState(
   notifications: BillingNotification[],
@@ -67,6 +68,16 @@ export function notificationsReducer(
     }
     case "toggle-muted":
       return { ...state, mutedExpanded: !state.mutedExpanded };
+    case "append-notifications": {
+      if (action.items.length === 0) return state;
+      const existingIds = new Set(state.notifications.map((n) => n.id));
+      const newItems = action.items.filter((item) => !existingIds.has(item.id));
+      if (newItems.length === 0) return state;
+      return {
+        ...state,
+        notifications: [...state.notifications, ...newItems],
+      };
+    }
   }
 }
 

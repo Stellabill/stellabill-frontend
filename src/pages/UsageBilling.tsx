@@ -1,9 +1,12 @@
 import { useCallback, useId, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
+  BarChart3,
+  Calendar,
   Download,
   FileText,
   Receipt,
+  Table as TableIcon,
 } from 'lucide-react';
 import { PastPeriods } from '../components/past-periods/past-periods';
 import ReceiptPreview from '../components/past-periods/ReceiptPreview';
@@ -17,6 +20,116 @@ import { useUsageData } from '../hooks/useUsageData';
 import ErrorState from '../components/ErrorState';
 import { getStatementView } from '../utils/statement';
 import type { StatementEntry, StatementEntryType } from '../utils/statement';
+import Sparkline from '../components/common/Sparkline';
+import DatePickerCalendar from '../components/DatePickerCalendar';
+import { formatAmount } from '../utils/amount';
+
+export type UsageRangePreset = '7D' | '30D' | '90D' | 'custom';
+
+export interface UsageLineItem {
+    id: string;
+    date: string; // YYYY-MM-DD
+    description: string;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    amount: number;
+    currency: string;
+}
+
+/** Escape a single CSV cell per RFC 4180 (handles commas, double quotes, and newlines). */
+export function escapeCsvCell(value: string | number): string {
+    const str = String(value);
+    if (/[",\r\n]/.test(str)) {
+        return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+}
+
+/** Build a CSV string from usage line items with RFC 4180 escaping. */
+export function buildUsageCsv(items: UsageLineItem[]): string {
+    const headers = ['Date', 'Description', 'Quantity', 'Unit', 'Unit Price', 'Amount', 'Currency'];
+    const headerRow = headers.map(escapeCsvCell).join(',');
+    const rows = items.map((item) =>
+        [
+            item.date,
+            item.description,
+            item.quantity,
+            item.unit,
+            item.unitPrice.toFixed(4),
+            item.amount.toFixed(2),
+            item.currency,
+        ]
+            .map(escapeCsvCell)
+            .join(','),
+    );
+    return [headerRow, ...rows].join('\n');
+}
+
+function toIsoDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function parseIsoDate(iso: string): Date {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+}
+
+function formatRangeLabel(startIso: string, endIso: string): string {
+    const start = parseIsoDate(startIso);
+    const end = parseIsoDate(endIso);
+    const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `${startStr} – ${endStr}`;
+}
+
+/** Deterministic daily usage line items spanning Jan 1 – Mar 31, 2026 (90 days). */
+function generateUsageLineItems(): UsageLineItem[] {
+    const items: UsageLineItem[] = [];
+    const start = new Date(2026, 0, 1);
+    const end = new Date(2026, 2, 31);
+    const unitPrice = 0.0005;
+    let idx = 1;
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const iso = toIsoDate(d);
+        const dayOfMonth = d.getDate();
+        const month = d.getMonth(); // 0=Jan, 1=Feb, 2=Mar
+        // Deterministic wave pattern so 7D / 30D / 90D have distinct, realistic totals
+        const base = 850 + month * 120 + ((dayOfMonth * 73) % 380);
+        const amount = Number((base * unitPrice).toFixed(2));
+        const description =
+            dayOfMonth % 7 === 0
+                ? 'API calls — "v2/billing, metered" batch'
+                : 'API calls (metered endpoint)';
+
+        items.push({
+            id: `usage-${idx++}`,
+            date: iso,
+            description,
+            quantity: base,
+            unit: 'API calls',
+            unitPrice,
+            amount,
+            currency: 'USDC',
+        });
+    }
+    return items;
+}
+
+export const USAGE_LINE_ITEMS: UsageLineItem[] = generateUsageLineItems();
+
+const PRESET_RANGES: Record<Exclude<UsageRangePreset, 'custom'>, { label: string; start: string; end: string }> = {
+    '7D': { label: 'Last 7 days', start: '2026-03-25', end: '2026-03-31' },
+    '30D': { label: 'Last 30 days', start: '2026-03-01', end: '2026-03-31' },
+    '90D': { label: 'Last 90 days', start: '2026-01-01', end: '2026-03-31' },
+};
+
+const MIN_USAGE_DATE = new Date(2026, 0, 1);
+const MAX_USAGE_DATE = new Date(2026, 2, 31);
 
 function UsageSkeleton() {
     return (
@@ -103,7 +216,7 @@ export default function UsageBilling() {
         );
     }
 
-    const { planName, billingPeriod, usageCount, usageLimit, unit, amount, currency } = data;
+    const { amount } = data;
     const usagePct = Math.min(100, Math.round((usageCount / usageLimit) * 100));
     const progressColor = usagePct >= 90 ? '#ef4444' : usagePct >= 70 ? '#f59e0b' : '#6366f1';
     const usageCountFmt = usageCount.toLocaleString();
@@ -222,15 +335,70 @@ export default function UsageBilling() {
 
             <div className="main-card">
                 <div className="main-card-inner">
-                    <div className="period-header">
-                        <svg className="period-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                            <line x1="16" y1="2" x2="16" y2="6" />
-                            <line x1="8" y1="2" x2="8" y2="6" />
-                            <line x1="3" y1="10" x2="21" y2="10" />
-                        </svg>
-                        <h2>Current billing period: {billingPeriod}</h2>
+                    <div className="period-header-row">
+                        <div className="period-header">
+                            <svg className="period-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                <line x1="16" y1="2" x2="16" y2="6" />
+                                <line x1="8" y1="2" x2="8" y2="6" />
+                                <line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                            <h2>Current billing period: {billingPeriod}</h2>
+                        </div>
+
+                        <div className="usage-range-controls" role="group" aria-label="Usage date range">
+                            {(['7D', '30D', '90D'] as const).map((preset) => (
+                                <button
+                                    key={preset}
+                                    type="button"
+                                    className={`usage-range-btn ${rangePreset === preset ? 'active' : ''}`}
+                                    aria-pressed={rangePreset === preset}
+                                    onClick={() => setRangePreset(preset)}
+                                >
+                                    {preset}
+                                </button>
+                            ))}
+                            <button
+                                type="button"
+                                className={`usage-range-btn ${rangePreset === 'custom' ? 'active' : ''}`}
+                                aria-pressed={rangePreset === 'custom'}
+                                onClick={() => setRangePreset('custom')}
+                            >
+                                <Calendar size={14} aria-hidden="true" />
+                                Custom
+                            </button>
+                        </div>
                     </div>
+
+                    {rangePreset === 'custom' && (
+                        <div className="custom-range-panel" role="region" aria-label="Custom date range picker">
+                            <div className="custom-range-tabs" role="group" aria-label="Select range boundary">
+                                <button
+                                    type="button"
+                                    className={`custom-range-tab ${activeCalendarField === 'start' ? 'active' : ''}`}
+                                    aria-pressed={activeCalendarField === 'start'}
+                                    onClick={() => setActiveCalendarField('start')}
+                                >
+                                    Start: {customStart}
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`custom-range-tab ${activeCalendarField === 'end' ? 'active' : ''}`}
+                                    aria-pressed={activeCalendarField === 'end'}
+                                    onClick={() => setActiveCalendarField('end')}
+                                >
+                                    End: {customEnd}
+                                </button>
+                            </div>
+                            <DatePickerCalendar
+                                key={activeCalendarField}
+                                selectedDate={parseIsoDate(activeCalendarField === 'start' ? customStart : customEnd)}
+                                onDateSelect={handleCustomDateSelect}
+                                minDate={MIN_USAGE_DATE}
+                                maxDate={MAX_USAGE_DATE}
+                            />
+                        </div>
+                    )}
 
                     <div className="metrics-grid">
                         <div className="metric-card">
@@ -292,6 +460,98 @@ export default function UsageBilling() {
                             </p>
                         )}
                     </div>
+
+                    {/* Usage over time chart with accessible table fallback */}
+                    <section className="usage-chart-section" aria-label="Usage over time">
+                        <div className="usage-chart-header">
+                            <div>
+                                <h3 className="usage-chart-title">Usage over time</h3>
+                                <p className="usage-chart-subtitle">
+                                    {filteredUsageItems.length} {filteredUsageItems.length === 1 ? 'day' : 'days'} · Peak {peakUsage.toLocaleString()} · Avg {avgUsage.toLocaleString()} {unit}/day
+                                </p>
+                            </div>
+                            <div className="usage-chart-actions">
+                                <div className="usage-view-toggle" role="group" aria-label="Usage view mode">
+                                    <button
+                                        type="button"
+                                        className={`usage-toggle-btn ${chartViewMode === 'chart' ? 'active' : ''}`}
+                                        aria-pressed={chartViewMode === 'chart'}
+                                        onClick={() => setChartViewMode('chart')}
+                                    >
+                                        <BarChart3 size={14} aria-hidden="true" />
+                                        Chart
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`usage-toggle-btn ${chartViewMode === 'table' ? 'active' : ''}`}
+                                        aria-pressed={chartViewMode === 'table'}
+                                        onClick={() => setChartViewMode('table')}
+                                    >
+                                        <TableIcon size={14} aria-hidden="true" />
+                                        Table
+                                    </button>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="usage-export-csv-btn"
+                                    onClick={handleExportUsageCsv}
+                                >
+                                    <Download size={14} aria-hidden="true" />
+                                    Export CSV
+                                </button>
+                            </div>
+                        </div>
+
+                        {chartViewMode === 'chart' ? (
+                            <div className="usage-chart-canvas">
+                                <Sparkline
+                                    data={chartValues}
+                                    width={640}
+                                    height={140}
+                                    color="#00D3F2"
+                                    strokeWidth={2}
+                                    showArea
+                                    areaOpacity={0.18}
+                                    className="usage-chart-sparkline"
+                                    aria-label={`Usage over time chart for ${billingPeriod}: ${usageCountFmt} ${unit} total across ${filteredUsageItems.length} days`}
+                                />
+                                <div className="usage-chart-axis">
+                                    <span>{rangeStart}</span>
+                                    <span>{rangeEnd}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="usage-table-wrap" role="region" aria-label="Usage line items table">
+                                <table className="usage-line-items-table">
+                                    <caption className="sr-only">
+                                        Daily usage line items for {billingPeriod}
+                                    </caption>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Date</th>
+                                            <th scope="col">Description</th>
+                                            <th scope="col" className="col-num">Quantity</th>
+                                            <th scope="col" className="col-num">Unit Price</th>
+                                            <th scope="col" className="col-num">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredUsageItems.map((item) => (
+                                            <tr key={item.id}>
+                                                <td>{item.date}</td>
+                                                <td>{item.description}</td>
+                                                <td className="col-num">{item.quantity.toLocaleString()} {item.unit}</td>
+                                                <td className="col-num">{item.unitPrice.toFixed(4)} {item.currency}</td>
+                                                <td className="col-num">
+                                                    {formatAmount(item.amount, { currency: item.currency }).display}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </section>
 
                     <div className="info-box">
                         <svg className="info-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -389,11 +649,15 @@ function StatementOfAccount({ periodStart, periodEnd }: { periodStart: string; p
   // ── Export CSV ───────────────────────────────────────────────────────────
   const exportCsv = useCallback(() => {
     const header = 'Date,Description,Type,Amount,Currency,Running Balance';
-    const rows = withBalance.map(
-      (e) => `${e.date},"${e.description}",${typeLabels[e.type]},${e.change.toFixed(2)},${e.currency},${e.balance.toFixed(2)}`,
+    const rows = withBalance.map((e) =>
+      [e.date, e.description, typeLabels[e.type], e.change.toFixed(2), e.currency, e.balance.toFixed(2)]
+        .map(escapeCsvCell)
+        .join(','),
     );
     const openingRow = dateStart
-      ? `${dateStart},"Opening balance",,,${statementCurrency},${openingBalance.toFixed(2)}`
+      ? [dateStart, 'Opening balance', '', '', statementCurrency, openingBalance.toFixed(2)]
+          .map(escapeCsvCell)
+          .join(',')
       : null;
     const ordered = openingRow ? [openingRow, ...rows] : rows;
     const blob = new Blob([header + '\n' + ordered.join('\n')], { type: 'text/csv;charset=utf-8;' });
