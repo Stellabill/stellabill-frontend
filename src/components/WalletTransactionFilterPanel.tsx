@@ -10,6 +10,14 @@ import {
   SavedFilter
 } from '../types/walletTransaction';
 import { filterWalletTransactions } from '../api/walletTransactions';
+import React from 'react';
+import { Filter, X, RotateCcw, User, Check, ChevronDown } from 'lucide-react';
+import Tag from './Tag';
+import { WalletTransaction } from '../types/walletTransaction';
+import { TRANSACTION_TYPE_OPTIONS } from './walletTransactionFilterUtils';
+import { useWalletTransactionFilters } from './useWalletTransactionFilters';
+import { WalletTransactionRangeControls } from './WalletTransactionRangeControls';
+import { WalletTransactionSavedFilters } from './WalletTransactionSavedFilters';
 import './WalletTransactionFilterPanel.css';
 
 export interface WalletTransactionFilterPanelProps {
@@ -199,6 +207,25 @@ export const WalletTransactionFilterPanel: React.FC<WalletTransactionFilterPanel
   const handleApplySavedFilter = (saved: SavedFilter) => {
     updateFilters({ ...saved.filter, types: [...saved.filter.types] });
   };
+  const {
+    filters,
+    setFilters,
+    savedFilters,
+    saveFilterName,
+    setSaveFilterName,
+    isSavingFilter,
+    setIsSavingFilter,
+    isPanelExpanded,
+    setIsPanelExpanded,
+    announcement,
+    filteredTransactions,
+    activeFilterCount,
+    handleTypeToggle,
+    handleClearAll,
+    handleRemoveChip,
+    handleSaveFilterSubmit,
+    handleApplySavedFilter,
+  } = useWalletTransactionFilters({ transactions, onFilteredTransactionsChange });
 
   const handleDeleteSavedFilter = (id: string) => {
     setSavedFilters((prev) => prev.filter((item) => item.id !== id));
@@ -425,6 +452,16 @@ export const WalletTransactionFilterPanel: React.FC<WalletTransactionFilterPanel
               </div>
             </div>
           </div>
+          <WalletTransactionRangeControls
+            startDate={filters.startDate}
+            endDate={filters.endDate}
+            minAmount={filters.minAmount}
+            maxAmount={filters.maxAmount}
+            onStartDateChange={(startDate) => setFilters((prev) => ({ ...prev, startDate }))}
+            onEndDateChange={(endDate) => setFilters((prev) => ({ ...prev, endDate }))}
+            onMinAmountChange={(minAmount) => setFilters((prev) => ({ ...prev, minAmount }))}
+            onMaxAmountChange={(maxAmount) => setFilters((prev) => ({ ...prev, maxAmount }))}
+          />
 
           {/* Counterparty / Address Filter */}
           <div className="wallet-filter-panel__group">
@@ -520,6 +557,17 @@ export const WalletTransactionFilterPanel: React.FC<WalletTransactionFilterPanel
               </div>
             )}
           </div>
+          <WalletTransactionSavedFilters
+            isSavingFilter={isSavingFilter}
+            saveFilterName={saveFilterName}
+            activeFilterCount={activeFilterCount}
+            savedFilters={savedFilters}
+            onStartSaving={() => setIsSavingFilter(true)}
+            onCancelSaving={() => setIsSavingFilter(false)}
+            onSaveFilterNameChange={setSaveFilterName}
+            onSaveFilterSubmit={handleSaveFilterSubmit}
+            onApplySavedFilter={handleApplySavedFilter}
+          />
         </div>
       )}
 
