@@ -5,6 +5,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom';
 import { subscriptions } from '../api/client';
 import type { Subscription } from '../types/subscription';
+import { MemoryRouter } from 'react-router-dom';
+import { subscriptions } from '../api/client';
+import type { Subscription } from '@/types/subscription';
 import Subscriptions from './Subscriptions';
 
 const mockNavigate = vi.fn();
@@ -357,11 +360,26 @@ describe('Subscriptions page', () => {
         fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
         await Promise.resolve();
       });
+      await renderAndLoad();
+
+      let resolveStale: (value: { subscriptions: Subscription[] }) => void = () => {};
+      const stalePromise = new Promise<{ subscriptions: Subscription[] }>(res => {
+        resolveStale = res;
+      });
+      vi.mocked(subscriptions.list)
+        .mockReturnValueOnce(stalePromise)
+        .mockResolvedValueOnce({ subscriptions: FIXTURE_SUBSCRIPTIONS });
+
+      // First refresh starts an in-flight request...
+      fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
+      // ...which a second refresh supersedes.
+      fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
       await advanceTimersAndFlush();
 
       // Now resolve the stale second request with different data.
       await act(async () => {
         resolveSecond({
+        resolveStale({
           subscriptions: [
             {
               ...FIXTURE_SUBSCRIPTIONS[0],
@@ -378,6 +396,7 @@ describe('Subscriptions page', () => {
         { timeout: 3000 },
       );
       expect(screen.queryByText('Stale Plan')).not.toBeInTheDocument();
+      expect(screen.getAllByText('Premium Access').length).toBeGreaterThan(0);
     });
   });
 
@@ -1006,6 +1025,102 @@ describe('Subscriptions page', () => {
     });
   });
 
+  /* ── Prepaid balance formatting ───────────────────────────── */
+  describe('Prepaid balance formatting', () => {
+    it('renders the table balance with Amount formatting and currency', async () => {
+      await renderAndLoad();
+
+      const balance = screen.getByTestId('prepaid-balance-SUB-001');
+      expect(balance).toHaveTextContent('30 USDC');
+      expect(balance).toHaveAttribute('aria-label', '30 USDC');
+      expect(screen.getByTestId('prepaid-balance-SUB-002')).toHaveTextContent('50 USDC');
+      expect(screen.getByTestId('prepaid-balance-SUB-003')).toHaveTextContent('15 USDC');
+    });
+
+    it('marks a zero balance without rendering a raw number', async () => {
+      await renderAndLoad();
+      const balance = screen.getByTestId('prepaid-balance-SUB-004');
+      expect(balance).toHaveTextContent('0 USDC');
+      expect(balance).toHaveAttribute('data-amount-zero', 'true');
+    });
+
+    it('formats the mobile card balance with currency', async () => {
+      await renderAndLoad();
+      expect(screen.getByTestId('prepaid-balance-card-SUB-001')).toHaveTextContent('30 USDC');
+      expect(screen.getByTestId('prepaid-balance-card-SUB-002')).toHaveTextContent('50 USDC');
+    });
+
+    it('formats the detail-view balance with currency', async () => {
+      await renderAndLoad();
+      fireEvent.click(screen.getByRole('button', { name: /manage premium access/i }));
+      await waitFor(() =>
+        expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
+      );
+
+      expect(screen.getByTestId('detail-prepaid-balance')).toHaveTextContent('30 USDC');
+      expect(screen.getByTestId('detail-prepaid-balance')).toHaveAttribute('aria-label', '30 USDC');
+    });
+
+    it('uses the subscription currency instead of hard-coding USDC', async () => {
+      vi.mocked(subscriptions.list).mockResolvedValue({
+        subscriptions: [
+          { ...FIXTURE_SUBSCRIPTIONS[0], currency: 'EUR', prepaidBalance: 12.5 },
+        ],
+      });
+      await renderAndLoad();
+
+      const balance = screen.getByTestId('prepaid-balance-SUB-001');
+      expect(balance).toHaveTextContent('12.5 EUR');
+      expect(balance).toHaveAttribute('aria-label', '12.5 EUR');
+    });
+
+    it('rounds balances through Amount rather than concatenating strings', async () => {
+      vi.mocked(subscriptions.list).mockResolvedValue({
+        subscriptions: [
+          { ...FIXTURE_SUBSCRIPTIONS[0], prepaidBalance: 12.505 },
+        ],
+      });
+      await renderAndLoad();
+
+      // Default precision is 2 with half-up rounding; no string arithmetic involved.
+      expect(screen.getByTestId('prepaid-balance-SUB-001')).toHaveTextContent('12.51 USDC');
+    });
+  });
+
+  /* ── Top-up flow ──────────────────────────────────────────── */
+  describe('Top-up flow', () => {
+    async function topUp(amount: string) {
+      await renderAndLoad();
+      fireEvent.click(screen.getByRole('button', { name: /manage premium access/i }));
+      await waitFor(() =>
+        expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
+      );
+      fireEvent.click(screen.getByRole('button', { name: /top up balance/i }));
+      fireEvent.change(screen.getByLabelText(/top up amount/i), {
+        target: { value: amount },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /review top up/i }));
+      fireEvent.click(screen.getByRole('button', { name: /confirm top up/i }));
+      await advanceTimersAndFlush();
+    }
+
+    it('adds the top-up to the numeric balance and re-formats it', async () => {
+      await topUp('10');
+
+      const balance = screen.getByTestId('detail-prepaid-balance');
+      expect(balance).toHaveTextContent('40 USDC');
+      expect(balance).toHaveAttribute('aria-label', '40 USDC');
+      expect(screen.getByText(/your balance has been updated to 40/i)).toBeInTheDocument();
+    });
+
+    it('derives the coverage count again from the new numeric balance', async () => {
+      await topUp('10');
+
+      // Premium Access costs 10 USDC/month, so 40 USDC covers ~4 payments.
+      expect(screen.getByText(/covers approximately/i)).toHaveTextContent('4');
+    });
+  });
+
   /* ── Accessibility ────────────────────────────────────────── */
   describe('Accessibility (ARIA)', () => {
     it('the main data table has an accessible aria-label', async () => {
@@ -1054,6 +1169,9 @@ describe('Subscriptions page', () => {
         (el) => el.textContent === 'Actions',
       );
       expect(hidden).toBeDefined();
+      const table = screen.getByRole('table', { name: /my subscriptions/i });
+      const hidden = table.querySelector('.visually-hidden');
+      expect(hidden).toBeInTheDocument();
       expect(hidden?.textContent).toBe('Actions');
     });
 
