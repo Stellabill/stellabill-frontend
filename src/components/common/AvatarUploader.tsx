@@ -19,6 +19,8 @@ export interface AvatarUploaderProps {
   maxSizeBytes?: number;
   /** Additional class name. */
   className?: string;
+  /** Prevent uploads/removal while a request is pending. */
+  disabled?: boolean;
 }
 
 const DEFAULT_ACCEPT = 'image/png,image/jpeg,image/webp';
@@ -42,6 +44,7 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
   accept = DEFAULT_ACCEPT,
   maxSizeBytes = DEFAULT_MAX_SIZE,
   className = '',
+  disabled = false,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -49,6 +52,7 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
 
   const validateAndProcess = useCallback(
     async (file: File) => {
+      if (disabled) return;
       setError(null);
 
       // Validate type
@@ -76,12 +80,12 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
       // Reset input so re-selecting the same file triggers onChange
       if (inputRef.current) inputRef.current.value = '';
     },
-    [accept, maxSizeBytes, onUpload]
+    [accept, maxSizeBytes, onUpload, disabled]
   );
 
   const handleClick = useCallback(() => {
-    inputRef.current?.click();
-  }, []);
+    if (!disabled) inputRef.current?.click();
+  }, [disabled]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -141,6 +145,7 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
       <input
         ref={inputRef}
         type="file"
+        disabled={disabled}
         accept={accept}
         className="sr-only"
         aria-label="Upload avatar"
@@ -151,7 +156,8 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
       {/* Avatar wrapper with drag-drop and hover overlay */}
       <div
         role="button"
-        tabIndex={0}
+        tabIndex={disabled ? -1 : 0}
+        aria-disabled={disabled}
         aria-label={
           hasAvatar
             ? 'Change or remove avatar. Press Enter or Space to change.'
@@ -222,6 +228,7 @@ export const AvatarUploader: React.FC<AvatarUploaderProps> = ({
           <button
             type="button"
             onClick={handleRemove}
+            disabled={disabled}
             aria-label="Remove avatar"
             style={{
               position: 'absolute',
