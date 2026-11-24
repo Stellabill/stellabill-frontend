@@ -1,3 +1,4 @@
+import { Trans, useTranslation } from "react-i18next";
 import { useCallback, useState } from "react";
 import LandingNavbar from "../components/LandingNavbar";
 import FeatureComparison from "../components/pricing/FeatureComparison";
@@ -11,57 +12,58 @@ import PricingCard from "../components/PricingCard";
 // basePricePerSeat: null    → custom / contact sales
 const PLANS = [
   {
-    title: "Free",
-    tagline: "For individuals and side projects getting started.",
+    title: "pricing.plans.free.title",
+    tagline: "pricing.plans.free.tagline",
     price: "$0",
     basePricePerSeat: 0,
     features: [
-      { text: "Up to 50 active subscriptions" },
-      { text: "Basic recurring billing" },
-      { text: "Webhooks" },
-      { text: "Community support" },
+      { text: "pricing.features.subscriptionLimit" },
+      { text: "pricing.features.basicBilling" },
+      { text: "pricing.features.webhooks" },
+      { text: "pricing.features.community" },
     ],
-    buttonText: "Get started free",
+    buttonText: "pricing.plans.free.buttonText",
     useGradientButton: false,
     isPopular: false,
   },
   {
-    title: "Pro",
-    tagline: "For growing teams that need advanced billing and analytics.",
+    title: "pricing.plans.pro.title",
+    tagline: "pricing.plans.pro.tagline",
     price: "$49",
     basePricePerSeat: 49,
     features: [
-      { text: "Unlimited subscriptions" },
-      { text: "Usage-based billing" },
-      { text: "Priority support" },
-      { text: "Advanced analytics" },
-      { text: "Custom webhooks" },
+      { text: "pricing.features.unlimited" },
+      { text: "pricing.features.usage" },
+      { text: "pricing.features.priority" },
+      { text: "pricing.features.analytics" },
+      { text: "pricing.features.customWebhooks" },
     ],
-    buttonText: "Start free trial",
+    buttonText: "pricing.plans.pro.buttonText",
     useGradientButton: true,
     isPopular: true,
   },
   {
-    title: "Enterprise",
-    tagline: "For large organizations with custom compliance needs.",
+    title: "pricing.plans.enterprise.title",
+    tagline: "pricing.plans.enterprise.tagline",
     price: undefined,
     basePricePerSeat: null,   // custom
-    priceLabel: "Custom",
-    priceSubtext: "Volume discounts & dedicated SLAs",
+    priceLabel: "pricing.plans.enterprise.priceLabel",
+    priceSubtext: "pricing.plans.enterprise.priceSubtext",
     features: [
-      { text: "Everything in Pro" },
-      { text: "Custom SLAs" },
-      { text: "Volume pricing" },
-      { text: "White-label options" },
-      { text: "Dedicated support team" },
+      { text: "pricing.features.everythingPro" },
+      { text: "pricing.features.slas" },
+      { text: "pricing.features.volume" },
+      { text: "pricing.features.whiteLabel" },
+      { text: "pricing.features.dedicatedSupport" },
     ],
-    buttonText: "Contact sales",
+    buttonText: "pricing.plans.enterprise.buttonText",
     useGradientButton: false,
     isPopular: false,
   },
 ] as const;
 
 export default function Pricing() {
+  const { t } = useTranslation();
   const [pricingMode, setPricingMode] = useState<PricingMode>("flat");
   const [seats, setSeats] = useState<number>(5);
 
@@ -96,7 +98,7 @@ export default function Pricing() {
                 marginBottom: "0.75rem",
               }}
             >
-              Plans &amp; pricing
+              {t('pricing.title')}
             </h2>
             <p
               style={{
@@ -107,7 +109,7 @@ export default function Pricing() {
                 lineHeight: 1.6,
               }}
             >
-              USDC-based plans with no hidden fees.
+              {t('pricing.subtitle')}
             </p>
 
             {/* Toggle */}
@@ -128,6 +130,12 @@ export default function Pricing() {
               <PricingCard
                 key={plan.title}
                 {...plan}
+                title={t(plan.title)}
+                tagline={t(plan.tagline)}
+                features={plan.features.map((feature) => ({ text: t(feature.text) }))}
+                buttonText={t(plan.buttonText)}
+                priceLabel={'priceLabel' in plan ? t(plan.priceLabel) : undefined}
+                priceSubtext={'priceSubtext' in plan ? t(plan.priceSubtext) : undefined}
                 pricingMode={pricingMode}
                 seats={seats}
               />
@@ -142,7 +150,7 @@ export default function Pricing() {
 
         {/* Print CTA under matrix */}
         <div className="hidden print:block text-center pt-8 text-black text-lg font-medium">
-          Ready to get started? Visit <strong>stellabill.com/pricing</strong>
+          <Trans t={t} i18nKey="pricing.printCta" components={[<strong />]} />
         </div>
       </main>
     </div>

@@ -21,16 +21,72 @@ function makeEvent(overrides: Partial<TimelineEvent> & { id: string }): Timeline
   };
 }
 
+const SAMPLE_EVENTS: TimelineEvent[] = [
+  {
+    id: '1',
+    type: 'Created',
+    status: 'Subscription created',
+    actor: 'Chukwuemeka',
+    timestamp: 'Feb 10, 2026, 10:30 AM'
+  },
+  {
+    id: '2',
+    type: 'Activated',
+    status: 'Plan activated',
+    actor: 'System',
+    timestamp: 'Feb 10, 2026, 10:31 AM'
+  },
+  {
+    id: '3',
+    type: 'Payment',
+    status: 'Payment successful',
+    actor: 'System',
+    timestamp: 'Feb 15, 2026, 09:00 AM',
+    details: '10 USDC - Period: Feb 15 - Mar 15'
+  },
+  {
+    id: '4',
+    type: 'Paused',
+    status: 'Subscription paused',
+    actor: 'Chukwuemeka',
+    timestamp: 'Mar 01, 2026, 02:45 PM',
+    details: 'User requested pause due to travel'
+  },
+  {
+    id: '5',
+    type: 'Resumed',
+    status: 'Subscription resumed',
+    actor: 'Chukwuemeka',
+    timestamp: 'Mar 10, 2026, 11:20 AM'
+  },
+  {
+    id: '6',
+    type: 'Payment',
+    status: 'Payment successful',
+    actor: 'System',
+    timestamp: 'Mar 15, 2026, 09:00 AM',
+    details: '10 USDC - Period: Mar 15 - Apr 15'
+  },
+  {
+    id: '7',
+    type: 'Cancelled',
+    status: 'Subscription cancelled',
+    actor: 'Chukwuemeka',
+    timestamp: 'Mar 20, 2026, 04:15 PM',
+    details: 'End of contract'
+  }
+];
+
 describe('PlanStatusTimeline', () => {
   it('renders the timeline header and filter group', () => {
-    render(<PlanStatusTimeline />);
+    render(<PlanStatusTimeline events={SAMPLE_EVENTS} />);
 
     expect(screen.getByRole('heading', { name: /subscription activity timeline/i })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: /filter timeline events/i })).toBeInTheDocument();
   });
 
   it('shows day groups and only the initial events before expanding', () => {
-    const { container } = render(<PlanStatusTimeline />);
+    const { container } = render(<PlanStatusTimeline events={SAMPLE_EVENTS} />);
 
     // Newest-first: Mar 20 / Mar 15 / Mar 10 are visible, oldest Feb 10 is collapsed.
     expect(screen.getByText(/march 20, 2026/i)).toBeInTheDocument();
@@ -41,7 +97,7 @@ describe('PlanStatusTimeline', () => {
 
   it('expands to show older activity when load older is clicked', async () => {
     const user = userEvent.setup();
-    render(<PlanStatusTimeline />);
+    render(<PlanStatusTimeline events={SAMPLE_EVENTS} />);
 
     const loadOlderButton = screen.getByRole('button', { name: /load older activity/i });
     await user.click(loadOlderButton);
@@ -53,7 +109,7 @@ describe('PlanStatusTimeline', () => {
 
   it('filters to payment events only', async () => {
     const user = userEvent.setup();
-    render(<PlanStatusTimeline />);
+    render(<PlanStatusTimeline events={SAMPLE_EVENTS} />);
 
     const paymentsChip = screen.getByRole('button', { name: /payments/i });
     await user.click(paymentsChip);
@@ -227,7 +283,7 @@ describe('PlanStatusTimeline', () => {
 
   it('completes the expand and collapse cycle from 3 items to all and back', async () => {
     const user = userEvent.setup();
-    const { container } = render(<PlanStatusTimeline />);
+    const { container } = render(<PlanStatusTimeline events={SAMPLE_EVENTS} />);
 
     expect(container.querySelectorAll('[role="listitem"]')).toHaveLength(3);
     expect(screen.getByRole('button', { name: /load older activity/i })).toBeInTheDocument();
@@ -244,7 +300,7 @@ describe('PlanStatusTimeline', () => {
 
   it('resets to collapsed state when the active filter changes', async () => {
     const user = userEvent.setup();
-    const { container } = render(<PlanStatusTimeline />);
+    const { container } = render(<PlanStatusTimeline events={SAMPLE_EVENTS} />);
 
     await user.click(screen.getByRole('button', { name: /load older activity/i }));
     expect(container.querySelectorAll('[role="listitem"]')).toHaveLength(7);
@@ -287,10 +343,26 @@ describe('PlanStatusTimeline', () => {
     expect(items[2].textContent).toMatch(/oldest event status/i);
   });
 
-  it('renders an empty timeline container deterministically for an empty events array', () => {
+  it('renders the no plan activity empty state for an empty events array', () => {
     const { container } = render(<PlanStatusTimeline events={[]} />);
 
-    expect(screen.getByText(/no events found for this filter/i)).toBeInTheDocument();
+    expect(screen.getByText(/no plan activity yet/i)).toBeInTheDocument();
     expect(container.querySelectorAll('[role="listitem"]')).toHaveLength(0);
+  });
+
+  it('renders the no plan activity empty state when events is undefined', () => {
+    const { container } = render(<PlanStatusTimeline events={undefined} />);
+
+    expect(screen.getByText(/no plan activity yet/i)).toBeInTheDocument();
+    expect(container.querySelectorAll('[role="listitem"]')).toHaveLength(0);
+  });
+
+  it('does not render fabricated events in the empty state', () => {
+    render(<PlanStatusTimeline events={[]} />);
+
+    expect(screen.getByText(/no plan activity yet/i)).toBeInTheDocument();
+    expect(screen.queryByText(/subscription created/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/payment successful/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
   });
 });
