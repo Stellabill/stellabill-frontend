@@ -31,6 +31,11 @@ export interface UsageLineItem {
     date: string; // YYYY-MM-DD
     description: string;
     quantity: number;
+export interface UsageData {
+    planName: string;
+    billingPeriod: string;
+    usageCount: number;
+    usageLimit: number;
     unit: string;
     unitPrice: number;
     amount: number;
@@ -131,6 +136,16 @@ const PRESET_RANGES: Record<Exclude<UsageRangePreset, 'custom'>, { label: string
 const MIN_USAGE_DATE = new Date(2026, 0, 1);
 const MAX_USAGE_DATE = new Date(2026, 2, 31);
 
+const DEFAULT_USAGE_DATA: UsageData = {
+    planName: "Developer Pro",
+    billingPeriod: "Mar 1 – Mar 31, 2026",
+    usageCount: 32450,
+    usageLimit: 50000,
+    unit: "API calls",
+    amount: "16.23",
+    currency: "USDC",
+};
+
 function UsageSkeleton() {
     return (
         <div className="usage-billing-page" role="status" aria-busy="true" aria-label="Loading usage data">
@@ -189,11 +204,13 @@ function EmptyUsageState({ planName, billingPeriod, id }: { planName: string; bi
     );
 }
 
-export default function UsageBilling() {
+export default function UsageBilling({ usageData = DEFAULT_USAGE_DATA }: { usageData?: UsageData | null }) {
     usePageTitle('Usage & Billing');
     const { id } = useParams<{ id: string }>();
 
     const { data, isLoading, error } = useUsageData(id);
+    const isLoading = false;
+    const data = usageData;
 
     if (isLoading) return <UsageSkeleton />;
     if (error) {
