@@ -14,6 +14,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { X, Sparkles, Mail } from 'lucide-react';
+import { readJson, writeJson, remove } from '../../utils/safeStorage';
 import './ChangelogPanel.css';
 
 /* ─── Types ────────────────────────────────────────────────────────── */
@@ -101,23 +102,18 @@ const CHANGELOG_ENTRIES: ChangelogEntry[] = [
 const UNREAD_STORAGE_KEY = 'sb:changelog-unread';
 
 function readUnreadIds(): string[] {
-  try {
-    const raw = localStorage.getItem(UNREAD_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : CHANGELOG_ENTRIES.map((e) => e.id);
-  } catch {
-    return CHANGELOG_ENTRIES.map((e) => e.id);
-  }
+  return readJson<string[]>(
+    UNREAD_STORAGE_KEY,
+    CHANGELOG_ENTRIES.map((e) => e.id),
+    Array.isArray
+  );
 }
 
 function persistUnreadIds(ids: string[]) {
-  try {
-    if (ids.length === 0) {
-      localStorage.removeItem(UNREAD_STORAGE_KEY);
-    } else {
-      localStorage.setItem(UNREAD_STORAGE_KEY, JSON.stringify(ids));
-    }
-  } catch {
-    // storage unavailable
+  if (ids.length === 0) {
+    remove(UNREAD_STORAGE_KEY);
+  } else {
+    writeJson(UNREAD_STORAGE_KEY, ids);
   }
 }
 
@@ -293,7 +289,7 @@ export default function ChangelogPanel({ isOpen, onOpenChange }: ChangelogPanelP
         {/* Footer */}
         <div className="changelog-footer">
           <Mail size={14} aria-hidden="true" />
-          <a href="mailto:updates@stellarbill.com" className="changelog-footer__link">
+          <a href="mailto:updates@stellabill.com" className="changelog-footer__link">
             Subscribe to email updates
           </a>
         </div>

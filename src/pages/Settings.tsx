@@ -1,37 +1,45 @@
-import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CreditCard, Key, Settings as SettingsIcon, Shield, SlidersHorizontal, Tags, Users, Home } from 'lucide-react'
 import OrganizationSettings from '../components/settings/OrganizationSettings'
 import BillingSettings from '../components/settings/BillingSettings'
 import ApiKeysSettings from '../components/settings/ApiKeysSettings'
 import DensityPreview from '../components/settings/DensityPreview'
 import FamilyPlanSettings from '../components/settings/FamilyPlanSettings'
+import ManageTagsSettings, { TagData } from '../components/settings/ManageTagsSettings'
+import { useTags } from '../hooks/useTags'
+import type { TagProps } from '../components/Tag'
 import './Settings.css'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 type SettingsTab = 'organization' | 'billing' | 'api-keys' | 'tags' | 'appearance' | 'family-plan'
 
-// Wrapper component for ManageTagsSettings with state
+// Wrapper component for ManageTagsSettings with state using useTags hook
 function ManageTagsWrapper() {
-  const [tags, setTags] = useState<TagData[]>([
-    { id: '1', label: 'Enterprise', color: 'blue', usageCount: 5 },
-    { id: '2', label: 'Popular', color: 'green', usageCount: 12 },
-    { id: '3', label: 'Beta', color: 'yellow', usageCount: 3 },
-  ]);
+  const tagsHook = useTags();
+
+  // Convert hook data to TagData format for ManageTagsSettings component
+  const tagsData: TagData[] = tagsHook.getAllTags().map((tag) => ({
+    id: tag.id,
+    label: tag.label,
+    color: tag.color,
+    usageCount: tagsHook.getTagUsageCount(tag.id),
+  }));
 
   const handleRenameTag = (id: string, newLabel: string) => {
-    setTags(prev => prev.map(t => t.id === id ? { ...t, label: newLabel } : t));
+    tagsHook.renameTag(id, newLabel);
   };
 
   const handleDeleteTag = (id: string) => {
-    setTags(prev => prev.filter(t => t.id !== id));
+    tagsHook.deleteTag(id);
   };
 
   const handleChangeColor = (id: string, newColor: TagProps['color']) => {
-    setTags(prev => prev.map(t => t.id === id ? { ...t, color: newColor } : t));
+    tagsHook.changeTagColor(id, newColor as Exclude<TagProps['color'], undefined>);
   };
 
   return (
     <ManageTagsSettings
-      tags={tags}
+      tags={tagsData}
       onRenameTag={handleRenameTag}
       onDeleteTag={handleDeleteTag}
       onChangeColor={handleChangeColor}
@@ -93,9 +101,20 @@ const settingsSections: SettingsSection[] = [
 ]
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('organization')
+  usePageTitle('Settings')
+  const { search, hash } = useLocation()
+  const navigate = useNavigate()
+  const searchParams = new URLSearchParams(search)
+  const hashSection = settingsSections.find((section) => section.id === hash.slice(1))
+  const requestedTab = searchParams.get('tab') ?? hashSection?.id
+  const activeSection = settingsSections.find((section) => section.id === requestedTab) ?? settingsSections[0]
+  const ActiveComponent = activeSection.component
 
-  const ActiveComponent = settingsSections.find((section) => section.id === activeTab)?.component
+  const selectTab = (tab: SettingsTab) => {
+    const nextParams = new URLSearchParams(search)
+    nextParams.set('tab', tab)
+    navigate({ search: nextParams.toString(), hash: hashSection ? '' : hash }, { replace: true })
+  }
 
   return (
     <div className="settings-page">
@@ -116,14 +135,14 @@ export default function Settings() {
           <div className="settings-nav__list">
             {settingsSections.map((section) => {
               const Icon = section.icon
-              const isActive = activeTab === section.id
+              const isActive = activeSection.id === section.id
 
               return (
                 <button
                   key={section.id}
                   type="button"
                   className="settings-nav__tab"
-                  onClick={() => setActiveTab(section.id)}
+                  onClick={() => selectTab(section.id)}
                   aria-pressed={isActive}
                   style={{
                     background: isActive ? '#2d2d44' : 'transparent',
@@ -164,7 +183,7 @@ export default function Settings() {
         </nav>
 
         <main className="settings-content">
-          {ActiveComponent && <ActiveComponent />}
+          <ActiveComponent />
         </main>
       </div>
     </div>

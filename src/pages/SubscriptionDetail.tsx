@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useCommandScope } from '../hooks/useCommandScope';
+import { usePageTitle } from '../hooks/usePageTitle';
 import type { CommandItem } from '../components/CommandPalette';
 import RecentPayments from '../components/RecentPayments';
 import UsageThisPeriod from '../components/UsageThisPeriod';
@@ -11,6 +12,10 @@ import ReactivationModal, { type ReactivationPlan } from '../components/Reactiva
 import DowngradeConfirmModal, { type PlanFeature } from '../components/DowngradeConfirmModal';
 import TrialCountdownBanner from '../components/TrialCountdownBanner';
 import ProrationPreviewModal from '../components/common/ProrationPreviewModal';
+import ErrorState from '../components/ErrorState';
+import { subscriptions, type ApiError, type Payment } from '../api/client';
+import type { Subscription } from '../types/subscription';
+import styles from './SubscriptionDetail.module.css';
 
 // ── Mock subscription status type ────────────────────────────────────────────
 type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
@@ -22,7 +27,19 @@ type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
 const REACTIVATION_WINDOW_DAYS = 30;
 
 export default function SubscriptionDetail() {
+    usePageTitle('Subscription Details');
     const { id } = useParams();
+
+    // ── Subscription fetch state ──────────────────────────────────────────────
+    const [subscriptionData, setSubscriptionData] = useState<Subscription | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<{ status?: number; message: string } | null>(null);
+    const [notFound, setNotFound] = useState(false);
+
+    // ── Recent payments fetch state ───────────────────────────────────────────
+    const [payments, setPayments] = useState<Payment[]>([]);
+    const [paymentsLoading, setPaymentsLoading] = useState(true);
+    const [paymentsError, setPaymentsError] = useState<string | null>(null);
 
     // ── Schedule-change preview state ─────────────────────────────────────────
     const [pendingInterval, setPendingInterval] = useState<BillingInterval | null>(null);
@@ -30,17 +47,10 @@ export default function SubscriptionDetail() {
     // ── Reactivation state ────────────────────────────────────────────────────
     const [isReactivationModalOpen, setIsReactivationModalOpen] = useState(false);
     const [isReactivating, setIsReactivating] = useState(false);
-
-    // ── Trial banner mock data ────────────────────────────────────────────────
-    // Set this to a real trial end date from the API. Adjust the offset to test
-    // different urgency tiers:
-    //   +10 days → info (blue)
-    //   +5 days  → warning (amber)
-    //   +1 day   → urgent (red)
-    //   today    → expired (red)
-    const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + 2); // <3 days → urgent tier
-    const isTrialSubscription = true; // replace with real flag from API
+    const [reactivationError, setReactivationError] = useState<{
+        message: string;
+        technicalDetails?: string;
+    } | null>(null);
 
     // ── Proration preview state ────────────────────────────────────────────────
     const [isProrationModalOpen, setIsProrationModalOpen] = useState(false);
@@ -73,52 +83,29 @@ export default function SubscriptionDetail() {
         navigate(`/subscriptions/${id}/usage`);
     };
 
-    // ── Mock data — replace with actual API responses ─────────────────────────
-    const isUsageBased = true;
-    const usageData = {
-        billingPeriod: 'Mar 1 — Mar 31',
-        usage: '32450 API calls',
-        estimatedCharge: '10 USDC',
-    };
-
-    // Mock subscription metadata
-    const subscriptionStatus: SubscriptionStatus = 'cancelled';
-    const cancelledAt = new Date();
-    cancelledAt.setDate(cancelledAt.getDate() - 7); // cancelled 7 days ago
-
-    const subscription = {
-        currentInterval: 'weekly' as BillingInterval,
-        nextCharge: '2026-08-05',
-        amount: 50,
-        currency: 'USDC',
-        billingDay: 15, // subscriber's original billing day of month
-    };
-
-    // Plan data for the reactivation modal
-    const reactivationPlan: ReactivationPlan = {
-        name: 'Pro Monthly',
-        interval: 'Monthly',
-        price: '50 USDC',
-        deleted: false,
-    };
-
-    // Only surface the CTA when reactivation is within the support window
-    const daysSinceCancellation = Math.floor(
-        (Date.now() - cancelledAt.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const isWithinWindow = daysSinceCancellation <= REACTIVATION_WINDOW_DAYS;
-    const showReactivateCTA = subscriptionStatus === 'cancelled' && isWithinWindow;
-
-    // Reactivation handler — swap out the console.log for your API call
+    // Reactivation goes through the typed subscriptions client. Errors keep
+    // the modal open and are surfaced in an alert under the header.
     const handleReactivateConfirm = async (startDate: Date) => {
+        if (!id) return;
         setIsReactivating(true);
+        setReactivationError(null);
         try {
-            console.log('Reactivating subscription', id, 'with start date', startDate.toISOString());
-            // TODO: await api.subscriptions.reactivate(id, { startDate })
-            await new Promise(resolve => setTimeout(resolve, 1200));
+            const result = await subscriptions.reactivate(id, {
+                startDate: startDate.toISOString(),
+            });
+            setSubscriptionData((prev) =>
+                prev ? { ...prev, status: result.status, cancelledAt: null } : prev,
+            );
             setIsReactivationModalOpen(false);
         } catch (err) {
-            console.error('Reactivation failed:', err);
+            const apiError = err as ApiError;
+            setReactivationError({
+                message:
+                    apiError instanceof Error && apiError.message
+                        ? apiError.message
+                        : 'Failed to reactivate subscription. Please try again.',
+                technicalDetails: apiError?.technicalDetails,
+            });
         } finally {
             setIsReactivating(false);
         }
@@ -133,6 +120,116 @@ export default function SubscriptionDetail() {
     ];
 
     const navigate = useNavigate();
+
+    // ── Fetch subscription on mount / id change ───────────────────────────────
+    useEffect(() => {
+        if (!id) {
+            setNotFound(true);
+            setIsLoading(false);
+            return;
+        }
+
+        const controller = new AbortController();
+        let cancelled = false;
+
+        setIsLoading(true);
+        setLoadError(null);
+        setNotFound(false);
+        setSubscriptionData(null);
+        setPaymentsLoading(true);
+        setPaymentsError(null);
+        setPayments([]);
+
+        subscriptions
+            .get(id, { signal: controller.signal })
+            .then((data) => {
+                if (cancelled) return;
+                setSubscriptionData(data);
+            })
+            .catch((err: unknown) => {
+                if (cancelled) return;
+                const status =
+                    typeof err === 'object' && err !== null && 'status' in err
+                        ? (err as { status?: number }).status
+                        : undefined;
+                if (status === 404) {
+                    setNotFound(true);
+                } else {
+                    setLoadError({
+                        status,
+                        message:
+                            err instanceof Error ? err.message : 'Failed to load subscription.',
+                    });
+                }
+            })
+            .finally(() => {
+                if (cancelled) return;
+                setIsLoading(false);
+            });
+
+        subscriptions
+            .payments(id, { signal: controller.signal })
+            .then((data) => {
+                if (cancelled) return;
+                setPayments(data?.payments ?? []);
+            })
+            .catch((err: unknown) => {
+                if (cancelled) return;
+                setPaymentsError(
+                    err instanceof Error ? err.message : 'Failed to load recent payments.',
+                );
+            })
+            .finally(() => {
+                if (cancelled) return;
+                setPaymentsLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+            controller.abort();
+        };
+    }, [id]);
+
+    // ── Derived data from fetched subscription ────────────────────────────────
+    const subscriptionStatus: SubscriptionStatus =
+        (subscriptionData?.status?.toLowerCase() as SubscriptionStatus | undefined) ?? 'active';
+    const trialEndsAt = subscriptionData?.trialEndsAt
+        ? new Date(subscriptionData.trialEndsAt)
+        : null;
+    const isTrialSubscription = Boolean(trialEndsAt);
+    const cancelledAt = subscriptionData?.cancelledAt
+        ? new Date(subscriptionData.cancelledAt)
+        : null;
+    const failedAttempts = subscriptionData?.failedAttempts ?? 0;
+    const showDunningBanner = failedAttempts > 0;
+
+    const subscription = {
+        currentInterval: (subscriptionData?.interval ?? 'monthly') as BillingInterval,
+        nextCharge: subscriptionData?.nextCharge ?? '',
+        amount: subscriptionData?.amount ?? subscriptionData?.price ?? 0,
+        currency: subscriptionData?.currency ?? 'USDC',
+        billingDay: subscriptionData?.billingDay ?? 1,
+    };
+
+    const isUsageBased = Boolean(subscriptionData?.usageBased);
+    const usageData = subscriptionData?.usage ?? null;
+
+    // Plan data for the reactivation modal
+    const reactivationPlan: ReactivationPlan = {
+        name: subscriptionData?.planName ?? 'Pro Monthly',
+        interval: subscriptionData?.interval ?? 'Monthly',
+        price: `${subscription.amount} ${subscription.currency}`,
+        deleted: false,
+    };
+
+    // Only surface the CTA when reactivation is within the support window
+    const daysSinceCancellation = cancelledAt
+        ? Math.floor((Date.now() - cancelledAt.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+    const isWithinWindow = cancelledAt
+        ? daysSinceCancellation <= REACTIVATION_WINDOW_DAYS
+        : false;
+    const showReactivateCTA = subscriptionStatus === 'cancelled' && isWithinWindow;
 
     const scopedActions = useMemo<CommandItem[]>(() => {
         const actions: CommandItem[] = [];
@@ -185,22 +282,122 @@ export default function SubscriptionDetail() {
     
     useCommandScope(`Subscription ${id || 'Detail'}`, scopedActions);
 
+    // ── Loading state ─────────────────────────────────────────────────────────
+    if (isLoading) {
+        return (
+            <div className={styles.page}>
+                <div
+                    role="status"
+                    aria-label="Loading subscription"
+                    className={styles.skeletonList}
+                >
+                    <div className={styles.skeletonLineSm} />
+                    <div className={styles.skeletonLineLg} />
+                    <div className={styles.skeletonCard} />
+                    <div className={styles.skeletonCard} />
+                </div>
+            </div>
+        );
+    }
+
+    // ── Not-found state ───────────────────────────────────────────────────────
+    if (notFound) {
+        return (
+            <div className={styles.page}>
+                <div
+                    role="alert"
+                    className={styles.notFoundCard}
+                >
+                    <h1 className={styles.notFoundTitle}>Subscription not found</h1>
+                    <p className={styles.notFoundMessage}>
+                        We couldn&apos;t find a subscription with id <strong>{id}</strong>.
+                    </p>
+                    <Link
+                        to="/subscriptions"
+                        className={styles.notFoundBackLink}
+                    >
+                        Back to Subscriptions
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    // ── Error state ───────────────────────────────────────────────────────────
+    if (loadError) {
+        return (
+            <div className={styles.page}>
+                <ErrorState
+                    title="Failed to load subscription"
+                    message={loadError.message}
+                    onRetry={() => {
+                        if (!id) return;
+                        setIsLoading(true);
+                        setLoadError(null);
+                        subscriptions
+                            .get(id)
+                            .then((data) => setSubscriptionData(data))
+                            .catch((err: unknown) => {
+                                const status =
+                                    typeof err === 'object' && err !== null && 'status' in err
+                                        ? (err as { status?: number }).status
+                                        : undefined;
+                                if (status === 404) {
+                                    setNotFound(true);
+                                } else {
+                                    setLoadError({
+                                        status,
+                                        message:
+                                            err instanceof Error
+                                                ? err.message
+                                                : 'Failed to load subscription.',
+                                    });
+                                }
+                            })
+                            .finally(() => setIsLoading(false));
+                    }}
+                />
+            </div>
+        );
+    }
+
     return (
-        <div style={{ padding: '2rem', background: '#0a0a0a', minHeight: '100vh', color: '#f8fafc' }}>
+        <div className={styles.page}>
+
+            {reactivationError && (
+                <div
+                    role="alert"
+                    style={{
+                        marginBottom: '1.5rem',
+                        padding: '0.875rem 1rem',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(239,68,68,0.45)',
+                        background: 'rgba(239,68,68,0.08)',
+                        color: '#fca5a5',
+                    }}
+                >
+                    <strong>Reactivation failed:</strong> {reactivationError.message}
+                    {reactivationError.technicalDetails && (
+                        <div style={{ marginTop: '0.25rem', fontSize: '0.85rem', color: '#94a3b8' }}>
+                            {reactivationError.technicalDetails}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* ── Page header with optional Reactivate CTA ──────────────────── */}
-            <div style={{ marginBottom: '2rem' }}>
+            <div className={styles.headerSection}>
                 <Link
                     to="/subscriptions"
-                    style={{ color: '#94a3b8', textDecoration: 'none', marginBottom: '1rem', display: 'inline-block' }}
+                    className={styles.backLink}
                 >
                     &larr; Back to Subscriptions
                 </Link>
 
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                <div className={styles.headerRow}>
                     <div>
-                        <h1 style={{ margin: '0 0 0.5rem' }}>Subscription {id}</h1>
-                        <p style={{ color: '#64748b', margin: 0 }}>
+                        <h1 className={styles.pageTitle}>Subscription {id}</h1>
+                        <p className={styles.pageSubtitle}>
                             View details and recent payments for this subscription.
                         </p>
                     </div>
@@ -209,21 +406,7 @@ export default function SubscriptionDetail() {
                     {showReactivateCTA && (
                         <button
                             onClick={() => setIsReactivationModalOpen(true)}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.625rem 1.25rem',
-                                borderRadius: '12px',
-                                border: '1px solid rgba(0,204,255,0.45)',
-                                background: 'rgba(0,204,255,0.1)',
-                                color: '#00ccff',
-                                fontWeight: 700,
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
-                                flexShrink: 0,
-                            }}
+                            className={`${styles.ctaButton} ${styles.reactivateButton}`}
                             aria-label="Reactivate this subscription"
                         >
                             {/* Refresh icon */}
@@ -249,21 +432,7 @@ export default function SubscriptionDetail() {
                     {subscriptionStatus === 'active' && (
                         <button
                             onClick={() => setIsDowngradeModalOpen(true)}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.625rem 1.25rem',
-                                borderRadius: '12px',
-                                border: '1px solid rgba(245,158,11,0.35)',
-                                background: 'rgba(245,158,11,0.08)',
-                                color: '#f59e0b',
-                                fontWeight: 700,
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
-                                flexShrink: 0,
-                            }}
+                            className={`${styles.ctaButton} ${styles.downgradeButton}`}
                             aria-label="Downgrade to a lower plan"
                         >
                             <svg
@@ -288,21 +457,7 @@ export default function SubscriptionDetail() {
                     {subscriptionStatus === 'active' && (
                         <button
                             onClick={() => setIsProrationModalOpen(true)}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.625rem 1.25rem',
-                                borderRadius: '12px',
-                                border: '1px solid rgba(34,211,238,0.35)',
-                                background: 'rgba(34,211,238,0.08)',
-                                color: '#22d3ee',
-                                fontWeight: 700,
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
-                                flexShrink: 0,
-                            }}
+                            className={`${styles.ctaButton} ${styles.prorationButton}`}
                             aria-label="Preview proration for plan change"
                         >
                             Preview Proration
@@ -313,18 +468,7 @@ export default function SubscriptionDetail() {
                 {/* Reactivation window notice */}
                 {subscriptionStatus === 'cancelled' && !isWithinWindow && (
                     <div
-                        style={{
-                            marginTop: '1rem',
-                            padding: '0.75rem 1rem',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(251,191,36,0.25)',
-                            background: 'rgba(251,191,36,0.05)',
-                            fontSize: '0.8125rem',
-                            color: '#94a3b8',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                        }}
+                        className={styles.windowNotice}
                         role="status"
                     >
                         <svg
@@ -348,7 +492,7 @@ export default function SubscriptionDetail() {
             </div>
 
             {/* ── Trial countdown banner ────────────────────────────────────── */}
-            {isTrialSubscription && (
+            {isTrialSubscription && trialEndsAt && (
                 <TrialCountdownBanner
                     trialEndsAt={trialEndsAt}
                     upgradeHref="/plans"
@@ -357,22 +501,24 @@ export default function SubscriptionDetail() {
             )}
 
             {/* ── Dunning banner ────────────────────────────────────────────── */}
-            <PaymentFailedBanner
-                subscriptionId={id}
-                failedAttempts={1}
-                retrySchedule={[
-                    { id: 'r1', when: 'Mar 24 — Attempted', status: 'past' },
-                    { id: 'r2', when: 'Mar 26 — Next retry', status: 'upcoming' },
-                    { id: 'r3', when: 'Mar 30 — Final retry', status: 'upcoming' },
-                ]}
-                onFixPayment={() => {
-                    navigate('/settings');
-                }}
-            />
+            {showDunningBanner && (
+                <PaymentFailedBanner
+                    subscriptionId={id}
+                    failedAttempts={failedAttempts}
+                    retrySchedule={[
+                        { id: 'r1', when: 'Mar 24 — Attempted', status: 'past' },
+                        { id: 'r2', when: 'Mar 26 — Next retry', status: 'upcoming' },
+                        { id: 'r3', when: 'Mar 30 — Final retry', status: 'upcoming' },
+                    ]}
+                    onFixPayment={() => {
+                        navigate('/settings');
+                    }}
+                />
+            )}
 
             {/* ── Usage this period ─────────────────────────────────────────── */}
             {isUsageBased && (
-                <div style={{ marginBottom: '2rem' }}>
+                <div className={styles.section}>
                     <UsageThisPeriod
                         billingPeriod={usageData?.billingPeriod}
                         usage={usageData?.usage}
@@ -383,14 +529,14 @@ export default function SubscriptionDetail() {
             )}
 
             {/* ── Billing schedule / schedule-change preview ────────────────── */}
-            <div style={{ marginBottom: '2rem' }}>
-                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '0.75rem' }}>
+            <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>
                     Billing schedule
                 </h2>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Change to:</span>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <div className={styles.scheduleControls}>
+                    <span className={styles.scheduleLabel}>Change to:</span>
+                    <div className={styles.intervalGroup}>
                         {intervalOptions
                             .filter(opt => opt.value !== subscription.currentInterval)
                             .map(opt => (
@@ -400,21 +546,7 @@ export default function SubscriptionDetail() {
                                         setPendingInterval((prev: BillingInterval | null) => prev === opt.value ? null : opt.value)
                                     }
                                     aria-pressed={pendingInterval === opt.value}
-                                    style={{
-                                        padding: '0.375rem 0.875rem',
-                                        borderRadius: '9999px',
-                                        fontSize: '0.8125rem',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                        border: pendingInterval === opt.value
-                                            ? '1px solid rgba(0,204,255,0.6)'
-                                            : '1px solid #2a2a2a',
-                                        background: pendingInterval === opt.value
-                                            ? 'rgba(0,204,255,0.12)'
-                                            : '#111',
-                                        color: pendingInterval === opt.value ? '#00ccff' : '#94a3b8',
-                                        transition: 'all 0.15s ease',
-                                    }}
+                                    className={`${styles.intervalButton} ${pendingInterval === opt.value ? styles.intervalButtonActive : ''}`}
                                 >
                                     {opt.label}
                                 </button>
@@ -434,7 +566,12 @@ export default function SubscriptionDetail() {
                 )}
             </div>
 
-            <RecentPayments subscriptionId={id} />
+            <RecentPayments
+                subscriptionId={id}
+                payments={payments}
+                isLoading={paymentsLoading}
+                error={paymentsError}
+            />
             <PlanStatusTimeline subscriptionId={id} />
 
             {/* ── Reactivation modal ────────────────────────────────────────── */}

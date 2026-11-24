@@ -11,6 +11,12 @@ export type WidgetId =
   | 'chart_revenue'
   | 'activity_feed';
 
+export interface DashboardFilters {
+  status?: 'active';
+  planId?: string;
+  range?: 'last30Days';
+}
+
 // ─── Per-widget state ──────────────────────────────────────────────────────
 
 export type WidgetStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -78,7 +84,10 @@ function makeWidgetError(message: string, opts: Partial<ApiError> = {}): ApiErro
   return err;
 }
 
-async function fetchWidget(widgetId: WidgetId): Promise<void> {
+async function fetchWidget(
+  widgetId: WidgetId,
+  _filters: DashboardFilters,
+): Promise<void> {
   // Honour per-widget failure simulation: ?fail_<widget_id>=1
   const search =
     typeof window !== 'undefined' ? window.location.search : '';
@@ -127,20 +136,22 @@ export interface UseDashboardWidgetsReturn {
   failedWidgetIds: WidgetId[];
 }
 
-export function useDashboardWidgets(): UseDashboardWidgetsReturn {
+export function useDashboardWidgets(
+  filters: DashboardFilters,
+): UseDashboardWidgetsReturn {
   const [widgets, dispatch] = useReducer(reducer, undefined, buildInitialState);
 
   const loadWidget = useCallback(
     async (id: WidgetId) => {
       dispatch({ type: 'LOAD', widgetId: id });
       try {
-        await fetchWidget(id);
+        await fetchWidget(id, filters);
         dispatch({ type: 'SUCCESS', widgetId: id });
       } catch (err) {
         dispatch({ type: 'ERROR', widgetId: id, error: err as ApiError });
       }
     },
-    [],
+    [filters],
   );
 
   const loadAll = useCallback(() => {

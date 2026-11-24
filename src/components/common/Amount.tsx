@@ -6,11 +6,11 @@ export interface AmountProps extends FormatAmountOptions {
   value: number | string | null | undefined
   /** Show the trailing currency code (e.g. " USDC"). Defaults to true. */
   showCode?: boolean
-  /** Placeholder rendered when the value is missing. Defaults to `"—"`. */
+  /** Placeholder rendered when the value is missing. Defaults to `—`. */
   placeholder?: ReactNode
   /** Override the screen-reader label entirely. */
   ariaLabel?: string
-  /** Override the host element. Defaults to `'span'`. */
+  /** Override the host element. Defaults to 'span'. */
   as?: ElementType
   /** Optional className applied to the root element. */
   className?: string
@@ -19,7 +19,7 @@ export interface AmountProps extends FormatAmountOptions {
   /** Optional className applied to the currency code portion. */
   codeClassName?: string
   /** Forwarded to the root element. */
-  ['data-testid']?: string
+  ['data-testid']: string
 }
 
 /**
@@ -92,7 +92,7 @@ export default function Amount({
       </span>
       {showCode && (
         <>
-          {' '}
+          {' '}
           <span className={codeClassName} aria-hidden="true">
             {formatted.currency}
           </span>

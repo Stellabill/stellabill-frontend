@@ -8,6 +8,8 @@ import QuoteCallout from "../components/Landing/QuoteCallout";
 import FAQ from "../components/Landing/FAQ";
 
 import { useNavigate } from "react-router-dom";
+import { openExternal } from "../utils/openExternal";
+import { SUPPORT_URL } from "../config/links";
 
 export default function Landing() {
 	const navigate = useNavigate();
@@ -20,7 +22,7 @@ export default function Landing() {
 	};
 
 	const handleContactSales = () => {
-		window.open("https://github.com/Stellabill/stellabill-frontend/issues", "_blank", "noopener");
+		openExternal(SUPPORT_URL);
 	};
 
 	return (

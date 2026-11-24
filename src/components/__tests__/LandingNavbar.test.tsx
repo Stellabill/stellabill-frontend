@@ -1,64 +1,70 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom/extend-expect';
+import '@testing-library/jest-dom';
 import LandingNavbar from '../LandingNavbar';
 import { BrowserRouter } from 'react-router-dom';
+import { WalletProvider } from '../../wallet/WalletContext';
 
-// Mock useLocation to simulate non-dashboard path
-jest.mock('react-router-dom', () => {
-  const original = jest.requireActual('react-router-dom');
-  return {
-    ...original,
-    useLocation: () => ({ pathname: '/' }),
-    Link: original.Link,
-  };
-});
+// Helper to find the enabled Freighter "Connect" button in the modal
+const getModalConnectButton = () => {
+  const modal = screen.getByRole('dialog');
+  return within(modal)
+    .getAllByRole('button', { name: /^connect$/i })
+    .find((button) => !(button as HTMLButtonElement).disabled) as HTMLButtonElement;
+};
+
+const renderNavbar = () =>
+  render(
+    <BrowserRouter>
+      <LandingNavbar />
+    </BrowserRouter>
+  );
 
 describe('LandingNavbar', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   test('renders logo and navigation links', () => {
     render(
       <BrowserRouter>
-        <LandingNavbar />
+        <WalletProvider><LandingNavbar /></WalletProvider>
       </BrowserRouter>
     );
-    // Logo should be in the document
-    const logo = screen.getByRole('link', { name: /logo/i });
-    expect(logo).toBeInTheDocument();
-    // Navigation links should be present (Product, Pricing, Docs, Contact)
+    const logos = screen.getAllByRole('link', { name: /stellabill/i });
+    expect(logos.length).toBeGreaterThan(0);
     const navLinks = ['Product', 'Pricing', 'Docs', 'Contact'];
     navLinks.forEach((label) => {
-      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     });
   });
 
   test('mobile menu toggles open and close', async () => {
-    render(
+    const { container } = render(
       <BrowserRouter>
-        <LandingNavbar />
+        <WalletProvider><LandingNavbar /></WalletProvider>
       </BrowserRouter>
     );
     const toggleButton = screen.getByRole('button', { name: /main menu/i });
-    // Initially drawer should be hidden
-    expect(screen.queryByText('Navigation')).not.toBeInTheDocument();
-    // Open menu
+    const drawer = container.querySelector('.site-navbar__mobile-drawer');
+    expect(drawer).toHaveClass('translate-x-full');
     fireEvent.click(toggleButton);
     await waitFor(() => {
-      expect(screen.getByText('Navigation')).toBeInTheDocument();
+      expect(drawer).toHaveClass('translate-x-0');
     });
-    // Close menu by clicking backdrop (simplified by clicking toggle again)
     fireEvent.click(toggleButton);
     await waitFor(() => {
-      expect(screen.queryByText('Navigation')).not.toBeInTheDocument();
+      expect(drawer).toHaveClass('translate-x-full');
     });
   });
 
-  test('shows connect wallet button when not connected', () => {
+  it('shows connect wallet button when not connected', () => {
     render(
       <BrowserRouter>
-        <LandingNavbar />
+        <WalletProvider><LandingNavbar /></WalletProvider>
       </BrowserRouter>
     );
-    const connectBtn = screen.getByRole('button', { name: /connect wallet/i });
-    expect(connectBtn).toBeInTheDocument();
+    const connectButtons = screen.getAllByRole('button', { name: /connect wallet/i });
+    expect(connectButtons.length).toBeGreaterThan(0);
   });
 });

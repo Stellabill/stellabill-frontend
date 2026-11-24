@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, KeyboardEvent } from 'react';
 import './RevenueChart.css';
-import { seriesVar } from '@/tokens/chartPalette';
+import { copyToClipboard } from '../utils/clipboard';
 
 export type TimeRange = '7D' | '30D' | '90D';
 
@@ -24,64 +24,6 @@ export interface RevenueChartProps {
   ariaLabel?: string;
 }
 
-// Mock data generator
-function generateMockData(days: number): DataPoint[] {
-  const data: DataPoint[] = [];
-  const now = new Date();
-  
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    
-    // Generate increasing trend with some variance
-    const baseRevenue = 400 + (days - i) * (800 / days);
-    const variance = Math.random() * 200 - 100;
-    const revenue = Math.max(0, baseRevenue + variance);
-    
-    data.push({
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      revenue: Math.round(revenue)
-    });
-  }
-  
-  return data;
-}
-
-// Mock series generator
-function generateMockSeries(days: number): SeriesData[] {
-  const baseData = generateMockData(days);
-  
-  return [
-    {
-      id: 'revenue',
-      name: 'Total Revenue',
-      color: seriesVar(0),
-      visible: true,
-      data: baseData
-    },
-    {
-      id: 'subscriptions',
-      name: 'Subscriptions',
-      color: seriesVar(1), 
-      visible: true,
-      data: baseData.map(d => ({
-        ...d,
-        revenue: Math.round(d.revenue * 0.7 + Math.random() * 100 - 50)
-      }))
-    },
-    {
-      id: 'oneTime',
-      name: 'One-time Payments',
-      color: seriesVar(2),
-      visible: true,
-      data: baseData.map(d => ({
-        ...d,
-        revenue: Math.round(d.revenue * 0.3 + Math.random() * 150 - 75)
-      }))
-    }
-  ];
-}
-
 export default function RevenueChart({
   initialTimeRange = '30D',
   data: customData,
@@ -95,18 +37,23 @@ export default function RevenueChart({
   
   const data = useMemo(() => {
     if (customData) return customData;
-    // When custom series are supplied without explicit data, use the first
-    // series' data points so the table caption and x-axis dates are consistent.
-    if (customSeries && customSeries.length > 0) return customSeries[0].data;
-    const days = timeRange === '7D' ? 7 : timeRange === '30D' ? 30 : 90;
-    return generateMockData(days);
-  }, [timeRange, customData, customSeries]);
+    if (customSeries) return customSeries.find(seriesItem => seriesItem.data.length)?.data ?? [];
+    return [];
+  }, [customData, customSeries]);
 
   const series = useMemo(() => {
     if (customSeries) return customSeries;
-    const days = timeRange === '7D' ? 7 : timeRange === '30D' ? 30 : 90;
-    return generateMockSeries(days);
-  }, [timeRange, customSeries]);
+    if (customData?.length) {
+      return [{
+        id: 'revenue',
+        name: 'Revenue',
+        color: 'var(--chart-series-1)',
+        visible: true,
+        data: customData
+      }];
+    }
+    return [];
+  }, [customData, customSeries]);
 
   // Apply visibility state to series
   const visibleSeries = useMemo(() => {
@@ -131,8 +78,19 @@ export default function RevenueChart({
     const startDate = data[0].date;
     const endDate = data[data.length - 1].date;
     const seriesNames = activeSeries.map(s => s.name).join(', ');
+    const values = activeSeries.flatMap(seriesItem =>
+      seriesItem.data.map(point => ({ ...point, seriesName: seriesItem.name })),
+    );
+    if (!values.length) return 'No revenue data available.';
+    const highest = values.reduce((highestPoint, point) =>
+      point.revenue > highestPoint.revenue ? point : highestPoint,
+    );
+    const lowest = values.reduce((lowestPoint, point) =>
+      point.revenue < lowestPoint.revenue ? point : lowestPoint,
+    );
+    const average = values.reduce((total, point) => total + point.revenue, 0) / values.length;
     
-    return `Revenue chart summary from ${startDate} to ${endDate}: ${data.length} data points showing ${seriesNames}. Use Left and Right arrow keys to explore individual data points. Press Escape to dismiss tooltip.`;
+    return `Revenue chart summary from ${startDate} to ${endDate}: ${data.length} dates showing ${seriesNames}. Highest revenue is $${highest.revenue.toLocaleString()} for ${highest.seriesName} on ${highest.date}. Lowest revenue is $${lowest.revenue.toLocaleString()} for ${lowest.seriesName} on ${lowest.date}. Average revenue is $${Math.round(average).toLocaleString()}. Use arrow keys to explore individual data points. Press Escape to dismiss tooltip.`;
   }, [data, visibleSeries]);
   
   return (
@@ -183,7 +141,11 @@ export default function RevenueChart({
             series={visibleSeries}
             onToggleSeries={toggleSeriesVisibility}
           />
-          <LineChart data={data} series={visibleSeries} />
+          {data.length && visibleSeries.some(seriesItem => seriesItem.data.length) ? (
+            <LineChart data={data} series={visibleSeries} />
+          ) : (
+            <p className="revenue-chart-empty-state" role="status">No revenue data available.</p>
+          )}
         </>
       ) : (
         <RevenueTable data={data} series={series} />
@@ -198,9 +160,16 @@ interface RevenueTableProps {
 }
 
 function RevenueTable({ data, series }: RevenueTableProps) {
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleCopyCsv = () => {
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  const handleCopyCsv = async () => {
     const headers = ['Date', ...series.map(s => `"${s.name.replace(/"/g, '""')}"`)];
     const rows = data.map((d, i) => {
       return [
@@ -217,12 +186,13 @@ function RevenueTable({ data, series }: RevenueTableProps) {
       ...rows.map(row => row.join(','))
     ].join('\n');
     
-    navigator.clipboard.writeText(csvContent).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(err => {
-      console.error('Failed to copy CSV:', err);
-    });
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    const succeeded = await copyToClipboard(csvContent);
+    setCopyStatus(succeeded ? 'success' : 'error');
+    copyTimerRef.current = setTimeout(() => {
+      setCopyStatus('idle');
+      copyTimerRef.current = null;
+    }, 2000);
   };
 
   const startDate = data[0]?.date || '';
@@ -231,14 +201,20 @@ function RevenueTable({ data, series }: RevenueTableProps) {
   return (
     <div className="revenue-table-container">
       <div className="revenue-table-actions">
-        <button 
-          type="button" 
-          onClick={handleCopyCsv} 
+        <button
+          type="button"
+          onClick={handleCopyCsv}
           className="btn-copy-csv"
-          aria-live="polite"
         >
-          {copied ? 'Copied!' : 'Copy as CSV'}
+          {copyStatus === 'success' ? 'Copied!' : copyStatus === 'error' ? 'Copy failed' : 'Copy as CSV'}
         </button>
+        <span className="sr-only" role="status" aria-live="polite" data-testid="csv-copy-live-region">
+          {copyStatus === 'success'
+            ? 'CSV copied to clipboard'
+            : copyStatus === 'error'
+              ? 'Copy failed — select and copy manually'
+              : ''}
+        </span>
       </div>
       <div className="revenue-table-wrapper" tabIndex={0} role="region" aria-label="Revenue data table">
         <table className="revenue-table">
@@ -425,6 +401,16 @@ export function LineChart({ data, series }: LineChartProps) {
   const visibleSeries = series.filter(s => s.visible);
   const allSeries = series;
 
+  // A series can be hidden from the legend while one of its points has focus.
+  // Clear that focus so the first remaining visible point becomes the roving tab stop.
+  useEffect(() => {
+    if (focusedPoint && !visibleSeries.some(s => s.id === focusedPoint.seriesId)) {
+      setFocusedPoint(null);
+      setHoveredPoint(null);
+      setAnnouncement('');
+    }
+  }, [focusedPoint, visibleSeries]);
+
   // Reset refs when data or series changes (track refs for ALL series)
   useEffect(() => {
     const newMap = new Map();
@@ -565,6 +551,8 @@ export function LineChart({ data, series }: LineChartProps) {
       case 'Escape':
         e.preventDefault();
         setFocusedPoint(null);
+        setHoveredPoint(null);
+        setAnnouncement('');
         pointRefs.current.get(seriesId)?.[pointIndex]?.blur();
         return;
       default:
@@ -785,6 +773,7 @@ export function LineChart({ data, series }: LineChartProps) {
                   onMouseEnter={isVisible ? () => setHoveredPoint({ seriesId: seriesItem.id, index: point.pointIndex }) : undefined}
                   onMouseLeave={isVisible ? () => setHoveredPoint(null) : undefined}
                   onFocus={isVisible ? () => setFocusedPoint({ seriesId: seriesItem.id, index: point.pointIndex }) : undefined}
+                  onBlur={isVisible ? () => setFocusedPoint(null) : undefined}
                   onKeyDown={isVisible ? (e) => handleKeyDown(e, seriesItem.id, point.pointIndex) : undefined}
                   role={isVisible ? 'button' : undefined}
                   tabIndex={isRovingTabTarget ? 0 : -1}

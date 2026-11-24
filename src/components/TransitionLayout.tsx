@@ -1,21 +1,40 @@
 import { Outlet, useLocation, useNavigationType } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useMemo } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { getMotionTokens } from '../design/tokens/motion';
 import { transitionTokens, TransitionKind } from '../design/tokens/transitions';
 
 export default function TransitionLayout() {
   const location = useLocation();
   const navigationType = useNavigationType();
+  const shouldReduceMotion = useReducedMotion();
+  const hasMounted = useRef(false);
+  const [announcement, setAnnouncement] = useState('');
 
-  const prefersReduced = useMemo(() => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [prefersReduced, setPrefersReduced] = useState(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? Boolean(window.matchMedia('(prefers-reduced-motion: reduce)')?.matches)
+      : false,
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (!mediaQuery) return;
+    const updatePreference = () => setPrefersReduced(Boolean(mediaQuery.matches));
+    updatePreference();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', updatePreference);
+      return () => mediaQuery.removeEventListener('change', updatePreference);
     }
-    return false;
+    mediaQuery.addListener?.(updatePreference);
+    return () => mediaQuery.removeListener?.(updatePreference);
   }, []);
 
+  const isReducedMotion = Boolean(shouldReduceMotion) || prefersReduced;
+
   const kind: TransitionKind = useMemo(() => {
-    if (prefersReduced) return 'reducedMotion';
+    if (isReducedMotion) return 'reducedMotion';
     switch (navigationType) {
       case 'PUSH':
         return 'forward';
@@ -26,9 +45,13 @@ export default function TransitionLayout() {
       default:
         return 'forward';
     }
-  }, [navigationType, prefersReduced]);
+  }, [navigationType, isReducedMotion]);
 
-  const { duration, easing: rawEasing, distance } = transitionTokens[kind];
+  const motionTokens = getMotionTokens();
+  const { duration: rawDuration, easing: rawEasing, distance } = transitionTokens[kind];
+  const duration = isReducedMotion ? Math.min(rawDuration, motionTokens.entry.duration) : rawDuration;
+  const durationRef = useRef(duration);
+  durationRef.current = duration;
   const easing = (({ "ease-out": "easeOut", "ease-in": "easeIn", "ease-in-out": "easeInOut", linear: "linear" }) as Record<string, string>)[rawEasing as string] ?? rawEasing;
 
   // Define animation variants based on kind
@@ -64,28 +87,45 @@ export default function TransitionLayout() {
 
   // Focus management after transition completes
   useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+    if (location.hash) return;
+
     const timeout = setTimeout(() => {
-      // Try to focus the first heading inside the new route
       const main = document.querySelector('main');
       const heading = main?.querySelector('h1, h2, h3') as HTMLElement | null;
-      heading?.focus();
-    }, duration);
+      let pageName = 'Page';
+      if (heading) {
+        heading.tabIndex = -1;
+        heading.focus();
+        pageName = heading.textContent?.trim() || pageName;
+      }
+      setAnnouncement(`${pageName} page`);
+    }, durationRef.current);
     return () => clearTimeout(timeout);
-  }, [location.key, duration]);
+  }, [location.key, location.hash]);
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.key}
-        variants={variants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        style={{ height: '100%' }}
-        aria-live="polite"
-      >
-        <Outlet />
-      </motion.div>
-    </AnimatePresence>
+    <>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.key}
+          variants={variants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={isReducedMotion ? { duration: 0 } : undefined}
+          data-transition-duration={duration / 1000}
+          style={{ height: '100%' }}
+        >
+          <Outlet />
+        </motion.div>
+      </AnimatePresence>
+      <div className="visually-hidden" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </div>
+    </>
   );
 }

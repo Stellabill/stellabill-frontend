@@ -107,7 +107,7 @@ export default function DowngradeConfirmModal({
     if (isOpen) setAcknowledged(false);
   }, [isOpen]);
 
-  useModalFocus(modalRef, { isOpen, onClose, initialFocusRef });
+  useModalFocus(modalRef, { isOpen, onClose, initialFocusRef, closeOnEscape: !isLoading });
 
   if (!isOpen) return null;
 
@@ -128,7 +128,7 @@ export default function DowngradeConfirmModal({
   };
 
   const handleOverlayClick = (e: MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) onClose();
+    if (e.target === e.currentTarget && !isLoading) onClose();
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -141,13 +141,14 @@ export default function DowngradeConfirmModal({
       aria-modal="true"
       aria-labelledby="downgrade-modal-title"
       aria-describedby="downgrade-modal-desc"
+      aria-busy={isLoading}
     >
       <div className="downgrade-modal-content" ref={modalRef}>
 
         {/* ── Close ───────────────────────────────────────────────────── */}
         <button
           className="downgrade-close-btn"
-          onClick={onClose}
+          onClick={() => { if (!isLoading) onClose(); }}
           aria-label="Close downgrade dialog"
           disabled={isLoading}
         >

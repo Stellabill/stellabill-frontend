@@ -240,4 +240,88 @@ describe("FileUpload component", () => {
     const region = document.querySelector('[aria-live="polite"]');
     expect(region).toBeInTheDocument();
   });
+
+  it("drives progress exclusively from the uploader onProgress callback", async () => {
+    let reportProgress!: (p: number) => void;
+    let resolveUpload!: () => void;
+    const uploader = vi.fn(
+      (_file: File, onProgress: (p: number) => void) =>
+        new Promise<void>((resolve) => {
+          reportProgress = onProgress;
+          resolveUpload = resolve;
+        })
+    );
+
+    const file = makeFile("logo.png", "image/png");
+    render(<FileUpload variant="logo" uploader={uploader} />);
+    const zone = screen.getByTestId("file-upload-dropzone");
+    fireEvent.drop(zone, { dataTransfer: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+
+    reportProgress(35);
+    await waitFor(() => {
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "35");
+    });
+
+    reportProgress(80);
+    await waitFor(() => {
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "80");
+    });
+
+    resolveUpload();
+    await waitFor(() => {
+      expect(screen.getByTestId("file-upload-image-preview")).toBeInTheDocument();
+    });
+  });
+
+  it("aborts the uploader signal and clears progress when cancel is clicked", async () => {
+    let capturedSignal: AbortSignal | undefined;
+    let reportProgress!: (p: number) => void;
+    const uploader = vi.fn(
+      (_file: File, onProgress: (p: number) => void, signal: AbortSignal) => {
+        capturedSignal = signal;
+        reportProgress = onProgress;
+        return new Promise<void>(() => {
+          // pending until aborted
+        });
+      }
+    );
+
+    const file = makeFile("logo.png", "image/png");
+    render(<FileUpload variant="logo" uploader={uploader} />);
+    const zone = screen.getByTestId("file-upload-dropzone");
+    fireEvent.drop(zone, { dataTransfer: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    });
+    reportProgress(50);
+    await waitFor(() => {
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+    });
+
+    const cancelBtn = screen.getByRole("button", { name: /cancel upload/i });
+    await userEvent.click(cancelBtn);
+
+    expect(capturedSignal?.aborted).toBe(true);
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.getByText(/drag & drop/i)).toBeInTheDocument();
+  });
+
+  it("shows error state when uploader rejects", async () => {
+    const uploader = vi.fn().mockRejectedValue(new Error("Upload failed on server"));
+    const file = makeFile("logo.png", "image/png");
+    render(<FileUpload variant="logo" uploader={uploader} />);
+    const zone = screen.getByTestId("file-upload-dropzone");
+    fireEvent.drop(zone, { dataTransfer: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("file-upload-error")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(/upload failed on server/i);
+  });
 });

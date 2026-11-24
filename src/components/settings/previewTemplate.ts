@@ -1,3 +1,6 @@
+// NOTE: vercel.json's Content-Security-Policy allows the inline <script> below by its
+// sha256 hash (the blob: preview iframe inherits the app's CSP). If you change that
+// script, recompute the hash and update script-src in vercel.json.
 export const PREVIEW_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>

@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { Link, MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Settings from '../pages/Settings'
 
@@ -20,11 +20,17 @@ vi.mock('../components/settings/DensityPreview', () => ({
   default: () => <div data-testid="density-preview">Density Preview Component</div>
 }))
 
-const renderWithRouter = (component: React.ReactElement) => {
+function SettingsLocation() {
+  const { search, hash } = useLocation()
+  return <output data-testid="settings-location">{search}{hash}</output>
+}
+
+const renderWithRouter = (component: React.ReactElement, initialPath = '/settings') => {
   return render(
-    <BrowserRouter>
+    <MemoryRouter initialEntries={[initialPath]}>
       {component}
-    </BrowserRouter>
+      <SettingsLocation />
+    </MemoryRouter>
   )
 }
 
@@ -123,11 +129,53 @@ describe('Settings Page', () => {
     expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument()
     
     // Check for button roles
-    expect(screen.getAllByRole('button')).toHaveLength(5) // Five navigation tabs
+    const navigation = screen.getByRole('navigation', { name: 'Settings sections' })
+    expect(within(navigation).getAllByRole('button')).toHaveLength(6)
   })
 })
 
 describe('Settings Navigation', () => {
+  it('opens Billing from the tab query even when a different tab is in the hash', () => {
+    renderWithRouter(<Settings />, '/settings?tab=billing#appearance')
+
+    expect(screen.getByTestId('billing-settings')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /billing/i })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('falls back to Organization when navigation supplies an invalid tab', () => {
+    renderWithRouter(
+      <>
+        <Settings />
+        <Link to="/settings?tab=unknown">Open invalid tab</Link>
+      </>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /billing/i }))
+    expect(screen.getByTestId('billing-settings')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open invalid tab' }))
+
+    expect(screen.getByTestId('organization-settings')).toBeInTheDocument()
+    expect(screen.queryByTestId('billing-settings')).not.toBeInTheDocument()
+  })
+
+  it('opens settings from a tab hash and replaces it when another tab is selected', () => {
+    renderWithRouter(<Settings />, '/settings?source=notification#appearance')
+    expect(screen.getByTestId('density-preview')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /api keys/i }))
+
+    expect(screen.getByTestId('api-keys-settings')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-location').textContent).toBe('?source=notification&tab=api-keys')
+  })
+
+  it('updates the tab query while keeping unrelated query values and anchors', () => {
+    renderWithRouter(<Settings />, '/settings?tab=billing&source=notification#invoice-history')
+
+    fireEvent.click(screen.getByRole('button', { name: /api keys/i }))
+
+    expect(screen.getByTestId('settings-location').textContent).toBe('?tab=api-keys&source=notification#invoice-history')
+  })
+
   it('navigates between sections maintaining state', async () => {
     renderWithRouter(<Settings />)
     

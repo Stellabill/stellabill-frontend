@@ -1,7 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WalletConnectModal from '../../components/WalletConnectModal';
-import { ConnectionState } from '../../components/ConnectButton';
 
 describe('WalletConnectModal', () => {
   const onClose = vi.fn();
@@ -171,8 +170,7 @@ describe('WalletConnectModal', () => {
       );
 
       expect(screen.getByText('Connecting...')).toBeInTheDocument();
-      expect(screen.getByText(/confirm in freighter/i)).toBeInTheDocument();
-      expect(screen.getByText(/accept the signature request/i)).toBeInTheDocument();
+      expect(screen.getByText(/approve the connection request in freighter/i)).toBeInTheDocument();
       expect(document.querySelector('.spinner')).toBeInTheDocument();
     });
 
@@ -244,7 +242,7 @@ describe('WalletConnectModal', () => {
     });
 
     it('opens help documentation when help button is clicked', () => {
-      const mockOpen = vi.spyOn(window, 'open').mockImplementation();
+      const mockOpen = vi.spyOn(window, 'open').mockImplementation(() => null);
       
       render(
         <WalletConnectModal 
@@ -257,7 +255,7 @@ describe('WalletConnectModal', () => {
       const helpButton = screen.getByText('Get Help');
       fireEvent.click(helpButton);
       
-      expect(mockOpen).toHaveBeenCalledWith('https://docs.stellar.org/wallets', '_blank');
+      expect(mockOpen).toHaveBeenCalledWith('https://docs.stellar.org/wallets', '_blank', 'noopener,noreferrer');
       
       mockOpen.mockRestore();
     });

@@ -1,7 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import GiftPurchaseModal from "./GiftPurchaseModal";
+import { copyToClipboard } from "../utils/clipboard";
+
+vi.mock("../utils/clipboard", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../utils/clipboard")>();
+  return { ...actual, copyToClipboard: vi.fn(actual.copyToClipboard) };
+});
+
+const mockedCopyToClipboard = vi.mocked(copyToClipboard);
+
+configure({ asyncUtilTimeout: 4000 });
 
 describe("GiftPurchaseModal", () => {
   const mockOnClose = vi.fn();
@@ -20,6 +30,8 @@ describe("GiftPurchaseModal", () => {
   beforeEach(() => {
     mockOnClose.mockClear();
     mockOnPurchaseComplete.mockClear();
+    mockedCopyToClipboard.mockClear();
+    mockedCopyToClipboard.mockResolvedValue(true);
   });
 
   describe("Rendering", () => {
@@ -140,8 +152,7 @@ describe("GiftPurchaseModal", () => {
       });
     });
 
-    it("enforces message character limit", async () => {
-      const user = userEvent.setup();
+    it("enforces message character limit", () => {
       render(
         <GiftPurchaseModal
           isOpen={true}
@@ -153,16 +164,12 @@ describe("GiftPurchaseModal", () => {
 
       const messageInput = screen.getByLabelText(/personal message/i);
       expect(messageInput).toHaveAttribute("maxLength", "300");
+      fireEvent.change(messageInput, { target: { value: "a".repeat(300) } });
 
-      const longMessage = "a".repeat(301);
-      await user.type(messageInput, longMessage);
-
-      // Should only accept 300 characters
       expect(messageInput).toHaveValue("a".repeat(300));
     });
 
-    it("updates character count", async () => {
-      const user = userEvent.setup();
+    it("updates character count", () => {
       render(
         <GiftPurchaseModal
           isOpen={true}
@@ -173,7 +180,7 @@ describe("GiftPurchaseModal", () => {
       );
 
       const messageInput = screen.getByLabelText(/personal message/i);
-      await user.type(messageInput, "Hello");
+      fireEvent.change(messageInput, { target: { value: "Hello" } });
 
       expect(screen.getByText("5 / 300")).toBeInTheDocument();
     });
@@ -341,13 +348,7 @@ describe("GiftPurchaseModal", () => {
 
     it("allows copying gift code", async () => {
       const user = userEvent.setup();
-      
-      // Mock clipboard API
-      Object.assign(navigator, {
-        clipboard: {
-          writeText: vi.fn().mockResolvedValue(undefined),
-        },
-      });
+      mockedCopyToClipboard.mockResolvedValueOnce(true);
 
       render(
         <GiftPurchaseModal
@@ -371,13 +372,44 @@ describe("GiftPurchaseModal", () => {
         expect(screen.getByText(/GIFT-/)).toBeInTheDocument();
       });
 
-      const copyBtn = screen.getByRole("button", { name: /copy/i });
+      const copyBtn = screen.getByRole("button", { name: /copy gift code to clipboard/i });
       await user.click(copyBtn);
 
       await waitFor(() => {
-        expect(navigator.clipboard.writeText).toHaveBeenCalled();
+        expect(mockedCopyToClipboard).toHaveBeenCalledWith(expect.stringContaining("GIFT-"));
         expect(screen.getByText("Copied!")).toBeInTheDocument();
       });
+      expect(screen.getByRole("status")).toHaveTextContent(/gift code copied to clipboard/i);
+    });
+
+    it("shows failure feedback without success when copying fails", async () => {
+      const user = userEvent.setup();
+      mockedCopyToClipboard.mockResolvedValueOnce(false);
+
+      render(
+        <GiftPurchaseModal
+          isOpen={true}
+          onClose={mockOnClose}
+          plan={mockPlan}
+          onPurchaseComplete={mockOnPurchaseComplete}
+        />
+      );
+
+      await user.type(screen.getByLabelText(/recipient email/i), "recipient@example.com");
+      await user.click(screen.getByRole("button", { name: /review gift/i }));
+      await user.click(screen.getByRole("button", { name: /confirm purchase/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/GIFT-/)).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /copy gift code to clipboard/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("status")).toHaveTextContent(/copy failed — select and copy manually/i);
+      });
+      expect(screen.queryByText("Copied!")).not.toBeInTheDocument();
+      expect(screen.getAllByText(/copy failed/i).length).toBeGreaterThan(0);
     });
   });
 
