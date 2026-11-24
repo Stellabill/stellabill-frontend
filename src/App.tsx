@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Routes, Route, useLocation, Outlet } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
+import RequireWallet, { WalletReturnRedirect } from "./components/RequireWallet";
 import TransitionLayout from "./components/TransitionLayout";
 import RouteErrorBoundary from "./components/RouteErrorBoundary";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -68,6 +69,7 @@ function App() {
   return (
     <>
     <ScrollToHash />
+    <WalletReturnRedirect />
     <Suspense fallback={<div style={{ minHeight: '100vh' }} role="status" aria-label="Loading" />}>
     <Routes>
       {/* 1. Public Routes (No Layout) */}

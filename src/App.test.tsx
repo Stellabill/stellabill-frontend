@@ -17,14 +17,25 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import App from './App';
+import { WalletProvider, useWallet } from './wallet/WalletContext';
+import type { FreighterAdapter } from './wallet/freighter';
 
-// ---------------------------------------------------------------------------
-// Stub every page / layout component so the tests stay fast and isolated.
-// Each stub renders a unique, easily queryable data-testid.
-// ---------------------------------------------------------------------------
+const TEST_PUBLIC_KEY = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+const WALLET_STORAGE_KEY = 'stellabill.wallet.publicKey';
 
-// Use factory functions that import Outlet via the hoisted vi.mock API.
-// The async factory form is supported by Vitest and avoids require().
+function createMockAdapter(overrides?: Partial<FreighterAdapter>): FreighterAdapter {
+  return {
+    isConnected: vi.fn().mockResolvedValue({ isConnected: true }),
+    requestAccess: vi.fn().mockResolvedValue({ address: TEST_PUBLIC_KEY }),
+    getAddress: vi.fn().mockResolvedValue({ address: TEST_PUBLIC_KEY }),
+    getNetwork: vi.fn().mockResolvedValue({
+      network: 'PUBLIC',
+      networkPassphrase: 'Public Global Stellar Network ; September 2015',
+    }),
+    ...overrides,
+  };
+}
+
 vi.mock('./components/Layout', async () => {
   const { Outlet } = await import('react-router-dom');
   return {
@@ -50,7 +61,18 @@ vi.mock('./components/TransitionLayout', async () => {
 vi.mock('./pages/NotFound', () => ({ default: () => <div data-testid="page-not-found" /> }));
 
 // Pages – public
-vi.mock('./pages/Landing', () => ({ default: () => <div data-testid="page-landing" /> }));
+vi.mock('./pages/Landing', () => ({
+  default: function MockLanding() {
+    const { connect } = useWallet();
+    return (
+      <div data-testid="page-landing">
+        <button type="button" onClick={() => void connect()}>
+          Connect Wallet
+        </button>
+      </div>
+    );
+  },
+}));
 vi.mock('./pages/Pricing', () => ({ default: () => <div data-testid="page-pricing" /> }));
 vi.mock('./components/AboutPrepaidBalances', () => ({ default: () => <div data-testid="page-about-prepaid-balances" /> }));
 vi.mock('./pages/OnboardingBusiness', () => ({ default: () => <div data-testid="page-onboarding-business" /> }));
@@ -69,33 +91,54 @@ vi.mock('./pages/CreatePlan', () => ({ default: () => <div data-testid="page-cre
 vi.mock('./pages/Subscriptions', () => ({ default: () => <div data-testid="page-subscriptions" /> }));
 vi.mock('./pages/SubscriptionDetail', () => ({ default: () => <div data-testid="page-subscription-detail" /> }));
 vi.mock('./pages/UsageBilling', () => ({ default: () => <div data-testid="page-usage-billing" /> }));
+vi.mock('./pages/WalletDetailView', () => ({ default: () => <div data-testid="page-wallet" /> }));
 vi.mock('./pages/Settings', () => ({ default: () => <div data-testid="page-settings" /> }));
 vi.mock('./pages/BrandPack', () => ({ default: () => <div data-testid="page-brand-pack" /> }));
 vi.mock('./pages/DesignTokens', () => ({ default: () => <div data-testid="page-design-tokens" /> }));
 vi.mock('./pages/WalletDetailView', () => ({ default: () => <div data-testid="page-wallet-detail" /> }));
 
-// ---------------------------------------------------------------------------
-// Helper: render App wrapped in a MemoryRouter at a given path.
-// ---------------------------------------------------------------------------
-function renderAt(path: string) {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
-      <App />
-    </MemoryRouter>,
+function LocationDisplay() {
+  const location = useLocation();
+  return (
+    <div data-testid="location-display">
+      {`${location.pathname}${location.search}${location.hash}`}
+    </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Exported contract
-// ---------------------------------------------------------------------------
+interface RenderAtOptions {
+  connected?: boolean;
+  adapter?: FreighterAdapter;
+}
+
+function renderAt(path: string, options: RenderAtOptions = {}) {
+  const { connected = false, adapter = createMockAdapter() } = options;
+  if (connected) {
+    localStorage.setItem(WALLET_STORAGE_KEY, TEST_PUBLIC_KEY);
+  } else {
+    localStorage.removeItem(WALLET_STORAGE_KEY);
+  }
+
+  return render(
+    <WalletProvider adapter={adapter}>
+      <MemoryRouter initialEntries={[path]}>
+        <App />
+        <LocationDisplay />
+      </MemoryRouter>
+    </WalletProvider>,
+  );
+}
+
+beforeEach(() => {
+  localStorage.clear();
+  sessionStorage.clear();
+  window.scrollTo = vi.fn();
+});
+
 describe('App – module contract', () => {
   it('has a default export that is a function (React component)', async () => {
     const mod = await import('./App');
     expect(typeof mod.default).toBe('function');
-  });
-
-  it('renders without throwing', () => {
-    expect(() => renderAt('/dashboard')).not.toThrow();
   });
 });
 
@@ -124,17 +167,14 @@ describe('App – redirects', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Public routes (no Layout wrapper expected)
-// ---------------------------------------------------------------------------
-describe('App – public routes', () => {
+describe('App – public routes (unauthenticated)', () => {
   const publicRoutes: Array<{ path: string; testId: string }> = [
     { path: '/', testId: 'page-landing' },
     { path: '/landing', testId: 'page-landing' },
     { path: '/pricing', testId: 'page-pricing' },
     { path: '/about-prepaid-balances', testId: 'page-about-prepaid-balances' },
+    { path: '/onboarding', testId: 'page-onboarding-business' },
     { path: '/onboarding/business', testId: 'page-onboarding-business' },
-    { path: '/onboarding/payout', testId: 'page-onboarding-payout' },
     { path: '/onboarding/review', testId: 'page-onboarding-review' },
     { path: '/onboarding-success', testId: 'page-onboarding-success' },
     { path: '/redeem-gift', testId: 'page-redeem-gift' },
@@ -157,12 +197,16 @@ describe('App – public routes', () => {
       expect(screen.queryByTestId('layout')).not.toBeInTheDocument();
     });
   });
+
+  it('renders "/onboarding/payout" without a wallet when business onboarding data exists', async () => {
+    sessionStorage.setItem('onboardingBusiness', JSON.stringify({ name: 'Acme' }));
+    renderAt('/onboarding/payout', { connected: false });
+    expect(await screen.findByTestId('page-onboarding-payout')).toBeInTheDocument();
+    expect(screen.queryByTestId('layout')).not.toBeInTheDocument();
+  });
 });
 
-// ---------------------------------------------------------------------------
-// Authenticated routes (must render inside Layout)
-// ---------------------------------------------------------------------------
-describe('App – authenticated (Layout-wrapped) routes', () => {
+describe('App – authenticated (Layout-wrapped) routes when connected', () => {
   const authRoutes: Array<{ path: string; testId: string; label?: string }> = [
     { path: '/dashboard', testId: 'page-dashboard' },
     { path: '/browse-plans', testId: 'page-browse-plans' },
@@ -173,6 +217,7 @@ describe('App – authenticated (Layout-wrapped) routes', () => {
     { path: '/subscriptions', testId: 'page-subscriptions' },
     { path: '/subscriptions/sub_123', testId: 'page-subscription-detail' },
     { path: '/subscriptions/sub_abc/usage', testId: 'page-usage-billing' },
+    { path: '/wallet', testId: 'page-wallet' },
     { path: '/settings', testId: 'page-settings' },
     { path: '/brand', testId: 'page-brand-pack' },
     { path: '/design-tokens', testId: 'page-design-tokens' },
