@@ -7,12 +7,15 @@ import { subscriptions } from '../api/client';
 import type { Subscription } from '../types/subscription';
 import Subscriptions from './Subscriptions';
 
+const mockNavigate = vi.fn();
+
 /* ─── Module mocks ──────────────────────────────────────────── */
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
     ...actual,
+    useNavigate: () => mockNavigate,
     Link: ({ children, to, className, id }: Record<string, unknown>) => (
       <a href={to as string} className={className as string} id={id as string}>{children as React.ReactNode}</a>
     ),
@@ -31,6 +34,8 @@ vi.mock('../api/client', () => ({
     pause: vi.fn().mockResolvedValue({ success: true }),
     cancel: vi.fn().mockResolvedValue({ success: true }),
     resume: vi.fn().mockResolvedValue({ success: true }),
+    reactivate: vi.fn().mockResolvedValue({ success: true }),
+    downgrade: vi.fn().mockResolvedValue({ success: true }),
     list: vi.fn().mockResolvedValue({ subscriptions: [] }),
   },
   ApiError: class ApiError extends Error {
@@ -41,7 +46,7 @@ vi.mock('../api/client', () => ({
 }));
 
 vi.mock('../utils/amount', () => ({
-  formatAmount: (value: number) => `${value} USDC`,
+  formatAmount: (value: number) => ({ number: String(value), currency: 'USDC' }),
 }));
 
 vi.mock('../components/PauseSubscriptionModal', () => ({
@@ -91,7 +96,14 @@ vi.mock('../components/CancelSubscriptionModal', () => ({
 }));
 
 vi.mock('../components/UsageThisPeriod', () => ({
-  default: () => <div data-testid="usage-this-period">Usage This Period</div>,
+  default: ({ onViewFullUsage }: { onViewFullUsage?: () => void }) => (
+    <div data-testid="usage-this-period">
+      Usage This Period
+      {onViewFullUsage && (
+        <button onClick={onViewFullUsage}>View full usage</button>
+      )}
+    </div>
+  ),
 }));
 
 vi.mock('../components/ErrorState', () => ({
@@ -323,27 +335,33 @@ describe('Subscriptions page', () => {
     });
 
     it('ignores a late response from a superseded refresh (race)', async () => {
-      let resolveFirst: (value: { subscriptions: Subscription[] }) => void = () => {};
-      const firstPromise = new Promise<{ subscriptions: Subscription[] }>(res => {
-        resolveFirst = res;
+      let resolveSecond: (value: { subscriptions: Subscription[] }) => void = () => {};
+      const secondPromise = new Promise<{ subscriptions: Subscription[] }>(res => {
+        resolveSecond = res;
       });
       vi.mocked(subscriptions.list)
-        .mockReturnValueOnce(firstPromise)
+        .mockResolvedValueOnce({ subscriptions: FIXTURE_SUBSCRIPTIONS })
+        .mockReturnValueOnce(secondPromise)
         .mockResolvedValueOnce({ subscriptions: FIXTURE_SUBSCRIPTIONS });
 
-      renderSubscriptions();
-      await advanceTimersAndFlush();
+      await renderAndLoad();
 
-      // Trigger a refresh which supersedes the first in-flight request.
+      // First refresh starts in-flight secondPromise while data.length > 0
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+        fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
+        await Promise.resolve();
+      });
+
+      // Second refresh supersedes secondPromise
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
         await Promise.resolve();
       });
       await advanceTimersAndFlush();
 
-      // Now resolve the stale first request with different data.
+      // Now resolve the stale second request with different data.
       await act(async () => {
-        resolveFirst({
+        resolveSecond({
           subscriptions: [
             {
               ...FIXTURE_SUBSCRIPTIONS[0],
@@ -644,7 +662,7 @@ describe('Subscriptions page', () => {
 
   /* ── Detail view ──────────────────────────────────────────── */
   describe('Detail view', () => {
-    async function openDetail(planName: string, subId: string) {
+    async function openDetail(planName: string) {
       await renderAndLoad();
       const btn = screen.getByRole('button', { name: new RegExp(`manage ${planName}`, 'i') });
       fireEvent.click(btn);
@@ -654,19 +672,21 @@ describe('Subscriptions page', () => {
     }
 
     it('shows the plan name as an h1', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       expect(
         screen.getByRole('heading', { name: /premium access/i, level: 1 }),
       ).toBeInTheDocument();
     });
 
-    it('shows the UsageThisPeriod component', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+    it('shows the UsageThisPeriod component and navigates to full usage page when requested', async () => {
+      await openDetail('Premium Access');
       expect(screen.getByTestId('usage-this-period')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /view full usage/i }));
+      expect(mockNavigate).toHaveBeenCalledWith('/subscriptions/SUB-001/usage');
     });
 
     it('"Back to all subscriptions" returns to list', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       fireEvent.click(screen.getByText('Back to all subscriptions'));
       await waitFor(() =>
         expect(screen.getByTestId('subscriptions-table')).toBeInTheDocument(),
@@ -674,7 +694,7 @@ describe('Subscriptions page', () => {
     });
 
     it('breadcrumb "My subscriptions" button returns to list', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       fireEvent.click(screen.getByRole('button', { name: /back to my subscriptions/i }));
       await waitFor(() =>
         expect(screen.getByTestId('subscriptions-table')).toBeInTheDocument(),
@@ -682,7 +702,7 @@ describe('Subscriptions page', () => {
     });
 
     it('Active sub shows Pause and Cancel billing buttons', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       expect(
         screen.getByRole('button', { name: /pause premium access subscription/i }),
       ).toBeInTheDocument();
@@ -724,7 +744,7 @@ describe('Subscriptions page', () => {
     });
 
     it('detail shows price and billing interval', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       expect(screen.getByText(/10/)).toBeInTheDocument();
       expect(screen.getByText(/per month/i)).toBeInTheDocument();
     });
@@ -783,11 +803,36 @@ describe('Subscriptions page', () => {
       await openPauseModal();
       fireEvent.click(screen.getByRole('button', { name: /confirm pause/i }));
 
-      expect(await screen.findByText('Action Failed')).toBeInTheDocument();
+      expect(await screen.findAllByText('Action Failed')).not.toHaveLength(0);
       expect(screen.getByText('Technical details')).toBeInTheDocument();
-      expect(screen.getByText('Pause could not be completed.')).toBeInTheDocument();
+      expect(screen.getAllByText('Pause could not be completed.').length).toBeGreaterThan(0);
       expect(screen.getByRole('dialog', { name: /pause subscription/i })).toBeInTheDocument();
       expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument();
+    });
+
+    it('optimistically sets status to Paused and rolls back to Active on failure', async () => {
+      const { subscriptions: apiSubs } = await import('../api/client');
+      let rejectPause!: (err: Error) => void;
+      vi.mocked(apiSubs.pause).mockImplementationOnce(
+        () => new Promise((_, reject) => {
+          rejectPause = reject;
+        }),
+      );
+      await openPauseModal();
+      fireEvent.click(screen.getByRole('button', { name: /confirm pause/i }));
+
+      // Optimistically updated while pending
+      expect(screen.getByRole('status', { name: /status: paused/i })).toBeInTheDocument();
+
+      await act(async () => {
+        rejectPause(new Error('Pause network failure'));
+      });
+
+      // Rolled back to Active and error toast displayed
+      await waitFor(() =>
+        expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument(),
+      );
+      expect(screen.getAllByText('Pause network failure').length).toBeGreaterThan(0);
     });
   });
 
@@ -843,11 +888,36 @@ describe('Subscriptions page', () => {
       await openCancelModal();
       fireEvent.click(screen.getByRole('button', { name: /confirm cancel/i }));
 
-      expect(await screen.findByText('Action Failed')).toBeInTheDocument();
+      expect(await screen.findAllByText('Action Failed')).not.toHaveLength(0);
       expect(screen.getByText('Technical details')).toBeInTheDocument();
-      expect(screen.getByText('Cancellation could not be completed.')).toBeInTheDocument();
+      expect(screen.getAllByText('Cancellation could not be completed.').length).toBeGreaterThan(0);
       expect(screen.getByRole('dialog', { name: /cancel subscription/i })).toBeInTheDocument();
       expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument();
+    });
+
+    it('optimistically sets status to Cancelled and rolls back to Active on failure', async () => {
+      const { subscriptions: apiSubs } = await import('../api/client');
+      let rejectCancel!: (err: Error) => void;
+      vi.mocked(apiSubs.cancel).mockImplementationOnce(
+        () => new Promise((_, reject) => {
+          rejectCancel = reject;
+        }),
+      );
+      await openCancelModal();
+      fireEvent.click(screen.getByRole('button', { name: /confirm cancel/i }));
+
+      // Optimistically updated while pending
+      expect(screen.getByRole('status', { name: /status: cancelled/i })).toBeInTheDocument();
+
+      await act(async () => {
+        rejectCancel(new Error('Cancel network failure'));
+      });
+
+      // Rolled back to Active and error toast displayed
+      await waitFor(() =>
+        expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument(),
+      );
+      expect(screen.getAllByText('Cancel network failure').length).toBeGreaterThan(0);
     });
   });
 
@@ -871,7 +941,8 @@ describe('Subscriptions page', () => {
         screen.getByRole('button', { name: /resume basic stream subscription/i }),
       );
       expect(screen.getByText('Resuming...')).toBeInTheDocument();
-      expect(screen.getByRole('status', { name: /status: paused/i })).toBeInTheDocument();
+      // Optimistically set to Active while pending
+      expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument();
 
       await act(async () => {
         resolveResume({ success: true });
@@ -915,7 +986,8 @@ describe('Subscriptions page', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
 
       expect(screen.getByText('Resuming subscription')).toBeInTheDocument();
-      expect(screen.getAllByRole('status', { name: /status: paused/i }).length).toBeGreaterThan(0);
+      // SUB-003 is optimistically Active while pending
+      expect(screen.queryAllByRole('status', { name: /status: paused/i })).toHaveLength(0);
       await act(async () => {
         resolveResume({ success: true });
       });
@@ -978,8 +1050,10 @@ describe('Subscriptions page', () => {
 
     it('visually-hidden "Actions" text is present for screen readers', async () => {
       await renderAndLoad();
-      const hidden = document.querySelector('.visually-hidden');
-      expect(hidden).toBeInTheDocument();
+      const hidden = Array.from(document.querySelectorAll('.visually-hidden')).find(
+        (el) => el.textContent === 'Actions',
+      );
+      expect(hidden).toBeDefined();
       expect(hidden?.textContent).toBe('Actions');
     });
 
