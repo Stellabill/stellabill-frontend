@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useCallback, useState } from "react";
 import { FaCheck, FaMinus, FaChevronDown } from "react-icons/fa6";
 import styles from "./FeatureComparison.module.css";
@@ -20,57 +21,59 @@ const PLANS = ["Free", "Pro", "Enterprise"] as const;
 
 const FEATURE_GROUPS: FeatureGroup[] = [
   {
-    group: "Billing",
+    group: "pricing.groups.billing",
     features: [
-      { name: "Recurring billing", free: true, pro: true, enterprise: true },
-      { name: "Usage-based billing", free: false, pro: true, enterprise: true },
-      { name: "API access", free: "Basic", pro: true, enterprise: true },
+      { name: "pricing.features.recurring", free: true, pro: true, enterprise: true },
+      { name: "pricing.features.usage", free: false, pro: true, enterprise: true },
+      { name: "pricing.features.api", free: "pricing.comparison.basic", pro: true, enterprise: true },
     ],
   },
   {
-    group: "Integrations",
+    group: "pricing.groups.integrations",
     features: [
-      { name: "Webhooks", free: true, pro: true, enterprise: true },
-      { name: "Custom webhooks", free: false, pro: true, enterprise: true },
+      { name: "pricing.features.webhooks", free: true, pro: true, enterprise: true },
+      { name: "pricing.features.customWebhooks", free: false, pro: true, enterprise: true },
     ],
   },
   {
-    group: "Support",
+    group: "pricing.groups.support",
     features: [
-      { name: "Community support", free: true, pro: true, enterprise: true },
-      { name: "Priority support", free: false, pro: true, enterprise: true },
-      { name: "Dedicated team", free: false, pro: false, enterprise: true },
+      { name: "pricing.features.community", free: true, pro: true, enterprise: true },
+      { name: "pricing.features.priority", free: false, pro: true, enterprise: true },
+      { name: "pricing.features.dedicated", free: false, pro: false, enterprise: true },
     ],
   },
   {
-    group: "Enterprise",
+    group: "pricing.groups.enterprise",
     features: [
-      { name: "Custom SLAs", free: false, pro: false, enterprise: true },
-      { name: "Volume pricing", free: false, pro: false, enterprise: true },
-      { name: "White-label options", free: false, pro: false, enterprise: true },
+      { name: "pricing.features.slas", free: false, pro: false, enterprise: true },
+      { name: "pricing.features.volume", free: false, pro: false, enterprise: true },
+      { name: "pricing.features.whiteLabel", free: false, pro: false, enterprise: true },
     ],
   },
 ];
 
 function FeatureCell({ value }: { value: FeatureValue }) {
+  const { t } = useTranslation();
   if (typeof value === "boolean") {
     return value ? (
       <span className={styles.cellIcon}>
-        <FaCheck aria-label="Included" />
+        <FaCheck aria-label={t('pricing.comparison.included')} />
       </span>
     ) : (
       <span className={styles.cellIconDim}>
-        <FaMinus aria-label="Not included" />
+        <FaMinus aria-label={t('pricing.comparison.excluded')} />
       </span>
     );
   }
   if (typeof value === "number") {
     return <span className={styles.cellLimit}>{value.toLocaleString()}</span>;
   }
-  return <span className={styles.cellText}>{value}</span>;
+  return <span className={styles.cellText}>{t(value)}</span>;
 }
 
 export default function FeatureComparison() {
+  const { t } = useTranslation();
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
 
@@ -91,18 +94,18 @@ export default function FeatureComparison() {
   return (
     <div className={styles.container} aria-labelledby="feature-matrix-heading">
       <h2 id="feature-matrix-heading" className={styles.title}>
-        Feature comparison
+        {t('pricing.comparison.title')}
       </h2>
 
       {/* Desktop table view */}
-      <div className={styles.tableWrapper} role="region" aria-label="Feature comparison table">
+      <div className={styles.tableWrapper} role="region" aria-label={t('pricing.comparison.label')}>
         <table className={styles.table}>
           <caption className={styles.srOnly}>
-            Side-by-side feature comparison of Free, Pro, and Enterprise plans
+            {t('pricing.comparison.caption')}
           </caption>
           <thead>
             <tr className={styles.headerRow}>
-              <th className={styles.cornerHeader} scope="col">Features</th>
+              <th className={styles.cornerHeader} scope="col">{t('pricing.comparison.features')}</th>
               {PLANS.map((plan) => (
                 <th
                   key={plan}
@@ -111,7 +114,7 @@ export default function FeatureComparison() {
                   onMouseEnter={() => setHoveredPlan(plan)}
                   onMouseLeave={() => setHoveredPlan(null)}
                 >
-                  {plan}
+                  {t(`pricing.plans.${plan.toLowerCase()}.title`)}
                 </th>
               ))}
             </tr>
@@ -133,7 +136,7 @@ export default function FeatureComparison() {
                         className={`${styles.groupArrow} ${isCollapsed ? styles.groupArrowCollapsed : ""}`}
                         aria-hidden="true"
                       />
-                      {group.group}
+                      {t(group.group)}
                     </button>
                   </td>
                 </tr>
@@ -144,7 +147,7 @@ export default function FeatureComparison() {
                     className={`${styles.featureRow} ${isCollapsed ? styles.rowHidden : ""}`}
                   >
                     <th scope="row" className={styles.featureLabel}>
-                      {feature.name}
+                      {t(feature.name)}
                     </th>
                     {planKeys.map((key) => (
                       <td
@@ -163,22 +166,22 @@ export default function FeatureComparison() {
       </div>
 
       {/* Mobile card-stack view under 720px */}
-      <div className={styles.cardStack} role="list" aria-label="Plan feature cards">
+      <div className={styles.cardStack} role="list" aria-label={t('pricing.comparison.cardsLabel')}>
         {PLANS.map((plan) => {
           const key = planKeys[PLANS.indexOf(plan)];
           return (
             <div key={plan} className={styles.planCard} role="listitem">
               <div className={`${styles.cardHeader} ${plan === "Pro" ? styles.cardHeaderPro : ""}`}>
-                <h3 className={styles.cardPlanName}>{plan}</h3>
+                <h3 className={styles.cardPlanName}>{t(`pricing.plans.${plan.toLowerCase()}.title`)}</h3>
               </div>
               <ul className={styles.cardFeatureList}>
                 {FEATURE_GROUPS.map((group) => (
                   <li key={group.group} className={styles.cardGroupSection}>
-                    <p className={styles.cardGroupLabel}>{group.group}</p>
+                    <p className={styles.cardGroupLabel}>{t(group.group)}</p>
                     <ul className={styles.cardGroupFeatures}>
                       {group.features.map((feature) => (
                         <li key={feature.name} className={styles.cardFeature}>
-                          <span className={styles.cardFeatureName}>{feature.name}</span>
+                          <span className={styles.cardFeatureName}>{t(feature.name)}</span>
                           <FeatureCell value={feature[key]} />
                         </li>
                       ))}

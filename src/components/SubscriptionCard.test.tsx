@@ -126,5 +126,21 @@ describe('SubscriptionCard', () => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
       });
     });
+
+    it('does not toggle the card popover when its Manage link is clicked', () => {
+      renderWithRouter(<SubscriptionCard subscription={mockSubscription} />);
+
+      fireEvent.click(screen.getByRole('link', { name: /manage/i }));
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('does not bubble Enter from its Manage link to the card', () => {
+      renderWithRouter(<SubscriptionCard subscription={mockSubscription} />);
+
+      fireEvent.keyDown(screen.getByRole('link', { name: /manage/i }), { key: 'Enter' });
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 });

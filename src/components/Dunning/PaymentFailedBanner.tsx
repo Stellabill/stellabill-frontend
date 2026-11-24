@@ -8,6 +8,10 @@ interface RetryAttempt {
   id: string;
   when: string;
   status: 'past' | 'upcoming' | 'failed' | 'succeeded';
+  /** Optional ISO-8601 timestamp forwarded to the timeline for delta labels. */
+  scheduledAt?: string;
+  method?: 'card' | 'usdc' | 'prepaid' | 'bank' | 'other';
+  successProbability?: number;
 }
 
 interface PaymentMethod {
@@ -140,7 +144,7 @@ export default function PaymentFailedBanner({
                 disabled={isCooldown || isRetrying}
                 aria-expanded={showMethodPicker}
                 aria-haspopup="dialog"
-                aria-controls={methodPickerId}
+                aria-controls={showMethodPicker ? methodPickerId : undefined}
               >
                 {isCooldown ? (
                   <>

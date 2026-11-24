@@ -8,7 +8,6 @@ import user from '../assets/Icon (4).svg';
 const meta = {
   title: 'Common/Icon',
   component: Icon,
-  tags: ['autodocs'],
 } satisfies Meta<typeof Icon>;
 
 export default meta;

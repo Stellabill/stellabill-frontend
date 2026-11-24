@@ -268,14 +268,24 @@
   cursor: not-allowed;
 }
 
-.fip-test-sent {
+.fip-test-sent,
+.fip-test-error {
   margin-top: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+}
+
+.fip-test-sent {
   background: rgba(52, 211, 153, 0.14);
   border: 1px solid rgba(52, 211, 153, 0.3);
   color: #6ee7b7;
-  font-size: 0.8125rem;
+}
+
+.fip-test-error {
+  background: rgba(248, 113, 113, 0.14);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #fca5a5;
 }
 
 /* ── Select ────────────────────────────────────────────────────────── */

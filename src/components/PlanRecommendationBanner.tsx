@@ -1,5 +1,6 @@
 import React, { useState, useId } from 'react';
 import { Sparkles, HelpCircle, X, ArrowRight, Check } from 'lucide-react';
+import { readJson, writeJson } from '../utils/safeStorage';
 
 interface PlanRecommendationBannerProps {
   currentPlan: string;
@@ -29,13 +30,9 @@ export default function PlanRecommendationBanner({
   const popoverId = useId();
   const dismissKey = `stellabill:plan-recommendation-dismissed:${currentPlan}`;
   
-  const [isDismissed, setIsDismissed] = useState(() => {
-    try {
-      return localStorage.getItem(dismissKey) === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const [isDismissed, setIsDismissed] = useState(() =>
+    readJson<boolean>(dismissKey, false, (value) => value === true)
+  );
 
   const [showPopover, setShowPopover] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
@@ -45,11 +42,7 @@ export default function PlanRecommendationBanner({
 
   const handleDismiss = () => {
     setIsDismissed(true);
-    try {
-      localStorage.setItem(dismissKey, 'true');
-    } catch {
-      // localStorage unavailable
-    }
+    writeJson(dismissKey, true);
   };
 
   const handleUpgradeClick = () => {
