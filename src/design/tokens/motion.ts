@@ -45,7 +45,8 @@ export function getMotionTokens(): {
 } {
   const reduced =
     typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    typeof window.matchMedia === 'function' &&
+    Boolean(window.matchMedia('(prefers-reduced-motion: reduce)')?.matches);
 
   if (reduced) {
     return {

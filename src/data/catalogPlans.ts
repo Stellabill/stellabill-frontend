@@ -81,6 +81,11 @@ export const catalogPlans: Plan[] = [
 	},
 ];
 
+/** Load the demo catalog; callers can replace this function with a real data source. */
+export async function loadCatalog(): Promise<Plan[]> {
+	return catalogPlans;
+}
+
 export function findCatalogPlan(id: string): Plan | undefined {
 	return catalogPlans.find((plan) => plan.id === id);
 }

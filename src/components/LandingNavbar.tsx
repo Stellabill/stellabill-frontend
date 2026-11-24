@@ -7,10 +7,9 @@ import LocaleSwitcher from './LocaleSwitcher';
 import { Menu, X, Github, Rocket, Zap, BookOpen, MessageSquare, ChevronRight } from 'lucide-react';
 import { useWallet } from '../wallet/WalletContext';
 import { FreighterConnectionError } from '../wallet/freighter';
+import { useModalFocus } from '../hooks/useModalFocus';
 
-export interface LandingNavbarProps extends UseWalletConnectionOptions {}
-
-export default function LandingNavbar(props: LandingNavbarProps = {}) {
+export default function LandingNavbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
@@ -24,6 +23,29 @@ export default function LandingNavbar(props: LandingNavbarProps = {}) {
     cancelConnect,
   } = useWallet()
   const isConnected = status === 'connected'
+
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerId = useId();
+
+  const closeDrawer = () => setIsMobileMenuOpen(false);
+
+  useModalFocus(drawerRef as RefObject<HTMLElement>, {
+    isOpen: isMobileMenuOpen,
+    onClose: closeDrawer,
+    initialFocusRef: closeButtonRef as RefObject<HTMLElement>,
+  });
+
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isMobileMenuOpen]);
 
   const location = useLocation();
   const navigate = useNavigate();

@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from "react";
 import { UNSAFE_LocationContext } from "react-router-dom";
 import ErrorState from "./ErrorState";
 import { RefreshCw } from "lucide-react";
+import { reportError } from "../utils/errorReporter";
 
 function isChunkLoadError(error: unknown): boolean {
   if (!error) return false;
@@ -68,9 +69,14 @@ export class RouteErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") {
-      console.error("RouteErrorBoundary caught error:", error, errorInfo);
-    }
+    reportError(error, {
+      source: "boundary",
+      route: this.getCurrentPathname(),
+      componentStack: errorInfo?.componentStack ?? undefined,
+      metadata: {
+        isChunkLoadError: isChunkLoadError(error),
+      },
+    });
   }
 
   componentDidMount(): void {

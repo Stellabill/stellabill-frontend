@@ -18,5 +18,5 @@
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["src", "vitest.config.ts", "src/test/setup.ts"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.spec.ts", "src/**/*.spec.tsx"]
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.spec.ts", "src/**/*.spec.tsx", "e2e"]
 }

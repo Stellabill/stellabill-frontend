@@ -16,10 +16,11 @@ import { usePageTitle } from '../hooks/usePageTitle';
  * fallback of route transitions.
  */
 
-// Controlled navigation type. Declared with `vi.hoisted` so the `vi.mock`
-// factory (hoisted above imports) can read it safely.
+// Controlled navigation type and reduced-motion flag. Declared with `vi.hoisted`
+// so the `vi.mock` factory (hoisted above imports) can read them safely.
 const routerState = vi.hoisted(() => ({
   navType: 'POP' as 'PUSH' | 'POP' | 'REPLACE' | 'UNKNOWN',
+  reducedMotion: false,
 }));
 
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -36,12 +37,13 @@ vi.mock('framer-motion', async () => {
   const React = await import('react');
   const MotionDiv = React.forwardRef<HTMLDivElement, Record<string, unknown>>(
     (props, ref) => {
-      const { children, variants, initial, animate, exit, ...rest } = props;
+      const { children, variants, initial, animate, exit, transition, ...rest } = props;
       return (
         <div
           ref={ref}
           data-testid="transition-surface"
           data-variants={JSON.stringify(variants ?? null)}
+          data-transition={JSON.stringify(transition ?? null)}
           data-initial={String(initial)}
           data-animate={String(animate)}
           data-exit={String(exit)}
@@ -56,6 +58,11 @@ vi.mock('framer-motion', async () => {
   return {
     motion: { div: MotionDiv },
     AnimatePresence: ({ children }: { children: ReactNode }) => <>{children}</>,
+    useReducedMotion: () =>
+      routerState.reducedMotion ||
+      (typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        Boolean(window.matchMedia('(prefers-reduced-motion: reduce)')?.matches)),
   };
 });
 
@@ -109,6 +116,7 @@ function variants(): {
 }
 
 function setReducedMotion(reduce: boolean) {
+  routerState.reducedMotion = reduce;
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: reduce && query.includes('prefers-reduced-motion'),
     media: query,
@@ -191,6 +199,39 @@ describe('TransitionLayout', () => {
     expect(v.initial).toEqual({});
     expect(v.animate).toEqual({});
     expect(v.exit).toEqual({});
+  });
+
+  it('sets zero-duration transitions across navigation types when prefers-reduced-motion is enabled', () => {
+    setReducedMotion(true);
+    for (const navType of ['PUSH', 'POP', 'REPLACE'] as const) {
+      routerState.navType = navType;
+      const { unmount } = renderLayout();
+      const surface = screen.getByTestId('transition-surface');
+      const v = variants();
+      const t = JSON.parse(surface.getAttribute('data-transition') ?? 'null') as { duration?: number } | null;
+      expect(v.initial).toEqual({});
+      expect(v.animate).not.toHaveProperty('x');
+      expect(v.animate).not.toHaveProperty('opacity');
+      expect(v.exit).not.toHaveProperty('x');
+      expect(v.exit).not.toHaveProperty('opacity');
+      const animateDuration = (v.animate.transition as { duration?: number } | undefined)?.duration ?? 0;
+      const exitDuration = (v.exit.transition as { duration?: number } | undefined)?.duration ?? 0;
+      expect(animateDuration).toBe(0);
+      expect(exitDuration).toBe(0);
+      expect(t).toEqual({ duration: 0 });
+      expect(surface.getAttribute('data-transition-duration')).toBe('0');
+      unmount();
+    }
+  });
+
+  it('uses useReducedMotion() from framer-motion to set zero-duration transitions', () => {
+    routerState.reducedMotion = true;
+    routerState.navType = 'PUSH';
+    renderLayout();
+    const surface = screen.getByTestId('transition-surface');
+    const t = JSON.parse(surface.getAttribute('data-transition') ?? 'null') as { duration?: number } | null;
+    expect(t).toEqual({ duration: 0 });
+    expect(surface.getAttribute('data-transition-duration')).toBe('0');
   });
 
   it('does not move focus on the initial route render', () => {

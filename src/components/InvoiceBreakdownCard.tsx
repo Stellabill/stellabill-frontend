@@ -1,5 +1,6 @@
 import { useId, useCallback, useState } from "react";
 import { ChevronDown, Download, FileText, CreditCard } from "lucide-react";
+import { buildInvoiceCsv, downloadCsvFile } from "../utils/statement";
 import "./InvoiceBreakdownCard.css";
 
 type LineItem = {
@@ -52,39 +53,12 @@ export type InvoiceWithBreakdown = {
 
 type Props = {
   invoice: InvoiceWithBreakdown;
+  defaultExpanded?: boolean;
 };
 
 function downloadCsv(invoice: InvoiceWithBreakdown) {
-  const header = "Description,Quantity,Unit Price,Line Total";
-  const rows = (invoice.lineItems ?? []).map(
-    (item) =>
-      `${item.description},${item.quantity ?? ""},${item.unitPrice ?? ""},${item.lineTotal}`
-  );
-
-  const summaryRows: string[] = [];
-  if (invoice.subtotal) summaryRows.push(`Subtotal,,,${invoice.subtotal}`);
-  if (invoice.taxes) {
-    for (const tax of invoice.taxes) {
-      summaryRows.push(`${tax.label},,,${tax.amount}`);
-    }
-  }
-  if (invoice.credits) {
-    for (const credit of invoice.credits) {
-      summaryRows.push(`${credit.label},,,${credit.amount}`);
-    }
-  }
-  summaryRows.push(`Total,,,${invoice.total}`);
-
-  const csv = header + "\n" + rows.join("\n") + "\n\n" + summaryRows.join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `invoice-breakdown-${invoice.id}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  const csv = buildInvoiceCsv(invoice);
+  downloadCsvFile(`invoice-breakdown-${invoice.id}.csv`, csv);
 }
 
 /* ── Status colour map ──────────────────────────────────────────────────── */
@@ -102,8 +76,8 @@ function isCreditNote(inv: InvoiceWithBreakdown): boolean {
 }
 
 /* ── Component ──────────────────────────────────────────────────────────── */
-export default function InvoiceBreakdownCard({ invoice }: Props) {
-  const [expanded, setExpanded] = useState(false);
+export default function InvoiceBreakdownCard({ invoice, defaultExpanded = false }: Props) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const toggleId = useId();
   const bodyId   = useId();
 

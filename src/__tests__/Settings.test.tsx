@@ -1,6 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
-import { describe, it, expect, beforeEach, vi} from 'vitest'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { Link, MemoryRouter, useLocation } from 'react-router-dom'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Settings from '../pages/Settings'
 
 // Mock the settings components
@@ -20,11 +20,17 @@ vi.mock('../components/settings/DensityPreview', () => ({
   default: () => <div data-testid="density-preview">Density Preview Component</div>
 }))
 
-const renderWithRouter = (component: React.ReactElement) => {
+function SettingsLocation() {
+  const { search, hash } = useLocation()
+  return <output data-testid="settings-location">{search}{hash}</output>
+}
+
+const renderWithRouter = (component: React.ReactElement, initialPath = '/settings') => {
   return render(
-    <BrowserRouter>
+    <MemoryRouter initialEntries={[initialPath]}>
       {component}
-    </BrowserRouter>
+      <SettingsLocation />
+    </MemoryRouter>
   )
 }
 
@@ -36,26 +42,26 @@ describe('Settings Page', () => {
   it('renders the settings page with correct title', () => {
     renderWithRouter(<Settings />)
     
-    expect(screen.getByRole('heading', { name: /settings/i })).toBeInDocument()
-    expect(screen.getByText(/manage your organization, billing, and security preferences/i)).toBeInDocument()
+    expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument()
+    expect(screen.getByText(/manage your organization, billing, and security preferences/i)).toBeInTheDocument()
   })
 
   it('displays all sections in navigation', () => {
     renderWithRouter(<Settings />)
     
-    expect(screen.getByRole('button', { name: /organization/i })).toBeInDocument()
-    expect(screen.getByRole('button', { name: /billing/i })).toBeInDocument()
-    expect(screen.getByRole('button', { name: /api keys/i })).toBeInDocument()
-    expect(screen.getByRole('button', { name: /tags/i })).toBeInDocument()
-    expect(screen.getByRole('button', { name: /appearance/i })).toBeInDocument()
+    expect(screen.getByRole('button', { name: /organization/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /billing/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /api keys/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /tags/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /appearance/i })).toBeInTheDocument()
   })
 
   it('shows organization settings by default', () => {
     renderWithRouter(<Settings />)
     
     expect(screen.getByTestId('organization-settings')).toBeInTheDocument()
-    expect(screen.queryByTestId('billing-settings')).not.toBeInDocument()
-    expect(screen.queryByTestId('api-keys-settings')).not.toBeInDocument()
+    expect(screen.queryByTestId('billing-settings')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('api-keys-settings')).not.toBeInTheDocument()
   })
 
   it('switches to billing settings when billing tab is clicked', async () => {
@@ -65,9 +71,9 @@ describe('Settings Page', () => {
     fireEvent.click(billingTab)
     
     await waitFor(() => {
-      expect(screen.getByTestId('billing-settings')).toBeInDocument()
-      expect(screen.queryByTestId('organization-settings')).not.toBeInDocument()
-      expect(screen.queryByTestId('api-keys-settings')).not.toBeInDocument()
+      expect(screen.getByTestId('billing-settings')).toBeInTheDocument()
+      expect(screen.queryByTestId('organization-settings')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('api-keys-settings')).not.toBeInTheDocument()
     })
   })
 
@@ -80,23 +86,23 @@ describe('Settings Page', () => {
     await waitFor(() => {
       expect(screen.getByTestId('api-keys-settings')).toBeInTheDocument()
       expect(screen.queryByTestId('organization-settings')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('billing-settings')).not.toBeInDocument()
+      expect(screen.queryByTestId('billing-settings')).not.toBeInTheDocument()
     })
   })
 
   it('displays security notice in navigation', () => {
     renderWithRouter(<Settings />)
     
-    expect(screen.getByText(/security notice/i)).toBeInDocument()
+    expect(screen.getByText(/security notice/i)).toBeInTheDocument()
     expect(screen.getByText(/some actions in these settings are irreversible/i)).toBeInTheDocument()
   })
 
   it('shows descriptions for each settings section', () => {
     renderWithRouter(<Settings />)
     
-    expect(screen.getByText(/manage your organization profile, team members, and preferences/i)).toBeInDocument()
+    expect(screen.getByText(/manage your organization profile, team members, and preferences/i)).toBeInTheDocument()
     expect(screen.getByText(/configure payment methods, billing cycles, and invoices/i)).toBeInTheDocument()
-    expect(screen.getByText(/manage api keys, tokens, and security settings/i)).toBeInDocument()
+    expect(screen.getByText(/manage api keys, tokens, and security settings/i)).toBeInTheDocument()
   })
 
   it('highlights active tab correctly', () => {
@@ -120,14 +126,56 @@ describe('Settings Page', () => {
     
     // Check for proper heading hierarchy
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /settings/i })).toBeInDocument()
+    expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument()
     
     // Check for button roles
-    expect(screen.getAllByRole('button')).toHaveLength(5) // Five navigation tabs
+    const navigation = screen.getByRole('navigation', { name: 'Settings sections' })
+    expect(within(navigation).getAllByRole('button')).toHaveLength(6)
   })
 })
 
 describe('Settings Navigation', () => {
+  it('opens Billing from the tab query even when a different tab is in the hash', () => {
+    renderWithRouter(<Settings />, '/settings?tab=billing#appearance')
+
+    expect(screen.getByTestId('billing-settings')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /billing/i })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('falls back to Organization when navigation supplies an invalid tab', () => {
+    renderWithRouter(
+      <>
+        <Settings />
+        <Link to="/settings?tab=unknown">Open invalid tab</Link>
+      </>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /billing/i }))
+    expect(screen.getByTestId('billing-settings')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open invalid tab' }))
+
+    expect(screen.getByTestId('organization-settings')).toBeInTheDocument()
+    expect(screen.queryByTestId('billing-settings')).not.toBeInTheDocument()
+  })
+
+  it('opens settings from a tab hash and replaces it when another tab is selected', () => {
+    renderWithRouter(<Settings />, '/settings?source=notification#appearance')
+    expect(screen.getByTestId('density-preview')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /api keys/i }))
+
+    expect(screen.getByTestId('api-keys-settings')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-location').textContent).toBe('?source=notification&tab=api-keys')
+  })
+
+  it('updates the tab query while keeping unrelated query values and anchors', () => {
+    renderWithRouter(<Settings />, '/settings?tab=billing&source=notification#invoice-history')
+
+    fireEvent.click(screen.getByRole('button', { name: /api keys/i }))
+
+    expect(screen.getByTestId('settings-location').textContent).toBe('?tab=api-keys&source=notification#invoice-history')
+  })
+
   it('navigates between sections maintaining state', async () => {
     renderWithRouter(<Settings />)
     
@@ -175,7 +223,7 @@ describe('Settings Navigation', () => {
     
     await waitFor(() => {
       expect(screen.getByTestId('density-preview')).toBeInTheDocument()
-      expect(screen.queryByTestId('organization-settings')).not.toBeInDocument()
+      expect(screen.queryByTestId('organization-settings')).not.toBeInTheDocument()
     })
   })
 })
