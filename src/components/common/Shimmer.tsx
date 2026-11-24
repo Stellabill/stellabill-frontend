@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+import { getMotionTokens } from '../../design/tokens/motion';
 import '../../styles/shimmer.css';
 
 export type ShimmerShape = 'block' | 'circle' | 'text';
@@ -55,6 +56,9 @@ export default function Shimmer({
   style,
   'aria-label': ariaLabel,
 }: ShimmerProps) {
+  const motionTokens = getMotionTokens();
+  const isReducedMotion = motionTokens.entry.duration === 0;
+
   const mergedStyle: CSSProperties & Record<string, string | number | undefined> = {
     width,
     height,
@@ -62,7 +66,12 @@ export default function Shimmer({
     ...style,
   };
 
-  if (duration) {
+  if (isReducedMotion) {
+    const zeroDuration = String(motionTokens.entry.duration) + 's';
+    mergedStyle['--shimmer-duration'] = zeroDuration;
+    mergedStyle.animationDuration = zeroDuration;
+    mergedStyle.animation = 'none';
+  } else if (duration) {
     mergedStyle['--shimmer-duration'] = duration;
   }
   if (delay) {

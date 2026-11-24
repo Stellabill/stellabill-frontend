@@ -1,22 +1,5 @@
 /* Redeem Confirm Modal */
 
-.redeem-confirm-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-
-.redeem-confirm-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(10, 10, 10, 0.85);
-  backdrop-filter: blur(8px);
-}
-
 .redeem-confirm-content {
   position: relative;
   width: 100%;

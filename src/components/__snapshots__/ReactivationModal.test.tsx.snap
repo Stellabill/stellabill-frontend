@@ -9,6 +9,7 @@ exports[`ReactivationModal – snapshot > matches snapshot for deleted plan 1`] 
   role="dialog"
 >
   <div
+    aria-busy="false"
     class="reactivation-modal-content"
   >
     <button
@@ -293,6 +294,7 @@ exports[`ReactivationModal – snapshot > matches snapshot for expired window 1`
   role="dialog"
 >
   <div
+    aria-busy="false"
     class="reactivation-modal-content"
   >
     <button
@@ -587,6 +589,7 @@ exports[`ReactivationModal – snapshot > matches snapshot for standard open sta
   role="dialog"
 >
   <div
+    aria-busy="false"
     class="reactivation-modal-content"
   >
     <button

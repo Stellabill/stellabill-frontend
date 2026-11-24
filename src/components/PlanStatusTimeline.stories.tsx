@@ -71,3 +71,9 @@ export const Default: Story = {
     events,
   },
 };
+
+export const Empty: Story = {
+  args: {
+    events: [],
+  },
+};

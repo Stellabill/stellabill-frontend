@@ -9,22 +9,30 @@
    opacity pulse under prefers-reduced-motion.
    ========================================================================== */
 
-@keyframes sb-shimmer-sweep {
-  0% {
-    background-position: -135% 0;
-  }
-  100% {
-    background-position: 135% 0;
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes sb-shimmer-sweep {
+    0% {
+      background-position: -135% 0;
+    }
+    100% {
+      background-position: 135% 0;
+    }
   }
 }
 
-@keyframes sb-shimmer-pulse {
-  0%,
-  100% {
-    opacity: 1;
+@media (prefers-reduced-motion: reduce) {
+  @keyframes sb-shimmer-sweep {
+    0%,
+    100% {
+      background-position: 0 0;
+    }
   }
-  50% {
-    opacity: 0.55;
+
+  @keyframes sb-shimmer-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
   }
 }
 
@@ -74,10 +82,8 @@
 @media (prefers-reduced-motion: reduce) {
   .sb-shimmer {
     background-image: none;
-    animation-name: sb-shimmer-pulse;
-    animation-duration: var(--shimmer-reduced-duration);
-    animation-timing-function: ease-in-out;
-    animation-iteration-count: infinite;
+    animation: none;
+    animation-duration: 0s;
   }
 
   .sb-shimmer[data-direction],

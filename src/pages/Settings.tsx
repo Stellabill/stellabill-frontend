@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CreditCard, Key, Settings as SettingsIcon, Shield, SlidersHorizontal, Tags, Users, Home } from 'lucide-react'
 import OrganizationSettings from '../components/settings/OrganizationSettings'
 import BillingSettings from '../components/settings/BillingSettings'
@@ -102,9 +102,19 @@ const settingsSections: SettingsSection[] = [
 
 export default function Settings() {
   usePageTitle('Settings')
-  const [activeTab, setActiveTab] = useState<SettingsTab>('organization')
+  const { search, hash } = useLocation()
+  const navigate = useNavigate()
+  const searchParams = new URLSearchParams(search)
+  const hashSection = settingsSections.find((section) => section.id === hash.slice(1))
+  const requestedTab = searchParams.get('tab') ?? hashSection?.id
+  const activeSection = settingsSections.find((section) => section.id === requestedTab) ?? settingsSections[0]
+  const ActiveComponent = activeSection.component
 
-  const ActiveComponent = settingsSections.find((section) => section.id === activeTab)?.component
+  const selectTab = (tab: SettingsTab) => {
+    const nextParams = new URLSearchParams(search)
+    nextParams.set('tab', tab)
+    navigate({ search: nextParams.toString(), hash: hashSection ? '' : hash }, { replace: true })
+  }
 
   return (
     <div className="settings-page">
@@ -125,14 +135,14 @@ export default function Settings() {
           <div className="settings-nav__list">
             {settingsSections.map((section) => {
               const Icon = section.icon
-              const isActive = activeTab === section.id
+              const isActive = activeSection.id === section.id
 
               return (
                 <button
                   key={section.id}
                   type="button"
                   className="settings-nav__tab"
-                  onClick={() => setActiveTab(section.id)}
+                  onClick={() => selectTab(section.id)}
                   aria-pressed={isActive}
                   style={{
                     background: isActive ? '#2d2d44' : 'transparent',
@@ -173,7 +183,7 @@ export default function Settings() {
         </nav>
 
         <main className="settings-content">
-          {ActiveComponent && <ActiveComponent />}
+          <ActiveComponent />
         </main>
       </div>
     </div>

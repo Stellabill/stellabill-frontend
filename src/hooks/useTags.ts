@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { readJson, writeJson } from '../utils/safeStorage';
 
 export interface TagOption {
   id: string;
@@ -37,29 +38,17 @@ export function normalizeLabelForComparison(label: string): string {
  * Loads tags store from localStorage or returns default
  */
 function loadTagsStore(): TagsStore {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch {
-    // Silently fail and use defaults
-  }
-  return {
+  return readJson<TagsStore>(STORAGE_KEY, {
     tags: DEFAULT_TAGS,
     subscriptionTags: {},
-  };
+  });
 }
 
 /**
  * Saves tags store to localStorage
  */
 function saveTagsStore(store: TagsStore): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  } catch {
-    // Silently fail if storage is unavailable
-  }
+  writeJson(STORAGE_KEY, store);
 }
 
 /**
@@ -73,6 +62,28 @@ export function useTags() {
   useEffect(() => {
     saveTagsStore(store);
   }, [store]);
+
+  // Sync state when another browser tab writes to the same storage key.
+  // The `storage` event is only fired in *other* tabs, so applying it here
+  // keeps every open tab in sync without echoing the write back.
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleStorage = (event: StorageEvent) => {
+      // `event.key` is null when the whole storage was cleared.
+      if (event.key !== STORAGE_KEY && event.key !== null) {
+        return;
+      }
+      setStore(loadTagsStore());
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   /**
    * Find an existing tag by normalized label match

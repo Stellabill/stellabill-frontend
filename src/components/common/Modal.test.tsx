@@ -1,5 +1,6 @@
+import { useRef } from 'react'
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Modal } from './Modal'
 
 describe('Modal', () => {
@@ -129,5 +130,39 @@ describe('Modal', () => {
 
     fireEvent.click(screen.getByRole('dialog'))
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('supports size prop, closeOnBackdrop=false, labelledBy, and initialFocusRef', async () => {
+    const onClose = vi.fn()
+
+    function CustomModalWrapper() {
+      const primaryRef = useRef<HTMLButtonElement>(null)
+      return (
+        <Modal
+          isOpen={true}
+          onClose={onClose}
+          title="Custom"
+          size="lg"
+          closeOnBackdrop={false}
+          labelledBy="custom-modal-heading"
+          initialFocusRef={primaryRef}
+        >
+          <button ref={primaryRef}>Primary Action</button>
+        </Modal>
+      )
+    }
+
+    const { container } = render(<CustomModalWrapper />)
+    const dialog = screen.getByRole('dialog')
+
+    expect(container.querySelector('.max-w-lg')).toBeInTheDocument()
+    expect(dialog).toHaveAttribute('aria-labelledby', 'custom-modal-heading')
+
+    fireEvent.click(dialog)
+    expect(onClose).not.toHaveBeenCalled()
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Primary Action' }))
+    })
   })
 })

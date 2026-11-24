@@ -2,6 +2,17 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import ICU from 'i18next-icu';
 import en from '../locales/en.json';
+import es from '../locales/es.json';
+import { AUTO_LOCALE_ID, getI18nLanguage, isSupportedLocale, LOCALE_STORAGE_KEY } from './locales';
+
+function initialLanguage() {
+  try {
+    const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+    return getI18nLanguage(stored && isSupportedLocale(stored) ? stored : AUTO_LOCALE_ID);
+  } catch {
+    return getI18nLanguage(AUTO_LOCALE_ID);
+  }
+}
 
 const isDebugI18n = new URLSearchParams(window.location.search).get('debug_i18n') === 'true';
 
@@ -35,9 +46,12 @@ i18n
     resources: {
       en: {
         translation: en
+      },
+      es: {
+        translation: es
       }
     },
-    lng: 'en',
+    lng: initialLanguage(),
     fallbackLng: 'en',
     postProcess: isDebugI18n ? ['pseudo'] : [],
     interpolation: {

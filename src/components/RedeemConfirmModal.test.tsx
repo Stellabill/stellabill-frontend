@@ -87,7 +87,8 @@ describe('RedeemConfirmModal', () => {
   });
 
   it('locks every dismissal control while the redemption is in flight', () => {
-    render(<RedeemConfirmModal {...baseProps()} />);
+    const redeemGift = vi.fn(() => new Promise<never>(() => {}));
+    render(<RedeemConfirmModal {...baseProps({ redeemGift })} />);
 
     fireEvent.click(screen.getByRole('button', { name: /activate subscription/i }));
 
@@ -99,7 +100,8 @@ describe('RedeemConfirmModal', () => {
 
   it('ignores backdrop clicks while the redemption is in flight', () => {
     const onClose = vi.fn();
-    render(<RedeemConfirmModal {...baseProps({ onClose })} />);
+    const redeemGift = vi.fn(() => new Promise<never>(() => {}));
+    render(<RedeemConfirmModal {...baseProps({ onClose, redeemGift })} />);
 
     fireEvent.click(screen.getByRole('button', { name: /activate subscription/i }));
     fireEvent.click(screen.getByRole('dialog'));
@@ -107,14 +109,13 @@ describe('RedeemConfirmModal', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('invokes onRedemptionComplete once the simulated request resolves', async () => {
+  it('invokes onRedemptionComplete once the redeem request resolves', async () => {
     const onRedemptionComplete = vi.fn();
-    render(<RedeemConfirmModal {...baseProps({ onRedemptionComplete })} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /activate subscription/i }));
+    const redeemGift = vi.fn().mockResolvedValue({ status: 'ok' as const });
+    render(<RedeemConfirmModal {...baseProps({ onRedemptionComplete, redeemGift })} />);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000);
+      fireEvent.click(screen.getByRole('button', { name: /activate subscription/i }));
     });
 
     expect(onRedemptionComplete).toHaveBeenCalledTimes(1);
@@ -129,5 +130,57 @@ describe('RedeemConfirmModal', () => {
     fireEvent.click(screen.getByRole('dialog'));
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls redeemGift and invokes onRedemptionComplete when result is ok', async () => {
+    const redeemGift = vi.fn().mockResolvedValue({ status: 'ok' as const });
+    const onRedemptionComplete = vi.fn();
+    render(<RedeemConfirmModal {...baseProps({ redeemGift, onRedemptionComplete })} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /activate subscription/i }));
+    });
+
+    expect(redeemGift).toHaveBeenCalledWith('GIFT-ABC-123');
+    expect(onRedemptionComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows already-redeemed error message when result is already-redeemed', async () => {
+    const redeemGift = vi.fn().mockResolvedValue({ status: 'already-redeemed' as const });
+    const onRedemptionComplete = vi.fn();
+    render(<RedeemConfirmModal {...baseProps({ redeemGift, onRedemptionComplete })} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /activate subscription/i }));
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('This gift has already been redeemed.');
+    expect(onRedemptionComplete).not.toHaveBeenCalled();
+  });
+
+  it('shows expired error message when result is expired', async () => {
+    const redeemGift = vi.fn().mockResolvedValue({
+      status: 'expired' as const,
+      expiredOn: '2026-08-15T12:00:00',
+    });
+    const onRedemptionComplete = vi.fn();
+    render(<RedeemConfirmModal {...baseProps({ redeemGift, onRedemptionComplete })} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /activate subscription/i }));
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/this gift code expired on/i);
+    expect(onRedemptionComplete).not.toHaveBeenCalled();
+  });
+
+  it('disables both Cancel and Activate buttons while redeemGift is pending', () => {
+    const redeemGift = vi.fn(() => new Promise<never>(() => {}));
+    render(<RedeemConfirmModal {...baseProps({ redeemGift })} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /activate subscription/i }));
+
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /activating/i })).toBeDisabled();
   });
 });

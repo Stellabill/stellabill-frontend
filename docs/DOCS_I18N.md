@@ -45,6 +45,9 @@ Provide translations for the exact categories your target languages support: `ze
 {t('activeSubscriptions', { count: activeCount })}
 ```
 
+For plural, `select`, and nested ICU examples—including replacing manually
+concatenated count suffixes—see the [ICU pluralization guide](./ICU_PLURALIZATION_GUIDE.md).
+
 ## 4. Length-Expansion Preview Mode
 Translating English text into languages like German or Russian often results in text expansion of up to 30%. To ensure our UI components can handle this, we've implemented a length-expansion preview mode.
 
@@ -71,3 +74,39 @@ The shared application header includes an accessible locale switcher. Locale ent
 - Selecting an RTL locale updates the document direction. Long native names wrap instead of clipping, and the menu becomes a full-width mobile sheet within the viewport.
 
 When adding a translation bundle, add its resource to `src/i18n/config.ts` and keep the locale catalog in `src/i18n/locales.ts` as the single source for the switcher's display metadata.
+
+## 7. Key naming and catalogue parity
+
+Use nested, lower-camel-case keys grouped by screen, component, and purpose:
+`landing.hero.primaryAction`, `landing.faq.prepaid.answer`,
+`landing.metrics.uptime.label`, `pricing.plans.free.tagline`, and
+`subscriptions.table.tags`. These are logical namespaces within the default
+`translation` resource. Reuse existing keys for the same meaning; avoid English
+sentences, array indexes, or visual positions as keys.
+
+Call `useTranslation()` inside the component so changing language updates existing
+content. Store keys rather than translated text in static data. Include visible
+copy, print copy, tooltips, and accessible labels. Brand names, URLs, and internal
+identifiers stay unchanged.
+
+Keep a sentence in one resource even when part of it is styled. Use `Trans` with
+numbered component placeholders (`<0>…</0>`) so translators can reorder the whole
+sentence. Use ICU named arguments and plural branches for dynamic messages, for
+example `pricing.total` and `pricing.seats.selected`; do not concatenate suffixes.
+
+English (`src/locales/en.json`) defines the complete key set. Spanish
+(`src/locales/es.json`) is loaded alongside English; choosing `es-ES` or browser
+Spanish uses that bundle. Other advertised locales currently fall back to English.
+Add every new key to every bundle in the same change. The automatically discovered
+catalogue test rejects missing keys, stale keys, and blank translations:
+
+```bash
+npx vitest run src/i18n/locales.test.ts src/i18n/screens.test.tsx
+```
+
+The screen tests exercise the real switcher with English/Spanish Landing and
+Pricing content, persisted locale selection, seat-count plurals, and Subscriptions
+headers in loading and loaded states. In the dev app, switch to Spanish in the
+header, open FAQ answers, visit `/pricing`, select per-seat pricing and change the
+seat count, then visit `/subscriptions`. Reload to check persistence and switch
+back to English. Also check `?debug_i18n=true` for text expansion.

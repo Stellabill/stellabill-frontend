@@ -28,7 +28,7 @@ export default function BottomSheet({
   title,
   description,
   children,
-  snapPoints,
+  snapPoints: _snapPoints,
 }: BottomSheetProps) {
   const panelId = useId();
   const titleId = useId();

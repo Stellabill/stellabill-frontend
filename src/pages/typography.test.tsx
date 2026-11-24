@@ -8,7 +8,7 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import Plans from './Plans';
+import MerchantPlans from './MerchantPlans';
 import SubscriptionDetail from './SubscriptionDetail';
 
 // ── Mocks required by SubscriptionDetail ────────────────────────────────────
@@ -35,7 +35,7 @@ describe('Plans page — typography', () => {
   it('renders an h1', () => {
     const { container } = render(
       <MemoryRouter>
-        <Plans />
+        <MerchantPlans />
       </MemoryRouter>
     );
     expect(getH1(container)).toBeInTheDocument();
@@ -44,7 +44,7 @@ describe('Plans page — typography', () => {
   it('h1 has no inline fontSize override', () => {
     const { container } = render(
       <MemoryRouter>
-        <Plans />
+        <MerchantPlans />
       </MemoryRouter>
     );
     const h1 = getH1(container)!;
@@ -54,7 +54,7 @@ describe('Plans page — typography', () => {
   it('h1 has no inline fontWeight override', () => {
     const { container } = render(
       <MemoryRouter>
-        <Plans />
+        <MerchantPlans />
       </MemoryRouter>
     );
     const h1 = getH1(container)!;

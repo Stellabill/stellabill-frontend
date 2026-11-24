@@ -1,5 +1,11 @@
-import { describe, it, expect } from "vitest";
-import { addBillingInterval, buildBillingSchedule } from "./billingDate";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import {
+  addBillingInterval,
+  buildBillingSchedule,
+  formatBillingDate,
+  getCurrentBillingPeriod,
+  parseBillingDate,
+} from "./billingDate";
 
 function iso(d: Date): string {
   const y = d.getFullYear();
@@ -71,5 +77,47 @@ describe("buildBillingSchedule", () => {
       "2026-05-31",
       "2026-06-30",
     ]);
+  });
+});
+
+describe("billing date strings", () => {
+  it("parses and formats calendar dates without timezone shifts", () => {
+    expect(formatBillingDate(parseBillingDate("2026-03-31"))).toBe("2026-03-31");
+  });
+});
+
+describe("getCurrentBillingPeriod", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns the period containing the mocked current date", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(dt(2027, 7, 20));
+
+    const period = getCurrentBillingPeriod(dt(2026, 1, 15), "monthly");
+
+    expect(iso(period.start)).toBe("2027-07-15");
+    expect(iso(period.end)).toBe("2027-08-15");
+  });
+
+  it("moves to the next period on the boundary date", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(dt(2026, 3, 15));
+
+    const period = getCurrentBillingPeriod(dt(2026, 1, 15), "monthly");
+
+    expect(iso(period.start)).toBe("2026-03-15");
+    expect(iso(period.end)).toBe("2026-04-15");
+  });
+
+  it("preserves the original month-end anchor without drift", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(dt(2026, 3, 30));
+
+    const period = getCurrentBillingPeriod(dt(2026, 1, 31), "monthly");
+
+    expect(iso(period.start)).toBe("2026-02-28");
+    expect(iso(period.end)).toBe("2026-03-31");
   });
 });

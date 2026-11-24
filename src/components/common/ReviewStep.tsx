@@ -1,4 +1,3 @@
-import React from 'react';
 import { Edit3, HelpCircle } from 'lucide-react';
 import { Button } from './Button';
 

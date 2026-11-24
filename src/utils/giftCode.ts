@@ -1,3 +1,5 @@
+import { validateGiftCodeFixture } from "./giftCode.fixtures";
+
 const GIFT_CODE_PREFIX = "GIFT";
 
 const SEGMENT_LENGTH = 6;
@@ -5,9 +7,6 @@ const BODY_LENGTH = SEGMENT_LENGTH * 2;
 const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 export const GIFT_CODE_REGEX = /^GIFT-[A-Z0-9]{6}-[A-Z0-9]{6}$/;
-
-/** Latency of the placeholder gift service. Kept above zero so the UI loading state is exercised. */
-export const MOCK_GIFT_VALIDATION_LATENCY_MS = 1500;
 
 export interface GiftDetails {
   planId: string;
@@ -26,6 +25,28 @@ export type GiftCodeValidationResult =
   | { status: "invalid"; code: string | null; reason: "malformed" | "not_found" }
   | { status: "expired"; code: string; expiredOn: string }
   | { status: "redeemed"; code: string };
+
+export const GIFT_ALREADY_REDEEMED_MESSAGE = "This gift has already been redeemed.";
+
+export function formatExpiredGiftMessage(expiredOn: string): string {
+  const formatted = new Date(expiredOn).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  return `This gift code expired on ${formatted}. Please contact the sender.`;
+}
+
+export interface GiftCodeValidationOptions {
+  latencyMs?: number;
+  useFixtures?: boolean;
+  validator?: GiftCodeValidator;
+}
+
+export type GiftCodeValidator = (
+  value: string,
+  options?: Pick<GiftCodeValidationOptions, "latencyMs">,
+) => Promise<GiftCodeValidationResult>;
 
 function withDashes(body: string): string {
   return `${GIFT_CODE_PREFIX}-${body.slice(0, SEGMENT_LENGTH)}-${body.slice(SEGMENT_LENGTH)}`;
@@ -64,8 +85,10 @@ export function generateGiftCode(): string {
   return withDashes(randomBody(BODY_LENGTH));
 }
 
-// Fixtures are matched against normalized input, so they are stored in canonical form.
-function canonicalCode(value: string): string {
+/**
+ * Returns the canonical form of a gift code or throws if the input is malformed.
+ */
+export function canonicalCode(value: string): string {
   const code = normalizeGiftCode(value);
   if (code === null) {
     throw new Error(`Gift code fixture is not a valid code: ${value}`);
@@ -73,52 +96,26 @@ function canonicalCode(value: string): string {
   return code;
 }
 
-const MOCK_EXPIRED_CODES = new Map<string, string>([
-  [canonicalCode("GIFT-EXPIRED-CODE1"), "2026-08-15T12:00:00"],
-]);
-
-const MOCK_REDEEMED_CODES = new Set([canonicalCode("GIFT-ALREADY-USED1")]);
-
-const MOCK_UNRECOGNIZED_CODES = new Set([canonicalCode("GIFT-INVALID-CODE1")]);
-
-const MOCK_GIFT: Omit<GiftDetails, "expiresOn"> = {
-  planId: "1",
-  planName: "Premium Access",
-  merchant: "Stellar News",
-  duration: 12,
-  gifterName: "Sarah Johnson",
-  message: "I thought you'd enjoy this subscription. Happy reading!",
-  value: 120,
-  currency: "USDC",
-};
-
-function mockExpiresOn(): string {
-  return new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-}
+export const defaultGiftCodeValidator: GiftCodeValidator = validateGiftCodeFixture;
 
 export async function validateGiftCode(
   value: string,
-  { latencyMs = MOCK_GIFT_VALIDATION_LATENCY_MS }: { latencyMs?: number } = {}
+  options: GiftCodeValidationOptions = {},
 ): Promise<GiftCodeValidationResult> {
+  const { useFixtures = true, validator, latencyMs } = options;
+
+  if (validator) {
+    return validator(value, { latencyMs });
+  }
+
+  if (useFixtures) {
+    return defaultGiftCodeValidator(value, { latencyMs });
+  }
+
   const code = normalizeGiftCode(value);
   if (code === null) {
     return { status: "invalid", code: null, reason: "malformed" };
   }
 
-  if (latencyMs > 0) {
-    await new Promise((resolve) => setTimeout(resolve, latencyMs));
-  }
-
-  const expiredOn = MOCK_EXPIRED_CODES.get(code);
-  if (expiredOn !== undefined) {
-    return { status: "expired", code, expiredOn };
-  }
-  if (MOCK_REDEEMED_CODES.has(code)) {
-    return { status: "redeemed", code };
-  }
-  if (MOCK_UNRECOGNIZED_CODES.has(code)) {
-    return { status: "invalid", code, reason: "not_found" };
-  }
-
-  return { status: "ok", code, giftDetails: { ...MOCK_GIFT, expiresOn: mockExpiresOn() } };
+  throw new Error("Gift code validation API adapter is not configured.");
 }

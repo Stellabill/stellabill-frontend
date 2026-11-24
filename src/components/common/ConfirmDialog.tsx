@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, useState, ReactNode, MouseEvent } from 'react'
+import { useEffect, useId, useRef, useState, ReactNode } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
+import Modal from './Modal'
 import './ConfirmDialog.css'
 
 export interface ConfirmDialogProps {
@@ -18,9 +19,6 @@ export interface ConfirmDialogProps {
   onClose: () => void
 }
 
-const FOCUSABLE_SELECTOR =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-
 export default function ConfirmDialog({
   isOpen,
   title,
@@ -36,8 +34,7 @@ export default function ConfirmDialog({
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
-  const dialogRef = useRef<HTMLDivElement>(null)
-  const previousFocusRef = useRef<HTMLElement | null>(null)
+  const cancelBtnRef = useRef<HTMLButtonElement>(null)
   const [phraseInput, setPhraseInput] = useState('')
   const titleId = useId()
   const descriptionId = useId()
@@ -45,81 +42,28 @@ export default function ConfirmDialog({
   useEffect(() => {
     if (!isOpen) {
       setPhraseInput('')
-      if (previousFocusRef.current) {
-        previousFocusRef.current.focus()
-        previousFocusRef.current = null
-      }
-      return
     }
-
-    previousFocusRef.current = document.activeElement as HTMLElement
-    const timer = window.setTimeout(() => {
-      const cancelBtn = dialogRef.current?.querySelector<HTMLButtonElement>(
-        '[data-confirm-dialog-initial-focus]'
-      )
-      cancelBtn?.focus()
-    }, 30)
-    return () => window.clearTimeout(timer)
   }, [isOpen])
-
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-        return
-      }
-
-      if (e.key !== 'Tab') return
-
-      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-      if (!focusable || focusable.length === 0) return
-
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      const active = document.activeElement as HTMLElement | null
-
-      if (e.shiftKey && (active === first || !dialogRef.current?.contains(active))) {
-        last.focus()
-        e.preventDefault()
-      } else if (!e.shiftKey && active === last) {
-        first.focus()
-        e.preventDefault()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
-
-  if (!isOpen) return null
 
   const phraseRequired = Boolean(confirmPhrase && confirmPhrase.length > 0)
   const phraseSatisfied = !phraseRequired || phraseInput.trim() === confirmPhrase
   const confirmDisabled = isLoading || !phraseSatisfied
 
-  const handleOverlayClick = (e: MouseEvent<HTMLDivElement>) => {
-    if (!closeOnOverlayClick || isLoading) return
-    if (e.target === e.currentTarget) onClose()
-  }
-
   return (
-    <div
-      className="confirm-dialog-overlay"
-      onClick={handleOverlayClick}
-      data-testid="confirm-dialog-overlay"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      unstyled
+      role="alertdialog"
+      labelledBy={titleId}
+      describedBy={description ? descriptionId : undefined}
+      initialFocusRef={cancelBtnRef}
+      closeOnBackdrop={closeOnOverlayClick && !isLoading}
+      closeOnEscape={!isLoading}
+      busy={isLoading}
+      overlayTestId="confirm-dialog-overlay"
+      contentClassName={`confirm-dialog${destructive ? ' confirm-dialog--destructive' : ''}`}
     >
-      <div
-        ref={dialogRef}
-        className={`confirm-dialog${destructive ? ' confirm-dialog--destructive' : ''}`}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={description ? descriptionId : undefined}
-        tabIndex={-1}
-      >
         <div className="confirm-dialog__header">
           {destructive && (
             <div className="confirm-dialog__icon" aria-hidden="true">
@@ -180,6 +124,7 @@ export default function ConfirmDialog({
 
         <div className="confirm-dialog__footer">
           <button
+            ref={cancelBtnRef}
             type="button"
             className="confirm-dialog__btn confirm-dialog__btn--cancel"
             onClick={onClose}
@@ -197,7 +142,6 @@ export default function ConfirmDialog({
             {isLoading ? loadingLabel ?? `${confirmLabel}...` : confirmLabel}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
