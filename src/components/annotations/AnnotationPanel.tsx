@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Annotation, AnnotationComment } from "./AnnotationTypes";
+import { Annotation } from "./AnnotationTypes";
 import { X, MessageSquare, CheckCircle, RotateCcw } from "lucide-react";
 
 interface AnnotationPanelProps {

@@ -328,4 +328,4 @@ export default function InvoiceBreakdownCard({ invoice, defaultExpanded = false 
   );
 }
 
-export type { InvoiceWithBreakdown, LineItem, TaxEntry, CreditEntry };
+export type { LineItem, TaxEntry, CreditEntry };

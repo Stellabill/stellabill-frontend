@@ -5,6 +5,7 @@ import BottomSheet from "./common/BottomSheet";
 interface SubscriptionActionsProps {
   hasUsageBilling?: boolean;
   isPaused?: boolean;
+  isPending?: boolean;
   onViewUsage?: () => void;
   onPauseSubscription?: () => void;
   onCancelSubscription?: () => void;
@@ -13,6 +14,7 @@ interface SubscriptionActionsProps {
 function SubscriptionActions({
   hasUsageBilling = true,
   isPaused = false,
+  isPending = false,
   onViewUsage,
   onPauseSubscription,
   onCancelSubscription,
@@ -47,8 +49,12 @@ function SubscriptionActions({
       {hasUsageBilling && (
         <button
           onClick={handleViewUsage}
-          className="w-full border border-[#191919] rounded-xl p-4 flex items-center gap-4 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-zinc-900"
+          disabled={isPending}
+          className={`w-full border border-[#191919] rounded-xl p-4 flex items-center gap-4 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-zinc-900 ${
+            isPending ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+          }`}
           aria-label="View usage-based billing details"
+          aria-disabled={isPending}
         >
           <div className="shrink-0">
             <Activity className="w-5 h-5 text-[#00D3F2]" strokeWidth={2} />
@@ -67,12 +73,12 @@ function SubscriptionActions({
 
       <button
         onClick={handlePauseClick}
-        disabled={isPaused}
+        disabled={isPaused || isPending}
         className={`w-full border border-gray-700 rounded-xl p-4 flex items-center gap-4 transition-colors focus:outline-none focus:ring-2 focus:ring-[#FFB900] focus:ring-offset-2 focus:ring-offset-zinc-900 ${
-          isPaused ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+          isPaused || isPending ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
         }`}
         aria-label="Pause subscription to temporarily stop billing"
-        aria-disabled={isPaused}
+        aria-disabled={isPaused || isPending}
       >
         <div className="shrink-0">
           <Pause className="w-5 h-5 text-[#FFB900]" strokeWidth={2} />
@@ -87,8 +93,12 @@ function SubscriptionActions({
 
       <button
         onClick={handleCancelClick}
-        className="w-full border border-[#FB2C364D] rounded-xl p-4 flex items-center gap-4 transition-colors focus:outline-none focus:ring-2 focus:ring-[#FB2C364D] focus:ring-offset-2 focus:ring-offset-zinc-900"
+        disabled={isPending}
+        className={`w-full border border-[#FB2C364D] rounded-xl p-4 flex items-center gap-4 transition-colors focus:outline-none focus:ring-2 focus:ring-[#FB2C364D] focus:ring-offset-2 focus:ring-offset-zinc-900 ${
+          isPending ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+        }`}
         aria-label="Cancel subscription to end recurring payments"
+        aria-disabled={isPending}
       >
         <div className="shrink-0">
           <XCircle className="w-5 h-5 text-[#FF6467]" strokeWidth={2} />

@@ -19,7 +19,7 @@ export interface AmountProps extends FormatAmountOptions {
   /** Optional className applied to the currency code portion. */
   codeClassName?: string
   /** Forwarded to the root element. */
-  ['data-testid']: string
+  ['data-testid']?: string
 }
 
 /**

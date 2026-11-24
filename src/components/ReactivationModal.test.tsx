@@ -20,7 +20,7 @@
  * - State resets on close/reopen
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ReactivationModal, { type ReactivationPlan } from './ReactivationModal';
@@ -521,6 +521,15 @@ describe('ReactivationModal – RTL layout', () => {
 // ── Snapshot ─────────────────────────────────────────────────────────────────
 
 describe('ReactivationModal – snapshot', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 29, 0, 0, 0, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('matches snapshot for standard open state', () => {
     const { container } = render(
       <ReactivationModal

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { ApiError } from "../api/client";
 import { catalogPlans as mockPlans, type Plan, type PlanInterval } from "../data/catalogPlans";
 import { useWallet } from "../wallet/WalletContext";
@@ -15,13 +15,20 @@ import {
 	createSubscribeHandler,
 } from "../pages/browsePlans/browsePlansHandlers";
 
+type IntervalFilter = PlanInterval | "All";
+
+function parseIntervalFilter(value: string | null): IntervalFilter {
+	return value === "Monthly" || value === "Yearly" ? value : "All";
+}
+
 export function useBrowsePlansPage() {
 	const navigate = useNavigate();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const searchQuery = searchParams.get("q") ?? "";
+	const intervalFilter = parseIntervalFilter(searchParams.get("interval"));
 	const [plans, setPlans] = useState<Plan[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<ApiError | null>(null);
-	const [searchQuery, setSearchQuery] = useState("");
-	const [intervalFilter, setIntervalFilter] = useState<PlanInterval | "All">("All");
 	const [sortField, setSortField] = useState<SortField>("name");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 	const [walletModalOpen, setWalletModalOpen] = useState(false);
@@ -116,12 +123,33 @@ export function useBrowsePlansPage() {
 		}
 	}, [connect]);
 
+	const updateFilters = useCallback(
+		(query: string, interval: IntervalFilter) => {
+			const next = new URLSearchParams(searchParams);
+			if (query) {
+				next.set("q", query);
+			} else {
+				next.delete("q");
+			}
+			if (interval === "All") {
+				next.delete("interval");
+			} else {
+				next.set("interval", interval);
+			}
+			// Keep the filters in the entry that Checkout returns to.
+			setSearchParams(next, { replace: true });
+		},
+		[searchParams, setSearchParams],
+	);
+
+	const setSearchQuery = (query: string) => updateFilters(query, intervalFilter);
+	const setIntervalFilter = (interval: IntervalFilter) => updateFilters(searchQuery, interval);
+
 	const clearFilters = useCallback(() => {
-		setSearchQuery("");
-		setIntervalFilter("All");
+		updateFilters("", "All");
 		setSortField("name");
 		setSortDirection("asc");
-	}, []);
+	}, [updateFilters]);
 
 	return {
 		loading,

@@ -3,19 +3,6 @@
    dark bg, border-radius 28px, modal-fade-in animation,
    amber (#f59e0b) warning accent instead of cyan. */
 
-/* ── Overlay ─────────────────────────────────────────────────────────── */
-.downgrade-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(8px);
-  padding: 1rem;
-}
-
 /* ── Modal container ─────────────────────────────────────────────────── */
 .downgrade-modal-content {
   background-color: #0d0d0d;
