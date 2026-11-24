@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import '@testing-library/jest-dom/vitest'
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import CreatePlan from './CreatePlan'
-import { api, plans } from '../api/client'
+import { plans, type ApiError } from '../api/client'
 
 vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/client')>()
@@ -165,5 +166,125 @@ describe('CreatePlan autosave integration', () => {
     const saved = localStorage.getItem(AUTOSAVE_KEY)
     expect(saved).not.toBeNull()
     expect(JSON.parse(saved!).pricing.price).toBe('75')
+  })
+})
+
+describe('CreatePlan submit and navigation guard', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.clearAllMocks()
+    Object.defineProperty(navigator, 'onLine', { value: true, writable: true, configurable: true })
+  })
+
+  afterEach(() => {
+    localStorage.clear()
+  })
+
+  function renderWithRoutes() {
+    return render(
+      <MemoryRouter initialEntries={['/plans/create']}>
+        <Routes>
+          <Route path="/plans/create" element={<CreatePlan />} />
+          <Route path="/plans" element={<div data-testid="plans-page">Plans Page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+  }
+
+  it('submits CreatePlanPayload via plans.create, clears autosave, and navigates to /plans', async () => {
+    vi.mocked(plans.create).mockResolvedValueOnce({ id: 'plan-1' })
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({
+      usageEnabled: true,
+      trialDays: '7',
+      pricing: { price: '29', interval: 'Monthly', priceType: 'currency' },
+    }))
+
+    renderWithRoutes()
+
+    fireEvent.click(screen.getByRole('button', { name: /create plan/i }))
+
+    await waitFor(() => {
+      expect(plans.create).toHaveBeenCalledWith({
+        usage_enabled: true,
+        trial_period_days: 7,
+        price: 29,
+        price_type: 'currency',
+        interval: 'Monthly',
+      })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('plans-page')).toBeInTheDocument()
+    })
+    expect(localStorage.getItem(AUTOSAVE_KEY)).toBeNull()
+  })
+
+  it('shows server error banner when plans.create fails with a generic error', async () => {
+    const err: ApiError = new Error('API error: Internal Server Error')
+    err.kind = 'http'
+    err.status = 500
+    err.technicalDetails = 'Database unavailable'
+    vi.mocked(plans.create).mockRejectedValueOnce(err)
+
+    const { container } = renderWithRoutes()
+    fireEvent.change(container.querySelector('#pricing-price-input')!, { target: { value: '25' } })
+    fireEvent.change(container.querySelector('#pricing-interval')!, { target: { value: 'Monthly' } })
+    fireEvent.click(screen.getByRole('button', { name: /create plan/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('API error: Internal Server Error')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Database unavailable')).toBeInTheDocument()
+    expect(screen.queryByTestId('plans-page')).not.toBeInTheDocument()
+  })
+
+  it('maps per-field server errors to inline field errors and clears them on edit', async () => {
+    const err: ApiError = new Error('Validation failed')
+    err.kind = 'http'
+    err.status = 422
+    err.technicalDetails = JSON.stringify({
+      errors: {
+        price: 'Price exceeds plan limit',
+        interval: 'Interval not supported for this currency',
+        trial_period_days: 'Trial period cannot exceed 90 days',
+        usage_enabled: 'Usage billing is not enabled for your account',
+      },
+    })
+    vi.mocked(plans.create).mockRejectedValueOnce(err)
+
+    const { container } = renderWithRoutes()
+    fireEvent.change(container.querySelector('#pricing-price-input')!, { target: { value: '50' } })
+    fireEvent.change(container.querySelector('#pricing-interval')!, { target: { value: 'Monthly' } })
+    fireEvent.change(container.querySelector('#trial-period')!, { target: { value: '120' } })
+    fireEvent.click(screen.getByRole('button', { name: /create plan/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Price exceeds plan limit')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Interval not supported for this currency')).toBeInTheDocument()
+    expect(screen.getByText('Trial period cannot exceed 90 days')).toBeInTheDocument()
+    expect(screen.getByText('Usage billing is not enabled for your account')).toBeInTheDocument()
+
+    // Editing trial days clears its inline error
+    fireEvent.change(container.querySelector('#trial-period')!, { target: { value: '14' } })
+    expect(screen.queryByText('Trial period cannot exceed 90 days')).not.toBeInTheDocument()
+  })
+
+  it('blocks browser unload and shows ExitConfirmModal on Cancel when form is dirty', () => {
+    const { container } = renderWithRoutes()
+
+    // Make form dirty
+    fireEvent.change(container.querySelector('#trial-period')!, { target: { value: '14' } })
+
+    // beforeunload should be prevented
+    const beforeUnloadEvent = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(beforeUnloadEvent)
+    expect(beforeUnloadEvent.defaultPrevented).toBe(true)
+
+    // Clicking Cancel opens ExitConfirmModal instead of navigating immediately
+    const cancelButtons = screen.getAllByRole('button', { name: /^cancel$/i })
+    fireEvent.click(cancelButtons[0])
+    expect(screen.queryByTestId('plans-page')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /unsaved changes/i })).toBeInTheDocument()
   })
 })

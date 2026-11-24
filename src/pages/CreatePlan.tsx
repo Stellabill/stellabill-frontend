@@ -8,12 +8,109 @@ import ExitConfirmModal from '../components/create-plan/ExitConfirmModal'
 import AutosaveIndicator from '../components/AutosaveIndicator'
 import AutosaveHistory from '../components/AutosaveHistory'
 import { useAutosave, type AutosaveEntry } from '../hooks/useAutosave'
-import { useDraftManager } from '../hooks/useDraftManager'
+import { useDraftManager, type DraftData, type DraftEntry } from '../hooks/useDraftManager'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { plans } from '../api/client'
+import { useUnsavedChangesGuard } from '../components/Layout'
+import { plans, type ApiError, type CreatePlanPayload } from '../api/client'
 import styles from './CreatePlan.module.css'
 
 const AUTOSAVE_KEY = 'stellabill-create-plan'
+
+interface FormFieldErrors {
+  priceError?: string
+  intervalError?: string
+  trialDaysError?: string
+  usageEnabledError?: string
+}
+
+function readSavedSnapshot(
+  draftIdParam: string | null,
+  getDraftById: (id: string) => DraftEntry | undefined,
+): DraftData | null {
+  if (draftIdParam !== null) {
+    const draft = getDraftById(draftIdParam)
+    if (draft) return draft.data
+    return null
+  }
+
+  let savedData = localStorage.getItem(AUTOSAVE_KEY)
+  if (!savedData) {
+    try {
+      const rawHistory = localStorage.getItem(`${AUTOSAVE_KEY}:history`)
+      if (rawHistory) {
+        const parsed = JSON.parse(rawHistory)
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.data) {
+          savedData = parsed[0].data
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  if (savedData) {
+    const restored = deserialiseForm({ data: savedData, savedAt: '', label: '' })
+    if (restored) return restored
+  }
+  return null
+}
+
+function mapRawFieldErrors(raw: Record<string, unknown>): FormFieldErrors {
+  const mapped: FormFieldErrors = {}
+  const asMessage = (val: unknown): string | undefined => {
+    if (typeof val === 'string' && val.trim()) return val.trim()
+    if (Array.isArray(val) && typeof val[0] === 'string' && val[0].trim()) return val[0].trim()
+    return undefined
+  }
+
+  const priceMsg = asMessage(raw.price ?? raw.price_type ?? raw.priceType)
+  if (priceMsg) mapped.priceError = priceMsg
+
+  const intervalMsg = asMessage(raw.interval ?? raw.billing_interval ?? raw.billingInterval)
+  if (intervalMsg) mapped.intervalError = intervalMsg
+
+  const trialMsg = asMessage(raw.trial_period_days ?? raw.trialDays ?? raw.trial_days)
+  if (trialMsg) mapped.trialDaysError = trialMsg
+
+  const usageMsg = asMessage(raw.usage_enabled ?? raw.usageEnabled)
+  if (usageMsg) mapped.usageEnabledError = usageMsg
+
+  return mapped
+}
+
+function extractFieldErrors(err: unknown): FormFieldErrors {
+  if (!err || typeof err !== 'object') return {}
+
+  const record = err as Record<string, unknown>
+  for (const key of ['fieldErrors', 'errors', 'fields'] as const) {
+    const candidate = record[key]
+    if (candidate && typeof candidate === 'object' && !Array.isArray(candidate)) {
+      const mapped = mapRawFieldErrors(candidate as Record<string, unknown>)
+      if (Object.keys(mapped).length > 0) return mapped
+    }
+  }
+
+  const technicalDetails = (err as ApiError).technicalDetails
+  if (typeof technicalDetails === 'string' && technicalDetails.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(technicalDetails) as Record<string, unknown>
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        for (const key of ['fieldErrors', 'errors', 'fields'] as const) {
+          const nested = parsed[key]
+          if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+            const mapped = mapRawFieldErrors(nested as Record<string, unknown>)
+            if (Object.keys(mapped).length > 0) return mapped
+          }
+        }
+        const topLevel = mapRawFieldErrors(parsed)
+        if (Object.keys(topLevel).length > 0) return topLevel
+      }
+    } catch {
+      // Not JSON — fall back to generic error banner.
+    }
+  }
+
+  return {}
+}
 
 function serialiseForm(usageEnabled: boolean, trialDays: string, pricing: PricingSectionValue): string {
   return JSON.stringify({ usageEnabled, trialDays, pricing })
@@ -51,7 +148,11 @@ function deserialiseForm(entry: AutosaveEntry): {
 
 function errorMessageOf(err: unknown): { message: string; technicalDetails?: string } {
   if (err instanceof Error) {
-    return { message: err.message || 'Failed to create plan.', technicalDetails: err.stack }
+    const apiErr = err as ApiError
+    return {
+      message: err.message || 'Failed to create plan.',
+      technicalDetails: apiErr.technicalDetails ?? err.stack,
+    }
   }
   return { message: 'Failed to create plan.', technicalDetails: String(err) }
 }
@@ -60,86 +161,37 @@ export default function CreatePlan() {
   usePageTitle('Create Plan')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { getDraftById } = useDraftManager()
+  const { getDraftById, saveDraft } = useDraftManager()
+  const { registerGuard } = useUnsavedChangesGuard()
 
   // Load draft or restore autosaved snapshot on initial mount
-  const initialSnapshot = useMemo(() => {
-    const draftIdParam = searchParams.get('draftId')
-    if (draftIdParam !== null) {
-      const draft = getDraftById(draftIdParam)
-      if (draft) return draft.data
-    } else {
-      let savedData = localStorage.getItem(AUTOSAVE_KEY)
-      if (!savedData) {
-        try {
-          const rawHistory = localStorage.getItem(`${AUTOSAVE_KEY}:history`)
-          if (rawHistory) {
-            const parsed = JSON.parse(rawHistory)
-            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.data) {
-              savedData = parsed[0].data
-            }
-          }
-        } catch {
-          // ignore
-        }
-      }
-      if (savedData) {
-        const restored = deserialiseForm({ data: savedData, savedAt: '', label: '' })
-        if (restored) return restored
-      }
-    }
-    return null
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const [initialSnapshot] = useState<DraftData | null>(() =>
+    readSavedSnapshot(searchParams.get('draftId'), getDraftById),
+  )
 
   const [usageEnabled, setUsageEnabled] = useState(() => initialSnapshot?.usageEnabled ?? false)
   const [trialDays, setTrialDays] = useState(() => initialSnapshot?.trialDays ?? '')
   const [pricing, setPricing] = useState<PricingSectionValue>(
     () => initialSnapshot?.pricing ?? { price: '', interval: '', priceType: 'currency' },
   )
-  const [errors, setErrors] = useState<{ priceError?: string; intervalError?: string }>({})
+  const [errors, setErrors] = useState<FormFieldErrors>({})
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<{ message: string; technicalDetails?: string } | null>(null)
   const submittingRef = useRef(false)
+  const confirmLeaveResolveRef = useRef<((confirmed: boolean) => void) | null>(null)
 
   // Load draft if query param present or re-sync
   useEffect(() => {
-    const draftIdParam = searchParams.get('draftId')
-    if (draftIdParam !== null) {
-      const draft = getDraftById(draftIdParam)
-      if (draft) {
-        setUsageEnabled(draft.data.usageEnabled)
-        setTrialDays(draft.data.trialDays)
-        setPricing(draft.data.pricing)
-        setErrors({})
-      }
-    } else {
-      let savedData = localStorage.getItem(AUTOSAVE_KEY)
-      if (!savedData) {
-        try {
-          const rawHistory = localStorage.getItem(`${AUTOSAVE_KEY}:history`)
-          if (rawHistory) {
-            const parsed = JSON.parse(rawHistory)
-            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.data) {
-              savedData = parsed[0].data
-            }
-          }
-        } catch {
-          // ignore
-        }
-      }
-      if (savedData) {
-        const restored = deserialiseForm({ data: savedData, savedAt: '', label: '' })
-        if (restored) {
-          setUsageEnabled(restored.usageEnabled)
-          setTrialDays(restored.trialDays)
-          setPricing(restored.pricing)
-          setErrors({})
-        }
-      }
+    const restored = readSavedSnapshot(searchParams.get('draftId'), getDraftById)
+    if (restored) {
+      setUsageEnabled(restored.usageEnabled)
+      setTrialDays(restored.trialDays)
+      setPricing(restored.pricing)
+      setErrors({})
     }
-  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams, getDraftById])
 
   // ── Autosave ────────────────────────────────────────────────────────────
 
@@ -183,8 +235,6 @@ export default function CreatePlan() {
 
   // ── Draft persistence ───────────────────────────────────────────────────
 
-  const { saveDraft } = useDraftManager()
-
   const defaultFormData = useMemo(
     () => ({ usageEnabled: false, trialDays: '', pricing: { price: '', interval: '', priceType: 'currency' as const } }),
     [],
@@ -199,6 +249,40 @@ export default function CreatePlan() {
       pricing.priceType !== defaultFormData.pricing.priceType,
     [usageEnabled, trialDays, pricing, defaultFormData],
   )
+
+  const isDirtyRef = useRef(isDirty)
+  isDirtyRef.current = isDirty
+
+  // ── Unsaved changes guard (in-app navigation & browser unload) ──────────
+
+  const confirmLeave = useCallback(() => {
+    setShowExitConfirm(true)
+    return new Promise<boolean>((resolve) => {
+      confirmLeaveResolveRef.current = resolve
+    })
+  }, [])
+
+  useEffect(() => {
+    registerGuard({
+      isDirty: () => isDirtyRef.current,
+      confirmLeave,
+    })
+    return () => {
+      registerGuard(null)
+    }
+  }, [registerGuard, confirmLeave])
+
+  useEffect(() => {
+    if (!isDirty) return
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [isDirty])
 
   // ── Navigation ──────────────────────────────────────────────────────────
 
@@ -218,14 +302,22 @@ export default function CreatePlan() {
   const handleExitSaveDraft = useCallback(() => {
     saveDraft({ usageEnabled, trialDays, pricing })
     setShowExitConfirm(false)
-    if (pendingNavigation) {
+    if (confirmLeaveResolveRef.current) {
+      const resolve = confirmLeaveResolveRef.current
+      confirmLeaveResolveRef.current = null
+      resolve(true)
+    } else if (pendingNavigation) {
       navigate(pendingNavigation)
     }
   }, [saveDraft, usageEnabled, trialDays, pricing, pendingNavigation, navigate])
 
   const handleExitDiscard = useCallback(() => {
     setShowExitConfirm(false)
-    if (pendingNavigation) {
+    if (confirmLeaveResolveRef.current) {
+      const resolve = confirmLeaveResolveRef.current
+      confirmLeaveResolveRef.current = null
+      resolve(true)
+    } else if (pendingNavigation) {
       navigate(pendingNavigation)
     }
   }, [pendingNavigation, navigate])
@@ -233,7 +325,33 @@ export default function CreatePlan() {
   const handleKeepEditing = useCallback(() => {
     setShowExitConfirm(false)
     setPendingNavigation(null)
+    if (confirmLeaveResolveRef.current) {
+      const resolve = confirmLeaveResolveRef.current
+      confirmLeaveResolveRef.current = null
+      resolve(false)
+    }
   }, [])
+
+  // ── Field change handlers (clear per-field errors on edit) ──────────────
+
+  const handleUsageEnabledChange = useCallback((v: boolean) => {
+    setUsageEnabled(v)
+    setErrors((prev) => (prev.usageEnabledError ? { ...prev, usageEnabledError: undefined } : prev))
+  }, [])
+
+  const handleTrialDaysChange = useCallback((v: string) => {
+    setTrialDays(v)
+    setErrors((prev) => (prev.trialDaysError ? { ...prev, trialDaysError: undefined } : prev))
+  }, [])
+
+  const handlePricingChange = useCallback((next: PricingSectionValue) => {
+    setPricing(next)
+    setErrors((prev) => ({
+      ...prev,
+      ...(next.price !== pricing.price ? { priceError: undefined } : {}),
+      ...(next.interval !== pricing.interval ? { intervalError: undefined } : {}),
+    }))
+  }, [pricing.price, pricing.interval])
 
   // ── Submit ──────────────────────────────────────────────────────────────
 
@@ -247,7 +365,7 @@ export default function CreatePlan() {
       return
     }
 
-    const payload = {
+    const payload: CreatePlanPayload = {
       usage_enabled: usageEnabled,
       trial_period_days: trialDays === '' ? 0 : Number(trialDays),
       price: Number(pricing.price),
@@ -262,10 +380,15 @@ export default function CreatePlan() {
       await plans.create(payload)
       clearHistory()
       localStorage.removeItem(AUTOSAVE_KEY)
+      isDirtyRef.current = false
       navigate('/plans', {
         state: { toast: { type: 'success', message: 'Plan created successfully.' } },
       })
     } catch (err) {
+      const serverFieldErrors = extractFieldErrors(err)
+      if (Object.keys(serverFieldErrors).length > 0) {
+        setErrors(serverFieldErrors)
+      }
       setSubmitError(errorMessageOf(err))
     } finally {
       submittingRef.current = false
@@ -325,15 +448,17 @@ export default function CreatePlan() {
       <form onSubmit={handleSubmit} noValidate>
         <BillingTypeSection
           usageEnabled={usageEnabled}
-          onUsageEnabledChange={setUsageEnabled}
+          onUsageEnabledChange={handleUsageEnabledChange}
           trialDays={trialDays}
-          onTrialDaysChange={setTrialDays}
+          onTrialDaysChange={handleTrialDaysChange}
+          usageEnabledError={errors.usageEnabledError}
+          trialDaysError={errors.trialDaysError}
         />
 
         <div style={{ marginBottom: '1.5rem' }}>
           <PricingSection
             value={pricing}
-            onChange={setPricing}
+            onChange={handlePricingChange}
             priceError={errors.priceError}
             intervalError={errors.intervalError}
           />

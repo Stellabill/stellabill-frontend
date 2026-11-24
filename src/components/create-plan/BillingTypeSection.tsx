@@ -60,6 +60,8 @@ interface BillingTypeSectionProps {
   onUsageEnabledChange: (v: boolean) => void;
   trialDays: string;
   onTrialDaysChange: (v: string) => void;
+  usageEnabledError?: string;
+  trialDaysError?: string;
 }
 
 // BillingTypeSection
@@ -68,6 +70,8 @@ export default function BillingTypeSection({
   onUsageEnabledChange,
   trialDays,
   onTrialDaysChange,
+  usageEnabledError,
+  trialDaysError,
 }: BillingTypeSectionProps) {
   return (
     <div
@@ -142,6 +146,15 @@ export default function BillingTypeSection({
             Charge customers based on their actual usage in addition to the base
             price.
           </p>
+          {usageEnabledError && (
+            <p
+              id="usage-based-error"
+              role="alert"
+              style={{ color: "#dc2626", fontSize: "0.75rem", marginTop: "0.375rem", marginBottom: 0 }}
+            >
+              {usageEnabledError}
+            </p>
+          )}
         </div>
       </div>
 
@@ -174,22 +187,24 @@ export default function BillingTypeSection({
             step="1"
             placeholder="0"
             value={trialDays}
+            aria-invalid={!!trialDaysError}
+            aria-describedby={trialDaysError ? "trial-period-error" : undefined}
             onChange={(e) => onTrialDaysChange(e.target.value)}
             style={{
               width: "100%",
               padding: "0.75rem 3.5rem 0.75rem 1rem",
               background: "#192121",
-              border: "1px solid #2e2e2e",
+              border: `1px solid ${trialDaysError ? "#dc2626" : "#2e2e2e"}`,
               borderRadius: "8px",
               color: "#e2e8f0",
               fontSize: "0.9rem",
               outline: "none",
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "#4dd8e1";
+              e.currentTarget.style.borderColor = trialDaysError ? "#dc2626" : "#4dd8e1";
             }}
             onBlur={(e) => {
-              e.currentTarget.style.borderColor = "#2e2e2e";
+              e.currentTarget.style.borderColor = trialDaysError ? "#dc2626" : "#2e2e2e";
             }}
           />
           <span
@@ -206,6 +221,15 @@ export default function BillingTypeSection({
             days
           </span>
         </div>
+        {trialDaysError && (
+          <p
+            id="trial-period-error"
+            role="alert"
+            style={{ color: "#dc2626", fontSize: "0.75rem", marginTop: "0.375rem", marginBottom: 0 }}
+          >
+            {trialDaysError}
+          </p>
+        )}
       </div>
     </div>
   );
