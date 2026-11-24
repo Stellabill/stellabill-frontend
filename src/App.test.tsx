@@ -3,6 +3,9 @@
  *
  * Covers:
  *  - Default export is a valid React component
+ *  - Root "/" renders the public landing page
+ *  - "/onboarding" redirects to "/onboarding/business"
+ *  - Catch-all unknown paths render the not-found page
  *  - Root "/" renders Landing and "/landing" redirects to "/"
  *  - "/onboarding" redirects to "/onboarding/business"
  *  - "/onboarding/payout" redirects to "/onboarding/business" without stored business data
@@ -18,11 +21,24 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import App from './App';
+import { WalletProvider, useWallet } from './wallet/WalletContext';
+import type { FreighterAdapter } from './wallet/freighter';
 
-// ---------------------------------------------------------------------------
-// Stub every page / layout component so the tests stay fast and isolated.
-// Each stub renders a unique, easily queryable data-testid.
-// ---------------------------------------------------------------------------
+const TEST_PUBLIC_KEY = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+const WALLET_STORAGE_KEY = 'stellabill.wallet.publicKey';
+
+function createMockAdapter(overrides?: Partial<FreighterAdapter>): FreighterAdapter {
+  return {
+    isConnected: vi.fn().mockResolvedValue({ isConnected: true }),
+    requestAccess: vi.fn().mockResolvedValue({ address: TEST_PUBLIC_KEY }),
+    getAddress: vi.fn().mockResolvedValue({ address: TEST_PUBLIC_KEY }),
+    getNetwork: vi.fn().mockResolvedValue({
+      network: 'PUBLIC',
+      networkPassphrase: 'Public Global Stellar Network ; September 2015',
+    }),
+    ...overrides,
+  };
+}
 
 vi.mock('./components/Layout', async () => {
   const { Outlet } = await import('react-router-dom');
@@ -46,8 +62,21 @@ vi.mock('./components/TransitionLayout', async () => {
   };
 });
 
+vi.mock('./pages/NotFound', () => ({ default: () => <div data-testid="page-not-found" /> }));
+
 // Pages – public
-vi.mock('./pages/Landing', () => ({ default: () => <div data-testid="page-landing" /> }));
+vi.mock('./pages/Landing', () => ({
+  default: function MockLanding() {
+    const { connect } = useWallet();
+    return (
+      <div data-testid="page-landing">
+        <button type="button" onClick={() => void connect()}>
+          Connect Wallet
+        </button>
+      </div>
+    );
+  },
+}));
 vi.mock('./pages/Pricing', () => ({ default: () => <div data-testid="page-pricing" /> }));
 vi.mock('./components/AboutPrepaidBalances', () => ({ default: () => <div data-testid="page-about-prepaid-balances" /> }));
 vi.mock('./pages/OnboardingBusiness', () => ({ default: () => <div data-testid="page-onboarding-business" /> }));
@@ -61,6 +90,7 @@ vi.mock('./pages/GiftRedeemSuccess', () => ({ default: () => <div data-testid="p
 vi.mock('./pages/Dashboard', () => ({ default: () => <div data-testid="page-dashboard" /> }));
 vi.mock('./pages/BrowsePlans', () => ({ default: () => <div data-testid="page-browse-plans" /> }));
 vi.mock('./pages/Checkout', () => ({ default: () => <div data-testid="page-checkout" /> }));
+vi.mock('./pages/MerchantPlans', () => ({ default: () => <div data-testid="page-plans" /> }));
 vi.mock('./pages/Plans', () => ({ default: () => <div data-testid="page-plans" /> }));
 vi.mock('./pages/CreatePlan', () => ({ default: () => <div data-testid="page-create-plan" /> }));
 vi.mock('./pages/Subscriptions', () => ({ default: () => <div data-testid="page-subscriptions" /> }));
@@ -70,19 +100,42 @@ vi.mock('./pages/WalletDetailView', () => ({ default: () => <div data-testid="pa
 vi.mock('./pages/Settings', () => ({ default: () => <div data-testid="page-settings" /> }));
 vi.mock('./pages/BrandPack', () => ({ default: () => <div data-testid="page-brand-pack" /> }));
 vi.mock('./pages/DesignTokens', () => ({ default: () => <div data-testid="page-design-tokens" /> }));
+vi.mock('./pages/WalletDetailView', () => ({ default: () => <div data-testid="page-wallet-detail" /> }));
 
-// ---------------------------------------------------------------------------
-// Helper: render App wrapped in a MemoryRouter at a given path.
-// ---------------------------------------------------------------------------
-function renderAt(path: string) {
+function LocationDisplay() {
+  const location = useLocation();
+  return (
+    <div data-testid="location-display">
+      {`${location.pathname}${location.search}${location.hash}`}
+    </div>
+  );
+}
+
+interface RenderAtOptions {
+  connected?: boolean;
+  adapter?: FreighterAdapter;
+}
+
+function renderAt(path: string, options: RenderAtOptions = {}) {
+  const { connected = false, adapter = createMockAdapter() } = options;
+  if (connected) {
+    localStorage.setItem(WALLET_STORAGE_KEY, TEST_PUBLIC_KEY);
+  } else {
+    localStorage.removeItem(WALLET_STORAGE_KEY);
+  }
+
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <App />
-    </MemoryRouter>,
+    <WalletProvider adapter={adapter}>
+      <MemoryRouter initialEntries={[path]}>
+        <App />
+        <LocationDisplay />
+      </MemoryRouter>
+    </WalletProvider>,
   );
 }
 
 beforeEach(() => {
+  localStorage.clear();
   sessionStorage.clear();
   window.scrollTo = vi.fn();
 });
@@ -106,6 +159,8 @@ describe('App – module contract', () => {
 // Redirect & catch-all behaviour
 // ---------------------------------------------------------------------------
 describe('App – redirects', () => {
+  it('renders the landing page at "/"', async () => {
+    renderAt('/');
   it('renders Landing at "/" and redirects "/landing" to "/"', async () => {
     const { unmount } = renderAt('/');
     expect(await screen.findByTestId('page-landing')).toBeInTheDocument();
@@ -120,6 +175,20 @@ describe('App – redirects', () => {
     expect(await screen.findByTestId('page-onboarding-business')).toBeInTheDocument();
   });
 
+  it('renders the not-found page for an unknown path', async () => {
+    renderAt('/this-route-does-not-exist');
+    expect(await screen.findByTestId('page-not-found')).toBeInTheDocument();
+  });
+
+  it('renders the not-found page for a deeply nested unknown path', async () => {
+    renderAt('/a/b/c/d/e');
+    expect(await screen.findByTestId('page-not-found')).toBeInTheDocument();
+  });
+});
+
+describe('App – public routes (unauthenticated)', () => {
+  const publicRoutes: Array<{ path: string; testId: string }> = [
+    { path: '/', testId: 'page-landing' },
   it('redirects "/onboarding/payout" to "/onboarding/business" when business data is missing', async () => {
     renderAt('/onboarding/payout');
     expect(await screen.findByTestId('page-onboarding-business')).toBeInTheDocument();
@@ -144,6 +213,7 @@ describe('App – public routes', () => {
     { path: '/landing', testId: 'page-landing' },
     { path: '/pricing', testId: 'page-pricing' },
     { path: '/about-prepaid-balances', testId: 'page-about-prepaid-balances' },
+    { path: '/onboarding', testId: 'page-onboarding-business' },
     { path: '/onboarding/business', testId: 'page-onboarding-business' },
     {
       path: '/onboarding/payout',
@@ -161,6 +231,16 @@ describe('App – public routes', () => {
     { path: '/gift-redeem-success', testId: 'page-gift-redeem-success' },
   ];
 
+  beforeEach(() => {
+    // Ensure Layout is NOT rendered for public routes and guards start clean.
+    sessionStorage.clear();
+  });
+
+  publicRoutes.forEach(({ path, testId }) => {
+    it(`renders "${path}" and does NOT wrap it in the authenticated Layout`, async () => {
+      if (path === '/onboarding/payout') {
+        sessionStorage.setItem('onboardingBusiness', '{}');
+      }
   publicRoutes.forEach(({ path, testId, setup }) => {
     it(`renders "${path}" and does NOT wrap it in the authenticated Layout`, async () => {
       setup?.();
@@ -170,15 +250,20 @@ describe('App – public routes', () => {
       expect(screen.queryByTestId('layout')).not.toBeInTheDocument();
     });
   });
+
+  it('renders "/onboarding/payout" without a wallet when business onboarding data exists', async () => {
+    sessionStorage.setItem('onboardingBusiness', JSON.stringify({ name: 'Acme' }));
+    renderAt('/onboarding/payout', { connected: false });
+    expect(await screen.findByTestId('page-onboarding-payout')).toBeInTheDocument();
+    expect(screen.queryByTestId('layout')).not.toBeInTheDocument();
+  });
 });
 
-// ---------------------------------------------------------------------------
-// Authenticated routes (must render inside Layout)
-// ---------------------------------------------------------------------------
-describe('App – authenticated (Layout-wrapped) routes', () => {
+describe('App – authenticated (Layout-wrapped) routes when connected', () => {
   const authRoutes: Array<{ path: string; testId: string; label?: string }> = [
     { path: '/dashboard', testId: 'page-dashboard' },
     { path: '/browse-plans', testId: 'page-browse-plans' },
+    { path: '/checkout/test-plan', testId: 'page-checkout' },
     { path: '/checkout/1', testId: 'page-checkout' },
     { path: '/plans', testId: 'page-plans' },
     { path: '/plans/create', testId: 'page-create-plan' },
@@ -190,6 +275,7 @@ describe('App – authenticated (Layout-wrapped) routes', () => {
     { path: '/settings', testId: 'page-settings' },
     { path: '/brand', testId: 'page-brand-pack' },
     { path: '/design-tokens', testId: 'page-design-tokens' },
+    { path: '/wallet', testId: 'page-wallet-detail' },
   ];
 
   authRoutes.forEach(({ path, testId, label }) => {
@@ -240,12 +326,17 @@ describe('App – route aliases', () => {
 // Boundary / invalid input behaviour
 // ---------------------------------------------------------------------------
 describe('App – boundary and invalid-input behaviour', () => {
+  it('handles an empty string path by rendering the landing page', async () => {
+    // MemoryRouter treats '' as '/' which renders the landing page.
   it('handles an empty string path by resolving to the root Landing route', async () => {
     // MemoryRouter treats '' as '/'
     renderAt('');
     expect(await screen.findByTestId('page-landing')).toBeInTheDocument();
   });
 
+  it('handles an unknown path with a trailing slash using the not-found page', async () => {
+    renderAt('/unknown/');
+    expect(await screen.findByTestId('page-not-found')).toBeInTheDocument();
   it('handles an unknown path with a trailing slash by rendering NotFound', async () => {
     renderAt('/unknown/');
     expect(await screen.findByRole('heading', { name: /page not found/i })).toBeInTheDocument();

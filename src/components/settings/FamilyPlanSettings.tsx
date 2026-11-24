@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Users, Plus } from 'lucide-react'
 import FamilyInvitationPreview from './FamilyInvitationPreview'
+import { DUPLICATE_EMAIL_MESSAGE, INVALID_EMAIL_MESSAGE, isValidInvitationEmail } from './invitationEmail'
+
+const ADMIN_EMAIL = 'admin@acme.com'
 
 interface FamilyMember {
   id: string
@@ -11,7 +14,7 @@ interface FamilyMember {
 }
 
 export default function FamilyPlanSettings() {
-  const [familyMembers] = useState<FamilyMember[]>([
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([
     { id: '1', name: 'Alice Johnson', email: 'alice@example.com', status: 'active', joinedAt: '2026-06-15' },
     { id: '2', name: 'Bob Smith', email: 'bob@example.com', status: 'pending' },
     { id: '3', name: 'Charlie Lee', email: 'charlie@example.com', status: 'pending' },
@@ -20,8 +23,27 @@ export default function FamilyPlanSettings() {
   const activeCount = familyMembers.filter((m) => m.status === 'active').length + 1 // +1 for the admin
   const pendingCount = familyMembers.filter((m) => m.status === 'pending').length
 
-  const handleSendTest = (email: string) => {
-    console.log('Sending test invitation to:', email)
+  const handleSendTest = (email: string): { success: boolean; message?: string } => {
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!isValidInvitationEmail(normalizedEmail)) {
+      return { success: false, message: INVALID_EMAIL_MESSAGE }
+    }
+    const alreadyInvited = [ADMIN_EMAIL, ...familyMembers.map((member) => member.email)]
+      .some((existingEmail) => existingEmail.toLowerCase() === normalizedEmail)
+    if (alreadyInvited) {
+      return { success: false, message: DUPLICATE_EMAIL_MESSAGE }
+    }
+    const name = normalizedEmail.split('@')[0].replace(/[._-]+/g, ' ')
+    setFamilyMembers((members) => [
+      ...members,
+      {
+        id: 'invite-' + Date.now() + '-' + members.length,
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        email: normalizedEmail,
+        status: 'pending',
+      },
+    ])
+    return { success: true }
   }
 
   return (
@@ -85,7 +107,7 @@ export default function FamilyPlanSettings() {
                     Owner
                   </span>
                 </div>
-                <div style={{ fontSize: '0.875rem', color: '#64748b' }}>admin@acme.com</div>
+                <div style={{ fontSize: '0.875rem', color: '#64748b' }}>{ADMIN_EMAIL}</div>
               </div>
             </div>
           </div>

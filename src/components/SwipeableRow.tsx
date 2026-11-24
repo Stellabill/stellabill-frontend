@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from "react";
-import { motion, useMotionValue, useTransform, animate, useReducedMotion } from "framer-motion";
+import { motion, useMotionValue, animate, useReducedMotion } from "framer-motion";
 import "./SwipeableRow.css";
 
 export interface SwipeAction {
@@ -9,6 +9,7 @@ export interface SwipeAction {
 	onClick: () => void;
 	backgroundColor?: string;
 	color?: string;
+	disabled?: boolean;
 }
 
 interface SwipeableRowProps {
@@ -39,7 +40,7 @@ export default function SwipeableRow({
 	const leftBound = trailingActions.length > 0 ? -trailingWidth : 0;
 	const rightBound = leadingActions.length > 0 ? leadingWidth : 0;
 
-	const handleDragEnd = (event: any, info: any) => {
+	const handleDragEnd = (_event: unknown, info: { velocity: { x: number } }) => {
 		const currentX = x.get();
 		const velocity = info.velocity.x;
 
@@ -111,8 +112,10 @@ export default function SwipeableRow({
 			key={action.id}
 			className="swipe-action-btn"
 			style={{ backgroundColor: action.backgroundColor, color: action.color, width: actionWidth }}
+			disabled={action.disabled}
 			onClick={(e) => {
 				e.stopPropagation();
+				if (action.disabled) return;
 				action.onClick();
 				closeSwipe();
 				setMenuOpen(false);

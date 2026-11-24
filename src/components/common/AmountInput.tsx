@@ -1,16 +1,12 @@
-import React, { useId, useRef, useState } from 'react'
+import { useId, useRef } from 'react'
+import AmountInputCurrencySelector from './AmountInputCurrencySelector'
+import AmountInputField from './AmountInputField'
+import type { CurrencyConfig } from './amountInputUtils'
+import { useAmountInputState } from './useAmountInputState'
 import './AmountInput.css'
 
 // ─── ISO 4217 currency catalogue ─────────────────────────────────────────────
-// fractionDigits: the number of decimal places defined by ISO 4217.
-// symbol: the conventional prefix symbol (shown in the input).
-// label: plain-English name shown in the currency selector.
-export interface CurrencyConfig {
-  code: string
-  fractionDigits: number
-  symbol: string
-  label: string
-}
+export type { CurrencyConfig } from './amountInputUtils'
 
 /**
  * Core supported currencies. Zero-decimal entries (JPY, KRW) have
@@ -28,81 +24,6 @@ export const SUPPORTED_CURRENCIES: CurrencyConfig[] = [
   { code: 'KRW',  fractionDigits: 0, symbol: '₩', label: 'Korean Won' },
   { code: 'XLM',  fractionDigits: 7, symbol: '*', label: 'Stellar Lumens' },
 ]
-
-// ─── Intl helpers ─────────────────────────────────────────────────────────────
-
-/** Return the locale-appropriate decimal separator for a given locale. */
-function getDecimalSeparator(locale: string): string {
-  try {
-    const parts = new Intl.NumberFormat(locale).formatToParts(1.1)
-    return parts.find((p) => p.type === 'decimal')?.value ?? '.'
-  } catch {
-    return '.'
-  }
-}
-
-/** Return the locale-appropriate thousands grouping separator. */
-function getGroupSeparator(locale: string): string {
-  try {
-    const parts = new Intl.NumberFormat(locale).formatToParts(1000)
-    return parts.find((p) => p.type === 'group')?.value ?? ','
-  } catch {
-    return ','
-  }
-}
-
-/**
- * Format a raw numeric string for display, respecting:
- * - locale decimal/group separators
- * - currency fraction digits (zero-decimal currencies get no decimal part)
- * Keeps a trailing decimal separator while the user is typing.
- */
-function formatRaw(raw: string, locale: string, fractionDigits: number): string {
-  if (!raw || raw === '-') return raw
-
-  const decSep = getDecimalSeparator(locale)
-
-  // Normalise: strip everything that isn't a digit or period (our internal separator)
-  const [intPart, ...rest] = raw.split('.')
-  const fracPart = rest.join('')
-
-  // Format integer part with grouping
-  const intNum = intPart === '' || intPart === '-' ? intPart : parseInt(intPart, 10)
-  let formattedInt: string
-  try {
-    formattedInt =
-      intNum === '-' || intNum === ''
-        ? intPart
-        : new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Number(intNum))
-  } catch {
-    formattedInt = String(intPart)
-  }
-
-  // Zero-decimal currencies: never show a decimal part
-  if (fractionDigits === 0) return formattedInt
-
-  // If user typed a decimal point, keep it and truncate to allowed digits
-  if (raw.includes('.')) {
-    const clampedFrac = fracPart.slice(0, fractionDigits)
-    return `${formattedInt}${decSep}${clampedFrac}`
-  }
-
-  return formattedInt
-}
-
-/**
- * Strip locale grouping and convert decimal separator back to `.`
- * so we can call `parseFloat` safely.
- */
-function toNumericString(display: string, locale: string): string {
-  const grpSep = getGroupSeparator(locale)
-  const decSep = getDecimalSeparator(locale)
-  // Escape for RegExp
-  const escapedGrp = grpSep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return display
-    .replace(new RegExp(escapedGrp, 'g'), '')
-    .replace(decSep, '.')
-}
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -203,107 +124,25 @@ export function AmountInput({
 
   const cfg = currencies.find((c) => c.code === currency) ?? currencies[0]
 
-  // Internal "display" string — what the user actually sees in the <input>
-  const [display, setDisplay] = useState<string>(() => {
-    if (value == null || !Number.isFinite(value)) return ''
-    return formatRaw(value.toFixed(cfg.fractionDigits), locale, cfg.fractionDigits)
+  const {
+    display,
+    focused,
+    defaultPlaceholder,
+    handleCurrencyChange,
+    handleChange,
+    handlePaste,
+    handleBlur,
+    handleFocus,
+    handleKeyDown,
+  } = useAmountInputState({
+    value,
+    onChange,
+    onCurrencyChange,
+    currencies,
+    locale,
+    currencyConfig: cfg,
   })
-
-  // Track whether the input is focused to avoid reformatting mid-edit
-  const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  // ── Currency change: reformat existing value with new fraction digits ──────
-  const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newCode = e.target.value
-    const newCfg = currencies.find((c) => c.code === newCode) ?? currencies[0]
-    onCurrencyChange(newCode)
-
-    // Re-normalise display value for the new currency's fraction digits
-    if (display !== '') {
-      const num = parseFloat(toNumericString(display, locale))
-      if (Number.isFinite(num)) {
-        setDisplay(formatRaw(num.toFixed(newCfg.fractionDigits), locale, newCfg.fractionDigits))
-        onChange(parseFloat(num.toFixed(newCfg.fractionDigits)))
-      }
-    }
-  }
-
-  // ── Typing ────────────────────────────────────────────────────────────────
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value
-
-    // Normalise: convert locale decimal sep → '.' and strip group separators
-    const numeric = toNumericString(raw, locale)
-
-    // Allow only digits, a single '.', and leading '-' pattern
-    // Zero-decimal: no decimal point at all
-    const pattern = cfg.fractionDigits === 0 ? /^-?\d*$/ : /^-?\d*\.?\d*$/
-    if (raw !== '' && !pattern.test(numeric)) return
-
-    // Clamp decimal digits
-    if (numeric.includes('.')) {
-      const fracPart = numeric.split('.')[1] ?? ''
-      if (fracPart.length > cfg.fractionDigits) return
-    }
-
-    setDisplay(raw)
-
-    const parsed = raw === '' ? null : parseFloat(numeric)
-    onChange(Number.isFinite(parsed) ? parsed : null)
-  }
-
-  // ── Paste: strip symbols and re-parse ─────────────────────────────────────
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault()
-    const pasted = e.clipboardData.getData('text')
-    // Remove currency codes, symbols, whitespace; keep digits and separators
-    const cleaned = pasted
-      .replace(/[a-zA-Z$€£¥₩*\s]/g, '')           // currency symbols / letters
-      .replace(/[^\d.,\-]/g, '')                    // everything else except digits/separators/minus
-
-    const normalised = toNumericString(cleaned, locale)
-    const pattern = cfg.fractionDigits === 0 ? /^-?\d*$/ : /^-?\d*\.?\d*$/
-    if (!pattern.test(normalised)) return
-
-    const parsed = parseFloat(normalised)
-    if (!Number.isFinite(parsed)) return
-
-    const clamped = parseFloat(parsed.toFixed(cfg.fractionDigits))
-    const formatted = formatRaw(clamped.toFixed(cfg.fractionDigits), locale, cfg.fractionDigits)
-    setDisplay(formatted)
-    onChange(clamped)
-  }
-
-  // ── Blur: reformat with locale grouping ───────────────────────────────────
-  const handleBlur = () => {
-    setFocused(false)
-    if (display === '') return
-    const numeric = toNumericString(display, locale)
-    const parsed = parseFloat(numeric)
-    if (!Number.isFinite(parsed)) {
-      setDisplay('')
-      onChange(null)
-      return
-    }
-    const clamped = parseFloat(parsed.toFixed(cfg.fractionDigits))
-    setDisplay(formatRaw(clamped.toFixed(cfg.fractionDigits), locale, cfg.fractionDigits))
-    onChange(clamped)
-  }
-
-  // ── Keyboard: block decimal key for zero-decimal currencies ──────────────
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const decSep = getDecimalSeparator(locale)
-    if (cfg.fractionDigits === 0 && (e.key === '.' || e.key === decSep || e.key === ',')) {
-      e.preventDefault()
-    }
-  }
-
-  // ── Placeholder ───────────────────────────────────────────────────────────
-  const defaultPlaceholder =
-    cfg.fractionDigits === 0
-      ? '0'
-      : `0${getDecimalSeparator(locale)}${'0'.repeat(cfg.fractionDigits)}`
 
   // ── Status helpers ────────────────────────────────────────────────────────
   const hasError = !!error || status === 'error'
@@ -345,102 +184,34 @@ export function AmountInput({
           .filter(Boolean)
           .join(' ')}
       >
-        {/* Currency selector */}
-        <div className="amt-currency-selector">
-          <label htmlFor={selectId} className="amt-sr-only">
-            Currency
-          </label>
-          <select
-            id={selectId}
-            value={currency}
-            onChange={handleCurrencyChange}
-            disabled={disabled}
-            aria-label="Select currency"
-            className="amt-currency-select"
-          >
-            {currencies.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.code}
-              </option>
-            ))}
-          </select>
-          {/* Chevron icon */}
-          <svg
-            className="amt-currency-chevron"
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </div>
+        <AmountInputCurrencySelector
+          id={selectId}
+          currency={currency}
+          currencies={currencies}
+          disabled={disabled}
+          onChange={handleCurrencyChange}
+        />
 
         {/* Divider */}
         <div className="amt-divider" aria-hidden="true" />
 
-        {/* Symbol prefix */}
-        {cfg.symbol && cfg.symbol !== '*' && (
-          <span className="amt-symbol" aria-hidden="true">
-            {cfg.symbol}
-          </span>
-        )}
-
-        {/* Numeric input */}
-        <input
-          ref={inputRef}
+        <AmountInputField
+          symbol={cfg.symbol}
+          inputRef={inputRef}
           id={inputId}
-          type="text"
-          inputMode="decimal"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          value={display}
+          display={display}
           placeholder={placeholder ?? defaultPlaceholder}
           disabled={disabled}
           required={required}
-          aria-required={required}
-          aria-invalid={hasError}
-          aria-describedby={messageText || status !== 'idle' ? messageId : undefined}
-          className="amt-input-field"
+          hasError={hasError}
+          messageText={messageText}
+          status={status}
           onChange={handleChange}
           onPaste={handlePaste}
           onBlur={handleBlur}
-          onFocus={() => setFocused(true)}
+          onFocus={handleFocus}
           onKeyDown={handleKeyDown}
-          dir="ltr"
         />
-
-        {/* Status indicator (right side) */}
-        {status === 'pending' && (
-          <span className="amt-status-icon amt-status-icon--pending" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" opacity="0.25" />
-              <path d="M12 2a10 10 0 0 1 10 10" />
-            </svg>
-          </span>
-        )}
-        {status === 'success' && (
-          <span className="amt-status-icon amt-status-icon--success" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </span>
-        )}
-        {hasError && (
-          <span className="amt-status-icon amt-status-icon--error" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-          </span>
-        )}
       </div>
 
       {/* Accessible message (error, helper, or live status) */}

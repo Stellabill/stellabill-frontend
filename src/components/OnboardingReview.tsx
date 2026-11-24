@@ -5,8 +5,16 @@ import { ReviewStep } from './common/ReviewStep';
 import { openExternal } from '../utils/openExternal';
 import { isValidEd25519PublicKey } from '../utils/stellarAddress';
 import { SUPPORT_URL } from '../config/links';
+import { onboarding } from '../api/client';
+import type { OnboardingBusiness } from '../api/client';
+import { isValidEd25519PublicKey } from '../utils/stellarAddress';
 import './Onboarding/OnboardingShell.css';
 
+interface OnboardingReviewProps {
+  client?: Pick<typeof onboarding, 'submit'>;
+}
+
+export default function OnboardingReview({ client = onboarding }: OnboardingReviewProps) {
 function parseStoredPayoutAddress(raw: string | null): string | null {
   if (!raw) return null;
   let candidate = raw.trim();
@@ -51,6 +59,15 @@ export default function OnboardingReview() {
       }
     }
 
+    let business: OnboardingBusiness | null = null;
+    if (businessData) {
+      business = {
+        businessName: businessData.businessName || '',
+        website: businessData.website || '',
+        country: businessData.country || '',
+      };
+    }
+
     const businessValid = !!(
       businessData &&
       typeof businessData.businessName === 'string' &&
@@ -67,6 +84,8 @@ export default function OnboardingReview() {
       return;
     }
 
+    const payout = sessionStorage.getItem('onboardingPayout');
+    if (!payout || !isValidEd25519PublicKey(payout)) {
     const payout = parseStoredPayoutAddress(sessionStorage.getItem('onboardingPayout'));
     if (!payout) {
       navigate('/onboarding/payout', {
@@ -76,6 +95,10 @@ export default function OnboardingReview() {
       return;
     }
 
+    setBusinessName(business!.businessName);
+    setWebsite(business!.website);
+    setCountry(business!.country);
+    setPayoutAddress(payout || '');
     setBusinessName(businessData!.businessName || '');
     setWebsite(businessData!.website || '');
     setCountry(businessData!.country || '');
@@ -112,16 +135,8 @@ export default function OnboardingReview() {
     setErrorMessage('');
     setLoading(true);
     try {
-      await new Promise<void>((resolve, reject) => {
-        window.setTimeout(() => {
-          // Stubbed submit: fails only when explicitly simulated via sessionStorage.
-          if (sessionStorage.getItem('onboardingSubmitFail') === '1') {
-            reject(new Error('Submit failed'));
-            return;
-          }
-          resolve();
-        }, 1000);
-      });
+      const business: OnboardingBusiness = { businessName, website, country };
+      await client.submit({ business, payout: payoutAddress });
       sessionStorage.removeItem('onboardingBusiness');
       sessionStorage.removeItem('onboardingPayout');
       navigate('/onboarding-success');

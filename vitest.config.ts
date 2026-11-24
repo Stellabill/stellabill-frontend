@@ -45,6 +45,13 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['src/components/**', 'src/pages/**', 'src/utils/**'],
+      exclude: ['**/*.test.tsx', '**/*.spec.tsx', '**/*.md', '**/setup.ts', 'src/vite-env.d.ts'],
+      thresholds: {
+        lines: 65,
+        functions: 67,
+        branches: 85,
+        statements: 65
+      }
       exclude: ['**/*.test.tsx', '**/*.spec.tsx', '**/*.md', '**/setup.ts', 'src/vite-env.d.ts', 'e2e/**']
     },
     projects: [{
