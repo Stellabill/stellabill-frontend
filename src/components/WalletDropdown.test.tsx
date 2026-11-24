@@ -2,13 +2,19 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import WalletDropdown from './WalletDropdown';
 import { copyToClipboard } from '../utils/clipboard';
+import { openExternal } from '../utils/openExternal';
 
 vi.mock('../utils/clipboard', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../utils/clipboard')>();
   return { ...actual, copyToClipboard: vi.fn(actual.copyToClipboard) };
 });
 
+vi.mock('../utils/openExternal', () => ({
+  openExternal: vi.fn(),
+}));
+
 const mockedCopyToClipboard = vi.mocked(copyToClipboard);
+const mockedOpenExternal = vi.mocked(openExternal);
 
 const ADDRESS = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
 
@@ -41,18 +47,15 @@ function renderDropdown(overrides: Overrides = {}) {
 }
 
 describe('WalletDropdown', () => {
-  let openSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
     mockedCopyToClipboard.mockClear();
     mockedCopyToClipboard.mockResolvedValue(true);
-    openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    mockedOpenExternal.mockClear();
   });
 
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllEnvs();
-    openSpy.mockRestore();
   });
 
   // ── The `if (!isOpen) return null` failure/empty-result path ────────────────
@@ -214,23 +217,22 @@ describe('WalletDropdown', () => {
 
   // ── Explorer link ─────────────────────────────────────────────────────────
   describe('view in explorer', () => {
-    it('defaults to the Testnet Stellar Expert page for the wallet address in a new tab', () => {
+    it('defaults to the Testnet Stellar Expert page for the wallet address', () => {
       renderDropdown();
       fireEvent.click(screen.getByText(/view in explorer/i));
-      expect(openSpy).toHaveBeenCalledTimes(1);
-      const [url, target] = openSpy.mock.calls[0];
-      expect(url).toBe(`https://stellar.expert/explorer/testnet/account/${ADDRESS}`);
-      expect(target).toBe('_blank');
+      expect(mockedOpenExternal).toHaveBeenCalledTimes(1);
+      expect(mockedOpenExternal).toHaveBeenCalledWith(
+        `https://stellar.expert/explorer/testnet/account/${ADDRESS}`,
+      );
     });
 
     it('opens the public (Mainnet) Stellar Expert page when network is Mainnet', () => {
       renderDropdown({ network: 'Mainnet' });
       fireEvent.click(screen.getByText(/view in explorer/i));
-      expect(openSpy).toHaveBeenCalledTimes(1);
-      const [url, target, features] = openSpy.mock.calls[0];
-      expect(url).toBe(`https://stellar.expert/explorer/public/account/${ADDRESS}`);
-      expect(target).toBe('_blank');
-      expect(features).toBe('noopener,noreferrer');
+      expect(mockedOpenExternal).toHaveBeenCalledTimes(1);
+      expect(mockedOpenExternal).toHaveBeenCalledWith(
+        `https://stellar.expert/explorer/public/account/${ADDRESS}`,
+      );
     });
   });
 
