@@ -45,8 +45,31 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['src/components/**', 'src/pages/**', 'src/utils/**'],
-      exclude: ['**/*.test.tsx', '**/*.spec.tsx', '**/*.md', '**/setup.ts', 'src/vite-env.d.ts'],
+      include: [
+        'src/components/**',
+        'src/pages/**',
+        'src/utils/**',
+        'src/hooks/**',
+        'src/api/**',
+        'src/wallet/**',
+        'src/config/**',
+        'src/i18n/**',
+      ],
+      exclude: [
+        // Test files are not product code. The new directories use .ts tests,
+        // so both extensions are listed.
+        '**/*.test.{ts,tsx}',
+        '**/*.spec.{ts,tsx}',
+        // Storybook stories are documentation/visual fixtures, not runtime code.
+        '**/*.stories.tsx',
+        // src/types only holds type declarations (no runtime code) and
+        // src/data holds static fixture tables; neither has logic to cover.
+        'src/types/**',
+        'src/data/**',
+        '**/*.md',
+        '**/setup.ts',
+        'src/vite-env.d.ts',
+      ],
       thresholds: {
         lines: 65,
         functions: 67,
