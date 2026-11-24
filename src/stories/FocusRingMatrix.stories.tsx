@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import React from 'react';
 import { Button } from '../components/common/Button';
 import { IconButton } from '../components/common/IconButton';
 import Tag from '../components/Tag';

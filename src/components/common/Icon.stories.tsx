@@ -52,6 +52,9 @@ export const LucideIcons: Story = {
 };
 
 export const RTLMirrorAudit: Story = {
+  args: {
+    src: arrow,
+  },
   render: () => (
     <div>
       <h2>LTR Direction (Default)</h2>

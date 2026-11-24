@@ -13,7 +13,7 @@ interface PricingCardProps {
   price?: string
   priceLabel?: string
   priceSubtext?: string
-  features: Feature[]
+  features: readonly Feature[]
   buttonText: string
   buttonArrow?: boolean
   onButtonClick?: () => void

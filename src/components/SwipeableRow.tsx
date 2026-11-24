@@ -41,6 +41,7 @@ export default function SwipeableRow({
 	const rightBound = leadingActions.length > 0 ? leadingWidth : 0;
 
 	const handleDragEnd = (_event: unknown, info: { velocity: { x: number } }) => {
+	const handleDragEnd = (_event: any, info: any) => {
 		const currentX = x.get();
 		const velocity = info.velocity.x;
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { History, X } from 'lucide-react'
+import { History } from 'lucide-react'
 import type { AutosaveEntry } from '../hooks/useAutosave'
 import { relativeTime } from '../hooks/useAutosave'
 import styles from './AutosaveIndicator.module.css'
@@ -139,7 +139,7 @@ export default function AutosaveHistory({
             </div>
           ) : (
             <ul className={styles.popoverList} role="list">
-              {history.map((entry, idx) => (
+              {history.map((entry) => (
                 <li key={entry.savedAt} className={styles.popoverItem}>
                   <span className={styles.popoverItemTime}>
                     {relativeTime(entry.savedAt)}

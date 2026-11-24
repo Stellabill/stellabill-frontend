@@ -38,7 +38,8 @@ npm run dev        # http://localhost:5173
 | --- | --- |
 | `npm run dev` | Start the Vite dev server |
 | `npx vite build` | Production build to `dist/` (used by CI and Vercel) |
-| `npm run build` | `tsc -b` type check plus build (type errors currently exist in some files) |
+| `npm run build` | `tsc -b` type check plus production build |
+| `npm run typecheck` | Run `tsc -b --noEmit` TypeScript type check |
 | `npm run preview` | Serve the built app locally |
 | `npm test` | Run Vitest |
 | `npm run test:coverage` | Run Vitest with V8 coverage (enforces global thresholds: 65% lines, 67% functions, 85% branches, 65% statements) |

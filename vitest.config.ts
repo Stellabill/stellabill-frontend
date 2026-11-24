@@ -9,7 +9,8 @@ const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(file
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 let storybookProjects: any[] = [];
 try {
-  const { playwright } = await import('@vitest/browser-playwright');
+  const playwrightPkg = '@vitest/browser-playwright';
+  const { playwright } = await import(/* @vite-ignore */ playwrightPkg);
   storybookProjects = [{
     extends: true,
     plugins: [
