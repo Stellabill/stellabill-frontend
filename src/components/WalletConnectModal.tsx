@@ -1,5 +1,4 @@
-import { useRef } from "react";
-import { useModalFocus } from "../hooks/useModalFocus";
+import Modal from "./common/Modal";
 import type { ConnectionState } from "./ConnectButton";
 import type { FreighterConnectionErrorType } from "../wallet/freighter";
 import { X, ShieldCheck, Info, RotateCcw, HelpCircle, AlertCircle, Loader2 } from "lucide-react";
@@ -29,7 +28,6 @@ export default function WalletConnectModal({
   errorType,
   onRetry,
 }: WalletConnectModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
   const mappedInitialState: ConnectionState = initialState === 'list'
     ? 'disconnected'
     : initialState === 'failed'
@@ -37,40 +35,23 @@ export default function WalletConnectModal({
       : initialState ?? 'disconnected';
   const resolvedConnectionState = connectionState ?? mappedInitialState;
 
-  useModalFocus(modalRef, { isOpen, onClose });
-
   const handleFreighterConnect = () => {
     onConnectFreighter?.();
     onConnected?.();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-      aria-describedby={resolvedConnectionState === 'disconnected' ? 'modal-description' : undefined}
-      aria-busy={resolvedConnectionState === 'connecting' ? 'true' : undefined}
-      onClick={(event) => {
-        if (event.target === event.currentTarget && resolvedConnectionState !== 'connecting') {
-          onClose();
-        }
-      }}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      unstyled
+      labelledBy="modal-title"
+      describedBy={resolvedConnectionState === 'disconnected' ? 'modal-description' : undefined}
+      busy={resolvedConnectionState === 'connecting' ? true : undefined}
+      closeOnBackdrop={resolvedConnectionState !== 'connecting'}
+      overlayClassName="sm:p-6 bg-slate-950/80 backdrop-blur-md"
+      contentClassName="relative w-full max-w-md bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl transition-all duration-300 animate-in fade-in zoom-in-95 duration-300 overflow-hidden"
     >
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-slate-950/80 backdrop-blur-md transition-opacity duration-300" 
-        onClick={() => resolvedConnectionState !== 'connecting' && onClose()}
-      />
-
-      {/* Modal Content */}
-      <div 
-        ref={modalRef}
-        className="relative w-full max-w-md bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl transition-all duration-300 animate-in fade-in zoom-in-95 duration-300 overflow-hidden"
-      >
         {/* Decorative Glow */}
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 blur-[80px] pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-teal-500/10 blur-[80px] pointer-events-none" />
@@ -208,7 +189,6 @@ export default function WalletConnectModal({
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }

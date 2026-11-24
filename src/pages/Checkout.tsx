@@ -7,6 +7,7 @@ import { type PlanInterval } from '../data/catalogPlans';
 import { useCheckout, type UseCheckoutOptions } from '../hooks/useCheckout';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { addBillingInterval } from '../utils/billingDate';
+import styles from './Checkout.module.css';
 
 const INTERVAL_LABELS: Record<PlanInterval, string> = {
   Monthly: 'month',
@@ -46,6 +47,7 @@ export interface CheckoutProps {
 }
 
 export default function Checkout({ checkoutOptions }: CheckoutProps = {}) {
+export default function Checkout() {
   usePageTitle('Checkout');
   const { planId } = useParams();
   const {
@@ -84,11 +86,11 @@ export default function Checkout({ checkoutOptions }: CheckoutProps = {}) {
 
   if (!plan) {
     return (
-      <div style={{ padding: '2rem' }}>
-        <div style={cardStyle}>
-          <h1 style={{ marginTop: 0 }}>Plan not found</h1>
-          <p style={{ color: '#94a3b8' }}>The plan you are trying to subscribe to does not exist.</p>
-          <Link to="/browse-plans" style={linkStyle}>
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <h1 className={styles.title}>Plan not found</h1>
+          <p className={styles.mutedText}>The plan you are trying to subscribe to does not exist.</p>
+          <Link to="/browse-plans" className={styles.link}>
             Back to Browse Plans
           </Link>
         </div>
@@ -364,6 +366,48 @@ export default function Checkout({ checkoutOptions }: CheckoutProps = {}) {
             </div>
           </>
         )}
+    <div className={styles.page}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>Confirm subscription</h1>
+        <dl className={styles.detailsList}>
+          <dt className={styles.detailTerm}>Plan</dt>
+          <dd className={styles.detailValue}>
+            {plan.name} <span className={styles.mutedText}>by {plan.merchant}</span>
+          </dd>
+          <dt className={styles.detailTerm}>Price</dt>
+          <dd className={styles.detailValue}>
+            {plan.price} {plan.currency} per {INTERVAL_LABELS[plan.interval]}
+          </dd>
+          <dt className={styles.detailTerm}>First charge</dt>
+          <dd className={styles.detailValue}>{firstChargeDate ? firstChargeDate.toLocaleDateString() : '—'}</dd>
+        </dl>
+        <AmountInput
+          label="Initial prepaid deposit"
+          value={deposit}
+          onChange={setDeposit}
+          currency={currency}
+          onCurrencyChange={setCurrency}
+          required
+          error={error ?? undefined}
+        />
+        {walletError && !isWalletConnected && (
+          <p role="alert" className={styles.errorAlert}>
+            {walletError.message}
+          </p>
+        )}
+        <div className={styles.actions}>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={submitting || status === 'connecting'}
+            className={styles.confirmButton}
+          >
+            {!isWalletConnected ? 'Connect wallet' : submitting ? 'Confirming…' : 'Confirm subscription'}
+          </button>
+          <Link to="/browse-plans" className={styles.link}>
+            Cancel
+          </Link>
+        </div>
       </div>
 
       <ToastContainer toasts={toasts} removeToast={removeToast} />

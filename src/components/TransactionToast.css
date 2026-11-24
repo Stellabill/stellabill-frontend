@@ -117,8 +117,9 @@
     color: #10b981;
 }
 
+/* Lightened from #ef4444 so the action label clears WCAG AA contrast (4.5:1) on the toast background. */
 .toast-action-danger {
-    color: #ef4444;
+    color: #f87171;
 }
 
 .toast-close {

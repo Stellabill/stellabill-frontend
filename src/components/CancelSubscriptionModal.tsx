@@ -1,5 +1,5 @@
-import { useRef, MouseEvent, useState, useEffect } from 'react';
-import { useModalFocus } from '../hooks/useModalFocus';
+import { useRef, useState, useEffect } from 'react';
+import Modal from './common/Modal';
 import { SaveOfferStep } from './SaveOfferStep';
 import './CancelSubscriptionModal.css';
 
@@ -27,7 +27,6 @@ export default function CancelSubscriptionModal({
     error
 }: CancelSubscriptionModalProps) {
     const [step, setStep] = useState<CancelStep>('offer');
-    const modalRef = useRef<HTMLDivElement>(null);
     const initialFocusRef = useRef<HTMLButtonElement>(null);
 
     // Reset step when modal opens
@@ -47,10 +46,6 @@ export default function CancelSubscriptionModal({
         }
     }, [step, isOpen]);
 
-    useModalFocus(modalRef, { isOpen, onClose, initialFocusRef, closeOnEscape: !isLoading });
-
-    if (!isOpen) return null;
-
     const handleOfferSelected = (offerId: string) => {
         onOfferSelected?.(offerId);
         onClose();
@@ -59,19 +54,18 @@ export default function CancelSubscriptionModal({
     const isOfferStep = step === 'offer';
 
     return (
-        <div
-            className="cancel-modal-overlay"
-            onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && !isLoading && onClose()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cancel-modal-title"
-            aria-describedby="cancel-modal-description"
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            unstyled
+            labelledBy="cancel-modal-title"
+            describedBy="cancel-modal-description"
+            initialFocusRef={initialFocusRef}
+            closeOnBackdrop={!isLoading}
+            closeOnEscape={!isLoading}
+            busy={isLoading}
+            contentClassName={`cancel-modal-content ${isOfferStep ? 'cancel-modal-content-wide' : ''}`}
         >
-            <div 
-                className={`cancel-modal-content ${isOfferStep ? 'cancel-modal-content-wide' : ''}`} 
-                ref={modalRef}
-                aria-busy={isLoading}
-            >
                 <button
                     className="cancel-close-btn"
                     onClick={() => !isLoading && onClose()}
@@ -177,7 +171,6 @@ export default function CancelSubscriptionModal({
                         </div>
                     </>
                 )}
-            </div>
-        </div>
+        </Modal>
     );
 }

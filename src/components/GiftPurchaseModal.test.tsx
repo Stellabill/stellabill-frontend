@@ -509,4 +509,131 @@ describe("GiftPurchaseModal", () => {
       expect(confirmBtn).toBeDisabled();
     });
   });
+
+  describe("Purchase API Integration", () => {
+    it("calls purchaseGift with payload and passes returned code to onPurchaseComplete", async () => {
+      const user = userEvent.setup();
+      const mockPurchaseGift = vi.fn().mockResolvedValue({
+        code: "GIFT-CUSTOM-123456",
+        expiresOn: "2027-11-23T00:00:00.000Z",
+      });
+
+      render(
+        <GiftPurchaseModal
+          isOpen={true}
+          onClose={mockOnClose}
+          plan={mockPlan}
+          onPurchaseComplete={mockOnPurchaseComplete}
+          purchaseGift={mockPurchaseGift}
+        />
+      );
+
+      await user.type(screen.getByLabelText(/recipient name/i), "Jane Doe");
+      await user.type(screen.getByLabelText(/recipient email/i), "jane@example.com");
+      await user.type(screen.getByLabelText(/personal message/i), "Enjoy!");
+      await user.click(screen.getByRole("button", { name: /review gift/i }));
+      await user.click(screen.getByRole("button", { name: /confirm purchase/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("GIFT-CUSTOM-123456")).toBeInTheDocument();
+      });
+
+      expect(mockPurchaseGift).toHaveBeenCalledTimes(1);
+      expect(mockPurchaseGift).toHaveBeenCalledWith({
+        planId: "1",
+        recipientName: "Jane Doe",
+        recipientEmail: "jane@example.com",
+        duration: 12,
+        message: "Enjoy!",
+        deliveryMethod: "email",
+      });
+      expect(mockOnPurchaseComplete).toHaveBeenCalledWith("GIFT-CUSTOM-123456");
+    });
+
+    it("shows inline error, keeps modal open, and resets submitting state on rejection", async () => {
+      const user = userEvent.setup();
+      const mockPurchaseGift = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("Payment declined"))
+        .mockResolvedValueOnce({
+          code: "GIFT-RETRY1-234567",
+          expiresOn: "2027-11-23T00:00:00.000Z",
+        });
+
+      render(
+        <GiftPurchaseModal
+          isOpen={true}
+          onClose={mockOnClose}
+          plan={mockPlan}
+          onPurchaseComplete={mockOnPurchaseComplete}
+          purchaseGift={mockPurchaseGift}
+        />
+      );
+
+      await user.type(screen.getByLabelText(/recipient email/i), "recipient@example.com");
+      await user.click(screen.getByRole("button", { name: /review gift/i }));
+
+      const confirmBtn = screen.getByRole("button", { name: /confirm purchase/i });
+      await user.click(confirmBtn);
+
+      await waitFor(() => {
+        expect(screen.getByRole("alert")).toHaveTextContent("Payment declined");
+      });
+
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByText("Gift Summary")).toBeInTheDocument();
+      expect(mockOnClose).not.toHaveBeenCalled();
+      expect(mockOnPurchaseComplete).not.toHaveBeenCalled();
+      expect(confirmBtn).not.toBeDisabled();
+
+      // Retry succeeds
+      await user.click(confirmBtn);
+      await waitFor(() => {
+        expect(screen.getByText("GIFT-RETRY1-234567")).toBeInTheDocument();
+      });
+      expect(mockOnPurchaseComplete).toHaveBeenCalledWith("GIFT-RETRY1-234567");
+    });
+
+    it("prevents double-submit while purchase is in flight", async () => {
+      const user = userEvent.setup();
+      let resolvePurchase!: (value: { code: string; expiresOn: string }) => void;
+      const mockPurchaseGift = vi.fn(
+        () =>
+          new Promise<{ code: string; expiresOn: string }>((resolve) => {
+            resolvePurchase = resolve;
+          })
+      );
+
+      render(
+        <GiftPurchaseModal
+          isOpen={true}
+          onClose={mockOnClose}
+          plan={mockPlan}
+          onPurchaseComplete={mockOnPurchaseComplete}
+          purchaseGift={mockPurchaseGift}
+        />
+      );
+
+      await user.type(screen.getByLabelText(/recipient email/i), "recipient@example.com");
+      await user.click(screen.getByRole("button", { name: /review gift/i }));
+
+      const confirmBtn = screen.getByRole("button", { name: /confirm purchase/i });
+      fireEvent.click(confirmBtn);
+      fireEvent.click(confirmBtn);
+
+      expect(mockPurchaseGift).toHaveBeenCalledTimes(1);
+      expect(confirmBtn).toBeDisabled();
+
+      resolvePurchase({
+        code: "GIFT-ONCE01-ABCDEF",
+        expiresOn: "2027-11-23T00:00:00.000Z",
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("GIFT-ONCE01-ABCDEF")).toBeInTheDocument();
+      });
+      expect(mockOnPurchaseComplete).toHaveBeenCalledTimes(1);
+      expect(mockOnPurchaseComplete).toHaveBeenCalledWith("GIFT-ONCE01-ABCDEF");
+    });
+  });
 });

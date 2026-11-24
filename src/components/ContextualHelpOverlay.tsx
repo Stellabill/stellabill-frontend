@@ -85,7 +85,7 @@ export default function ContextualHelpOverlay({ isOpen, onClose }: ContextualHel
         <h2>Contextual Help</h2>
         <p>Press Escape to close.</p>
         <ol>
-          {helpItems.map((item, i) => (
+          {helpItems.map((item) => (
             <li key={item.id}>
               {item.text}
             </li>
@@ -94,7 +94,7 @@ export default function ContextualHelpOverlay({ isOpen, onClose }: ContextualHel
       </div>
 
       <svg className="ctx-help-connectors" aria-hidden="true">
-        {helpItems.map((item, i) => {
+        {helpItems.map((item) => {
           const x = item.rect.left + item.rect.width / 2;
           const y = item.rect.top + item.rect.height / 2;
           

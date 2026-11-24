@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Routes, Route, useLocation, Outlet } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
+import RequireWallet, { WalletReturnRedirect } from "./components/RequireWallet";
 import TransitionLayout from "./components/TransitionLayout";
 import RouteErrorBoundary from "./components/RouteErrorBoundary";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -27,15 +28,27 @@ const DesignTokens = lazy(() => import("./pages/DesignTokens"));
 const WalletDetailView = lazy(() => import("./pages/WalletDetailView"));
 
 const ONBOARDING_BUSINESS_KEY = "onboardingBusiness";
-const ONBOARDING_PAYOUT_KEY = "onboardingPayout";
 
 function hasStoredBusiness(): boolean {
   if (typeof window === "undefined") return false;
   try {
     const raw = sessionStorage.getItem(ONBOARDING_BUSINESS_KEY);
     if (!raw) return false;
-    const parsed = JSON.parse(raw);
-    return Boolean(parsed && typeof parsed === "object");
+    const parsed = JSON.parse(raw) as {
+      businessName?: unknown;
+      name?: unknown;
+      country?: unknown;
+    } | null;
+    if (!parsed || typeof parsed !== "object") return false;
+    const businessName =
+      typeof parsed.businessName === "string"
+        ? parsed.businessName.trim()
+        : typeof parsed.name === "string"
+          ? parsed.name.trim()
+          : "";
+    const country =
+      typeof parsed.country === "string" ? parsed.country.trim() : "";
+    return Boolean(businessName && country);
   } catch {
     return false;
   }
@@ -68,6 +81,7 @@ function App() {
   return (
     <>
     <ScrollToHash />
+    <WalletReturnRedirect />
     <Suspense fallback={<div style={{ minHeight: '100vh' }} role="status" aria-label="Loading" />}>
     <Routes>
       {/* 1. Public Routes (No Layout) */}
@@ -107,8 +121,10 @@ function App() {
           {/* Plans Management */}
           <Route path="/plans" element={<MerchantPlans />} />
           <Route path="/plans/create" element={<CreatePlan />} />
-          <Route path="/plans/new" element={<CreatePlan />} />{" "}
-          {/* Alias for flexibility */}
+          <Route
+            path="/plans/new"
+            element={<Navigate to="/plans/create" replace />}
+          />
           {/* Subscriptions Management */}
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />

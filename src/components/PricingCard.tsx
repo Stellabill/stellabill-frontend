@@ -11,7 +11,7 @@ interface PricingCardProps {
   price?: string
   priceLabel?: string
   priceSubtext?: string
-  features: Feature[]
+  features: readonly Feature[]
   buttonText: string
   buttonArrow?: boolean
   onButtonClick?: () => void
@@ -63,6 +63,7 @@ export default function PricingCard({
   const displaySubtext: string | undefined = (() => {
     if (isPerSeat && typeof basePricePerSeat === 'number' && seats > 0) {
       const total = basePricePerSeat * seats
+      return t('pricing.total', { count: seats, amount: new Intl.NumberFormat(i18n.language, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(total) })
       return t('pricing.total', {
         count: seats,
         amount: new Intl.NumberFormat(i18n.language, {
