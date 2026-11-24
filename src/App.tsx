@@ -121,8 +121,10 @@ function App() {
           {/* Plans Management */}
           <Route path="/plans" element={<MerchantPlans />} />
           <Route path="/plans/create" element={<CreatePlan />} />
-          <Route path="/plans/new" element={<CreatePlan />} />{" "}
-          {/* Alias for flexibility */}
+          <Route
+            path="/plans/new"
+            element={<Navigate to="/plans/create" replace />}
+          />
           {/* Subscriptions Management */}
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />
