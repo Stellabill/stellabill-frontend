@@ -14,6 +14,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { X, Sparkles, Mail } from 'lucide-react';
+import { readJson, writeJson, remove } from '../../utils/safeStorage';
 import './ChangelogPanel.css';
 
 /* ─── Types ────────────────────────────────────────────────────────── */
@@ -101,23 +102,18 @@ const CHANGELOG_ENTRIES: ChangelogEntry[] = [
 const UNREAD_STORAGE_KEY = 'sb:changelog-unread';
 
 function readUnreadIds(): string[] {
-  try {
-    const raw = localStorage.getItem(UNREAD_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : CHANGELOG_ENTRIES.map((e) => e.id);
-  } catch {
-    return CHANGELOG_ENTRIES.map((e) => e.id);
-  }
+  return readJson<string[]>(
+    UNREAD_STORAGE_KEY,
+    CHANGELOG_ENTRIES.map((e) => e.id),
+    Array.isArray
+  );
 }
 
 function persistUnreadIds(ids: string[]) {
-  try {
-    if (ids.length === 0) {
-      localStorage.removeItem(UNREAD_STORAGE_KEY);
-    } else {
-      localStorage.setItem(UNREAD_STORAGE_KEY, JSON.stringify(ids));
-    }
-  } catch {
-    // storage unavailable
+  if (ids.length === 0) {
+    remove(UNREAD_STORAGE_KEY);
+  } else {
+    writeJson(UNREAD_STORAGE_KEY, ids);
   }
 }
 
@@ -264,3 +260,40 @@ export default function ChangelogPanel({ isOpen, onOpenChange }: ChangelogPanelP
         </div>
 
     
+
+        {/* Entries */}
+        <div className="changelog-entries">
+          {sortedDates.length === 0 ? (
+            <p className="changelog-empty">No entries for this area.</p>
+          ) : (
+            sortedDates.map((date) => (
+              <section key={date} className="changelog-group">
+                <h3 className="changelog-group__date">{formatDate(date)}</h3>
+                {groupedEntries.get(date)!.map((entry) => (
+                  <article
+                    key={entry.id}
+                    className={`changelog-entry${unreadIds.includes(entry.id) ? ' changelog-entry--unread' : ''}`}
+                  >
+                    <span className={`changelog-entry__area-badge changelog-entry__area-badge--${entry.area}`}>
+                      {AREA_LABELS[entry.area]}
+                    </span>
+                    <h4 className="changelog-entry__title">{entry.title}</h4>
+                    <p className="changelog-entry__description">{entry.description}</p>
+                  </article>
+                ))}
+              </section>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="changelog-footer">
+          <Mail size={14} aria-hidden="true" />
+          <a href="mailto:updates@stellabill.com" className="changelog-footer__link">
+            Subscribe to email updates
+          </a>
+        </div>
+      </div>
+    </>
+  );
+}

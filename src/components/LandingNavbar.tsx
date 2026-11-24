@@ -1,20 +1,64 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 import WalletPill from './WalletPill'
 import WalletConnectModal from './WalletConnectModal'
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from './Branding/Logo';
-import ThemeToggle from './ThemeToggle';
 import LocaleSwitcher from './LocaleSwitcher';
-import { Menu, X, Rocket, Zap, BookOpen, MessageSquare, ChevronRight } from 'lucide-react';
+import { Menu, X, Github, Rocket, Zap, BookOpen, MessageSquare, ChevronRight } from 'lucide-react';
+import { useWallet } from '../wallet/WalletContext';
+import { FreighterConnectionError } from '../wallet/freighter';
+import { useModalFocus } from '../hooks/useModalFocus';
 
 export default function LandingNavbar() {
+import type { UseWalletConnectionOptions } from '../hooks/useWalletConnection';
+
+export interface LandingNavbarProps extends UseWalletConnectionOptions {}
+
+export default function LandingNavbar(_props: LandingNavbarProps = {}) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isConnected, setIsConnected] = useState(false)
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
-  const [address] = useState("GABCDEFGHIJK1234567890ABCDEFGHIJK1234567890ABCDEXYZ9")
+  const toggleButtonRef = useRef<HTMLButtonElement>(null)
+  const drawerRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const drawerId = useId()
+  const closeDrawer = () => setIsMobileMenuOpen(false)
+  const {
+    status,
+    address,
+    error,
+    connect,
+    disconnect,
+    clearError,
+    cancelConnect,
+  } = useWallet()
+  const isConnected = status === 'connected'
+
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerId = useId();
+
+  const closeDrawer = () => setIsMobileMenuOpen(false);
+
+  useModalFocus(drawerRef as RefObject<HTMLElement>, {
+    isOpen: isMobileMenuOpen,
+    onClose: closeDrawer,
+    initialFocusRef: closeButtonRef as RefObject<HTMLElement>,
+  });
+
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isMobileMenuOpen]);
 
   const location = useLocation();
+  const navigate = useNavigate();
   const isDashboard = location.pathname.startsWith('/dashboard') ||
       location.pathname.startsWith('/subscriptions') ||
       location.pathname.startsWith('/plans') ||
@@ -37,17 +81,18 @@ export default function LandingNavbar() {
     setIsWalletModalOpen(true);
   }
 
-  const handleFreighterConnect = () => {
-    setIsConnected(true);
-    console.log("Freighter connected successfully");
-  }
-
-  const handleDisconnect = () => {
-    setIsConnected(false);
+  const handleFreighterConnect = async () => {
+    try {
+      const result = await connect()
+      if (!result) return
+      setIsWalletModalOpen(false)
+    } catch {
+      // The provider exposes the error to the modal.
+    }
   }
 
   const handleSubscribe = () => {
-    console.log("Subscribe with USDC clicked");
+    navigate("/browse-plans");
   };
 
   const navLinks = isDashboard ? [] : [
@@ -92,13 +137,21 @@ export default function LandingNavbar() {
                       Subscribe with USDC
                     </button>
                 )}
-                <ThemeToggle />
+                <a
+                    href="https://github.com/Stellabill/stellabill-frontend"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Stellabill on GitHub"
+                    className="site-navbar__text-action rounded-lg p-2 transition-colors flex items-center gap-1.5 text-sm font-medium"
+                >
+                  <Github size={18} /> GitHub
+                </a>
                 <LocaleSwitcher />
 
                 {isConnected ? (
                     <WalletPill
-                        address={address}
-                        onDisconnect={handleDisconnect}
+                        address={address ?? ''}
+                        onDisconnect={disconnect}
                     />
                 ) : (
                     <button
@@ -112,17 +165,17 @@ export default function LandingNavbar() {
 
               {/* Mobile Menu Toggle */}
               <div className="md:hidden flex items-center gap-3">
-                <ThemeToggle />
-                <LocaleSwitcher />
                 {isConnected && (
                     <div className="scale-90 origin-right">
-                      <WalletPill address={address} onDisconnect={handleDisconnect} />
+                      <WalletPill address={address ?? ''} onDisconnect={disconnect} />
                     </div>
                 )}
                 <button
+                    ref={toggleButtonRef}
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                     className="site-navbar__mobile-toggle p-2 rounded-lg transition-colors"
                     aria-expanded={isMobileMenuOpen}
+                    aria-controls={drawerId}
                     aria-label="Main menu"
                 >
                   {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -135,22 +188,32 @@ export default function LandingNavbar() {
           {isMobileMenuOpen && (
               <div
                   className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={closeDrawer}
+                  aria-hidden="true"
               />
           )}
 
           {/* Mobile Menu Drawer */}
           <div
+              ref={drawerRef}
+              id={drawerId}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Main menu"
               className={`site-navbar__mobile-drawer fixed inset-y-0 right-0 w-full max-w-xs z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
                   isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
               }`}
+              {...(!isMobileMenuOpen ? ({ inert: '' } as Record<string, string>) : {})}
+              aria-hidden={!isMobileMenuOpen}
           >
             <div className="flex flex-col h-full">
               <div className="site-navbar__mobile-section flex items-center justify-between p-5 border-b">
                 <Logo size="sm" />
                 <button
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    ref={closeButtonRef}
+                    onClick={closeDrawer}
                     className="site-navbar__drawer-close site-navbar__mobile-toggle p-2 rounded-lg transition-colors"
+                    aria-label="Close menu"
                 >
                   <X size={20} />
                 </button>
@@ -184,6 +247,17 @@ export default function LandingNavbar() {
               </div>
 
               <div className="site-navbar__mobile-section p-5 border-t space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <a
+                      href="https://github.com/Stellabill/stellabill-frontend"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="site-navbar__text-action flex items-center gap-2 text-sm font-medium"
+                  >
+                    <Github size={18} /> GitHub
+                  </a>
+                  <LocaleSwitcher />
+                </div>
                 {!isDashboard && (
                     <button
                         onClick={() => {
@@ -211,7 +285,7 @@ export default function LandingNavbar() {
                 {isConnected && (
                     <button
                         onClick={() => {
-                          handleDisconnect();
+                          disconnect();
                           setIsMobileMenuOpen(false);
                         }}
                         className="w-full py-4 px-6 text-center text-red-400 bg-red-400/5 hover:bg-red-400/10 border border-red-400/20 rounded-xl font-medium transition-all"
@@ -227,9 +301,15 @@ export default function LandingNavbar() {
         {/* Wallet Connect Modal */}
         <WalletConnectModal
             isOpen={isWalletModalOpen}
-            onClose={() => setIsWalletModalOpen(false)}
+            onClose={() => {
+              cancelConnect()
+              setIsWalletModalOpen(false)
+            }}
             onConnectFreighter={handleFreighterConnect}
-            connectionState="disconnected"
+            connectionState={status}
+            errorMessage={error?.message}
+            errorType={error instanceof FreighterConnectionError ? error.type : undefined}
+            onRetry={clearError}
         />
       </>
   );

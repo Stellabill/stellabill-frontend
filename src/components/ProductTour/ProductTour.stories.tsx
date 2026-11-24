@@ -84,7 +84,7 @@ const demoSteps: TourStep[] = [
   {
     id: 'welcome',
     target: '.tour-demo-header',
-    title: 'Welcome to Stellarbill! 👋',
+    title: 'Welcome to Stellabill! 👋',
     content: 'Let\'s take a quick tour to help you get started with managing your subscriptions. You can skip this anytime and come back later.',
     placement: 'bottom',
     spotlightPadding: 12,

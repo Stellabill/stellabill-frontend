@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config({
   extends: [js.configs.recommended, ...tseslint.configs.recommended],
   files: ['**/*.{ts,tsx}'],
-  ignores: ['dist', 'node_modules', 'coverage', '*.config.ts'],
+  ignores: ['dist', 'node_modules', 'coverage', '*.config.ts', 'e2e/**'],
   languageOptions: {
     ecmaVersion: 2020,
     globals: globals.browser,
@@ -33,6 +33,12 @@ export default tseslint.config({
         message:
           'Avoid interpolating counts directly into template strings. ' +
           'Use ICU MessageFormat via t() instead — see docs/ICU_PLURALIZATION_GUIDE.md.',
+      },
+      {
+        selector:
+          "CallExpression[callee.object.name='window'][callee.property.name='open']:not([arguments.2.value=/noopener/])",
+        message:
+          'window.open must include "noopener" in windowFeatures to mitigate reverse tabnabbing. Use openExternal() from "@/utils/openExternal" instead.',
       },
     ],
   },

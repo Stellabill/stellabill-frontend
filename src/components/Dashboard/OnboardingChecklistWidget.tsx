@@ -15,7 +15,7 @@ interface OnboardingChecklistWidgetProps {
 
 const DEFAULT_ITEMS: ChecklistItem[] = [
   { id: 'payout', label: 'Set up payout method', completed: false, link: '/onboarding/payout' },
-  { id: 'brand', label: 'Upload brand pack', completed: false, link: '/branding' },
+  { id: 'brand', label: 'Upload brand pack', completed: false, link: '/brand' },
   { id: 'plan', label: 'Create your first plan', completed: false, link: '/plans?create=true' },
 ];
 

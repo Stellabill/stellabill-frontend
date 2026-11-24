@@ -18,4 +18,30 @@ describe('Illustrations Components', () => {
     expect(svg).toHaveAttribute('width', '250');
     expect(svg).toHaveAttribute('viewBox', '0 0 200 200');
   });
+
+  it('supports numeric, string, and boundary sizes without changing the viewBox', () => {
+    const { container, rerender } = render(<EmptyDashboard size={0} className="empty" />);
+    let svg = container.querySelector('svg');
+    expect(svg).toHaveAttribute('width', '0');
+    expect(svg).toHaveClass('empty');
+    expect(svg).toHaveAttribute('aria-hidden', 'true');
+
+    rerender(<EmptyDashboard size="100%" />);
+    svg = container.querySelector('svg');
+    expect(svg).toHaveAttribute('width', '100%');
+    expect(svg).toHaveAttribute('height', '100%');
+    expect(svg).toHaveAttribute('viewBox', '0 0 200 200');
+  });
+
+  it('updates NoTransactions presentation when its props change', () => {
+    const { container, rerender } = render(<NoTransactions size={-1} />);
+    let svg = container.querySelector('svg');
+    expect(svg).toHaveAttribute('width', '-1');
+
+    rerender(<NoTransactions size={180} className="transactions" />);
+    svg = container.querySelector('svg');
+    expect(svg).toHaveAttribute('width', '180');
+    expect(svg).toHaveClass('transactions');
+    expect(svg?.querySelectorAll('defs linearGradient')).toHaveLength(2);
+  });
 });

@@ -75,4 +75,47 @@ describe('EmptyState Component', () => {
       expect(illustrationWrapper).toHaveClass(styles.illustrationWrapper);
     });
   });
+
+  describe('EmptyStateType and Prop Transitions', () => {
+    it('covers all EmptyStateType definitions (type check)', () => {
+      // This test ensures the `EmptyStateType` union is exactly what we expect.
+      // If a new type is added to `EmptyStateType` without being added here,
+      // it won't break at runtime, but we ensure the known types are valid.
+      const exactTypes: Record<EmptyStateType, boolean> = {
+        subscriptions: true,
+        plans: true,
+        invoices: true,
+        notifications: true,
+        search: true,
+        generic: true,
+      };
+      expect(Object.keys(exactTypes)).toHaveLength(6);
+    });
+
+    it('handles empty string inputs gracefully', () => {
+      render(
+        <EmptyState type="generic" title="" description="" />
+      );
+      // Even with empty strings, the component should render without crashing
+      const title = screen.getByRole('heading', { level: 3 });
+      expect(title).toBeInTheDocument();
+      expect(title).toBeEmptyDOMElement();
+    });
+
+    it('reflects prop updates correctly (state transitions)', () => {
+      const { rerender } = render(
+        <EmptyState type="search" title="Initial Title" description="Initial Desc" />
+      );
+      expect(screen.getByText('Initial Title')).toBeInTheDocument();
+      expect(screen.getByText('Initial Desc')).toBeInTheDocument();
+
+      // Transition to a new state
+      rerender(
+        <EmptyState type="invoices" title="Updated Title" description="Updated Desc" />
+      );
+      expect(screen.queryByText('Initial Title')).not.toBeInTheDocument();
+      expect(screen.getByText('Updated Title')).toBeInTheDocument();
+      expect(screen.getByText('Updated Desc')).toBeInTheDocument();
+    });
+  });
 });

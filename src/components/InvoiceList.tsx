@@ -30,7 +30,7 @@ export default function InvoiceList({ invoices }: Props) {
       {/* ================= DESKTOP TABLE ================= */}
       <div className="hidden md:block">
         <table className="w-full border border-gray-300 rounded-lg overflow-hidden">
-          <thead className="bg-gray-100 text-left">
+          <thead className="bg-white/5 text-left text-slate-300">
             <tr>
               <th className="p-3">Invoice</th>
               <th className="p-3">Date</th>

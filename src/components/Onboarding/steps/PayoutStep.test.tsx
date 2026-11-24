@@ -1,0 +1,120 @@
+import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import PayoutStep from './PayoutStep';
+
+const VALID_ADDRESS = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7';
+
+describe('PayoutStep', () => {
+  it('renders the address field, helper text, and navigation buttons', () => {
+    render(<PayoutStep />);
+
+    expect(screen.getByLabelText(/stellar wallet address/i)).toBeInTheDocument();
+    expect(screen.getByText(/this address will receive usdc/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['an empty value', ''],
+    ['whitespace only', '   '],
+  ])('shows a required error for %s', (_description, address) => {
+    render(<PayoutStep />);
+
+    fireEvent.change(screen.getByLabelText(/stellar wallet address/i), {
+      target: { value: address },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Stellar wallet address is required.');
+    expect(screen.getByLabelText(/stellar wallet address/i)).toHaveAttribute(
+      'aria-describedby',
+      'stellar-error'
+    );
+  });
+
+  it.each([
+    ['too short', 'G' + 'A'.repeat(54)],
+    ['too long', 'G' + 'A'.repeat(56)],
+    ['lowercase characters (invalid checksum)', 'G' + 'a'.repeat(55)],
+    ['a character outside Stellar base32', 'G' + 'A'.repeat(54) + '0'],
+  ])('rejects an address that is %s', (_description, address) => {
+    const onNext = vi.fn();
+    render(<PayoutStep onNext={onNext} />);
+
+    fireEvent.change(screen.getByLabelText(/stellar wallet address/i), {
+      target: { value: address },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Please enter a valid Stellar address (starts with G, 56 characters, valid checksum).'
+    );
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it('rejects an address with a bad checksum', () => {
+    const onNext = vi.fn();
+    const altered = VALID_ADDRESS.slice(0, 5) + (VALID_ADDRESS.slice(5, 6) === 'A' ? 'B' : 'A') + VALID_ADDRESS.slice(6);
+    render(<PayoutStep onNext={onNext} />);
+
+    fireEvent.change(screen.getByLabelText(/stellar wallet address/i), {
+      target: { value: altered },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Please enter a valid Stellar address (starts with G, 56 characters, valid checksum).'
+    );
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it('shows a secret-key warning when an S address is pasted', () => {
+    const onNext = vi.fn();
+    render(<PayoutStep onNext={onNext} />);
+
+    fireEvent.change(screen.getByLabelText(/stellar wallet address/i), {
+      target: { value: 'S' + 'A'.repeat(55) },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/never paste your secret key/i);
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it('clears the validation error when the address is edited', () => {
+    render(<PayoutStep />);
+    const addressInput = screen.getByLabelText(/stellar wallet address/i);
+
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    fireEvent.change(addressInput, { target: { value: VALID_ADDRESS } });
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(addressInput).not.toHaveClass('onboarding-input--error');
+    expect(addressInput).toHaveAttribute('aria-describedby', 'stellar-helper');
+  });
+
+  it('trims and submits a valid Stellar address', () => {
+    const onNext = vi.fn();
+    render(<PayoutStep onNext={onNext} />);
+
+    fireEvent.change(screen.getByLabelText(/stellar wallet address/i), {
+      target: { value: '  ' + VALID_ADDRESS + '  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+
+    expect(onNext).toHaveBeenCalledOnce();
+    expect(onNext).toHaveBeenCalledWith(VALID_ADDRESS);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('calls the optional Back callback', () => {
+    const onBack = vi.fn();
+    render(<PayoutStep onBack={onBack} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(onBack).toHaveBeenCalledOnce();
+  });
+});

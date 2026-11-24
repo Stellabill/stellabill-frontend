@@ -11,6 +11,12 @@ export type WidgetId =
   | 'chart_revenue'
   | 'activity_feed';
 
+export interface DashboardFilters {
+  status?: 'active';
+  planId?: string;
+  range?: 'last30Days';
+}
+
 // ─── Per-widget state ──────────────────────────────────────────────────────
 
 export type WidgetStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -68,8 +74,8 @@ function reducer(state: WidgetsState, action: Action): WidgetsState {
 // ─── Fake per-widget fetch helpers ────────────────────────────────────────
 //
 // In production each would call a real API endpoint.  For now they reuse the
-// same simulate_error / simulate_offline query-string flags that the existing
-// Dashboard uses, but each widget can fail independently (so the pattern can
+// same simulate_offline query-string flag that the existing Dashboard uses,
+// but each widget can fail independently (so the pattern can
 // be demonstrated by adding e.g. ?fail_kpi_mrr=1 in the URL).
 
 function makeWidgetError(message: string, opts: Partial<ApiError> = {}): ApiError {
@@ -78,7 +84,10 @@ function makeWidgetError(message: string, opts: Partial<ApiError> = {}): ApiErro
   return err;
 }
 
-async function fetchWidget(widgetId: WidgetId): Promise<void> {
+async function fetchWidget(
+  widgetId: WidgetId,
+  _filters: DashboardFilters,
+): Promise<void> {
   // Honour per-widget failure simulation: ?fail_<widget_id>=1
   const search =
     typeof window !== 'undefined' ? window.location.search : '';
@@ -91,18 +100,10 @@ async function fetchWidget(widgetId: WidgetId): Promise<void> {
     });
   }
 
-  // Global simulate_offline / simulate_error flags still work for all widgets
+  // The global offline flag still works for all widgets.
   if (search.includes('simulate_offline')) {
     await delay(300);
     throw makeWidgetError('No internet connection', { isOffline: true });
-  }
-
-  if (search.includes('simulate_error')) {
-    await delay(300);
-    throw makeWidgetError('Internal Server Error', {
-      status: 500,
-      technicalDetails: 'Metrics service timeout [Trace: MET-500]',
-    });
   }
 
   // Happy-path: simulate a short network round-trip
@@ -127,20 +128,22 @@ export interface UseDashboardWidgetsReturn {
   failedWidgetIds: WidgetId[];
 }
 
-export function useDashboardWidgets(): UseDashboardWidgetsReturn {
+export function useDashboardWidgets(
+  filters: DashboardFilters,
+): UseDashboardWidgetsReturn {
   const [widgets, dispatch] = useReducer(reducer, undefined, buildInitialState);
 
   const loadWidget = useCallback(
     async (id: WidgetId) => {
       dispatch({ type: 'LOAD', widgetId: id });
       try {
-        await fetchWidget(id);
+        await fetchWidget(id, filters);
         dispatch({ type: 'SUCCESS', widgetId: id });
       } catch (err) {
         dispatch({ type: 'ERROR', widgetId: id, error: err as ApiError });
       }
     },
-    [],
+    [filters],
   );
 
   const loadAll = useCallback(() => {

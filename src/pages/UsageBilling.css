@@ -393,6 +393,11 @@
     background: rgba(255, 255, 255, 0.03);
 }
 
+.statement-opening-row td {
+    color: #94A3B8;
+    font-style: italic;
+}
+
 .cell-date {
     white-space: nowrap;
     color: #94A3B8;
@@ -472,6 +477,18 @@
     font-size: 15px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+}
+
+.statement-opening-card {
+    border-style: dashed;
+}
+
+.statement-opening-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: #94A3B8;
 }
 
 /* Empty state */
@@ -642,3 +659,222 @@
 .skeleton-period-header { height: 24px; width: 320px; margin-bottom: 24px; }
 .skeleton-metric-card { height: 120px; border-radius: 12px; }
 .skeleton-progress    { height: 8px; margin-top: 24px; border-radius: 9999px; }
+
+/* ── Usage Range Controls & Custom Picker ────────────────────────────────── */
+
+.period-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.period-header-row .period-header {
+    margin-bottom: 0;
+}
+
+.usage-range-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+}
+
+.usage-range-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: #90A1B9;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease;
+}
+
+.usage-range-btn:hover {
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.usage-range-btn.active {
+    background: rgba(0, 211, 242, 0.18);
+    color: #00D3F2;
+}
+
+.custom-range-panel {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.custom-range-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.custom-range-tab {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.04);
+    color: #CBD5E1;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.custom-range-tab.active {
+    border-color: #00D3F2;
+    background: rgba(0, 211, 242, 0.14);
+    color: #FFFFFF;
+}
+
+/* ── Usage Over Time Chart & Accessible Table ────────────────────────────── */
+
+.usage-chart-section {
+    margin-top: 24px;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+}
+
+.usage-chart-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.usage-chart-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
+.usage-chart-subtitle {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #90A1B9;
+}
+
+.usage-chart-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.usage-view-toggle {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.usage-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #90A1B9;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.usage-toggle-btn.active {
+    background: rgba(0, 211, 242, 0.18);
+    color: #00D3F2;
+}
+
+.usage-export-csv-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 211, 242, 0.35);
+    background: rgba(0, 211, 242, 0.12);
+    color: #00D3F2;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 150ms ease;
+}
+
+.usage-export-csv-btn:hover {
+    background: rgba(0, 211, 242, 0.22);
+}
+
+.usage-chart-canvas {
+    width: 100%;
+}
+
+.usage-chart-sparkline {
+    width: 100%;
+    height: 140px;
+    display: block;
+}
+
+.usage-chart-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #90A1B9;
+}
+
+.usage-table-wrap {
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.usage-line-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.usage-line-items-table th,
+.usage-line-items-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.usage-line-items-table th {
+    color: #90A1B9;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.03);
+    position: sticky;
+    top: 0;
+}
+
+.usage-line-items-table .col-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}

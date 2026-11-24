@@ -15,9 +15,9 @@ export interface RouteHelpContext {
 export const helpArticles: HelpArticle[] = [
   {
     id: 'gs-welcome',
-    title: 'Welcome to Stellarbill',
+    title: 'Welcome to Stellabill',
     content:
-      'Stellarbill is a crypto-native billing platform. Connect your wallet to get started, create plans, and subscribe customers using USDC on Stellar.',
+      'Stellabill is a crypto-native billing platform. Connect your wallet to get started, create plans, and subscribe customers using USDC on Stellar.',
     keywords: ['welcome', 'intro', 'getting started', 'overview', 'about'],
     category: 'Getting Started',
   },
@@ -220,11 +220,6 @@ export const routeHelpContexts: RouteHelpContext[] = [
     topAnswerIds: ['plan-create', 'plan-types'],
   },
   {
-    routePattern: '/plans/new',
-    pageTitle: 'Create a plan',
-    topAnswerIds: ['plan-create', 'plan-types'],
-  },
-  {
     routePattern: '/browse-plans',
     pageTitle: 'Browse plans',
     topAnswerIds: ['plan-browse', 'plan-types', 'sub-create'],
@@ -235,18 +230,13 @@ export const routeHelpContexts: RouteHelpContext[] = [
     topAnswerIds: ['settings-org', 'settings-api-keys', 'settings-billing', 'settings-tags'],
   },
   {
-    routePattern: '/ui-kit',
-    pageTitle: 'UI kit',
-    topAnswerIds: ['tr-accessibility', 'gs-welcome'],
-  },
-  {
     routePattern: '/brand',
     pageTitle: 'Brand pack',
     topAnswerIds: ['gs-welcome', 'tr-accessibility'],
   },
 ];
 
-export const SUPPORT_EMAIL = 'support@stellarbill.example';
+export const SUPPORT_URL = 'https://github.com/Stellabill/stellabill-frontend/issues';
 export const SUPPORT_HOURS = 'Monday–Friday, 9:00–18:00 UTC';
 
 export function findRouteContext(pathname: string): RouteHelpContext | undefined {

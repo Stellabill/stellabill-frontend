@@ -163,7 +163,7 @@
   pointer-events: auto;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: var(--space-2);
+  gap: 0.125rem;
   width: min(100%, 720px);
   margin: 0 auto;
   background: var(--color-surface-elevated);
@@ -181,10 +181,12 @@
   justify-content: center;
   gap: 0.25rem;
   min-height: 4.25rem;
-  padding: 0.75rem 0.5rem;
+  padding: 0.75rem 0.125rem;
   color: var(--color-text-muted);
   text-decoration: none;
-  font-size: var(--text-xxs);
+  font-size: 0.625rem;
+  min-width: 0;
+  text-align: center;
   border-radius: 1rem;
   transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
   position: relative;
@@ -224,6 +226,8 @@
 
 .app-layout__bottom-nav-label {
   line-height: 1.2;
+  max-width: 100%;
+  font-size: 0.625rem;
 }
 
 @media (min-width: 721px) {

@@ -1,7 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import GiftPurchaseModal from "./GiftPurchaseModal";
+import { copyToClipboard } from "../utils/clipboard";
+
+vi.mock("../utils/clipboard", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../utils/clipboard")>();
+  return { ...actual, copyToClipboard: vi.fn(actual.copyToClipboard) };
+});
+
+const mockedCopyToClipboard = vi.mocked(copyToClipboard);
+
+configure({ asyncUtilTimeout: 4000 });
 
 describe("GiftPurchaseModal", () => {
   const mockOnClose = vi.fn();
@@ -20,11 +30,13 @@ describe("GiftPurchaseModal", () => {
   beforeEach(() => {
     mockOnClose.mockClear();
     mockOnPurchaseComplete.mockClear();
+    mockedCopyToClipboard.mockClear();
+    mockedCopyToClipboard.mockResolvedValue(true);
   });
 
   describe("Rendering", () => {
     it("does not render when isOpen is false", () => {
-      render(
+      const { container } = render(
         <GiftPurchaseModal
           isOpen={false}
           onClose={mockOnClose}
@@ -34,6 +46,21 @@ describe("GiftPurchaseModal", () => {
       );
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(container.firstChild).toBeNull();
+    });
+
+    it("does not render when plan is null", () => {
+      const { container } = render(
+        <GiftPurchaseModal
+          isOpen={true}
+          onClose={mockOnClose}
+          plan={null}
+          onPurchaseComplete={mockOnPurchaseComplete}
+        />
+      );
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(container.firstChild).toBeNull();
     });
 
     it("renders when isOpen is true", () => {
@@ -125,8 +152,7 @@ describe("GiftPurchaseModal", () => {
       });
     });
 
-    it("enforces message character limit", async () => {
-      const user = userEvent.setup();
+    it("enforces message character limit", () => {
       render(
         <GiftPurchaseModal
           isOpen={true}
@@ -138,16 +164,12 @@ describe("GiftPurchaseModal", () => {
 
       const messageInput = screen.getByLabelText(/personal message/i);
       expect(messageInput).toHaveAttribute("maxLength", "300");
+      fireEvent.change(messageInput, { target: { value: "a".repeat(300) } });
 
-      const longMessage = "a".repeat(301);
-      await user.type(messageInput, longMessage);
-
-      // Should only accept 300 characters
       expect(messageInput).toHaveValue("a".repeat(300));
     });
 
-    it("updates character count", async () => {
-      const user = userEvent.setup();
+    it("updates character count", () => {
       render(
         <GiftPurchaseModal
           isOpen={true}
@@ -158,7 +180,7 @@ describe("GiftPurchaseModal", () => {
       );
 
       const messageInput = screen.getByLabelText(/personal message/i);
-      await user.type(messageInput, "Hello");
+      fireEvent.change(messageInput, { target: { value: "Hello" } });
 
       expect(screen.getByText("5 / 300")).toBeInTheDocument();
     });
@@ -326,13 +348,7 @@ describe("GiftPurchaseModal", () => {
 
     it("allows copying gift code", async () => {
       const user = userEvent.setup();
-      
-      // Mock clipboard API
-      Object.assign(navigator, {
-        clipboard: {
-          writeText: vi.fn().mockResolvedValue(undefined),
-        },
-      });
+      mockedCopyToClipboard.mockResolvedValueOnce(true);
 
       render(
         <GiftPurchaseModal
@@ -356,13 +372,44 @@ describe("GiftPurchaseModal", () => {
         expect(screen.getByText(/GIFT-/)).toBeInTheDocument();
       });
 
-      const copyBtn = screen.getByRole("button", { name: /copy/i });
+      const copyBtn = screen.getByRole("button", { name: /copy gift code to clipboard/i });
       await user.click(copyBtn);
 
       await waitFor(() => {
-        expect(navigator.clipboard.writeText).toHaveBeenCalled();
+        expect(mockedCopyToClipboard).toHaveBeenCalledWith(expect.stringContaining("GIFT-"));
         expect(screen.getByText("Copied!")).toBeInTheDocument();
       });
+      expect(screen.getByRole("status")).toHaveTextContent(/gift code copied to clipboard/i);
+    });
+
+    it("shows failure feedback without success when copying fails", async () => {
+      const user = userEvent.setup();
+      mockedCopyToClipboard.mockResolvedValueOnce(false);
+
+      render(
+        <GiftPurchaseModal
+          isOpen={true}
+          onClose={mockOnClose}
+          plan={mockPlan}
+          onPurchaseComplete={mockOnPurchaseComplete}
+        />
+      );
+
+      await user.type(screen.getByLabelText(/recipient email/i), "recipient@example.com");
+      await user.click(screen.getByRole("button", { name: /review gift/i }));
+      await user.click(screen.getByRole("button", { name: /confirm purchase/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/GIFT-/)).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /copy gift code to clipboard/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("status")).toHaveTextContent(/copy failed — select and copy manually/i);
+      });
+      expect(screen.queryByText("Copied!")).not.toBeInTheDocument();
+      expect(screen.getAllByText(/copy failed/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -460,6 +507,133 @@ describe("GiftPurchaseModal", () => {
       // Should show loading state
       expect(screen.getByText(/processing/i)).toBeInTheDocument();
       expect(confirmBtn).toBeDisabled();
+    });
+  });
+
+  describe("Purchase API Integration", () => {
+    it("calls purchaseGift with payload and passes returned code to onPurchaseComplete", async () => {
+      const user = userEvent.setup();
+      const mockPurchaseGift = vi.fn().mockResolvedValue({
+        code: "GIFT-CUSTOM-123456",
+        expiresOn: "2027-11-23T00:00:00.000Z",
+      });
+
+      render(
+        <GiftPurchaseModal
+          isOpen={true}
+          onClose={mockOnClose}
+          plan={mockPlan}
+          onPurchaseComplete={mockOnPurchaseComplete}
+          purchaseGift={mockPurchaseGift}
+        />
+      );
+
+      await user.type(screen.getByLabelText(/recipient name/i), "Jane Doe");
+      await user.type(screen.getByLabelText(/recipient email/i), "jane@example.com");
+      await user.type(screen.getByLabelText(/personal message/i), "Enjoy!");
+      await user.click(screen.getByRole("button", { name: /review gift/i }));
+      await user.click(screen.getByRole("button", { name: /confirm purchase/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("GIFT-CUSTOM-123456")).toBeInTheDocument();
+      });
+
+      expect(mockPurchaseGift).toHaveBeenCalledTimes(1);
+      expect(mockPurchaseGift).toHaveBeenCalledWith({
+        planId: "1",
+        recipientName: "Jane Doe",
+        recipientEmail: "jane@example.com",
+        duration: 12,
+        message: "Enjoy!",
+        deliveryMethod: "email",
+      });
+      expect(mockOnPurchaseComplete).toHaveBeenCalledWith("GIFT-CUSTOM-123456");
+    });
+
+    it("shows inline error, keeps modal open, and resets submitting state on rejection", async () => {
+      const user = userEvent.setup();
+      const mockPurchaseGift = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("Payment declined"))
+        .mockResolvedValueOnce({
+          code: "GIFT-RETRY1-234567",
+          expiresOn: "2027-11-23T00:00:00.000Z",
+        });
+
+      render(
+        <GiftPurchaseModal
+          isOpen={true}
+          onClose={mockOnClose}
+          plan={mockPlan}
+          onPurchaseComplete={mockOnPurchaseComplete}
+          purchaseGift={mockPurchaseGift}
+        />
+      );
+
+      await user.type(screen.getByLabelText(/recipient email/i), "recipient@example.com");
+      await user.click(screen.getByRole("button", { name: /review gift/i }));
+
+      const confirmBtn = screen.getByRole("button", { name: /confirm purchase/i });
+      await user.click(confirmBtn);
+
+      await waitFor(() => {
+        expect(screen.getByRole("alert")).toHaveTextContent("Payment declined");
+      });
+
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByText("Gift Summary")).toBeInTheDocument();
+      expect(mockOnClose).not.toHaveBeenCalled();
+      expect(mockOnPurchaseComplete).not.toHaveBeenCalled();
+      expect(confirmBtn).not.toBeDisabled();
+
+      // Retry succeeds
+      await user.click(confirmBtn);
+      await waitFor(() => {
+        expect(screen.getByText("GIFT-RETRY1-234567")).toBeInTheDocument();
+      });
+      expect(mockOnPurchaseComplete).toHaveBeenCalledWith("GIFT-RETRY1-234567");
+    });
+
+    it("prevents double-submit while purchase is in flight", async () => {
+      const user = userEvent.setup();
+      let resolvePurchase!: (value: { code: string; expiresOn: string }) => void;
+      const mockPurchaseGift = vi.fn(
+        () =>
+          new Promise<{ code: string; expiresOn: string }>((resolve) => {
+            resolvePurchase = resolve;
+          })
+      );
+
+      render(
+        <GiftPurchaseModal
+          isOpen={true}
+          onClose={mockOnClose}
+          plan={mockPlan}
+          onPurchaseComplete={mockOnPurchaseComplete}
+          purchaseGift={mockPurchaseGift}
+        />
+      );
+
+      await user.type(screen.getByLabelText(/recipient email/i), "recipient@example.com");
+      await user.click(screen.getByRole("button", { name: /review gift/i }));
+
+      const confirmBtn = screen.getByRole("button", { name: /confirm purchase/i });
+      fireEvent.click(confirmBtn);
+      fireEvent.click(confirmBtn);
+
+      expect(mockPurchaseGift).toHaveBeenCalledTimes(1);
+      expect(confirmBtn).toBeDisabled();
+
+      resolvePurchase({
+        code: "GIFT-ONCE01-ABCDEF",
+        expiresOn: "2027-11-23T00:00:00.000Z",
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("GIFT-ONCE01-ABCDEF")).toBeInTheDocument();
+      });
+      expect(mockOnPurchaseComplete).toHaveBeenCalledTimes(1);
+      expect(mockOnPurchaseComplete).toHaveBeenCalledWith("GIFT-ONCE01-ABCDEF");
     });
   });
 });

@@ -321,6 +321,26 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.subs-table__plan-cell:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.subs-table__plan-copy,
+.subs-table__plan-name,
+.subs-table__merchant {
+  display: block;
 }
 
 .subs-table__plan-icon {
@@ -985,3 +1005,10 @@
     transition: none;
   }
 }
+
+.sort-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin: 0 0 1rem; }
+.sort-toolbar__label { font-size: 0.875rem; color: var(--color-text-muted, #94a3b8); }
+.sort-toolbar__buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.sort-btn { padding: 0.35rem 0.85rem; border-radius: 999px; border: 1px solid rgba(148,163,184,0.35); background: transparent; color: inherit; font-size: 0.8rem; cursor: pointer; }
+.sort-btn:hover { border-color: #38bcd4; }
+.sort-btn--active { border-color: #38bcd4; background: rgba(56,188,212,0.15); color: #38bcd4; font-weight: 600; }

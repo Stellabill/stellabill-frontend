@@ -92,7 +92,6 @@ describe('NotFound page', () => {
     '/plans/create',
     '/browse-plans',
     '/settings',
-    '/ui-kit',
     '/brand',
   ])('treats %s as a shell path', (path) => {
     renderAt(path);

@@ -4,7 +4,7 @@ export const dashboardTourSteps: TourStep[] = [
   {
     id: 'welcome',
     target: '.dashboard-header',
-    title: 'Welcome to Stellarbill!',
+    title: 'Welcome to Stellabill!',
     content: 'Let\'s take a quick tour to help you get started with managing your subscriptions. You can skip this anytime and come back later.',
     placement: 'bottom',
     spotlightPadding: 12,
@@ -21,7 +21,7 @@ export const dashboardTourSteps: TourStep[] = [
     id: 'revenue-chart',
     target: '.dashboard-panel--chart',
     title: 'Track Revenue Growth',
-    content: 'Visualize your revenue trends over time. Click "View Detailed Report" to explore more insights.',
+    content: 'Visualize your revenue trends over time.',
     placement: 'top',
     spotlightPadding: 12,
   },

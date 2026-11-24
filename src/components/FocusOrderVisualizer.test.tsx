@@ -91,4 +91,34 @@ describe('FocusOrderVisualizer', () => {
     
     expect(handleClose).toHaveBeenCalled();
   });
+
+  it('handles hidden elements and skips early paths (failure handling regression)', () => {
+    document.body.innerHTML = `
+      <div id="test-container">
+        <button id="btn1">Button 1</button>
+        <button id="hidden1" hidden>Hidden 1</button>
+        <button id="btn2">Button 2</button>
+      </div>
+    `;
+
+    const handleClose = vi.fn();
+    render(<FocusOrderVisualizer onClose={handleClose} />);
+    
+    // Check lines (i === 0, el.isHidden || prev.isHidden paths)
+    // 3 elements total:
+    // i=0 (btn1): i === 0 returns null (no line)
+    // i=1 (hidden1): el.isHidden returns null (no line)
+    // i=2 (btn2): prev.isHidden (hidden1 is hidden) returns null (no line)
+    const lines = document.querySelectorAll('line');
+    expect(lines.length).toBe(0);
+    
+    // Check overlays (el.isHidden path for divs)
+    // Only btn1 and btn2 get overlays because hidden1 is skipped
+    const overlays = document.querySelectorAll('div[aria-hidden="true"] > span');
+    expect(overlays.length).toBe(2);
+    
+    // btn1 is index 1, hidden1 is index 2, btn2 is index 3
+    expect(overlays[0].textContent).toBe('1');
+    expect(overlays[1].textContent).toBe('3');
+  });
 });

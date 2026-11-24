@@ -1,5 +1,5 @@
-import { useRef, MouseEvent, useState, useEffect } from 'react';
-import { useModalFocus } from '../hooks/useModalFocus';
+import { useRef, useState, useEffect } from 'react';
+import Modal from './common/Modal';
 import { SaveOfferStep } from './SaveOfferStep';
 import './CancelSubscriptionModal.css';
 
@@ -11,6 +11,7 @@ interface CancelSubscriptionModalProps {
     isLoading?: boolean;
     balance: string;
     endDate: string;
+    error?: { message: string; technicalDetails?: string } | null;
 }
 
 type CancelStep = 'offer' | 'confirm';
@@ -22,10 +23,10 @@ export default function CancelSubscriptionModal({
     onOfferSelected,
     isLoading = false,
     balance,
-    endDate
+    endDate,
+    error
 }: CancelSubscriptionModalProps) {
     const [step, setStep] = useState<CancelStep>('offer');
-    const modalRef = useRef<HTMLDivElement>(null);
     const initialFocusRef = useRef<HTMLButtonElement>(null);
 
     // Reset step when modal opens
@@ -45,10 +46,6 @@ export default function CancelSubscriptionModal({
         }
     }, [step, isOpen]);
 
-    useModalFocus(modalRef, { isOpen, onClose, initialFocusRef });
-
-    if (!isOpen) return null;
-
     const handleOfferSelected = (offerId: string) => {
         onOfferSelected?.(offerId);
         onClose();
@@ -57,22 +54,23 @@ export default function CancelSubscriptionModal({
     const isOfferStep = step === 'offer';
 
     return (
-        <div
-            className="cancel-modal-overlay"
-            onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cancel-modal-title"
-            aria-describedby="cancel-modal-description"
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            unstyled
+            labelledBy="cancel-modal-title"
+            describedBy="cancel-modal-description"
+            initialFocusRef={initialFocusRef}
+            closeOnBackdrop={!isLoading}
+            closeOnEscape={!isLoading}
+            busy={isLoading}
+            contentClassName={`cancel-modal-content ${isOfferStep ? 'cancel-modal-content-wide' : ''}`}
         >
-            <div 
-                className={`cancel-modal-content ${isOfferStep ? 'cancel-modal-content-wide' : ''}`} 
-                ref={modalRef}
-            >
                 <button
                     className="cancel-close-btn"
-                    onClick={onClose}
+                    onClick={() => !isLoading && onClose()}
                     aria-label="Close"
+                    disabled={isLoading}
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -102,6 +100,18 @@ export default function CancelSubscriptionModal({
                         <p id="cancel-modal-description" className="cancel-description">
                             You will no longer be charged. Your remaining prepaid balance ({balance} USDC) can be withdrawn to your wallet.
                         </p>
+
+                        {error && (
+                            <div className="cancel-action-error" role="alert">
+                                <p>{error.message}</p>
+                                {error.technicalDetails && (
+                                    <details>
+                                        <summary>Technical details</summary>
+                                        <p>{error.technicalDetails}</p>
+                                    </details>
+                                )}
+                            </div>
+                        )}
 
                         <div className="cancel-checklist-container">
                             <div className="cancel-checklist-item">
@@ -146,7 +156,7 @@ export default function CancelSubscriptionModal({
                             <button
                                 ref={initialFocusRef}
                                 className="cancel-btn cancel-btn-keep"
-                                onClick={onClose}
+                                onClick={() => !isLoading && onClose()}
                                 disabled={isLoading}
                             >
                                 Keep subscription
@@ -161,7 +171,6 @@ export default function CancelSubscriptionModal({
                         </div>
                     </>
                 )}
-            </div>
-        </div>
+        </Modal>
     );
 }

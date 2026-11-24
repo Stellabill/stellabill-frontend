@@ -23,7 +23,6 @@ const SHELL_PREFIXES = [
   '/subscriptions',
   '/browse-plans',
   '/settings',
-  '/ui-kit',
   '/brand',
 ];
 

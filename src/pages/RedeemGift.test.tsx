@@ -1,19 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { BrowserRouter } from "react-router-dom";
 import RedeemGift from "./RedeemGift";
+import { generateGiftCode, validateGiftCode } from "../utils/giftCode";
 
 // Mock the navigation hook
 const mockNavigate = vi.fn();
+let mockSearchParams = new URLSearchParams();
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useSearchParams: () => [new URLSearchParams()],
+    useSearchParams: () => [mockSearchParams],
   };
 });
+
+// Spy on the gift service so tests can count validations.
+vi.mock("../utils/giftCode", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../utils/giftCode")>();
+  return {
+    ...actual,
+    validateGiftCode: vi.fn(actual.validateGiftCode),
+  };
+});
+
+const validateGiftCodeMock = vi.mocked(validateGiftCode);
 
 // Mock the components
 vi.mock("../components/LandingNavbar", () => ({
@@ -25,9 +39,14 @@ vi.mock("../components/RedeemConfirmModal", () => ({
     isOpen ? <div>Redeem Confirm Modal: {giftDetails?.planName}</div> : null,
 }));
 
+// The placeholder gift service waits MOCK_GIFT_VALIDATION_LATENCY_MS before answering.
+const RESULT_TIMEOUT = 3000;
+
 describe("RedeemGift", () => {
   beforeEach(() => {
     mockNavigate.mockClear();
+    validateGiftCodeMock.mockClear();
+    mockSearchParams = new URLSearchParams();
   });
 
   const renderComponent = () => {
@@ -36,6 +55,27 @@ describe("RedeemGift", () => {
         <RedeemGift />
       </BrowserRouter>
     );
+  };
+
+  const renderInStrictMode = () => {
+    return render(
+      <BrowserRouter>
+        <StrictMode>
+          <RedeemGift />
+        </StrictMode>
+      </BrowserRouter>
+    );
+  };
+
+  const redeem = async (code: string) => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    const input = screen.getByLabelText(/gift code/i);
+    await user.type(input, code);
+
+    const button = screen.getByRole("button", { name: /redeem gift/i });
+    await user.click(button);
   };
 
   describe("Rendering", () => {
@@ -89,14 +129,15 @@ describe("RedeemGift", () => {
       expect(input).toHaveValue("GIFT-ABC123-XYZ789");
     });
 
-    it("formats code input automatically", async () => {
+    it("canonicalizes a loosely typed code when the input loses focus", async () => {
       const user = userEvent.setup();
       renderComponent();
 
       const input = screen.getByLabelText(/gift code/i);
       await user.type(input, "ABC123XYZ789");
+      await user.tab();
 
-      expect(input).toHaveValue("GIFT-ABC123XYZ789");
+      expect(input).toHaveValue("GIFT-ABC123-XYZ789");
     });
 
     it("shows example format hint", () => {
@@ -166,9 +207,12 @@ describe("RedeemGift", () => {
       const button = screen.getByRole("button", { name: /redeem gift/i });
       await user.click(button);
 
-      await waitFor(() => {
-        expect(screen.getByText(/not recognized/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/not recognized/i)).toBeInTheDocument();
+        },
+        { timeout: RESULT_TIMEOUT }
+      );
     });
 
     it("shows error for expired code", async () => {
@@ -181,9 +225,12 @@ describe("RedeemGift", () => {
       const button = screen.getByRole("button", { name: /redeem gift/i });
       await user.click(button);
 
-      await waitFor(() => {
-        expect(screen.getByText(/expired/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/expired/i)).toBeInTheDocument();
+        },
+        { timeout: RESULT_TIMEOUT }
+      );
     });
 
     it("shows error for already redeemed code", async () => {
@@ -196,9 +243,12 @@ describe("RedeemGift", () => {
       const button = screen.getByRole("button", { name: /redeem gift/i });
       await user.click(button);
 
-      await waitFor(() => {
-        expect(screen.getByText(/already been redeemed/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/already been redeemed/i)).toBeInTheDocument();
+        },
+        { timeout: RESULT_TIMEOUT }
+      );
     });
 
     it("clears error when user types in input", async () => {
@@ -233,10 +283,78 @@ describe("RedeemGift", () => {
       const button = screen.getByRole("button", { name: /redeem gift/i });
       await user.click(button);
 
-      await waitFor(() => {
-        expect(screen.getByText(/redeem confirm modal/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/redeem confirm modal/i)).toBeInTheDocument();
+        },
+        { timeout: RESULT_TIMEOUT }
+      );
     });
+
+    it("opens confirmation modal for a code handed out by the gift purchase flow", async () => {
+      await redeem(generateGiftCode());
+
+      await waitFor(
+        () => {
+          expect(screen.getByText(/redeem confirm modal/i)).toBeInTheDocument();
+        },
+        { timeout: RESULT_TIMEOUT }
+      );
+    });
+
+    it("passes the resolved gift details to the confirmation modal", async () => {
+      await redeem("GIFT-VALID1-CODE12");
+
+      await waitFor(
+        () => {
+          expect(screen.getByText("Redeem Confirm Modal: Premium Access")).toBeInTheDocument();
+        },
+        { timeout: RESULT_TIMEOUT }
+      );
+    });
+  });
+
+  describe("Code Normalization", () => {
+    const variants = [
+      "GIFT-ABC123-XYZ789",
+      "gift-abc123-xyz789",
+      "GIFT ABC123 XYZ789",
+      "ABC123XYZ789",
+      "GIFT-ABC123XYZ789",
+    ];
+
+    it.each(variants)("canonicalizes %s when leaving the input", async (variant) => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      const input = screen.getByLabelText(/gift code/i);
+      await user.type(input, variant);
+      await user.tab();
+
+      expect(input).toHaveValue("GIFT-ABC123-XYZ789");
+    });
+
+    it("redeems a pasted lowercase code", async () => {
+      await redeem("gift-abc123-xyz789");
+
+      await waitFor(
+        () => {
+          expect(screen.getByText(/redeem confirm modal/i)).toBeInTheDocument();
+        },
+        { timeout: RESULT_TIMEOUT }
+      );
+    });
+
+    it.each(["ABC123XYZ78", "GIFT-ABC123-XYZ7890", "GIFT-"])(
+      "asks for a readable code when input is %s",
+      async (variant) => {
+        await redeem(variant);
+
+        await waitFor(() => {
+          expect(screen.getByText(/please enter a valid gift code/i)).toBeInTheDocument();
+        });
+      }
+    );
   });
 
   describe("Navigation", () => {
@@ -310,17 +428,48 @@ describe("RedeemGift", () => {
 
   describe("Auto-fill from URL", () => {
     it("prefills code from URL parameter", () => {
-      const mockSearchParams = new URLSearchParams("?code=GIFT-URL123-PARAM1");
-      
-      vi.mocked(require("react-router-dom").useSearchParams).mockReturnValue([
-        mockSearchParams,
-        vi.fn(),
-      ]);
+      mockSearchParams = new URLSearchParams("?code=GIFT-URL123-PARAM1");
 
       renderComponent();
 
       const input = screen.getByLabelText(/gift code/i);
       expect(input).toHaveValue("GIFT-URL123-PARAM1");
+    });
+
+    it("canonicalizes a loosely formatted URL parameter", () => {
+      mockSearchParams = new URLSearchParams("?code=gift+abc123+xyz789");
+
+      renderComponent();
+
+      const input = screen.getByLabelText(/gift code/i);
+      expect(input).toHaveValue("GIFT-ABC123-XYZ789");
+    });
+
+    it("validates a link-bundled code and opens the confirmation modal", async () => {
+      mockSearchParams = new URLSearchParams("?code=GIFT-ABC123-XYZ789");
+
+      renderComponent();
+
+      await waitFor(
+        () => {
+          expect(screen.getByText(/redeem confirm modal/i)).toBeInTheDocument();
+        },
+        { timeout: RESULT_TIMEOUT }
+      );
+    });
+
+    it("starts exactly one validation per URL code under StrictMode", () => {
+      mockSearchParams = new URLSearchParams("?code=GIFT-ABC123-XYZ789");
+
+      renderInStrictMode();
+
+      expect(validateGiftCodeMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not validate anything without a URL code", () => {
+      renderComponent();
+
+      expect(validateGiftCodeMock).not.toHaveBeenCalled();
     });
   });
 });

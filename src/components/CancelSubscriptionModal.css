@@ -1,15 +1,4 @@
 /* CancelSubscriptionModal.css */
-.cancel-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    backdrop-filter: blur(8px);
-    padding: 1rem;
-}
 
 .cancel-modal-content {
     background-color: #0d0d0d;
@@ -111,6 +100,28 @@
     max-width: 400px;
     margin-left: auto;
     margin-right: auto;
+}
+
+.cancel-action-error {
+    margin: -1.5rem 0 2rem;
+    padding: 1rem;
+    color: #fecaca;
+    background: #2a1414;
+    border: 1px solid #7f1d1d;
+    border-radius: 12px;
+}
+
+.cancel-action-error p {
+    margin: 0;
+}
+
+.cancel-action-error details {
+    margin-top: 0.75rem;
+    color: #fca5a5;
+}
+
+.cancel-action-error summary {
+    cursor: pointer;
 }
 
 .cancel-checklist-container {

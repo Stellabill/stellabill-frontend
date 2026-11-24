@@ -1,19 +1,13 @@
-import { useRef, useState } from "react";
-import { useModalFocus } from "../hooks/useModalFocus";
+import { useState } from "react";
+import Modal from "./common/Modal";
 import { X, Gift, Calendar, DollarSign, Package, Loader2 } from "lucide-react";
+import { gifts, type GiftRedeemResult } from "../api/client";
+import {
+  formatExpiredGiftMessage,
+  GIFT_ALREADY_REDEEMED_MESSAGE,
+  type GiftDetails,
+} from "../utils/giftCode";
 import "./RedeemConfirmModal.css";
-
-interface GiftDetails {
-  planId: string;
-  planName: string;
-  merchant: string;
-  duration: number;
-  gifterName?: string;
-  message?: string;
-  value: number;
-  currency: string;
-  expiresOn: string;
-}
 
 interface RedeemConfirmModalProps {
   isOpen: boolean;
@@ -21,6 +15,7 @@ interface RedeemConfirmModalProps {
   giftDetails: GiftDetails;
   giftCode: string;
   onRedemptionComplete: () => void;
+  redeemGift?: (code: string) => Promise<GiftRedeemResult>;
 }
 
 export default function RedeemConfirmModal({
@@ -29,24 +24,33 @@ export default function RedeemConfirmModal({
   giftDetails,
   giftCode,
   onRedemptionComplete,
+  redeemGift = gifts.redeem,
 }: RedeemConfirmModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [error, setError] = useState("");
-
-  useModalFocus(modalRef, { isOpen, onClose });
 
   const handleRedeem = async () => {
     setIsRedeeming(true);
     setError("");
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const result = await redeemGift(giftCode);
 
-      // On success, call the completion handler
-      onRedemptionComplete();
-    } catch (err) {
+      if (result.status === "ok") {
+        onRedemptionComplete();
+        return;
+      }
+
+      if (result.status === "already-redeemed") {
+        setError(GIFT_ALREADY_REDEEMED_MESSAGE);
+        return;
+      }
+
+      if (result.status === "expired") {
+        setError(formatExpiredGiftMessage(result.expiredOn ?? giftDetails.expiresOn));
+        return;
+      }
+    } catch {
       setError("Failed to redeem gift. Please try again.");
     } finally {
       setIsRedeeming(false);
@@ -70,19 +74,17 @@ export default function RedeemConfirmModal({
   const expiryDate = formatDate(giftDetails.expiresOn);
   const gifterDisplayName = giftDetails.gifterName || "Anonymous";
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="redeem-confirm-overlay"
-      onClick={(event) => event.target === event.currentTarget && !isRedeeming && onClose()}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="redeem-confirm-title"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      unstyled
+      labelledBy="redeem-confirm-title"
+      closeOnBackdrop={!isRedeeming}
+      closeOnEscape={!isRedeeming}
+      busy={isRedeeming}
+      contentClassName="redeem-confirm-content"
     >
-      <div className="redeem-confirm-backdrop" />
-
-      <div ref={modalRef} className="redeem-confirm-content">
         {/* Header */}
         <div className="redeem-confirm-header">
           <div className="redeem-confirm-header-icon">
@@ -205,7 +207,6 @@ export default function RedeemConfirmModal({
         <div className="redeem-code-reference">
           Code: <code>{giftCode}</code>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

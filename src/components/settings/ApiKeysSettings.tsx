@@ -1,7 +1,9 @@
-import { useState } from 'react'
-import { Key, Plus, Eye, EyeOff, Copy, RotateCcw, Trash2, AlertTriangle, Shield, Calendar, User } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Key, Plus, Copy, RotateCcw, Trash2, AlertTriangle, Shield, Calendar, User, Check } from 'lucide-react'
+import { defaultGenerateApiKey, maskApiKey } from '../../utils/apiKey'
+import styles from './ApiKeysSettings.module.css'
 
-interface ApiKey {
+export interface ApiKey {
   id: string
   name: string
   key: string
@@ -13,12 +15,20 @@ interface ApiKey {
   isActive: boolean
 }
 
-export default function ApiKeysSettings() {
+export interface ApiKeysSettingsProps {
+  generateApiKey?: () => string
+}
+
+const AVAILABLE_SCOPES = ['read', 'write', 'admin'] as const
+
+export default function ApiKeysSettings({
+  generateApiKey = defaultGenerateApiKey,
+}: ApiKeysSettingsProps = {}) {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([
     {
       id: '1',
       name: 'Production API Key',
-      key: 'sk_live_51H2K3a...',
+      key: 'sk_live_••••••••••••••••3a8f',
       scopes: ['read', 'write', 'admin'],
       createdAt: '2024-01-15',
       createdBy: 'alice@example.com',
@@ -28,7 +38,7 @@ export default function ApiKeysSettings() {
     {
       id: '2',
       name: 'Development Key',
-      key: 'sk_test_51H2K3a...',
+      key: 'sk_test_••••••••••••••••5b2c',
       scopes: ['read', 'write'],
       createdAt: '2024-02-01',
       createdBy: 'bob@example.com',
@@ -39,22 +49,115 @@ export default function ApiKeysSettings() {
   ])
 
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [newKeyName, setNewKeyName] = useState('')
+  const [newKeyScopes, setNewKeyScopes] = useState<string[]>([])
+  const [newKeyExpiry, setNewKeyExpiry] = useState('')
+  const [formErrors, setFormErrors] = useState<{ name?: string; scopes?: string; expiry?: string }>({})
+
   const [showRevokeConfirmation, setShowRevokeConfirmation] = useState<string | null>(null)
   const [revokeConfirmationText, setRevokeConfirmationText] = useState('')
-  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())
 
-  const toggleKeyVisibility = (keyId: string) => {
-    const newVisibleKeys = new Set(visibleKeys)
-    if (newVisibleKeys.has(keyId)) {
-      newVisibleKeys.delete(keyId)
-    } else {
-      newVisibleKeys.add(keyId)
+  const [showSecretModal, setShowSecretModal] = useState<{
+    title: string
+    keyName: string
+    secret: string
+  } | null>(null)
+  const [copiedSecret, setCopiedSecret] = useState(false)
+
+  const [copyFeedback, setCopyFeedback] = useState<{ keyId: string; success: boolean } | null>(null)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const revokeTriggerRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const revokeConfirmInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
     }
-    setVisibleKeys(newVisibleKeys)
+  }, [])
+
+  const copyToClipboard = (text: string): boolean => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {})
+      return true
+    }
+    return false
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
+  const handleCopyKey = (keyId: string, text: string) => {
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    setCopyFeedback({ keyId, success: copyToClipboard(text) })
+    copyTimerRef.current = setTimeout(() => {
+      setCopyFeedback(null)
+      copyTimerRef.current = null
+    }, 2000)
+  }
+
+  const resetCreateForm = () => {
+    setNewKeyName('')
+    setNewKeyScopes([])
+    setNewKeyExpiry('')
+    setFormErrors({})
+  }
+
+  const handleCloseCreateModal = () => {
+    resetCreateForm()
+    setShowCreateModal(false)
+  }
+
+  const handleCreateKey = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+
+    const errors: { name?: string; scopes?: string; expiry?: string } = {}
+    if (!newKeyName.trim()) {
+      errors.name = 'Key name is required'
+    }
+    if (newKeyScopes.length === 0) {
+      errors.scopes = 'At least one scope must be selected'
+    }
+    if (newKeyExpiry) {
+      const parts = newKeyExpiry.split('-')
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (parts.length === 3) {
+        const expDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10))
+        if (isNaN(expDate.getTime()) || expDate <= today) {
+          errors.expiry = 'Expiry date must be in the future'
+        }
+      } else {
+        const expDate = new Date(newKeyExpiry)
+        if (isNaN(expDate.getTime()) || expDate <= today) {
+          errors.expiry = 'Expiry date must be in the future'
+        }
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      return
+    }
+
+    const secret = generateApiKey()
+    const masked = maskApiKey(secret)
+
+    const newKey: ApiKey = {
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+      name: newKeyName.trim(),
+      key: masked,
+      scopes: [...newKeyScopes],
+      createdAt: new Date().toISOString().split('T')[0],
+      createdBy: 'alice@example.com',
+      expiresAt: newKeyExpiry || undefined,
+      isActive: true,
+    }
+
+    setApiKeys((prev) => [newKey, ...prev])
+    handleCloseCreateModal()
+
+    setShowSecretModal({
+      title: 'API Key Created',
+      keyName: newKey.name,
+      secret,
+    })
   }
 
   const handleRevokeKey = (keyId: string) => {
@@ -64,12 +167,18 @@ export default function ApiKeysSettings() {
   }
 
   const handleRevokeAndRotateKey = (keyId: string) => {
+    const keyToRotate = apiKeys.find((k) => k.id === keyId)
+    if (!keyToRotate) return
+
+    const newSecret = generateApiKey()
+    const masked = maskApiKey(newSecret)
+
     setApiKeys((prev) =>
       prev.map((k) =>
         k.id === keyId
           ? {
               ...k,
-              key: `sk_new_${Math.random().toString(36).substring(7)}...`,
+              key: masked,
               createdAt: new Date().toISOString().split('T')[0],
               lastUsed: undefined,
             }
@@ -78,33 +187,50 @@ export default function ApiKeysSettings() {
     )
     setShowRevokeConfirmation(null)
     setRevokeConfirmationText('')
+
+    setShowSecretModal({
+      title: 'API Key Rotated',
+      keyName: keyToRotate.name,
+      secret: newSecret,
+    })
   }
 
-  const activeKeysCount = apiKeys.filter(k => k.isActive).length;
-  const keyToRevoke = apiKeys.find(k => k.id === showRevokeConfirmation);
-  const isOnlyKey = activeKeysCount === 1 && keyToRevoke?.isActive;
-  const isRevokeConfirmed = revokeConfirmationText.trim() === keyToRevoke?.name;
+  const activeKeysCount = apiKeys.filter((k) => k.isActive).length
+  const keyToRevoke = apiKeys.find((k) => k.id === showRevokeConfirmation)
+  const isOnlyKey = activeKeysCount === 1 && keyToRevoke?.isActive
+  const isRevokeConfirmed = revokeConfirmationText.trim() === keyToRevoke?.name
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '0.5rem' }}>
+      <div
+        role="status"
+        aria-live="polite"
+        className={styles.srOnly}
+      >
+        {copyFeedback
+          ? copyFeedback.success
+            ? 'API key copied to clipboard'
+            : 'Copy failed — select and copy manually'
+          : ''}
+      </div>
+      <div className={styles.header}>
+        <h2 className={styles.title}>
           API Keys & Security
         </h2>
-        <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>
+        <p className={styles.subtitle}>
           Manage API keys, tokens, and security settings for your organization
         </p>
       </div>
 
       {/* Security Notice */}
-      <div style={{ background: '#1e293b', borderRadius: '6px', padding: '1rem', marginBottom: '2rem', border: '1px solid #3b82f6' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-          <Shield size={20} style={{ color: '#3b82f6', marginTop: '2px' }} />
+      <div className={styles.noticeCard}>
+        <div className={styles.noticeInner}>
+          <Shield size={20} className={styles.noticeIcon} />
           <div>
-            <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.875rem', fontWeight: 600, color: '#e2e8f0' }}>
+            <h4 className={styles.noticeTitle}>
               Security Best Practices
             </h4>
-            <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: '#94a3b8', lineHeight: '1.5' }}>
+            <ul className={styles.noticeList}>
               <li>Never share your API keys publicly or commit them to version control</li>
               <li>Use environment variables to store keys in your applications</li>
               <li>Regularly rotate keys and remove unused ones</li>
@@ -115,135 +241,98 @@ export default function ApiKeysSettings() {
       </div>
 
       {/* API Keys Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Key size={20} style={{ color: '#67d5f0' }} />
-          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#e2e8f0' }}>
+      <div className={styles.sectionHeader}>
+        <div className={styles.sectionTitleGroup}>
+          <Key size={20} className={styles.sectionIcon} />
+          <h3 className={styles.sectionTitle}>
             API Keys
           </h3>
-          <span style={{ background: '#2d2d44', color: '#94a3b8', fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
+          <span className={styles.countBadge}>
             {apiKeys.length} keys
           </span>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.5rem 1rem',
-            borderRadius: '6px',
-            border: '1px solid #2d2d44',
-            background: 'transparent',
-            color: '#e2e8f0',
-            fontSize: '0.875rem',
-            cursor: 'pointer',
+          onClick={() => {
+            resetCreateForm()
+            setShowCreateModal(true)
           }}
+          className={styles.createTriggerButton}
         >
           <Plus size={14} />
           Create API Key
         </button>
       </div>
 
-      {/* API Keys List */}
-      <div style={{ background: '#0a0a0a', borderRadius: '6px', border: '1px solid #2d2d44', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
+      {/* API Keys Table */}
+      <div className={styles.tableContainer}>
+        <table className={styles.table}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #2d2d44', background: '#1a1a2e' }}>
-              <th style={{ padding: '1rem 1.5rem', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 600 }}>Key Name</th>
-              <th style={{ padding: '1rem 1.5rem', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 600 }}>Secret Key</th>
-              <th style={{ padding: '1rem 1.5rem', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 600 }}>Scopes</th>
-              <th style={{ padding: '1rem 1.5rem', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 600 }}>Metadata</th>
-              <th style={{ padding: '1rem 1.5rem', color: '#94a3b8', fontSize: '0.875rem', fontWeight: 600, textAlign: 'right' }}>Actions</th>
+            <tr className={styles.tableHeadRow}>
+              <th className={styles.tableHeadCell}>Key Name</th>
+              <th className={styles.tableHeadCell}>Secret Key</th>
+              <th className={styles.tableHeadCell}>Scopes</th>
+              <th className={styles.tableHeadCell}>Metadata</th>
+              <th className={styles.tableHeadCellRight}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {apiKeys.map((key, index) => (
+            {apiKeys.map((key) => (
               <tr
                 key={key.id}
-                style={{
-                  borderBottom: index < apiKeys.length - 1 ? '1px solid #2d2d44' : 'none',
-                }}
+                className={styles.tableRow}
               >
-                <td style={{ padding: '1rem 1.5rem', verticalAlign: 'top' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                    <span style={{ fontSize: '1rem', fontWeight: 600, color: '#e2e8f0' }}>{key.name}</span>
+                <td className={styles.tableCell}>
+                  <div className={styles.keyNameRow}>
+                    <span className={styles.keyName}>{key.name}</span>
                     {key.isActive ? (
-                      <span style={{ background: '#10b981', color: '#fff', fontSize: '0.75rem', padding: '0.125rem 0.5rem', borderRadius: '4px', fontWeight: 500 }}>Active</span>
+                      <span className={[styles.statusBadge, styles.statusActive].join(' ')}>Active</span>
                     ) : (
-                      <span style={{ background: '#64748b', color: '#fff', fontSize: '0.75rem', padding: '0.125rem 0.5rem', borderRadius: '4px', fontWeight: 500 }}>Inactive</span>
+                      <span className={[styles.statusBadge, styles.statusInactive].join(' ')}>Inactive</span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  <div className={styles.createdAt}>
                     Created: {new Date(key.createdAt).toLocaleDateString()}
                   </div>
                 </td>
 
-                <td style={{ padding: '1rem 1.5rem', verticalAlign: 'top' }}>
-                  <div style={{
-                    fontFamily: 'monospace',
-                    fontSize: '0.875rem',
-                    color: '#e2e8f0',
-                    background: '#1a1a1a',
-                    padding: '0.375rem 0.5rem',
-                    borderRadius: '4px',
-                    display: 'inline-block'
-                  }}>
-                    {visibleKeys.has(key.id) ? key.key : '•'.repeat(16) + key.key.slice(-4)}
+                <td className={styles.tableCell}>
+                  <div className={styles.secretBox}>
+                    {key.key}
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <div className={styles.copyRow}>
                     <button
-                      onClick={() => toggleKeyVisibility(key.id)}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#67d5f0',
-                        fontSize: '0.75rem',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem'
-                      }}
-                    >
-                      {visibleKeys.has(key.id) ? <EyeOff size={12} /> : <Eye size={12} />}
-                      {visibleKeys.has(key.id) ? 'Hide' : 'Show'}
-                    </button>
-                    <button
-                      onClick={() => copyToClipboard(key.key)}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#67d5f0',
-                        fontSize: '0.75rem',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem'
-                      }}
+                      onClick={() => handleCopyKey(key.id, key.key)}
+                      className={styles.copyButton}
                     >
                       <Copy size={12} />
                       Copy
                     </button>
+                    {copyFeedback?.keyId === key.id && (
+                      <span
+                        className={[
+                          styles.copyFeedback,
+                          copyFeedback.success ? styles.copySuccess : styles.copyError,
+                        ].join(' ')}
+                      >
+                        {copyFeedback.success ? 'Copied!' : 'Copy failed — select and copy manually'}
+                      </span>
+                    )}
                   </div>
                 </td>
 
-                <td style={{ padding: '1rem 1.5rem', verticalAlign: 'top' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <td className={styles.tableCell}>
+                  <div className={styles.scopesList}>
                     {key.scopes.map((scope) => (
                       <span
                         key={scope}
-                        style={{
-                          padding: '0.25rem 0.5rem',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          fontWeight: 500,
-                          background:
-                            scope === 'admin' ? '#dc2626' :
-                            scope === 'write' ? '#2563eb' : '#64748b',
-                          color: '#fff',
-                        }}
+                        className={[
+                          styles.scopeBadge,
+                          scope === 'admin'
+                            ? styles.scopeAdmin
+                            : scope === 'write'
+                              ? styles.scopeWrite
+                              : styles.scopeRead,
+                        ].join(' ')}
                       >
                         {scope}
                       </span>
@@ -251,38 +340,28 @@ export default function ApiKeysSettings() {
                   </div>
                 </td>
 
-                <td style={{ padding: '1rem 1.5rem', verticalAlign: 'top' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                <td className={styles.tableCell}>
+                  <div className={styles.metadataList}>
+                    <div className={styles.metadataItem}>
                       <User size={12} /> <span>{key.createdBy}</span>
                     </div>
                     {key.lastUsed ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <div className={styles.metadataItem}>
                         <Calendar size={12} /> <span>Used {new Date(key.lastUsed).toLocaleDateString()}</span>
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: '#64748b' }}>
+                      <div className={styles.metadataMuted}>
                         <Calendar size={12} /> <span>Never used</span>
                       </div>
                     )}
                   </div>
                 </td>
 
-                <td style={{ padding: '1rem 1.5rem', verticalAlign: 'top', textAlign: 'right' }}>
+                <td className={styles.tableCellRight}>
                   <button
+                    ref={(el) => { if (el) revokeTriggerRefs.current.set(key.id, el) }}
                     onClick={() => setShowRevokeConfirmation(key.id)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      padding: '0.375rem 0.75rem',
-                      borderRadius: '4px',
-                      border: '1px solid #dc2626',
-                      background: 'transparent',
-                      color: '#ef4444',
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                    }}
+                    className={styles.revokeButton}
                   >
                     <Trash2 size={12} />
                     Revoke
@@ -292,7 +371,7 @@ export default function ApiKeysSettings() {
             ))}
             {apiKeys.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+                <td colSpan={5} className={styles.emptyCell}>
                   No API keys found. Create one to get started.
                 </td>
               </tr>
@@ -301,64 +380,204 @@ export default function ApiKeysSettings() {
         </table>
       </div>
 
-      {/* Create API Key Modal - Minimally changed just retaining structure */}
+      {/* Create API Key Modal */}
       {showCreateModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-        }}>
-          <div style={{
-            background: '#1a1a2e',
-            borderRadius: '8px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            border: '1px solid #2d2d44',
-          }}>
-            <h3 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0' }}>
+        <div
+          role="dialog"
+          aria-labelledby="create-modal-title"
+          className={styles.modalOverlay}
+        >
+          <div className={styles.modalCard}>
+            <h3
+              id="create-modal-title"
+              className={styles.modalTitle}
+            >
               Create API Key
             </h3>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '6px',
-                  border: '1px solid #2d2d44',
-                  background: 'transparent',
-                  color: '#94a3b8',
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                }}
+
+            <form onSubmit={handleCreateKey} noValidate>
+              {/* Key Name Input */}
+              <div className={styles.fieldGroup}>
+                <label
+                  htmlFor="create-key-name"
+                  className={styles.fieldLabel}
+                >
+                  Key Name <span className={styles.requiredMark}>*</span>
+                </label>
+                <input
+                  id="create-key-name"
+                  type="text"
+                  value={newKeyName}
+                  onChange={(e) => {
+                    setNewKeyName(e.target.value)
+                    if (formErrors.name) {
+                      setFormErrors((prev) => ({ ...prev, name: undefined }))
+                    }
+                  }}
+                  placeholder="e.g. Production Backend"
+                  className={[styles.input, formErrors.name ? styles.inputError : ''].filter(Boolean).join(' ')}
+                />
+                {formErrors.name && (
+                  <div role="alert" className={styles.errorText}>
+                    {formErrors.name}
+                  </div>
+                )}
+              </div>
+
+              {/* Scopes Checkboxes */}
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>
+                  Scopes <span className={styles.requiredMark}>*</span>
+                </label>
+                <div className={styles.scopesCheckboxGroup}>
+                  {AVAILABLE_SCOPES.map((scope) => (
+                    <label
+                      key={scope}
+                      htmlFor={'scope-' + scope}
+                      className={styles.checkboxLabel}
+                    >
+                      <input
+                        id={'scope-' + scope}
+                        type="checkbox"
+                        checked={newKeyScopes.includes(scope)}
+                        onChange={(e) => {
+                          const checked = e.target.checked
+                          setNewKeyScopes((prev) =>
+                            checked ? [...prev, scope] : prev.filter((s) => s !== scope)
+                          )
+                          if (formErrors.scopes) {
+                            setFormErrors((prev) => ({ ...prev, scopes: undefined }))
+                          }
+                        }}
+                        className={styles.checkbox}
+                      />
+                      <span className={styles.scopeLabelText}>{scope}</span>
+                    </label>
+                  ))}
+                </div>
+                {formErrors.scopes && (
+                  <div role="alert" className={styles.errorText}>
+                    {formErrors.scopes}
+                  </div>
+                )}
+              </div>
+
+              {/* Expiry Date (Optional) */}
+              <div className={styles.fieldGroupLast}>
+                <label
+                  htmlFor="create-key-expiry"
+                  className={styles.fieldLabel}
+                >
+                  Expiry Date (optional)
+                </label>
+                <input
+                  id="create-key-expiry"
+                  type="date"
+                  value={newKeyExpiry}
+                  onChange={(e) => {
+                    setNewKeyExpiry(e.target.value)
+                    if (formErrors.expiry) {
+                      setFormErrors((prev) => ({ ...prev, expiry: undefined }))
+                    }
+                  }}
+                  className={[styles.input, formErrors.expiry ? styles.inputError : ''].filter(Boolean).join(' ')}
+                />
+                {formErrors.expiry && (
+                  <div role="alert" className={styles.errorText}>
+                    {formErrors.expiry}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Actions */}
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  onClick={handleCloseCreateModal}
+                  className={styles.cancelButton}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={styles.primaryButton}
+                >
+                  <Key size={16} />
+                  Create Key
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Show-Once Secret Key Panel */}
+      {showSecretModal && (
+        <div
+          role="dialog"
+          aria-labelledby="secret-modal-title"
+          className={styles.modalOverlay}
+        >
+          <div className={styles.secretModalCard}>
+            <div className={styles.modalHeaderRow}>
+              <Shield size={24} className={styles.successIcon} />
+              <h3 id="secret-modal-title" className={styles.modalHeaderTitle}>
+                {showSecretModal.title}
+              </h3>
+            </div>
+
+            {/* Prominent warning notice */}
+            <div className={styles.warningBanner}>
+              <AlertTriangle size={18} className={styles.warningIcon} />
+              <div className={styles.warningBody}>
+                <strong className={styles.warningHeading}>
+                  {"Copy now — you won't see it again"}
+                </strong>
+                {"Please copy and store this API key in a secure location. For your security, this full key will not be shown again."}
+              </div>
+            </div>
+
+            <div className={styles.fieldGroupLast}>
+              <label
+                htmlFor="generated-secret-key"
+                className={styles.fieldLabelMuted}
               >
-                Cancel
-              </button>
+                Secret Key for <strong>{showSecretModal.keyName}</strong>
+              </label>
+              <div className={styles.secretInputRow}>
+                <input
+                  id="generated-secret-key"
+                  type="text"
+                  readOnly
+                  value={showSecretModal.secret}
+                  className={styles.secretInput}
+                />
+                <button
+                  type="button"
+                  aria-label="Copy secret key"
+                  onClick={() => {
+                    copyToClipboard(showSecretModal.secret)
+                    setCopiedSecret(true)
+                    setTimeout(() => setCopiedSecret(false), 2000)
+                  }}
+                  className={styles.copySecretButton}
+                >
+                  {copiedSecret ? <Check size={16} className={styles.successIcon} /> : <Copy size={16} />}
+                  {copiedSecret ? 'Copied!' : 'Copy Key'}
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.modalActions}>
               <button
-                onClick={() => setShowCreateModal(false)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #67d5f0, #5ce0b8)',
-                  color: '#fff',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
+                type="button"
+                onClick={() => {
+                  setShowSecretModal(null)
+                  setCopiedSecret(false)
                 }}
+                className={styles.primaryButton}
               >
-                <Key size={16} />
-                Create Key
+                Done
               </button>
             </div>
           </div>
@@ -371,128 +590,73 @@ export default function ApiKeysSettings() {
           role="dialog"
           aria-labelledby="revoke-modal-title"
           aria-describedby="revoke-modal-desc"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
+          className={styles.modalOverlay}
         >
-          <div style={{
-            background: '#1a1a2e',
-            borderRadius: '8px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            border: '1px solid #2d2d44',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-              <AlertTriangle size={24} style={{ color: '#ef4444' }} />
-              <h3 id="revoke-modal-title" style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0' }}>
+          <div className={styles.revokeModalCard}>
+            <div className={styles.modalHeaderRow}>
+              <AlertTriangle size={24} className={styles.dangerIcon} />
+              <h3 id="revoke-modal-title" className={styles.modalHeaderTitle}>
                 Revoke API Key
               </h3>
             </div>
 
-            <div id="revoke-modal-desc" style={{ margin: '0 0 1.5rem', color: '#94a3b8', lineHeight: '1.5', fontSize: '0.875rem' }}>
-              <p style={{ margin: '0 0 1rem' }}>
+            <div id="revoke-modal-desc" className={styles.revokeDesc}>
+              <p className={styles.revokeIntro}>
                 Are you sure you want to revoke <strong>{keyToRevoke.name}</strong>? This action cannot be undone.
               </p>
-              
-              <div style={{ background: '#2d1b1e', border: '1px solid #ef4444', borderRadius: '4px', padding: '0.75rem', marginBottom: '1rem' }}>
-                <strong style={{ color: '#ef4444', display: 'block', marginBottom: '0.5rem' }}>Consequences:</strong>
-                <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#fca5a5' }}>
+
+              <div className={styles.consequencesBox}>
+                <strong className={styles.consequencesTitle}>Consequences:</strong>
+                <ul className={styles.consequencesList}>
                   <li>Any applications or scripts using this key will immediately fail.</li>
                   <li>You will not be able to view or restore this key again.</li>
                   {isOnlyKey && (
-                    <li style={{ fontWeight: 600 }}>This is your only active key. API access will be completely disabled.</li>
+                    <li className={styles.onlyKeyWarning}>This is your only active key. API access will be completely disabled.</li>
                   )}
                 </ul>
               </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label htmlFor="revoke-confirm-input" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#e2e8f0' }}>
+              <div className={styles.fieldGroupCompact}>
+                <label htmlFor="revoke-confirm-input" className={styles.fieldLabel}>
                   Please type <strong>{keyToRevoke.name}</strong> to confirm.
                 </label>
                 <input
                   id="revoke-confirm-input"
+                  ref={revokeConfirmInputRef}
                   type="text"
                   dir="auto"
                   value={revokeConfirmationText}
                   onChange={(e) => setRevokeConfirmationText(e.target.value)}
                   placeholder={keyToRevoke.name}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '4px',
-                    border: '1px solid #2d2d44',
-                    background: '#0a0a0a',
-                    color: '#e2e8f0',
-                    fontSize: '0.875rem',
-                    boxSizing: 'border-box',
-                  }}
+                  className={styles.input}
                 />
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div className={styles.modalActions}>
               <button
                 onClick={() => {
-                  setShowRevokeConfirmation(null);
-                  setRevokeConfirmationText('');
+                  setShowRevokeConfirmation(null)
+                  setRevokeConfirmationText('')
                 }}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '6px',
-                  border: '1px solid #2d2d44',
-                  background: 'transparent',
-                  color: '#94a3b8',
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                }}
+                className={styles.cancelButton}
               >
                 Cancel
               </button>
-              
+
               <button
                 disabled={!isRevokeConfirmed}
                 onClick={() => handleRevokeAndRotateKey(keyToRevoke.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.375rem',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '6px',
-                  border: '1px solid #f59e0b',
-                  background: isRevokeConfirmed ? 'transparent' : 'rgba(245, 158, 11, 0.2)',
-                  color: isRevokeConfirmed ? '#f59e0b' : '#925e07',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: isRevokeConfirmed ? 'pointer' : 'not-allowed',
-                }}
+                className={styles.rotateButton}
               >
                 <RotateCcw size={16} />
                 Revoke & Rotate
               </button>
-              
+
               <button
                 disabled={!isRevokeConfirmed}
                 onClick={() => handleRevokeKey(keyToRevoke.id)}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: isRevokeConfirmed ? '#dc2626' : '#7f1d1d',
-                  color: isRevokeConfirmed ? '#fff' : '#ef4444',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: isRevokeConfirmed ? 'pointer' : 'not-allowed',
-                }}
+                className={styles.revokeConfirmButton}
               >
                 Revoke Key
               </button>

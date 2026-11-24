@@ -21,9 +21,9 @@
  * • Reduced-motion: animation suppressed
  */
 
-import { useRef, useState, useEffect, MouseEvent } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { AlertTriangle, ArrowRight, CheckCircle2, X, ExternalLink, Info } from 'lucide-react';
-import { useModalFocus } from '../hooks/useModalFocus';
+import Modal from './common/Modal';
 import './DowngradeConfirmModal.css';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -96,7 +96,6 @@ export default function DowngradeConfirmModal({
   comparePlansHref = '/plans',
   isLoading = false,
 }: DowngradeConfirmModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
   const initialFocusRef = useRef<HTMLButtonElement>(null);
   const checkboxRef = useRef<HTMLInputElement>(null);
 
@@ -106,10 +105,6 @@ export default function DowngradeConfirmModal({
   useEffect(() => {
     if (isOpen) setAcknowledged(false);
   }, [isOpen]);
-
-  useModalFocus(modalRef, { isOpen, onClose, initialFocusRef });
-
-  if (!isOpen) return null;
 
   const canConfirm = acknowledged && !isLoading;
 
@@ -127,27 +122,26 @@ export default function DowngradeConfirmModal({
     onConfirm();
   };
 
-  const handleOverlayClick = (e: MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      className="downgrade-modal-overlay"
-      onClick={handleOverlayClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="downgrade-modal-title"
-      aria-describedby="downgrade-modal-desc"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      unstyled
+      labelledBy="downgrade-modal-title"
+      describedBy="downgrade-modal-desc"
+      initialFocusRef={initialFocusRef}
+      closeOnBackdrop={!isLoading}
+      closeOnEscape={!isLoading}
+      busy={isLoading}
+      contentClassName="downgrade-modal-content"
     >
-      <div className="downgrade-modal-content" ref={modalRef}>
 
         {/* ── Close ───────────────────────────────────────────────────── */}
         <button
           className="downgrade-close-btn"
-          onClick={onClose}
+          onClick={() => { if (!isLoading) onClose(); }}
           aria-label="Close downgrade dialog"
           disabled={isLoading}
         >
@@ -292,7 +286,6 @@ export default function DowngradeConfirmModal({
             )}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

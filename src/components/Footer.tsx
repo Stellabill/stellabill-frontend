@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import Logo from "./Branding/Logo";
-import { Send, Check, Twitter, Github, Linkedin, ExternalLink } from "lucide-react";
+import { Send, Check, Github, ExternalLink } from "lucide-react";
+import { DOCS_URL, GITHUB_REPO_URL, SUPPORT_URL, DEMO_URL } from "../config/links";
 
 interface LinkItem {
   label: string;
@@ -17,22 +18,20 @@ interface FooterSectionProps {
 const PRODUCT_LINKS: LinkItem[] = [
   { label: "Features", href: "/#product" },
   { label: "Pricing", href: "/pricing" },
-  { label: "Smart Contracts", href: "https://github.com/stellarbill/contracts", isExternal: true },
-  { label: "Security", href: "/security" },
+  { label: "Dashboard (demo)", href: "/dashboard" },
+  { label: "Browse plans", href: "/browse-plans" },
 ];
 
 const RESOURCES_LINKS: LinkItem[] = [
-  { label: "Documentation", href: "https://docs.stellarbill.com", isExternal: true },
-  { label: "API Reference", href: "/#api" },
+  { label: "Documentation", href: DOCS_URL, isExternal: true },
+  { label: "Source code", href: GITHUB_REPO_URL, isExternal: true },
   { label: "Stellar Network", href: "https://stellar.org", isExternal: true },
-  { label: "Status Page", href: "https://status.stellarbill.com", isExternal: true },
+  { label: "Report an issue", href: SUPPORT_URL, isExternal: true },
 ];
 
 const LEGAL_LINKS: LinkItem[] = [
-  { label: "About Us", href: "/about" },
-  { label: "Privacy Policy", href: "/privacy" },
-  { label: "Terms of Service", href: "/terms" },
-  { label: "Cookie Policy", href: "/cookies" },
+  { label: "About prepaid balances", href: "/about-prepaid-balances" },
+  { label: "Brand pack", href: "/brand" },
 ];
 
 const FooterSection: React.FC<FooterSectionProps> = ({ title, links }) => (
@@ -112,20 +111,14 @@ const Footer: React.FC = () => {
               </form>
               {isSubscribed && (
                 <p className="text-teal-400 text-xs animate-in fade-in slide-in-from-top-1">
-                  Thanks for subscribing!
+                  Demo only: no email is stored.
                 </p>
               )}
             </div>
 
             <div className="flex items-center space-x-4">
-              <a href="#" className="p-2.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded-xl transition-all">
-                <Twitter size={20} />
-              </a>
-              <a href="#" className="p-2.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded-xl transition-all">
+              <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" aria-label="Stellabill on GitHub" className="p-2.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded-xl transition-all">
                 <Github size={20} />
-              </a>
-              <a href="#" className="p-2.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded-xl transition-all">
-                <Linkedin size={20} />
               </a>
             </div>
           </div>
@@ -143,10 +136,9 @@ const Footer: React.FC = () => {
           <p className="text-slate-500 text-sm">
             © {new Date().getFullYear()} Stellabill. Built on the Stellar Network.
           </p>
-          <div className="flex items-center gap-6">
-            <a href="#" className="text-slate-500 hover:text-slate-300 text-xs transition-colors">Security Status</a>
-            <a href="#" className="text-slate-500 hover:text-slate-300 text-xs transition-colors">Privacy choices</a>
-          </div>
+          <a href={DEMO_URL} target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-slate-300 text-xs transition-colors">
+            Live demo: stellabill-frontend-blush.vercel.app
+          </a>
         </div>
       </div>
     </footer>
@@ -154,4 +146,3 @@ const Footer: React.FC = () => {
 };
 
 export default Footer;
-;

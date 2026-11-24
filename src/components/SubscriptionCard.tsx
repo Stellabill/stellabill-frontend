@@ -23,6 +23,10 @@ interface SubscriptionCardProps {
   subscription: SubscriptionData;
 }
 
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest("button, a, [role='menu']") !== null;
+}
+
 /**
  * Detects if the device likely supports hover (i.e. not a touch-primary device).
  * On touch devices we rely on click to toggle; on desktop we use hover-with-delay.
@@ -213,7 +217,7 @@ export default function SubscriptionCard({ subscription }: SubscriptionCardProps
     cancelled: { label: 'Cancelled', icon: '✕', className: 'cancelled' }
   };
 
-  const currentStatus = statusConfig[status];
+  const currentStatus = statusConfig[status] || { label: 'Unknown', icon: '?', className: 'unknown' };
 
   /* ── Compute inline popover styles based on position ───────── */
   const getPopoverStyle = (): React.CSSProperties => {
@@ -272,10 +276,12 @@ export default function SubscriptionCard({ subscription }: SubscriptionCardProps
       onMouseLeave={() => {
         if (hoverCapable) closePopover(200);
       }}
-      onClick={() => {
-        togglePopover();
+      onClick={(e) => {
+        if (!isInteractiveTarget(e.target)) togglePopover();
       }}
-      onKeyDown={handleKeyDown}
+      onKeyDown={(e) => {
+        if (!isInteractiveTarget(e.target)) handleKeyDown(e);
+      }}
     >
       <div className="subscription-card-header">
         <div className="subscription-card-info">
@@ -334,11 +340,9 @@ export default function SubscriptionCard({ subscription }: SubscriptionCardProps
         </div>
       </div>
 
-      <div className="subscription-actions" onClick={(e) => e.stopPropagation()}>
-        <Link to={`/subscriptions/${id}`}>
-          <button className="manage-btn">
-            Manage
-          </button>
+      <div className="subscription-actions">
+        <Link to={`/subscriptions/${id}`} className="manage-btn">
+          Manage
         </Link>
         <a
           href={`/subscriptions/${id}`}
@@ -346,7 +350,6 @@ export default function SubscriptionCard({ subscription }: SubscriptionCardProps
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Open subscription in new tab"
-          onClick={(e) => e.stopPropagation()}
         >
           <span aria-hidden="true">↗</span>
         </a>
@@ -404,7 +407,6 @@ export default function SubscriptionCard({ subscription }: SubscriptionCardProps
             <Link
               to={`/subscriptions/${id}`}
               className="subscription-popover__cta"
-              onClick={(e) => e.stopPropagation()}
             >
               View details
               <svg

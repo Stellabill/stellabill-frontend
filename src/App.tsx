@@ -1,33 +1,99 @@
-import { Navigate, Routes, Route } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
+import { Navigate, Routes, Route, useLocation, Outlet } from "react-router-dom";
+import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
+import RequireWallet, { WalletReturnRedirect } from "./components/RequireWallet";
 import TransitionLayout from "./components/TransitionLayout";
-import Dashboard from "./pages/Dashboard";
-import Subscriptions from "./pages/Subscriptions";
-import SubscriptionDetail from "./pages/SubscriptionDetail"; // Fixed: Added missing import
-import Plans from "./pages/Plans";
-import CreatePlan from "./pages/CreatePlan";
-import UIMockups from "./pages/UIMockups";
-import Landing from "./pages/Landing";
-import BrowsePlans from "./pages/BrowsePlans";
-import OnboardingBusiness from "./pages/OnboardingBusiness";
-import OnboardingPayout from "./pages/OnboardingPayout";
-import OnboardingReviewPage from "./components/OnboardingReview";
-import UsageBilling from "./pages/UsageBilling";
-import OnboardingSuccess from "./pages/OnboardingSuccess";
-import GiftRedeemSuccess from "./pages/GiftRedeemSuccess";
-import RedeemGift from "./pages/RedeemGift";
-import AboutPrepaidBalances from "./components/AboutPrepaidBalances";
-import Pricing from "./pages/Pricing";
-import BrandPack from "./pages/BrandPack";
-import Settings from "./pages/Settings";
-import DesignTokens from "./pages/DesignTokens";
+import RouteErrorBoundary from "./components/RouteErrorBoundary";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Subscriptions = lazy(() => import("./pages/Subscriptions"));
+const SubscriptionDetail = lazy(() => import("./pages/SubscriptionDetail"));
+const MerchantPlans = lazy(() => import("./pages/MerchantPlans"));
+const CreatePlan = lazy(() => import("./pages/CreatePlan"));
+const Landing = lazy(() => import("./pages/Landing"));
+const BrowsePlans = lazy(() => import("./pages/BrowsePlans"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const OnboardingBusiness = lazy(() => import("./pages/OnboardingBusiness"));
+const OnboardingPayout = lazy(() => import("./pages/OnboardingPayout"));
+const OnboardingReviewPage = lazy(() => import("./components/OnboardingReview"));
+const UsageBilling = lazy(() => import("./pages/UsageBilling"));
+const OnboardingSuccess = lazy(() => import("./pages/OnboardingSuccess"));
+const GiftRedeemSuccess = lazy(() => import("./pages/GiftRedeemSuccess"));
+const RedeemGift = lazy(() => import("./pages/RedeemGift"));
+const AboutPrepaidBalances = lazy(() => import("./components/AboutPrepaidBalances"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const BrandPack = lazy(() => import("./pages/BrandPack"));
+const Settings = lazy(() => import("./pages/Settings"));
+const DesignTokens = lazy(() => import("./pages/DesignTokens"));
+const WalletDetailView = lazy(() => import("./pages/WalletDetailView"));
+
+const ONBOARDING_BUSINESS_KEY = "onboardingBusiness";
+
+function hasStoredBusiness(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = sessionStorage.getItem(ONBOARDING_BUSINESS_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as {
+      businessName?: unknown;
+      name?: unknown;
+      country?: unknown;
+    } | null;
+    if (!parsed || typeof parsed !== "object") return false;
+    const businessName =
+      typeof parsed.businessName === "string"
+        ? parsed.businessName.trim()
+        : typeof parsed.name === "string"
+          ? parsed.name.trim()
+          : "";
+    const country =
+      typeof parsed.country === "string" ? parsed.country.trim() : "";
+    return Boolean(businessName && country);
+  } catch {
+    return false;
+  }
+}
+
+function OnboardingPayoutGuard() {
+  if (!hasStoredBusiness()) {
+    return <Navigate to="/onboarding/business" replace />;
+  }
+  return <OnboardingPayout />;
+}
+
+function ScrollToHash() {
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (hash) {
+      const el = document.getElementById(hash.slice(1));
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+    }
+    window.scrollTo(0, 0);
+  }, [pathname, hash]);
+  return null;
+}
 
 function App() {
+  const location = useLocation();
   return (
+    <>
+    <ScrollToHash />
+    <WalletReturnRedirect />
+    <Suspense fallback={<div style={{ minHeight: '100vh' }} role="status" aria-label="Loading" />}>
     <Routes>
       {/* 1. Public Routes (No Layout) */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/landing" element={<Landing />} />
+      <Route
+        element={
+          <RouteErrorBoundary pathname={location.pathname}>
+            <Outlet />
+          </RouteErrorBoundary>
+        }
+      >
+      <Route path="/" element={<Landing />} />
+      <Route path="/landing" element={<Navigate to="/" replace />} />
       <Route path="/pricing" element={<Pricing />} />
       <Route
         path="/about-prepaid-balances"
@@ -38,11 +104,12 @@ function App() {
         element={<Navigate to="/onboarding/business" replace />}
       />
       <Route path="/onboarding/business" element={<OnboardingBusiness />} />
-      <Route path="/onboarding/payout" element={<OnboardingPayout />} />
+      <Route path="/onboarding/payout" element={<OnboardingPayoutGuard />} />
       <Route path="/onboarding/review" element={<OnboardingReviewPage />} />
       <Route path="/onboarding-success" element={<OnboardingSuccess />} />
       <Route path="/redeem-gift" element={<RedeemGift />} />
       <Route path="/gift-redeem-success" element={<GiftRedeemSuccess />} />
+      </Route>
 
       {/* 2. Authenticated Routes (Wrapped in Layout) */}
       <Route element={<Layout />}>
@@ -50,26 +117,38 @@ function App() {
           {/* Redirect base dashboard path to specific dashboard component if needed */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/browse-plans" element={<BrowsePlans />} />
+          <Route path="/checkout/:planId" element={<Checkout />} />
           {/* Plans Management */}
-          <Route path="/plans" element={<Plans />} />
+          <Route path="/plans" element={<MerchantPlans />} />
           <Route path="/plans/create" element={<CreatePlan />} />
-          <Route path="/plans/new" element={<CreatePlan />} />{" "}
-          {/* Alias for flexibility */}
+          <Route
+            path="/plans/new"
+            element={<Navigate to="/plans/create" replace />}
+          />
           {/* Subscriptions Management */}
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/subscriptions/:id" element={<SubscriptionDetail />} />
           <Route path="/subscriptions/:id/usage" element={<UsageBilling />} />
+          <Route path="/wallet" element={<WalletDetailView />} />
           <Route path="/settings" element={<Settings />} />
           {/* Development/UI Kit */}
-          <Route path="/ui-kit" element={<UIMockups />} />
           <Route path="/brand" element={<BrandPack />} />
           <Route path="/design-tokens" element={<DesignTokens />} />
         </Route>
       </Route>
 
       {/* 3. Catch-all redirect - Sends users back to the dashboard for safety */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="*"
+        element={
+          <RouteErrorBoundary pathname={location.pathname}>
+            <NotFound />
+          </RouteErrorBoundary>
+        }
+      />
     </Routes>
+    </Suspense>
+    </>
   );
 }
 
