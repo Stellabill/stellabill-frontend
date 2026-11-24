@@ -1,10 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   GIFT_CODE_REGEX,
+  canonicalCode,
   generateGiftCode,
   normalizeGiftCode,
   validateGiftCode,
+  type GiftCodeValidator,
 } from './giftCode';
+import {
+  MOCK_GIFT,
+  validateGiftCodeFixture,
+} from './giftCode.fixtures';
 
 const instant = { latencyMs: 0 };
 
@@ -149,5 +155,40 @@ describe('validateGiftCode', () => {
     if (result.status !== 'invalid') return;
     expect(result.reason).toBe('malformed');
     expect(result.code).toBeNull();
+  });
+
+  it('uses the fixture validator directly via giftCode.fixtures', async () => {
+    const result = await validateGiftCodeFixture('GIFT-ABC123-XYZ789', instant);
+
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.giftDetails).toMatchObject(MOCK_GIFT);
+  });
+
+  it('delegates to a custom GiftCodeValidator when provided', async () => {
+    const customValidator = vi.fn<GiftCodeValidator>(async (value) => ({
+      status: 'redeemed',
+      code: canonicalCode(value),
+    }));
+
+    const result = await validateGiftCode('GIFT-ABC123-XYZ789', {
+      validator: customValidator,
+      useFixtures: false,
+      latencyMs: 0,
+    });
+
+    expect(customValidator).toHaveBeenCalledWith('GIFT-ABC123-XYZ789', { latencyMs: 0 });
+    expect(result).toEqual({ status: 'redeemed', code: 'GIFT-ABC123-XYZ789' });
+  });
+
+  it('rejects well-formed codes when useFixtures is false and no validator is provided', async () => {
+    await expect(
+      validateGiftCode('GIFT-ABC123-XYZ789', { useFixtures: false }),
+    ).rejects.toThrow(/not configured/i);
+  });
+
+  it('still reports malformed codes when useFixtures is false', async () => {
+    const result = await validateGiftCode('INVALID', { useFixtures: false });
+    expect(result).toEqual({ status: 'invalid', code: null, reason: 'malformed' });
   });
 });
