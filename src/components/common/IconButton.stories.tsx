@@ -154,42 +154,22 @@ export const AllVariants: Story = {
   render: () => (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap gap-4 items-center">
-        <IconButton variant="primary" aria-label="Confirm selection">
-          <Check aria-hidden="true" />
-        </IconButton>
-        <IconButton variant="secondary" aria-label="Open settings">
-          <Settings aria-hidden="true" />
-        </IconButton>
-        <IconButton variant="ghost" aria-label="More options">
-          <MoreHorizontal aria-hidden="true" />
-        </IconButton>
-        <IconButton variant="outline" aria-label="Add item">
-          <Plus aria-hidden="true" />
-        </IconButton>
-        <IconButton variant="elevated" aria-label="Open settings">
-          <Settings aria-hidden="true" />
-        </IconButton>
-        <IconButton variant="inverse" aria-label="Close dialog">
-          <X aria-hidden="true" />
-        </IconButton>
+        <IconButton variant="primary" aria-label="Confirm selection" icon={<Check aria-hidden="true" />} />
+        <IconButton variant="secondary" aria-label="Open settings" icon={<Settings aria-hidden="true" />} />
+        <IconButton variant="ghost" aria-label="More options" icon={<MoreHorizontal aria-hidden="true" />} />
+        <IconButton variant="outline" aria-label="Add item" icon={<Plus aria-hidden="true" />} />
+        <IconButton variant="elevated" aria-label="Open settings" icon={<Settings aria-hidden="true" />} />
+        <IconButton variant="inverse" aria-label="Close dialog" icon={<X aria-hidden="true" />} />
       </div>
 
       <div className="flex flex-wrap gap-4 items-center">
-        <IconButton size="sm" aria-label="Add item">
-          <Plus aria-hidden="true" />
-        </IconButton>
-        <IconButton size="md" aria-label="Add item">
-          <Plus aria-hidden="true" />
-        </IconButton>
-        <IconButton size="lg" aria-label="Add item">
-          <Plus aria-hidden="true" />
-        </IconButton>
+        <IconButton size="sm" aria-label="Add item" icon={<Plus aria-hidden="true" />} />
+        <IconButton size="md" aria-label="Add item" icon={<Plus aria-hidden="true" />} />
+        <IconButton size="lg" aria-label="Add item" icon={<Plus aria-hidden="true" />} />
       </div>
 
       <div className="flex flex-wrap gap-4 items-center">
-        <IconButton isLoading aria-label="Saving changes">
-          <Plus aria-hidden="true" />
-        </IconButton>
+        <IconButton isLoading aria-label="Saving changes" icon={<Plus aria-hidden="true" />} />
       </div>
     </div>
   ),

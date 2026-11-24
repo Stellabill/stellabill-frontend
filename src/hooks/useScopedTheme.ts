@@ -27,8 +27,8 @@ import type { Theme } from './useTheme';
  */
 export function useScopedTheme<T extends HTMLElement = HTMLDivElement>(
   forcedTheme: Theme | null,
-): React.RefObject<T | null> {
-  const ref = useRef<T | null>(null);
+): React.RefObject<T> {
+  const ref = useRef<T>(null);
 
   useEffect(() => {
     const el = ref.current;

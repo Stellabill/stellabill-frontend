@@ -1,3 +1,27 @@
+/**
+ * ReactivationModal
+ *
+ * Confirm modal for reactivating a previously cancelled subscription.
+ * Surfaces only when reactivation is possible within the support window
+ * (planDeleted=false AND windowExpired=false).
+ *
+ * Features
+ * ─────────
+ * • Plan summary card (name, interval, price)
+ * • Start-date picker: "Start today" | "Same billing day" | "Custom date"
+ * • Microcopy explaining billing-day rounding
+ * • Deleted-plan warning (read-only, blocks confirm)
+ * • Expired-window banner (read-only, blocks confirm)
+ * • Full keyboard nav + focus trap via useModalFocus
+ * • WCAG 2.1 AA: role=dialog, aria-modal, aria-labelledby/describedby,
+ *   aria-pressed on date options, aria-live loading state, all icons aria-hidden
+ * • Responsive: single-column on mobile
+ * • RTL-safe
+ */
+
+import { useRef, useState, useEffect } from 'react';
+import Modal from './common/Modal';
+import DatePickerCalendar from './DatePickerCalendar';
 import { useRef, MouseEvent } from 'react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import ReactivationDateSection from './ReactivationDateSection';
@@ -53,11 +77,11 @@ export default function ReactivationModal({
   isLoading = false,
   maxDaysAhead = 90,
 }: ReactivationModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
   const initialFocusRef = useRef<HTMLButtonElement>(null);
   const { mode, setMode, customDate, setCustomDate } =
     useReactivationDateState(isOpen);
 
+  // ── Derived state ──────────────────────────────────────────────────────────
   useModalFocus(modalRef, {
     isOpen,
     onClose,
@@ -97,16 +121,19 @@ export default function ReactivationModal({
   };
 
   return (
-    <div
-      className="reactivation-modal-overlay"
-      onClick={(e: MouseEvent<HTMLDivElement>) =>
-        e.target === e.currentTarget && handleDismiss()
-      }
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="reactivation-modal-title"
-      aria-describedby="reactivation-modal-description"
+    <Modal
+      isOpen={isOpen}
+      onClose={handleDismiss}
+      unstyled
+      labelledBy="reactivation-modal-title"
+      describedBy="reactivation-modal-description"
+      initialFocusRef={initialFocusRef}
+      closeOnBackdrop={!isLoading}
+      closeOnEscape={!isLoading}
+      busy={isLoading}
+      contentClassName="reactivation-modal-content"
     >
+        {/* Close */}
       <div
         className="reactivation-modal-content"
         ref={modalRef}
@@ -210,7 +237,6 @@ export default function ReactivationModal({
             )}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

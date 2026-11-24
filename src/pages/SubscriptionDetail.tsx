@@ -1,7 +1,8 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useCommandScope } from '../hooks/useCommandScope';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useSubscriptionActions } from '../hooks/useSubscriptionActions';
 import type { CommandItem } from '../components/CommandPalette';
 import RecentPayments from '../components/RecentPayments';
 import UsageThisPeriod from '../components/UsageThisPeriod';
@@ -29,6 +30,7 @@ const REACTIVATION_WINDOW_DAYS = 30;
 export default function SubscriptionDetail() {
     usePageTitle('Subscription Details');
     const { id } = useParams();
+    const navigate = useNavigate();
 
     // ── Subscription fetch state ──────────────────────────────────────────────
     const [subscriptionData, setSubscriptionData] = useState<Subscription | null>(null);
@@ -57,7 +59,18 @@ export default function SubscriptionDetail() {
 
     // ── Downgrade state ───────────────────────────────────────────────────────
     const [isDowngradeModalOpen, setIsDowngradeModalOpen] = useState(false);
-    const [isDowngrading, setIsDowngrading] = useState(false);
+
+    const {
+        pendingAction,
+        isPending,
+        toasts,
+        removeToast,
+        downgrade,
+        reactivate,
+    } = useSubscriptionActions();
+
+    const isReactivating = pendingAction === 'reactivate';
+    const isDowngrading = pendingAction === 'downgrade';
 
     const downgradeLostFeatures: PlanFeature[] = [
         { id: 'api-calls',   label: 'Unlimited API calls (limited to 10k/mo on Basic)' },
@@ -67,21 +80,37 @@ export default function SubscriptionDetail() {
     ];
 
     const handleDowngradeConfirm = async () => {
-        setIsDowngrading(true);
-        try {
-            console.log('Downgrading subscription', id, 'to Basic plan');
-            await new Promise(resolve => setTimeout(resolve, 1200));
-            setIsDowngradeModalOpen(false);
-        } catch (err) {
-            console.error('Downgrade failed:', err);
-        } finally {
-            setIsDowngrading(false);
-        }
+        if (!id) return;
+        const previousSnapshot = subscriptionData;
+        await downgrade(
+            id,
+            { planName: 'Basic' },
+            {
+                onOptimistic: () => {
+                    setSubscriptionData((prev) =>
+                        prev
+                            ? {
+                                  ...prev,
+                                  planName: 'Basic',
+                                  price: 20,
+                                  amount: 20,
+                              }
+                            : prev,
+                    );
+                },
+                onRollback: () => {
+                    setSubscriptionData(previousSnapshot);
+                },
+                onSuccess: () => {
+                    setIsDowngradeModalOpen(false);
+                },
+            },
+        );
     };
 
-    const handleViewFullUsage = () => {
-        navigate(`/subscriptions/${id}/usage`);
-    };
+    const handleViewFullUsage = useCallback(() => {
+        navigate('/subscriptions/' + String(id) + '/usage');
+    }, [navigate, id]);
 
     // Reactivation goes through the typed subscriptions client. Errors keep
     // the modal open and are surfaced in an alert under the header.
@@ -118,8 +147,6 @@ export default function SubscriptionDetail() {
         { label: 'Quarterly', value: 'quarterly' },
         { label: 'Yearly', value: 'yearly' },
     ];
-
-    const navigate = useNavigate();
 
     // ── Fetch subscription on mount / id change ───────────────────────────────
     useEffect(() => {
@@ -278,7 +305,7 @@ export default function SubscriptionDetail() {
         });
 
         return actions;
-    }, [showReactivateCTA, subscriptionStatus, navigate]);
+    }, [showReactivateCTA, subscriptionStatus, navigate, handleViewFullUsage]);
     
     useCommandScope(`Subscription ${id || 'Detail'}`, scopedActions);
 
@@ -617,6 +644,8 @@ export default function SubscriptionDetail() {
                 comparePlansHref="/plans"
                 isLoading={isDowngrading}
             />
+
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
         </div>
     );
 }

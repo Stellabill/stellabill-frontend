@@ -63,6 +63,28 @@ export function useTags() {
     saveTagsStore(store);
   }, [store]);
 
+  // Sync state when another browser tab writes to the same storage key.
+  // The `storage` event is only fired in *other* tabs, so applying it here
+  // keeps every open tab in sync without echoing the write back.
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleStorage = (event: StorageEvent) => {
+      // `event.key` is null when the whole storage was cleared.
+      if (event.key !== STORAGE_KEY && event.key !== null) {
+        return;
+      }
+      setStore(loadTagsStore());
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
   /**
    * Find an existing tag by normalized label match
    * Returns null if no match found
