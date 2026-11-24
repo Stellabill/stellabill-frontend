@@ -244,6 +244,104 @@ describe('useProductTour', () => {
     });
   });
 
+  describe('Storage failure resilience', () => {
+    const throwSecurityError = () => {
+      throw new DOMException('Storage disabled', 'SecurityError');
+    };
+
+    it('should render without throwing when getItem throws', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(throwSecurityError);
+
+      expect(() => renderHook(() => useProductTour())).not.toThrow();
+    });
+
+    it('should fall back to in-memory defaults when reads throw', async () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(throwSecurityError);
+
+      const { result } = renderHook(() => useProductTour());
+
+      act(() => {
+        vi.advanceTimersByTime(800);
+      });
+
+      await waitFor(() => {
+        expect(result.current.isOpen).toBe(true);
+      });
+    });
+
+    it('should keep completion state in memory when setItem throws', () => {
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(throwSecurityError);
+
+      const { result } = renderHook(() => useProductTour());
+
+      expect(() => {
+        act(() => {
+          result.current.completeTour();
+        });
+      }).not.toThrow();
+
+      expect(result.current.showCompletion).toBe(true);
+    });
+
+    it('should dismiss the open tour in memory when setItem throws', () => {
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(throwSecurityError);
+
+      const { result } = renderHook(() => useProductTour());
+
+      act(() => {
+        result.current.startTour();
+      });
+
+      expect(result.current.isOpen).toBe(true);
+
+      expect(() => {
+        act(() => {
+          result.current.dismissTour();
+        });
+      }).not.toThrow();
+
+      expect(result.current.isOpen).toBe(false);
+    });
+
+    it('should keep dismiss and reset state in memory when storage writes throw', () => {
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(throwSecurityError);
+      vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(throwSecurityError);
+
+      const { result } = renderHook(() => useProductTour());
+
+      expect(() => {
+        act(() => {
+          result.current.dismissTour();
+          result.current.completeTour();
+          result.current.resetTour();
+        });
+      }).not.toThrow();
+
+      expect(result.current.isOpen).toBe(false);
+      expect(result.current.showCompletion).toBe(false);
+    });
+
+    it('should still run the TOUR_VERSION reset when getItem throws', () => {
+      const getItemSpy = vi
+        .spyOn(Storage.prototype, 'getItem')
+        .mockImplementation(throwSecurityError);
+      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+
+      renderHook(() => useProductTour());
+
+      expect(getItemSpy).toHaveBeenCalledWith('sb:tour-completed-version');
+      expect(setItemSpy).toHaveBeenCalledWith('sb:tour-completed-version', '1.0');
+    });
+
+    it('should not throw when every storage operation throws', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(throwSecurityError);
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(throwSecurityError);
+      vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(throwSecurityError);
+
+      expect(() => renderHook(() => useProductTour())).not.toThrow();
+    });
+  });
+
   describe('Edge cases', () => {
     it('should handle localStorage errors gracefully', () => {
       // Mock localStorage to throw errors

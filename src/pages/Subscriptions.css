@@ -321,6 +321,26 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.subs-table__plan-cell:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.subs-table__plan-copy,
+.subs-table__plan-name,
+.subs-table__merchant {
+  display: block;
 }
 
 .subs-table__plan-icon {

@@ -148,8 +148,14 @@
   [class*="notification"],
   [class*="snackbar"],
   [data-print="hide"],
-  .no-print {
+  .no-print,
+  .pdf-thumbnail-navigator,
+  .pdf-mobile-chip-container {
     display: none !important;
+  }
+
+  .invoice-preview-page--hidden {
+    display: block !important;
   }
 
   /* ── Layout: collapse sidebar shell to a simple block flow ───────────── */

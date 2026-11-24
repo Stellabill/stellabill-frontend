@@ -1,7 +1,7 @@
 import SwipeableRow, { type SwipeAction } from "../components/SwipeableRow";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import PauseSubscriptionModal from "../components/PauseSubscriptionModal";
 import CancelSubscriptionModal from "../components/CancelSubscriptionModal";
 import TopUpModal from "../components/TopUpModal";
@@ -13,7 +13,8 @@ import ErrorState from "../components/ErrorState";
 import Tag from "../components/Tag";
 import AddTagPopover, { TagOption } from "../components/AddTagPopover";
 import { usePageTitle } from '../hooks/usePageTitle';
-import { ToastContainer, type ToastOptions } from "../components/TransactionToast";
+import { ToastContainer } from "../components/TransactionToast";
+import { useSubscriptionActions, type SubscriptionActionError } from "../hooks/useSubscriptionActions";
 import { useRefresh } from "../hooks/useRefresh";
 import { useFlip } from "../hooks/useFlip";
 import { useTags } from "../hooks/useTags";
@@ -44,7 +45,10 @@ function coverageLabel(count: number): string {
 
 type StatusType = "Active" | "Paused" | "Cancelled";
 
-type SortField = "planName" | "price" | "nextCharge" | "status";
+const STATUS_FILTERS = ["All", "Active", "Paused", "Cancelled"] as const;
+const SORT_FIELDS = ["planName", "price", "status", "nextCharge"] as const;
+
+type SortField = (typeof SORT_FIELDS)[number];
 type SortDirection = "asc" | "desc";
 
 interface SortState {
@@ -55,6 +59,10 @@ interface SortState {
 interface SubscriptionActionError {
 	message: string;
 	technicalDetails?: string;
+}
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+	return target instanceof Element && target.closest("button, a, [role='menu']") !== null;
 }
 
 function getActionError(error: unknown, fallbackMessage: string): SubscriptionActionError {
@@ -236,17 +244,18 @@ function StatusBadge({ status }: { status: StatusType }) {
 const SKELETON_ROWS = 4;
 
 function SkeletonTable() {
+	const { t } = useTranslation();
 	return (
-		<div className="subs-loading-wrapper" aria-busy="true" aria-label="Loading subscriptions" role="status">
-			<table className="subs-table" aria-label="Loading subscriptions">
+		<div className="subs-loading-wrapper" aria-busy="true" aria-label={t('aria.loadingSubscriptions')} role="status">
+			<table className="subs-table" aria-label={t('aria.loadingSubscriptions')}>
 				<thead>
 				<tr>
-					<th scope="col">Plan</th>
-					<th scope="col">Status</th>
-					<th scope="col">Price</th>
-					<th scope="col">Next Charge</th>
-					<th scope="col">Prepaid Balance</th>
-					<th scope="col">Actions</th>
+					<th scope="col">{t('subscriptions.table.plan')}</th>
+					<th scope="col">{t('subscriptions.table.status')}</th>
+					<th scope="col">{t('subscriptions.table.price')}</th>
+					<th scope="col">{t('subscriptions.table.nextCharge')}</th>
+					<th scope="col">{t('subscriptions.table.prepaidBalance')}</th>
+					<th scope="col">{t('subscriptions.table.actions')}</th>
 				</tr>
 				</thead>
 				<tbody>
@@ -275,8 +284,9 @@ function SkeletonTable() {
 }
 
 function SkeletonCards() {
+	const { t } = useTranslation();
 	return (
-		<div className="subs-loading-cards" aria-busy="true" aria-label="Loading subscriptions" role="status">
+		<div className="subs-loading-cards" aria-busy="true" aria-label={t('aria.loadingSubscriptions')} role="status">
 			{Array.from({ length: SKELETON_ROWS }).map((_, i) => (
 				<div key={i} className="subs-loading-card" aria-hidden="true">
 					<div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
@@ -392,47 +402,55 @@ const FIXTURE_DATA: SubscriptionWithIcon[] = [
 export default function Subscriptions() {
   usePageTitle('Subscriptions');
 	const { t } = useTranslation();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const statusParam = searchParams.get("status");
+	const activeFilter = STATUS_FILTERS.find((status) => status === statusParam) ?? "All";
+	const sortParam = searchParams.get("sort");
+	const sort = useMemo<SortState>(() => {
+		const [fieldParam, direction, extra] = sortParam?.split("-") ?? [];
+		const field = SORT_FIELDS.find((candidate) => candidate === fieldParam);
+		if (!field || (direction !== "asc" && direction !== "desc") || extra !== undefined) {
+			return { field: "planName", direction: "asc" };
+		}
+		return { field, direction };
+	}, [sortParam]);
+
 	const [data, setData] = useState<SubscriptionWithIcon[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<ApiError | null>(null);
-	const [activeFilter, setActiveFilter] = useState("All");
 	const [selectedId, setSelectedId] = useState<string | null>(null);
-	const [sort, setSort] = useState<SortState>({ field: "planName", direction: "asc" });
 
 	const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
 	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 	const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
-	const [isActionLoading, setIsActionLoading] = useState(false);
 	const [pauseError, setPauseError] = useState<SubscriptionActionError | null>(null);
 	const [cancelError, setCancelError] = useState<SubscriptionActionError | null>(null);
-	const [resumeLoadingId, setResumeLoadingId] = useState<string | null>(null);
-	const [toasts, setToasts] = useState<ToastOptions[]>([]);
-	const toastId = useRef(0);
 
-	const addToast = (status: ToastOptions["status"], title: string, message?: string) => {
-		toastId.current += 1;
-		const id = `subscription-${toastId.current}`;
-		setToasts((prev) => [...prev, { id, status, title, message }]);
-		return id;
+	const {
+		pendingAction,
+		pendingId,
+		isPending: isActionLoading,
+		toasts,
+		removeToast,
+		pause,
+		cancel,
+		resume,
+	} = useSubscriptionActions();
+
+	const resumeLoadingId = pendingAction === "resume" ? pendingId : null;
+
+	const updateSearchParam = useCallback((key: "status" | "sort", value: string) => {
+		setSearchParams((current) => {
+			const next = new URLSearchParams(current);
+			next.set(key, value);
+			return next;
+		}, { replace: true });
+	}, [setSearchParams]);
+
+	const handleSortField = (field: SortField) => {
+		const direction = sort.field === field && sort.direction === "asc" ? "desc" : "asc";
+		updateSearchParam("sort", `${field}-${direction}`);
 	};
-
-	const updateToast = (id: string, status: ToastOptions["status"], title: string, message?: string) => {
-		setToasts((prev) =>
-			prev.map((toast) => toast.id === id ? { ...toast, status, title, message } : toast),
-		);
-	};
-
-	const removeToast = (id: string) => {
-		setToasts((prev) => prev.filter((toast) => toast.id !== id));
-	};
-
-	const handleSortField = useCallback((field: SortField) => {
-		setSort((prev) =>
-			prev.field === field
-				? { field, direction: prev.direction === "asc" ? "desc" : "asc" }
-				: { field, direction: "asc" },
-		);
-	}, []);
 
 	const abortRef = useRef<AbortController | null>(null);
 
@@ -442,6 +460,7 @@ export default function Subscriptions() {
 			: 0;
 		return {
 			...sub,
+			status: normalizeStatus(sub.status),
 			icon: <IconCloud />,
 			prepaidBalance: balance,
 			coveragePayments: coveragePaymentsFor(balance, sub.price),
@@ -530,14 +549,17 @@ export default function Subscriptions() {
 		[selectedId],
 	);
 
-	const handleViewFullUsage = () => {
-		/* TODO: Navigate to full usage page */
-	};
+	const handleViewFullUsage = useCallback(() => {
+		if (!selectedId) return;
+		navigate('/subscriptions/' + selectedId + '/usage');
+	}, [navigate, selectedId]);
 
 	const filteredData = useMemo(() => {
 		const filtered = activeFilter === "All" ? data : data.filter((sub) => sub.status === activeFilter);
 		return sortSubscriptions(filtered, sort);
 	}, [activeFilter, data, sort]);
+
+	const listAnnouncement = `${filteredData.length} ${filteredData.length === 1 ? "subscription" : "subscriptions"}, sorted by ${SORT_LABELS[sort.field]} ${sort.direction === "asc" ? "ascending" : "descending"}, filter ${activeFilter}.`;
 
 	// FLIP animation — keys must match the render order
 	const flipKeys = useMemo(() => filteredData.map((s) => s.id), [filteredData]);
@@ -604,44 +626,64 @@ export default function Subscriptions() {
 
 	const handlePauseConfirm = async () => {
 		if (!selectedId) return;
-		setIsActionLoading(true);
+		const targetId = selectedId;
+		const prevSub = data.find((s) => s.id === targetId);
+		const prevStatus = prevSub?.status ?? "Active";
 		setPauseError(null);
-		try {
-			await subscriptions.pause(selectedId);
-			setData((prev) =>
-				prev.map((sub) =>
-					sub.id === selectedId ? { ...sub, status: "Paused" as const } : sub,
-				),
-			);
-			addToast("success", "Subscription paused", "Your subscription has been paused.");
-			setIsPauseModalOpen(false);
-		} catch (err) {
-			setPauseError(getActionError(err, "Failed to pause subscription. Please try again."));
-		} finally {
-			setIsActionLoading(false);
-		}
+		await pause(targetId, {
+			onOptimistic: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === targetId ? { ...sub, status: "Paused" as const } : sub,
+					),
+				);
+			},
+			onRollback: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === targetId ? { ...sub, status: prevStatus } : sub,
+					),
+				);
+			},
+			onSuccess: () => {
+				setIsPauseModalOpen(false);
+			},
+			onError: (err) => {
+				setPauseError(err);
+			},
+		});
 	};
 
 	const handleCancelConfirm = async () => {
 		if (!selectedId) return;
-		setIsActionLoading(true);
+		const targetId = selectedId;
+		const prevSub = data.find((s) => s.id === targetId);
+		const prevStatus = prevSub?.status ?? "Active";
 		setCancelError(null);
-		try {
-			await subscriptions.cancel(selectedId);
-			setData((prev) =>
-				prev.map((sub) =>
-					sub.id === selectedId
-						? { ...sub, status: "Cancelled" as const }
-						: sub,
-				),
-			);
-			addToast("success", "Subscription cancelled", "Your subscription has been cancelled.");
-			setIsCancelModalOpen(false);
-		} catch (err) {
-			setCancelError(getActionError(err, "Failed to cancel subscription. Please try again."));
-		} finally {
-			setIsActionLoading(false);
-		}
+		await cancel(targetId, {
+			onOptimistic: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === targetId
+							? { ...sub, status: "Cancelled" as const }
+							: sub,
+					),
+				);
+			},
+			onRollback: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === targetId ? { ...sub, status: prevStatus } : sub,
+					),
+				);
+			},
+			onSuccess: () => {
+				setIsCancelModalOpen(false);
+			},
+			onError: (err) => {
+				setCancelError(err);
+			},
+		});
 	};
 
 	const handleOfferSelected = (offerId: string) => {
@@ -657,23 +699,25 @@ export default function Subscriptions() {
 	};
 
 	const handleResume = async (id: string) => {
-		if (resumeLoadingId !== null) return;
-		setResumeLoadingId(id);
-		const pendingToastId = addToast("pending", "Resuming subscription", "Please wait while we resume your subscription.");
-		try {
-			await subscriptions.resume(id);
-			setData((prev) =>
-				prev.map((sub) =>
-					sub.id === id ? { ...sub, status: "Active" as const } : sub,
-				),
-			);
-			updateToast(pendingToastId, "success", "Subscription resumed", "Your subscription is active again.");
-		} catch (err) {
-			const actionError = getActionError(err, "Failed to resume subscription. Please try again.");
-			updateToast(pendingToastId, "error", actionError.message, actionError.technicalDetails);
-		} finally {
-			setResumeLoadingId(null);
-		}
+		if (isActionLoading) return;
+		const prevSub = data.find((s) => s.id === id);
+		const prevStatus = prevSub?.status ?? "Paused";
+		await resume(id, {
+			onOptimistic: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === id ? { ...sub, status: "Active" as const } : sub,
+					),
+				);
+			},
+			onRollback: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === id ? { ...sub, status: prevStatus } : sub,
+					),
+				);
+			},
+		});
 	};
 
 	/* ── Loading state ─────────────────────────────────────────── */
@@ -830,9 +874,10 @@ export default function Subscriptions() {
 						<div className="detail-actions-sidebar">
 							<h4>Actions</h4>
 							<div className="action-btn-stack">
-								{selectedSub.status === "Active" && (
+								{selectedSub.status === "Active" && resumeLoadingId !== selectedSub.id && (
 									<button
 										className="detail-action-btn detail-action-btn--pause"
+										disabled={isActionLoading}
 										onClick={() => {
 											setPauseError(null);
 											setIsPauseModalOpen(true);
@@ -841,11 +886,11 @@ export default function Subscriptions() {
 										Pause subscription
 									</button>
 								)}
-								{selectedSub.status === "Paused" && (
+								{(selectedSub.status === "Paused" || resumeLoadingId === selectedSub.id) && (
 									<button
 										className="detail-action-btn detail-action-btn--resume"
 										onClick={() => handleResume(selectedSub.id)}
-										disabled={resumeLoadingId !== null}
+										disabled={isActionLoading}
 										aria-label={`Resume ${selectedSub.planName} subscription`}>
 										{resumeLoadingId === selectedSub.id ? "Resuming..." : "Resume subscription"}
 									</button>
@@ -853,6 +898,7 @@ export default function Subscriptions() {
 								{selectedSub.status !== "Cancelled" && (
 									<button
 										className="detail-action-btn"
+										disabled={isActionLoading}
 										onClick={() => {
 											setCancelError(null);
 											setIsCancelModalOpen(true);
@@ -950,18 +996,27 @@ export default function Subscriptions() {
 
 			{/* Filter tabs */}
 			<div className="filter-tabs" role="group" aria-label="Filter subscriptions by status">
-				{(["All", "Active", "Paused", "Cancelled"] as const).map((tab) => (
+				{STATUS_FILTERS.map((tab) => (
 					<button
 						key={tab}
 						id={`filter-tab-${tab.toLowerCase()}`}
 						className={`filter-tab${activeFilter === tab ? " active" : ""}`}
-						onClick={() => setActiveFilter(tab)}
+						onClick={() => updateSearchParam("status", tab)}
 						aria-pressed={activeFilter === tab}
 						aria-label={t('subscriptions.tabAriaLabel', { label: tab, count: stats[tab] })}>
 						{t(`subscriptions.tabs.${tab.toLowerCase()}`)} <span>({stats[tab]})</span>
 					</button>
 				))}
 			</div>
+
+			<span
+				className="visually-hidden"
+				role="status"
+				aria-live="polite"
+				aria-atomic="true"
+				data-testid="subscriptions-list-live-region">
+				{listAnnouncement}
+			</span>
 
 			{/* Empty state */}
 			{filteredData.length === 0 ? (
@@ -976,18 +1031,10 @@ export default function Subscriptions() {
 						data-testid="sort-toolbar">
 						<span className="sort-toolbar__label" id="sort-toolbar-label">Sort by:</span>
 						<div className="sort-toolbar__buttons" aria-labelledby="sort-toolbar-label">
-							{(["planName", "price", "status", "nextCharge"] as SortField[]).map((f) => (
+							{SORT_FIELDS.map((f) => (
 								<SortButton key={f} field={f} sort={sort} onSort={handleSortField} />
 							))}
 						</div>
-						{/* Accessible live announcement for sort changes */}
-						<span
-							className="visually-hidden"
-							role="status"
-							aria-live="polite"
-							aria-atomic="true">
-							{`Sorted by ${SORT_LABELS[sort.field]}, ${sort.direction === "asc" ? "ascending" : "descending"}`}
-						</span>
 					</div>
 
 					{/* ── Desktop table ─────────────────────────────────── */}
@@ -1001,7 +1048,7 @@ export default function Subscriptions() {
 								<th scope="col">{t('subscriptions.table.plan')}</th>
 								<th scope="col">{t('subscriptions.table.status')}</th>
 								<th scope="col">{t('subscriptions.table.price')}</th>
-								<th scope="col">Tags</th>
+								<th scope="col">{t('subscriptions.table.tags')}</th>
 								<th scope="col">{t('subscriptions.table.nextCharge')}</th>
 								<th scope="col">{t('subscriptions.table.prepaidBalance')}</th>
 								<th scope="col">
@@ -1015,27 +1062,25 @@ export default function Subscriptions() {
 								<tr
 									key={sub.id}
 									{...getItemProps(sub.id)}
-									tabIndex={0}
 									aria-label={`${sub.planName} by ${sub.merchantName}, ${sub.status}`}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") {
-											e.preventDefault();
-											setSelectedId(sub.id);
-										}
-									}}
-									onClick={() => setSelectedId(sub.id)}
-									role="button">
+									onClick={(e) => {
+										if (!isInteractiveTarget(e.target)) setSelectedId(sub.id);
+									}}>
 									{/* Plan cell */}
 									<td>
-										<div className="subs-table__plan-cell">
-											<div className="subs-table__plan-icon" aria-hidden="true">
+										<button
+											type="button"
+											className="subs-table__plan-cell"
+											onClick={() => setSelectedId(sub.id)}
+											aria-label={`Open ${sub.planName}`}>
+											<span className="subs-table__plan-icon" aria-hidden="true">
 												{sub.icon}
-											</div>
-											<div>
-												<div className="subs-table__plan-name">{sub.planName}</div>
-												<div className="subs-table__merchant">{sub.merchantName}</div>
-											</div>
-										</div>
+											</span>
+											<span className="subs-table__plan-copy">
+												<span className="subs-table__plan-name">{sub.planName}</span>
+												<span className="subs-table__merchant">{sub.merchantName}</span>
+											</span>
+										</button>
 									</td>
 
 									{/* Status */}
@@ -1053,7 +1098,7 @@ export default function Subscriptions() {
 
 									{/* Tags */}
 									<td>
-										<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+										<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
 											{sub.tags?.slice(0, 2).map((tag) => (
 												<Tag
 													key={tag.id}
@@ -1093,14 +1138,12 @@ export default function Subscriptions() {
 
 									{/* Actions */}
 									<td>
-										<div className="subs-table__actions" onClick={(e) => e.stopPropagation()}>
+										<div className="subs-table__actions">
 											<button
+												type="button"
 												className="subs-table__btn subs-table__btn--primary"
 												id={`manage-btn-${sub.id}`}
-												onClick={(e) => {
-													e.stopPropagation();
-													setSelectedId(sub.id);
-												}}
+												onClick={() => setSelectedId(sub.id)}
 												aria-label={`Manage ${sub.planName}`}>
 												{t('subscriptions.table.manage')}
 											</button>
@@ -1163,26 +1206,28 @@ export default function Subscriptions() {
 							const leadingActions: SwipeAction[] = [];
 							const trailingActions: SwipeAction[] = [];
 
-							if (sub.status === "Active") {
+							if (sub.status === "Active" && resumeLoadingId !== sub.id) {
 								trailingActions.push({
 									id: "pause",
 									label: "Pause",
 									icon: <IconPause />,
 									backgroundColor: "#f59e0b", // amber-500
 									color: "#fff",
+									disabled: isActionLoading,
 									onClick: () => {
 										setSelectedId(sub.id);
 										setPauseError(null);
 										setIsPauseModalOpen(true);
 									}
 								});
-							} else if (sub.status === "Paused") {
+							} else if (sub.status === "Paused" || resumeLoadingId === sub.id) {
 								trailingActions.push({
 									id: "resume",
 									label: resumeLoadingId === sub.id ? "Resuming..." : "Resume",
 									icon: <IconPlay />,
 									backgroundColor: "#10b981", // emerald-500
 									color: "#fff",
+									disabled: isActionLoading,
 									onClick: () => handleResume(sub.id)
 								});
 							}
@@ -1194,6 +1239,7 @@ export default function Subscriptions() {
 									icon: <IconX />,
 									backgroundColor: "#ef4444", // red-500
 									color: "#fff",
+									disabled: isActionLoading,
 									onClick: () => {
 										setSelectedId(sub.id);
 										setCancelError(null);
@@ -1209,6 +1255,8 @@ export default function Subscriptions() {
 									tabIndex={-1}
 									role="button"
 									aria-label={`${sub.planName} – ${sub.status}. Tap to manage.`}
+									onClick={(e) => {
+										if (!isInteractiveTarget(e.target)) setSelectedId(sub.id);
 									onClick={() => setSelectedId(sub.id)}
 									onKeyDown={(e) => {
 										if (e.key === "Enter" || e.key === " ") {
@@ -1281,12 +1329,10 @@ export default function Subscriptions() {
 											</span>
 										</span>
 										<button
+											type="button"
 											className="subs-table__btn subs-table__btn--primary"
 											id={`manage-card-btn-${sub.id}`}
-											onClick={(e) => {
-												e.stopPropagation();
-												setSelectedId(sub.id);
-											}}
+											onClick={() => setSelectedId(sub.id)}
 											aria-label={`Open ${sub.planName} from card`}>
 											Manage
 										</button>

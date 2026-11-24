@@ -85,6 +85,12 @@
   display: block;
 }
 
+.revenue-chart-empty-state {
+  padding: var(--space-8) var(--space-4);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
 .grid-line {
   stroke: var(--chart-grid);
   stroke-width: 1;

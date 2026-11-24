@@ -2,12 +2,13 @@ import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Routes, Route, useLocation, Outlet } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
+import RequireWallet, { WalletReturnRedirect } from "./components/RequireWallet";
 import TransitionLayout from "./components/TransitionLayout";
 import RouteErrorBoundary from "./components/RouteErrorBoundary";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const SubscriptionDetail = lazy(() => import("./pages/SubscriptionDetail"));
-const Plans = lazy(() => import("./pages/Plans"));
+const MerchantPlans = lazy(() => import("./pages/MerchantPlans"));
 const CreatePlan = lazy(() => import("./pages/CreatePlan"));
 const Landing = lazy(() => import("./pages/Landing"));
 const BrowsePlans = lazy(() => import("./pages/BrowsePlans"));
@@ -68,6 +69,7 @@ function App() {
   return (
     <>
     <ScrollToHash />
+    <WalletReturnRedirect />
     <Suspense fallback={<div style={{ minHeight: '100vh' }} role="status" aria-label="Loading" />}>
     <Routes>
       {/* 1. Public Routes (No Layout) */}
@@ -105,7 +107,7 @@ function App() {
           <Route path="/browse-plans" element={<BrowsePlans />} />
           <Route path="/checkout/:planId" element={<Checkout />} />
           {/* Plans Management */}
-          <Route path="/plans" element={<Plans />} />
+          <Route path="/plans" element={<MerchantPlans />} />
           <Route path="/plans/create" element={<CreatePlan />} />
           <Route path="/plans/new" element={<CreatePlan />} />{" "}
           {/* Alias for flexibility */}

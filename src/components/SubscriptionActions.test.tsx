@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SubscriptionActions from './SubscriptionActions';
 
@@ -143,6 +143,14 @@ describe('SubscriptionActions', () => {
         expect(btn.tagName).toBe('BUTTON');
       });
     });
+
+    it('disables all action buttons while an action is pending', () => {
+      render(<SubscriptionActions isPending />);
+      const buttons = screen.getAllByRole('button');
+      buttons.forEach((btn) => {
+        expect(btn).toBeDisabled();
+      });
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -207,7 +215,9 @@ describe('SubscriptionActions', () => {
       await user.click(screen.getByRole('button', { name: /view usage/i }));
       expect(onViewUsage).toHaveBeenCalledOnce();
       // Sheet should be closed after action
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
     });
 
     it('calls onCancelSubscription via sheet', async () => {

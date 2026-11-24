@@ -17,6 +17,7 @@ export interface Subscription {
   nextCharge: string;
   subscribedSince: string;
   icon?: string;
+  prepaidBalance?: number;
   /** Optional detail fields returned by GET /subscriptions/:id. */
   trialEndsAt?: string | null;
   cancelledAt?: string | null;

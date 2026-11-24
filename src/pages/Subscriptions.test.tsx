@@ -1,9 +1,16 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom';
+import { subscriptions } from '../api/client';
+import type { Subscription } from '../types/subscription';
 import { MemoryRouter } from 'react-router-dom';
 import { subscriptions } from '../api/client';
 import type { Subscription } from '@/types/subscription';
 import Subscriptions from './Subscriptions';
+
+const mockNavigate = vi.fn();
 
 /* ─── Module mocks ──────────────────────────────────────────── */
 
@@ -11,6 +18,7 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
     ...actual,
+    useNavigate: () => mockNavigate,
     Link: ({ children, to, className, id }: Record<string, unknown>) => (
       <a href={to as string} className={className as string} id={id as string}>{children as React.ReactNode}</a>
     ),
@@ -29,6 +37,8 @@ vi.mock('../api/client', () => ({
     pause: vi.fn().mockResolvedValue({ success: true }),
     cancel: vi.fn().mockResolvedValue({ success: true }),
     resume: vi.fn().mockResolvedValue({ success: true }),
+    reactivate: vi.fn().mockResolvedValue({ success: true }),
+    downgrade: vi.fn().mockResolvedValue({ success: true }),
     list: vi.fn().mockResolvedValue({ subscriptions: [] }),
   },
   ApiError: class ApiError extends Error {
@@ -36,6 +46,10 @@ vi.mock('../api/client', () => ({
     technicalDetails?: string;
     isOffline?: boolean;
   },
+}));
+
+vi.mock('../utils/amount', () => ({
+  formatAmount: (value: number) => ({ number: String(value), currency: 'USDC' }),
 }));
 
 vi.mock('../components/PauseSubscriptionModal', () => ({
@@ -85,7 +99,14 @@ vi.mock('../components/CancelSubscriptionModal', () => ({
 }));
 
 vi.mock('../components/UsageThisPeriod', () => ({
-  default: () => <div data-testid="usage-this-period">Usage This Period</div>,
+  default: ({ onViewFullUsage }: { onViewFullUsage?: () => void }) => (
+    <div data-testid="usage-this-period">
+      Usage This Period
+      {onViewFullUsage && (
+        <button onClick={onViewFullUsage}>View full usage</button>
+      )}
+    </div>
+  ),
 }));
 
 vi.mock('../components/ErrorState', () => ({
@@ -99,7 +120,7 @@ vi.mock('../components/ErrorState', () => ({
 
 /* ─── Helpers ───────────────────────────────────────────────── */
 
-const FIXTURE_SUBSCRIPTIONS: Subscription[] = [
+const FIXTURE_SUBSCRIPTIONS: (Subscription & { prepaidBalance: number })[] = [
   {
     id: 'SUB-001',
     planName: 'Premium Access',
@@ -111,6 +132,7 @@ const FIXTURE_SUBSCRIPTIONS: Subscription[] = [
     nextCharge: '2025-02-01',
     prepaidBalance: 30,
     lastPayment: '2025-01-01',
+    subscribedSince: '2025-01-01',
   },
   {
     id: 'SUB-002',
@@ -123,6 +145,7 @@ const FIXTURE_SUBSCRIPTIONS: Subscription[] = [
     nextCharge: '2025-02-05',
     prepaidBalance: 50,
     lastPayment: '2025-01-05',
+    subscribedSince: '2025-01-05',
   },
   {
     id: 'SUB-003',
@@ -135,6 +158,7 @@ const FIXTURE_SUBSCRIPTIONS: Subscription[] = [
     nextCharge: '2025-02-10',
     prepaidBalance: 15,
     lastPayment: '2025-01-10',
+    subscribedSince: '2025-01-10',
   },
   {
     id: 'SUB-004',
@@ -147,13 +171,21 @@ const FIXTURE_SUBSCRIPTIONS: Subscription[] = [
     nextCharge: '2025-02-15',
     prepaidBalance: 0,
     lastPayment: '2025-01-15',
+    subscribedSince: '2025-01-15',
   },
 ];
 
-function renderSubscriptions() {
+function RouterState() {
+  const { search } = useLocation();
+  const navigationType = useNavigationType();
+  return <div data-testid="subscription-search" data-navigation-type={navigationType}>{search}</div>;
+}
+
+function renderSubscriptions(initialEntry = '/subscriptions') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Subscriptions />
+      <RouterState />
     </MemoryRouter>,
   );
 }
@@ -169,8 +201,8 @@ async function advanceTimersAndFlush(ms = 2000) {
 }
 
 /** Render the page and wait for the data table to appear. */
-async function renderAndLoad() {
-  const utils = renderSubscriptions();
+async function renderAndLoad(initialEntry?: string) {
+  const utils = renderSubscriptions(initialEntry);
   await advanceTimersAndFlush();
   await waitFor(
     () => expect(screen.getByTestId('subscriptions-table')).toBeInTheDocument(),
@@ -306,6 +338,28 @@ describe('Subscriptions page', () => {
     });
 
     it('ignores a late response from a superseded refresh (race)', async () => {
+      let resolveSecond: (value: { subscriptions: Subscription[] }) => void = () => {};
+      const secondPromise = new Promise<{ subscriptions: Subscription[] }>(res => {
+        resolveSecond = res;
+      });
+      vi.mocked(subscriptions.list)
+        .mockResolvedValueOnce({ subscriptions: FIXTURE_SUBSCRIPTIONS })
+        .mockReturnValueOnce(secondPromise)
+        .mockResolvedValueOnce({ subscriptions: FIXTURE_SUBSCRIPTIONS });
+
+      await renderAndLoad();
+
+      // First refresh starts in-flight secondPromise while data.length > 0
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
+        await Promise.resolve();
+      });
+
+      // Second refresh supersedes secondPromise
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
+        await Promise.resolve();
+      });
       await renderAndLoad();
 
       let resolveStale: (value: { subscriptions: Subscription[] }) => void = () => {};
@@ -322,8 +376,9 @@ describe('Subscriptions page', () => {
       fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
       await advanceTimersAndFlush();
 
-      // Now resolve the stale first request with different data.
+      // Now resolve the stale second request with different data.
       await act(async () => {
+        resolveSecond({
         resolveStale({
           subscriptions: [
             {
@@ -425,6 +480,45 @@ describe('Subscriptions page', () => {
     });
   });
 
+  describe('Subscription URL state', () => {
+    it('restores the status and sort direction from a deep link', async () => {
+      await renderAndLoad('/subscriptions?status=Active&sort=price-desc');
+
+      expect(screen.getByRole('button', { name: /show active subscriptions/i }))
+        .toHaveAttribute('aria-pressed', 'true');
+      const [first, second] = within(screen.getByTestId('subscriptions-table'))
+        .getAllByRole('button', { name: / by /i });
+      expect(first).toHaveTextContent('Pro Plan');
+      expect(second).toHaveTextContent('Premium Access');
+      expect(screen.queryByText('Basic Stream')).not.toBeInTheDocument();
+    });
+
+    it('replaces the URL when status or sort changes and preserves unrelated parameters', async () => {
+      await renderAndLoad('/subscriptions?view=compact&sort=price-desc');
+      const search = screen.getByTestId('subscription-search');
+
+      fireEvent.click(screen.getByRole('button', { name: /show paused subscriptions/i }));
+      expect(search).toHaveTextContent('?view=compact&sort=price-desc&status=Paused');
+      expect(search).toHaveAttribute('data-navigation-type', 'REPLACE');
+
+      fireEvent.click(screen.getByRole('button', { name: /sort by price/i }));
+      expect(search).toHaveTextContent('?view=compact&sort=price-asc&status=Paused');
+      expect(search).toHaveAttribute('data-navigation-type', 'REPLACE');
+    });
+
+    it('uses the default filter and sort for invalid parameters', async () => {
+      await renderAndLoad('/subscriptions?status=Unknown&sort=price-sideways');
+
+      expect(screen.getByRole('button', { name: /show all subscriptions/i }))
+        .toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: /sort by plan name, currently ascending/i }))
+        .toHaveAttribute('aria-pressed', 'true');
+
+      fireEvent.click(screen.getByRole('button', { name: /sort by plan name/i }));
+      expect(screen.getByTestId('subscription-search')).toHaveTextContent('sort=planName-desc');
+    });
+  });
+
   /* ── Filter tabs ──────────────────────────────────────────── */
   describe('Filter tabs', () => {
     it('renders all four filter tabs', async () => {
@@ -500,6 +594,33 @@ describe('Subscriptions page', () => {
       fireEvent.click(screen.getByRole('button', { name: /show active subscriptions/i }));
       expect(screen.queryByText(/no subscriptions yet/i)).not.toBeInTheDocument();
     });
+
+    it('announces the filtered subscription count and status', async () => {
+      await renderAndLoad();
+
+      fireEvent.click(screen.getByRole('button', { name: /show paused subscriptions/i }));
+
+      expect(screen.getByTestId('subscriptions-list-live-region')).toHaveTextContent(
+        '1 subscription, sorted by Plan name ascending, filter Paused.',
+      );
+    });
+  });
+
+  describe('List change announcements', () => {
+    it('announces the sort field and direction outside the subscriptions list', async () => {
+      await renderAndLoad();
+
+      fireEvent.click(screen.getByRole('button', { name: /sort by price/i }));
+
+      const liveRegion = screen.getByTestId('subscriptions-list-live-region');
+      expect(liveRegion).toHaveClass('visually-hidden');
+      expect(liveRegion).toHaveAttribute('role', 'status');
+      expect(liveRegion).toHaveAttribute('aria-live', 'polite');
+      expect(liveRegion).toHaveTextContent(
+        '4 subscriptions, sorted by Price ascending, filter All.',
+      );
+      expect(liveRegion.closest('.subs-table-wrapper')).toBeNull();
+    });
   });
 
   /* ── Empty state ──────────────────────────────────────────── */
@@ -518,42 +639,49 @@ describe('Subscriptions page', () => {
 
   /* ── Keyboard row navigation ──────────────────────────────── */
   describe('Keyboard row navigation', () => {
-    it('all table rows have tabIndex=0', async () => {
+    it('provides a real button to open each subscription', async () => {
       await renderAndLoad();
-      const rows = document.querySelectorAll('.subs-table tbody tr');
-      expect(rows.length).toBeGreaterThan(0);
-      rows.forEach(row => expect(row).toHaveAttribute('tabindex', '0'));
+      expect(screen.getByRole('button', { name: /open premium access/i })).toBeInTheDocument();
     });
 
-    it('Enter key on a row opens the detail view', async () => {
+    it.each(['{Enter}', '{Space}'])('opens a subscription from its semantic button with %s', async (key) => {
+      await renderAndLoad();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const openButton = screen.getByRole('button', { name: /open premium access/i });
+
+      openButton.focus();
+      await user.keyboard(key);
+
+      expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument();
+    });
+
+    it('clicking a row opens the detail view', async () => {
       await renderAndLoad();
       const rows = document.querySelectorAll('.subs-table tbody tr');
-      fireEvent.keyDown(rows[0], { key: 'Enter' });
+      fireEvent.click(rows[0]);
       await waitFor(() =>
         expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
       );
     });
 
-    it('Space key on a row opens the detail view', async () => {
+    it('clicking an action opens its subscription without activating the row handler', async () => {
       await renderAndLoad();
-      const rows = document.querySelectorAll('.subs-table tbody tr');
-      fireEvent.keyDown(rows[0], { key: ' ' });
+      fireEvent.click(screen.getByRole('button', { name: /manage premium access/i }));
       await waitFor(() =>
         expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
       );
     });
 
-    it('other keys (e.g. ArrowDown) do not navigate', async () => {
+    it('Enter on an action does not bubble to the row', async () => {
       await renderAndLoad();
-      const rows = document.querySelectorAll('.subs-table tbody tr');
-      fireEvent.keyDown(rows[0], { key: 'ArrowDown' });
+      fireEvent.keyDown(screen.getByRole('button', { name: /manage premium access/i }), { key: 'Enter' });
       expect(screen.queryByText('Back to all subscriptions')).not.toBeInTheDocument();
     });
   });
 
   /* ── Detail view ──────────────────────────────────────────── */
   describe('Detail view', () => {
-    async function openDetail(planName: string, subId: string) {
+    async function openDetail(planName: string) {
       await renderAndLoad();
       const btn = screen.getByRole('button', { name: new RegExp(`manage ${planName}`, 'i') });
       fireEvent.click(btn);
@@ -563,19 +691,21 @@ describe('Subscriptions page', () => {
     }
 
     it('shows the plan name as an h1', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       expect(
         screen.getByRole('heading', { name: /premium access/i, level: 1 }),
       ).toBeInTheDocument();
     });
 
-    it('shows the UsageThisPeriod component', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+    it('shows the UsageThisPeriod component and navigates to full usage page when requested', async () => {
+      await openDetail('Premium Access');
       expect(screen.getByTestId('usage-this-period')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /view full usage/i }));
+      expect(mockNavigate).toHaveBeenCalledWith('/subscriptions/SUB-001/usage');
     });
 
     it('"Back to all subscriptions" returns to list', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       fireEvent.click(screen.getByText('Back to all subscriptions'));
       await waitFor(() =>
         expect(screen.getByTestId('subscriptions-table')).toBeInTheDocument(),
@@ -583,7 +713,7 @@ describe('Subscriptions page', () => {
     });
 
     it('breadcrumb "My subscriptions" button returns to list', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       fireEvent.click(screen.getByRole('button', { name: /back to my subscriptions/i }));
       await waitFor(() =>
         expect(screen.getByTestId('subscriptions-table')).toBeInTheDocument(),
@@ -591,7 +721,7 @@ describe('Subscriptions page', () => {
     });
 
     it('Active sub shows Pause and Cancel billing buttons', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       expect(
         screen.getByRole('button', { name: /pause premium access subscription/i }),
       ).toBeInTheDocument();
@@ -633,7 +763,7 @@ describe('Subscriptions page', () => {
     });
 
     it('detail shows price and billing interval', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       expect(screen.getByText(/10/)).toBeInTheDocument();
       expect(screen.getByText(/per month/i)).toBeInTheDocument();
     });
@@ -692,11 +822,36 @@ describe('Subscriptions page', () => {
       await openPauseModal();
       fireEvent.click(screen.getByRole('button', { name: /confirm pause/i }));
 
-      expect(await screen.findByText('Action Failed')).toBeInTheDocument();
+      expect(await screen.findAllByText('Action Failed')).not.toHaveLength(0);
       expect(screen.getByText('Technical details')).toBeInTheDocument();
-      expect(screen.getByText('Pause could not be completed.')).toBeInTheDocument();
+      expect(screen.getAllByText('Pause could not be completed.').length).toBeGreaterThan(0);
       expect(screen.getByRole('dialog', { name: /pause subscription/i })).toBeInTheDocument();
       expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument();
+    });
+
+    it('optimistically sets status to Paused and rolls back to Active on failure', async () => {
+      const { subscriptions: apiSubs } = await import('../api/client');
+      let rejectPause!: (err: Error) => void;
+      vi.mocked(apiSubs.pause).mockImplementationOnce(
+        () => new Promise((_, reject) => {
+          rejectPause = reject;
+        }),
+      );
+      await openPauseModal();
+      fireEvent.click(screen.getByRole('button', { name: /confirm pause/i }));
+
+      // Optimistically updated while pending
+      expect(screen.getByRole('status', { name: /status: paused/i })).toBeInTheDocument();
+
+      await act(async () => {
+        rejectPause(new Error('Pause network failure'));
+      });
+
+      // Rolled back to Active and error toast displayed
+      await waitFor(() =>
+        expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument(),
+      );
+      expect(screen.getAllByText('Pause network failure').length).toBeGreaterThan(0);
     });
   });
 
@@ -752,11 +907,36 @@ describe('Subscriptions page', () => {
       await openCancelModal();
       fireEvent.click(screen.getByRole('button', { name: /confirm cancel/i }));
 
-      expect(await screen.findByText('Action Failed')).toBeInTheDocument();
+      expect(await screen.findAllByText('Action Failed')).not.toHaveLength(0);
       expect(screen.getByText('Technical details')).toBeInTheDocument();
-      expect(screen.getByText('Cancellation could not be completed.')).toBeInTheDocument();
+      expect(screen.getAllByText('Cancellation could not be completed.').length).toBeGreaterThan(0);
       expect(screen.getByRole('dialog', { name: /cancel subscription/i })).toBeInTheDocument();
       expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument();
+    });
+
+    it('optimistically sets status to Cancelled and rolls back to Active on failure', async () => {
+      const { subscriptions: apiSubs } = await import('../api/client');
+      let rejectCancel!: (err: Error) => void;
+      vi.mocked(apiSubs.cancel).mockImplementationOnce(
+        () => new Promise((_, reject) => {
+          rejectCancel = reject;
+        }),
+      );
+      await openCancelModal();
+      fireEvent.click(screen.getByRole('button', { name: /confirm cancel/i }));
+
+      // Optimistically updated while pending
+      expect(screen.getByRole('status', { name: /status: cancelled/i })).toBeInTheDocument();
+
+      await act(async () => {
+        rejectCancel(new Error('Cancel network failure'));
+      });
+
+      // Rolled back to Active and error toast displayed
+      await waitFor(() =>
+        expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument(),
+      );
+      expect(screen.getAllByText('Cancel network failure').length).toBeGreaterThan(0);
     });
   });
 
@@ -780,7 +960,8 @@ describe('Subscriptions page', () => {
         screen.getByRole('button', { name: /resume basic stream subscription/i }),
       );
       expect(screen.getByText('Resuming...')).toBeInTheDocument();
-      expect(screen.getByRole('status', { name: /status: paused/i })).toBeInTheDocument();
+      // Optimistically set to Active while pending
+      expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument();
 
       await act(async () => {
         resolveResume({ success: true });
@@ -824,7 +1005,8 @@ describe('Subscriptions page', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
 
       expect(screen.getByText('Resuming subscription')).toBeInTheDocument();
-      expect(screen.getAllByRole('status', { name: /status: paused/i }).length).toBeGreaterThan(0);
+      // SUB-003 is optimistically Active while pending
+      expect(screen.queryAllByRole('status', { name: /status: paused/i })).toHaveLength(0);
       await act(async () => {
         resolveResume({ success: true });
       });
@@ -983,6 +1165,10 @@ describe('Subscriptions page', () => {
 
     it('visually-hidden "Actions" text is present for screen readers', async () => {
       await renderAndLoad();
+      const hidden = Array.from(document.querySelectorAll('.visually-hidden')).find(
+        (el) => el.textContent === 'Actions',
+      );
+      expect(hidden).toBeDefined();
       const table = screen.getByRole('table', { name: /my subscriptions/i });
       const hidden = table.querySelector('.visually-hidden');
       expect(hidden).toBeInTheDocument();
