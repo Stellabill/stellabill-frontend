@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     PlusCircle,
     PlayCircle,
@@ -11,6 +11,7 @@ import {
     ChevronUp,
     CreditCard
 } from 'lucide-react';
+import styles from './PlanStatusTimeline.module.css';
 
 /* ─── Types ─────────────────────────────────────────────────── */
 
@@ -30,64 +31,6 @@ interface PlanStatusTimelineProps {
     events?: TimelineEvent[];
 }
 
-/* ─── Mock Data ─────────────────────────────────────────────── */
-
-const MOCK_EVENTS: TimelineEvent[] = [
-    {
-        id: '1',
-        type: 'Created',
-        status: 'Subscription created',
-        actor: 'Chukwuemeka',
-        timestamp: 'Feb 10, 2026, 10:30 AM'
-    },
-    {
-        id: '2',
-        type: 'Activated',
-        status: 'Plan activated',
-        actor: 'System',
-        timestamp: 'Feb 10, 2026, 10:31 AM'
-    },
-    {
-        id: '3',
-        type: 'Payment',
-        status: 'Payment successful',
-        actor: 'System',
-        timestamp: 'Feb 15, 2026, 09:00 AM',
-        details: '10 USDC - Period: Feb 15 - Mar 15'
-    },
-    {
-        id: '4',
-        type: 'Paused',
-        status: 'Subscription paused',
-        actor: 'Chukwuemeka',
-        timestamp: 'Mar 01, 2026, 02:45 PM',
-        details: 'User requested pause due to travel'
-    },
-    {
-        id: '5',
-        type: 'Resumed',
-        status: 'Subscription resumed',
-        actor: 'Chukwuemeka',
-        timestamp: 'Mar 10, 2026, 11:20 AM'
-    },
-    {
-        id: '6',
-        type: 'Payment',
-        status: 'Payment successful',
-        actor: 'System',
-        timestamp: 'Mar 15, 2026, 09:00 AM',
-        details: '10 USDC - Period: Mar 15 - Apr 15'
-    },
-    {
-        id: '7',
-        type: 'Cancelled',
-        status: 'Subscription cancelled',
-        actor: 'Chukwuemeka',
-        timestamp: 'Mar 20, 2026, 04:15 PM',
-        details: 'End of contract'
-    }
-];
-
 const EVENT_FILTERS = [
     { label: 'All activity', value: 'All' },
     { label: 'User actions', value: 'User' },
@@ -95,23 +38,34 @@ const EVENT_FILTERS = [
     { label: 'Payments', value: 'Payment' }
 ];
 
+const EVENT_ICON_CLASS: Record<TimelineEventType, string> = {
+    Created: styles.iconCreated,
+    Activated: styles.iconActivated,
+    Paused: styles.iconPaused,
+    Resumed: styles.iconResumed,
+    Cancelled: styles.iconCancelled,
+    Payment: styles.iconPayment
+};
+const EMPTY_EVENTS: TimelineEvent[] = [];
+
 const EventIcon = ({ type }: { type: TimelineEventType }) => {
     const iconSize = 16;
+    const className = EVENT_ICON_CLASS[type] ?? styles.iconCreated;
     switch (type) {
         case 'Created':
-            return <PlusCircle size={iconSize} color="#94a3b8" />;
+            return <PlusCircle size={iconSize} className={className} />;
         case 'Activated':
-            return <PlayCircle size={iconSize} color="#34d399" />;
+            return <PlayCircle size={iconSize} className={className} />;
         case 'Paused':
-            return <PauseCircle size={iconSize} color="#fbbf24" />;
+            return <PauseCircle size={iconSize} className={className} />;
         case 'Resumed':
-            return <RefreshCw size={iconSize} color="#60a5fa" />;
+            return <RefreshCw size={iconSize} className={className} />;
         case 'Cancelled':
-            return <XCircle size={iconSize} color="#fb7185" />;
+            return <XCircle size={iconSize} className={className} />;
         case 'Payment':
-            return <CreditCard size={iconSize} color="#818cf8" />;
+            return <CreditCard size={iconSize} className={className} />;
         default:
-            return <PlusCircle size={iconSize} color="#94a3b8" />;
+            return <PlusCircle size={iconSize} className={className} />;
     }
 };
 
@@ -124,7 +78,7 @@ const TimelineFilterChips = ({
 }) => {
     return (
         <div
-            style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}
+            className={styles.filterGroup}
             role="group"
             aria-label="Filter timeline events"
         >
@@ -134,19 +88,8 @@ const TimelineFilterChips = ({
                     type="button"
                     onClick={() => setFilter(filter.value)}
                     aria-pressed={activeFilter === filter.value}
-                    style={{
-                        padding: '0.55rem 1rem',
-                        borderRadius: '999px',
-                        fontSize: '0.88rem',
-                        fontWeight: 600,
-                        transition: 'all 0.2s ease',
-                        backgroundColor: activeFilter === filter.value ? '#00D3F3' : 'rgba(31, 41, 55, 0.6)',
-                        color: activeFilter === filter.value ? '#000' : '#cbd5e1',
-                        border: '1px solid',
-                        borderColor: activeFilter === filter.value ? '#00D3F3' : 'rgba(71, 85, 105, 0.35)',
-                        cursor: 'pointer',
-                        outline: 'none'
-                    }}
+                    data-active={activeFilter === filter.value}
+                    className={styles.chip}
                 >
                     {filter.label}
                 </button>
@@ -163,67 +106,36 @@ const TimelineItem = ({
     isLast: boolean;
 }) => {
     return (
-        <li style={{ position: 'relative', paddingLeft: '2.4rem', paddingBottom: isLast ? 0 : '2rem' }} role="listitem">
-            {!isLast && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        left: '14px',
-                        top: '1.6rem',
-                        bottom: 0,
-                        width: '2px',
-                        backgroundColor: '#1e293b'
-                    }}
-                    aria-hidden="true"
-                />
-            )}
+        <li className={isLast ? `${styles.item} ${styles.itemLast}` : styles.item} role="listitem">
+            {!isLast && <div className={styles.connector} aria-hidden="true" />}
 
-            <div
-                style={{
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    width: '24px',
-                    height: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 10,
-                    backgroundColor: '#0a0a0a',
-                    borderRadius: '50%',
-                    transform: 'translateY(4px)'
-                }}
-            >
+            <div className={styles.marker}>
                 <EventIcon type={event.type} />
             </div>
 
-            <div style={{ display: 'grid', gap: '0.45rem' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '1rem', alignItems: 'baseline' }}>
-                    <p style={{ margin: 0, fontSize: '0.96rem', fontWeight: 600, color: '#f8fafc' }}>{event.status}</p>
-                    <time style={{ fontSize: '0.82rem', color: '#64748b' }} dateTime={new Date(event.timestamp).toISOString()}>
+            <div className={styles.eventContent}>
+                <div className={styles.eventTopRow}>
+                    <p className={styles.eventStatus}>{event.status}</p>
+                    <time className={styles.eventTime} dateTime={new Date(event.timestamp).toISOString()}>
                         {event.timestamp}
                     </time>
                 </div>
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.84rem', color: '#94a3b8' }}>
+                <div className={styles.eventMetaRow}>
+                    <div className={styles.eventActor}>
                         {event.type === 'Payment' ? (
-                            <CreditCard size={14} color="#64748b" />
+                            <CreditCard size={14} className={styles.actorIcon} />
                         ) : event.actor === 'System' ? (
-                            <Cpu size={14} color="#64748b" />
+                            <Cpu size={14} className={styles.actorIcon} />
                         ) : (
-                            <User size={14} color="#64748b" />
+                            <User size={14} className={styles.actorIcon} />
                         )}
                         <span>{event.actor || 'System'}</span>
                     </div>
-                    <span style={{ fontSize: '0.75rem', color: '#cbd5e1', background: '#111827', borderRadius: '999px', padding: '4px 10px' }}>
-                        {event.type}
-                    </span>
+                    <span className={styles.eventTypeBadge}>{event.type}</span>
                 </div>
 
-                {event.details && (
-                    <p style={{ margin: 0, lineHeight: 1.7, fontSize: '0.92rem', color: '#94a3b8' }}>{event.details}</p>
-                )}
+                {event.details && <p className={styles.eventDetails}>{event.details}</p>}
             </div>
         </li>
     );
@@ -249,16 +161,19 @@ function isEventVisible(event: TimelineEvent, filter: string) {
 
 export default function PlanStatusTimeline({
     subscriptionId,
+    events
+    subscriptionId: _subscriptionId,
     events = MOCK_EVENTS
 }: PlanStatusTimelineProps) {
+    const safeEvents = events ?? EMPTY_EVENTS;
     const [filter, setFilter] = useState('All');
     const [isExpanded, setIsExpanded] = useState(false);
     const INITIAL_COUNT = 3;
 
     const filteredEvents = useMemo(() => {
-        const sortedEvents = [...events].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        const sortedEvents = [...safeEvents].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         return sortedEvents.filter((event) => isEventVisible(event, filter));
-    }, [events, filter]);
+    }, [safeEvents, filter]);
 
     const visibleEvents = isExpanded ? filteredEvents : filteredEvents.slice(0, INITIAL_COUNT);
 
@@ -275,31 +190,17 @@ export default function PlanStatusTimeline({
     const hasMore = !isExpanded && filteredEvents.length > INITIAL_COUNT;
 
     return (
-        <div style={{
-            background: '#0a0a0a',
-            borderRadius: '18px',
-            border: '1px solid #1f2937',
-            padding: '1.5rem',
-            fontFamily: 'Inter, sans-serif',
-            marginTop: '2rem'
-        }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{
-                        background: '#111827',
-                        padding: '0.5rem',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <RefreshCw size={16} color="#9ca3af" aria-hidden="true" />
+        <div className={styles.container}>
+            <div className={styles.header}>
+                <div className={styles.headerRow}>
+                    <div className={styles.headerIconWrap}>
+                        <RefreshCw size={16} className={styles.headerIcon} aria-hidden="true" />
                     </div>
                     <div>
-                        <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#f8fafc' }}>
+                        <h2 className={styles.title}>
                             Subscription activity timeline
                         </h2>
-                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.9rem', color: '#94a3b8' }}>
+                        <p className={styles.subtitle}>
                             Grouped by day with event type filters and older activity loading.
                         </p>
                     </div>
@@ -317,14 +218,14 @@ export default function PlanStatusTimeline({
             {filteredEvents.length > 0 ? (
                 <div aria-label="Subscription activity timeline">
                     {groupKeys.map((day, dayIndex) => (
-                        <section key={day} aria-labelledby={`timeline-day-${dayIndex}`} style={{ marginBottom: '1.75rem' }}>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
-                                <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700, color: '#f8fafc' }} id={`timeline-day-${dayIndex}`}>
+                        <section key={day} aria-labelledby={`timeline-day-${dayIndex}`} className={styles.section}>
+                            <div className={styles.sectionHeader}>
+                                <h3 className={styles.dayTitle} id={`timeline-day-${dayIndex}`}>
                                     {day}
                                 </h3>
-                                <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>{groupedEvents[day].length} event{groupedEvents[day].length > 1 ? 's' : ''}</span>
+                                <span className={styles.dayCount}>{groupedEvents[day].length} event{groupedEvents[day].length > 1 ? 's' : ''}</span>
                             </div>
-                            <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                            <ol className={styles.list}>
                                 {groupedEvents[day].map((event, index) => (
                                     <TimelineItem
                                         key={event.id}
@@ -340,18 +241,7 @@ export default function PlanStatusTimeline({
                         <button
                             type="button"
                             onClick={() => setIsExpanded(true)}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.45rem',
-                                color: '#60a5fa',
-                                background: 'transparent',
-                                border: 'none',
-                                padding: 0,
-                                fontSize: '0.95rem',
-                                cursor: 'pointer',
-                                textDecoration: 'underline'
-                            }}
+                            className={styles.loadMoreButton}
                             aria-expanded={isExpanded}
                         >
                             Load older activity
@@ -362,18 +252,7 @@ export default function PlanStatusTimeline({
                             <button
                                 type="button"
                                 onClick={() => setIsExpanded(false)}
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.45rem',
-                                    color: '#60a5fa',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    padding: 0,
-                                    fontSize: '0.95rem',
-                                    cursor: 'pointer',
-                                    textDecoration: 'underline'
-                                }}
+                                className={styles.loadMoreButton}
                                 aria-expanded={isExpanded}
                             >
                                 Show less
@@ -382,8 +261,12 @@ export default function PlanStatusTimeline({
                         )
                     )}
                 </div>
+            ) : safeEvents.length === 0 ? (
+                <div role="status" style={{ textAlign: 'center', padding: '2rem 0', color: '#64748b', fontSize: '0.95rem' }}>
+                    No plan activity yet
+                </div>
             ) : (
-                <div style={{ textAlign: 'center', padding: '2rem 0', color: '#64748b', fontSize: '0.95rem' }}>
+                <div className={styles.emptyState}>
                     No events found for this filter.
                 </div>
             )}

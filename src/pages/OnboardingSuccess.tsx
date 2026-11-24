@@ -34,7 +34,7 @@ export default function OnboardingSuccess() {
         </p>
 
         <div className="success-actions">
-          <Link to="/plans/new" className="onboarding-btn-primary">
+          <Link to="/plans/create" className="onboarding-btn-primary">
             <svg
               width="20"
               height="20"

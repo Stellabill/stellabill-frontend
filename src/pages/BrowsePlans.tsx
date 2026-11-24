@@ -1,15 +1,23 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePageTitle } from "../hooks/usePageTitle";
 import type { ApiError } from "../api/client";
 import WalletConnectModal from "../components/WalletConnectModal";
-import { useWallet } from "../wallet/WalletContext";
+import GiftPurchaseModal from "../components/GiftPurchaseModal";
 import { FreighterConnectionError } from "../wallet/freighter";
+import { usePageTitle } from "../hooks/usePageTitle";
+import { useBrowsePlansPage } from "../hooks/useBrowsePlansPage";
+import BrowsePlansFilterBar from "./browsePlans/BrowsePlansFilterBar";
+import BrowsePlansGrid from "./browsePlans/BrowsePlansGrid";
 import ErrorState from "../components/ErrorState";
 import SortBySelect from "../components/SortBySelect";
+import GiftPurchaseModal from "../components/GiftPurchaseModal";
 import GiftPurchaseModal, { type Plan as GiftPlan } from "../components/GiftPurchaseModal";
+import { ToastContainer, type ToastOptions } from "../components/TransactionToast";
+import { copyToClipboard } from "../utils/clipboard";
 import { addBillingInterval } from "../utils/billingDate";
 import { catalogPlans as mockPlans, type Plan, type PlanInterval } from "../data/catalogPlans";
+import styles from "./BrowsePlans.module.css";
 
 type SortField = "name" | "price" | "merchant";
 type SortDirection = "asc" | "desc";
@@ -107,167 +115,45 @@ interface PlanCardProps {
 
 function PlanCard({ plan, onSubscribe, onSendGift }: PlanCardProps) {
 	const IconComponent = iconMap[plan.icon];
-	const [isHovered, setIsHovered] = useState(false);
 	const billingCopy = getBillingIntervalCopy(plan.interval);
 	const nextChargeDate = getNextChargeDate(plan.interval);
 
 	return (
-		<article
-			onMouseEnter={() => setIsHovered(true)}
-			onMouseLeave={() => setIsHovered(false)}
-			style={{
-				background: "#161B22",
-				borderRadius: 16,
-				padding: "24px",
-				border: "1px solid #30363D",
-				display: "flex",
-				flexDirection: "column",
-				gap: "20px",
-				transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-				position: "relative",
-				boxShadow: isHovered
-					? "0 12px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(79, 209, 197, 0.15)"
-					: "0 4px 6px rgba(0, 0, 0, 0.1)",
-				transform: isHovered ? "translateY(-4px)" : "translateY(0)",
-			}}>
-			<div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-				<div
-					style={{
-						width: 44,
-						height: 44,
-						borderRadius: 10,
-						background: "rgba(255, 255, 255, 0.05)",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						color: "#ffffff",
-						flexShrink: 0,
-						border: "1px solid rgba(255, 255, 255, 0.1)",
-					}}>
+		<article className={styles.planCard}>
+			<div className={styles.cardHeader}>
+				<div className={styles.planIcon}>
 					<IconComponent />
 				</div>
-				<span style={{ color: "#8b949e", fontSize: "14px", fontWeight: 500 }}>
-					{plan.merchant}
-				</span>
+				<span className={styles.planMerchant}>{plan.merchant}</span>
 			</div>
 
-			<h3
-				style={{
-					color: "#ffffff",
-					fontSize: "22px",
-					fontWeight: 700,
-					margin: 0,
-					lineHeight: 1.2,
-				}}>
-				{plan.name}
-			</h3>
+			<h3 className={styles.planName}>{plan.name}</h3>
 
-			<div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-				<div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-					<span
-						style={{
-							color: "#ffffff",
-							fontSize: "36px",
-							fontWeight: 800,
-						}}>
-						{plan.price}
-					</span>
-					<span style={{ color: "#8b949e", fontSize: "16px", fontWeight: 500 }}>
-						{plan.currency}
-					</span>
+			<div className={styles.pricing}>
+				<div className={styles.priceRow}>
+					<span className={styles.planPrice}>{plan.price}</span>
+					<span className={styles.planCurrency}>{plan.currency}</span>
 				</div>
-				<p style={{ color: "#8b949e", fontSize: "14px", margin: 0 }}>
-					{billingCopy}
-				</p>
+				<p className={styles.billingCopy}>{billingCopy}</p>
 				<p
 					aria-label={`Next charge preview for ${plan.name}`}
-					style={{ color: "#4FD1C5", fontSize: "14px", fontWeight: 600, margin: 0 }}>
+					className={styles.nextCharge}>
 					Next charge: {nextChargeDate}
 				</p>
 			</div>
 
-			<p
-				style={{
-					color: "#8b949e",
-					fontSize: "15px",
-					lineHeight: 1.55,
-					margin: 0,
-					flex: 1,
-					display: "-webkit-box",
-					WebkitLineClamp: 2,
-					WebkitBoxOrient: "vertical",
-					overflow: "hidden",
-				}}>
-				{plan.description}
-			</p>
+			<p className={styles.planDescription}>{plan.description}</p>
 
 			<button
 				onClick={() => onSubscribe(plan)}
-				style={{
-					width: "100%",
-					padding: "14px 20px",
-					background: "linear-gradient(90deg, #4FD1C5 0%, #38B2AC 100%)",
-					color: "#0D1117",
-					fontSize: "16px",
-					fontWeight: 700,
-					border: "none",
-					borderRadius: 12,
-					cursor: "pointer",
-					transition: "all 0.2s ease",
-					boxShadow: isHovered ? "0 4px 12px rgba(79, 209, 197, 0.3)" : "none",
-				}}
-				onMouseEnter={(e) => {
-					e.currentTarget.style.filter = "brightness(1.1)";
-				}}
-				onMouseLeave={(e) => {
-					e.currentTarget.style.filter = "brightness(1)";
-				}}
-				onFocus={(e) => {
-					e.currentTarget.style.outline = "2px solid #22d3ee";
-					e.currentTarget.style.outlineOffset = "2px";
-				}}
-				onBlur={(e) => {
-					e.currentTarget.style.outline = "none";
-				}}
+				className={styles.subscribeButton}
 				aria-label={`Subscribe to ${plan.name} plan for ${plan.price} ${plan.currency}. ${billingCopy}. Next charge on ${nextChargeDate} from ${plan.merchant}`}>
 				Subscribe
 			</button>
 
 			<button
 				onClick={() => onSendGift(plan)}
-				style={{
-					width: "100%",
-					padding: "14px 20px",
-					background: "transparent",
-					color: "#c084fc",
-					fontSize: "16px",
-					fontWeight: 700,
-					border: "1px solid rgba(168, 85, 247, 0.4)",
-					borderRadius: 12,
-					cursor: "pointer",
-					transition: "all 0.2s ease",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					gap: "8px",
-				}}
-				onMouseEnter={(e) => {
-					e.currentTarget.style.background = "rgba(168, 85, 247, 0.1)";
-					e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.6)";
-					e.currentTarget.style.boxShadow = "0 0 20px rgba(168, 85, 247, 0.2)";
-				}}
-				onMouseLeave={(e) => {
-					e.currentTarget.style.background = "transparent";
-					e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.4)";
-					e.currentTarget.style.boxShadow = "none";
-				}}
-				onFocus={(e) => {
-					e.currentTarget.style.outline = "2px solid #a855f7";
-					e.currentTarget.style.outlineOffset = "2px";
-				}}
-				onBlur={(e) => {
-					e.currentTarget.style.outline = "none";
-				}}
+				className={styles.giftButton}
 				aria-label={`Send ${plan.name} as a gift`}>
 				<svg 
 					width="18" 
@@ -294,6 +180,7 @@ function PlanCard({ plan, onSubscribe, onSendGift }: PlanCardProps) {
 
 export default function BrowsePlans() {
 	usePageTitle("Browse Plans");
+	const state = useBrowsePlansPage();
 	const navigate = useNavigate();
 	const [plans, setPlans] = useState<Plan[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -305,6 +192,12 @@ export default function BrowsePlans() {
 	const [walletModalOpen, setWalletModalOpen] = useState(false);
 	const [giftModalOpen, setGiftModalOpen] = useState(false);
 	const [selectedPlanForGift, setSelectedPlanForGift] = useState<Plan | null>(null);
+	const [toasts, setToasts] = useState<ToastOptions[]>([]);
+	const toastId = useRef(0);
+
+	const removeToast = useCallback((id: string) => {
+		setToasts((prev) => prev.filter((toast) => toast.id !== id));
+	}, []);
 	const {
 		status,
 		error: walletError,
@@ -397,8 +290,29 @@ export default function BrowsePlans() {
 	};
 
 	const handleGiftPurchaseComplete = (giftCode: string) => {
-		console.log("Gift purchased with code:", giftCode);
-		// Could show a toast notification here
+		toastId.current += 1;
+		const id = `gift-${toastId.current}`;
+		setToasts((prev) => [
+			...prev,
+			{
+				id,
+				status: "success",
+				title: "Gift created",
+				message: "Your gift subscription is ready to share.",
+				actionText: "Copy Code",
+				onAction: () => {
+					void copyToClipboard(giftCode).then((copied) => {
+						if (copied) {
+							setToasts((current) =>
+								current.map((t) =>
+									t.id === id ? { ...t, actionText: "Copied!" } : t,
+								),
+							);
+						}
+					});
+				},
+			},
+		]);
 	};
 
 	const handleWalletConnect = async () => {
@@ -419,42 +333,46 @@ export default function BrowsePlans() {
 	};
 
 	return (
-		<div style={{ padding: "2rem", background: "#0a0a0a", minHeight: "100vh" }}>
-			<div style={{ maxWidth: 1280, margin: "0 auto" }}>
-				<div style={{ marginBottom: "2rem" }}>
-					<h1
-						style={{
-							color: "#ffffff",
-							fontSize: "2rem",
-							fontWeight: 700,
-							margin: "0 0 0.5rem",
-						}}>
-						Browse Plans
-					</h1>
-					<p style={{ color: "#94a3b8", margin: 0, fontSize: "1rem" }}>
+		<div className={styles.page}>
+			<div className={styles.container}>
+				<div className={styles.pageHeader}>
+					<h1 className={styles.pageTitle}>Browse Plans</h1>
+					<p className={styles.pageSubtitle}>
 						Discover subscription plans from verified merchants on Stellar
 					</p>
 				</div>
 
-				<div
-					style={{
-						display: "flex",
-						gap: "1rem",
-						marginBottom: "2rem",
-						flexWrap: "wrap",
-						alignItems: "center",
-					}}>
-					<div style={{ flex: "1 1 300px", position: "relative" }}>
+				<BrowsePlansFilterBar
+					searchQuery={state.searchQuery}
+					onSearchChange={state.setSearchQuery}
+					intervalFilter={state.intervalFilter}
+					onIntervalChange={state.setIntervalFilter}
+					sortField={state.sortField}
+					sortDirection={state.sortDirection}
+					onSortChange={state.handleSortChange}
+					onClearFilters={state.clearFilters}
+				/>
+
+				<div style={{ marginBottom: "1.5rem" }}>
+					<span style={{ color: "#64748b", fontSize: "0.875rem" }}>
+						{state.filteredPlans.length}{" "}
+						{state.filteredPlans.length === 1 ? "plan" : "plans"} found
+					</span>
+				</div>
+
+				<BrowsePlansGrid
+					plans={state.filteredPlans}
+					loading={state.loading}
+					error={state.error}
+					onRetry={state.fetchPlans}
+					onSubscribe={state.handleSubscribe}
+					onSendGift={state.handleSendGift}
+					onClearFilters={state.clearFilters}
+				/>
+				<div className={styles.controls}>
+					<div className={styles.searchWrapper}>
 						<svg
-							style={{
-								position: "absolute",
-								left: "12px",
-								top: "50%",
-								transform: "translateY(-50%)",
-								width: "18px",
-								height: "18px",
-								color: "#64748b",
-							}}
+							className={styles.searchIcon}
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24">
@@ -470,18 +388,7 @@ export default function BrowsePlans() {
 							placeholder="Search plans..."
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
-							style={{
-								width: "100%",
-								padding: "0.75rem 1rem 0.75rem 2.5rem",
-								background: "#1a1a1a",
-								border: "1px solid #2a2a2a",
-								borderRadius: 8,
-								color: "#ffffff",
-								fontSize: "0.875rem",
-								outline: "none",
-							}}
-							onFocus={(e) => (e.currentTarget.style.borderColor = "#22d3ee")}
-							onBlur={(e) => (e.currentTarget.style.borderColor = "#2a2a2a")}
+							className={styles.searchInput}
 							onKeyDown={(e) => {
 								if (e.key === "Escape") {
 									clearFilters();
@@ -496,31 +403,18 @@ export default function BrowsePlans() {
 						onChange={(e) =>
 							setIntervalFilter(e.target.value as PlanInterval | "All")
 						}
-						style={{
-							padding: "0.75rem 1rem",
-							background: "#1a1a1a",
-							border: "1px solid #2a2a2a",
-							borderRadius: 8,
-							color: "#ffffff",
-							fontSize: "0.875rem",
-							cursor: "pointer",
-							outline: "none",
-						}}
-						onFocus={(e) => (e.currentTarget.style.borderColor = "#22d3ee")}
-						onBlur={(e) => (e.currentTarget.style.borderColor = "#2a2a2a")}
+						className={styles.intervalSelect}
 						aria-label="Filter plans by billing interval">
 						<option value="All">All billing intervals</option>
 						<option value="Monthly">Billed every month</option>
 						<option value="Yearly">Billed every year</option>
 					</select>
 
-					<div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-						<span
-							id="browse-sort-label"
-							style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
+					<div className={styles.sortGroup}>
+						<span id="browse-sort-label" className={styles.sortLabel}>
 							Sort by:
 						</span>
-						<div style={{ minWidth: 210 }}>
+						<div className={styles.sortControl}>
 							<SortBySelect
 								value={`${sortField}-${sortDirection}`}
 								onValueChange={handleSortChange}
@@ -532,49 +426,25 @@ export default function BrowsePlans() {
 					</div>
 				</div>
 
-				<div style={{ marginBottom: "1.5rem" }}>
-					<span style={{ color: "#64748b", fontSize: "0.875rem" }}>
+				<div className={styles.resultsCount}>
+					<span className={styles.resultsCountText}>
 						{filteredPlans.length}{" "}
 						{filteredPlans.length === 1 ? "plan" : "plans"} found
 					</span>
 				</div>
 
 				{loading && (
-					<div
-						style={{
-							textAlign: "center",
-							padding: "4rem 2rem",
-							background: "#1a1a1a",
-							borderRadius: 12,
-							border: "1px solid #2a2a2a",
-						}}>
-						<div
-							style={{
-								width: 48,
-								height: 48,
-								margin: "0 auto 1.5rem",
-								borderRadius: "50%",
-								border: "3px solid #2a2a2a",
-								borderTopColor: "#22d3ee",
-								animation: "spin 1s linear infinite",
-							}}
-						/>
-						<h2 style={{ color: "#ffffff", fontSize: "1.5rem", margin: "0 0 0.5rem" }}>
-							Loading plans...
-						</h2>
-						<p style={{ color: "#94a3b8", margin: 0 }}>
+					<div className={styles.statePanel}>
+						<div className={styles.spinner} />
+						<h2 className={styles.stateTitle}>Loading plans...</h2>
+						<p className={styles.stateMessage}>
 							Please wait while we fetch available subscription plans
 						</p>
-						<style>{`
-							@keyframes spin {
-								to { transform: rotate(360deg); }
-							}
-						`}</style>
 					</div>
 				)}
 
 				{error && !loading && (
-					<div style={{ padding: "4rem 2rem", background: "#1a1a1a", borderRadius: 12, border: "1px solid #2a2a2a", display: "flex", justifyContent: "center" }}>
+					<div className={styles.errorPanel}>
 						<ErrorState 
 							title="Failed to load plans"
 							message={error.message}
@@ -591,11 +461,7 @@ export default function BrowsePlans() {
 						<div
 							role="list"
 							aria-label="Available subscription plans"
-							style={{
-								display: "grid",
-								gridTemplateColumns: "repeat(auto-fill, minmax(min(340px, 100%), 1fr))",
-								gap: "24px 32px",
-							}}>
+							className={styles.planGrid}>
 							{filteredPlans.map((plan) => (
 								<PlanCard 
 									key={plan.id} 
@@ -609,59 +475,45 @@ export default function BrowsePlans() {
 						<div
 							role="status"
 							aria-live="polite"
-							style={{
-								textAlign: "center",
-								padding: "4rem 2rem",
-								background: "#1a1a1a",
-								borderRadius: 12,
-								border: "1px solid #2a2a2a",
-							}}>
-							<h2 style={{ color: "#ffffff", fontSize: "1.5rem", margin: "0 0 0.5rem" }}>
+							className={styles.statePanel}>
+							<h2 className={styles.stateTitle}>
 								No plans match your filters
 							</h2>
-							<p style={{ color: "#94a3b8", margin: "0 0 1.5rem" }}>
+							<p className={styles.stateMessageWithAction}>
 								Try adjusting your search criteria or browse all plans
 							</p>
 							<button
 								onClick={clearFilters}
-								style={{
-									padding: "0.75rem 1.5rem",
-									background: "linear-gradient(135deg, #3b82f6 0%, #10b981 100%)",
-									color: "#ffffff",
-									fontSize: "0.875rem",
-									fontWeight: 600,
-									border: "none",
-									borderRadius: 8,
-									cursor: "pointer",
-								}}>
+								className={styles.clearFiltersButton}>
 								Clear Filters
 							</button>
 						</div>
 					))}
 
 				<WalletConnectModal
-					isOpen={walletModalOpen}
+					isOpen={state.walletModalOpen}
 					onClose={() => {
-						cancelConnect();
-						setWalletModalOpen(false);
+						state.cancelConnect();
+						state.setWalletModalOpen(false);
 					}}
-					onConnectFreighter={handleWalletConnect}
-					connectionState={status}
-					errorMessage={walletError?.message}
+					onConnectFreighter={state.handleWalletConnect}
+					connectionState={state.status}
+					errorMessage={state.walletError?.message}
 					errorType={
-						walletError instanceof FreighterConnectionError
-							? walletError.type
+						state.walletError instanceof FreighterConnectionError
+							? state.walletError.type
 							: undefined
 					}
-					onRetry={clearError}
+					onRetry={state.clearError}
 				/>
 
 				<GiftPurchaseModal
-					isOpen={giftModalOpen}
-					onClose={() => setGiftModalOpen(false)}
-					plan={selectedPlanForGift}
-					onPurchaseComplete={handleGiftPurchaseComplete}
+					isOpen={state.giftModalOpen}
+					onClose={() => state.setGiftModalOpen(false)}
+					plan={state.selectedPlanForGift}
+					onPurchaseComplete={state.handleGiftPurchaseComplete}
 				/>
+				<ToastContainer toasts={toasts} removeToast={removeToast} />
 			</div>
 		</div>
 	);

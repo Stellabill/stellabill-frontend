@@ -9,9 +9,9 @@ The `RevenueChart` component renders an interactive, responsive multi-series lin
 export interface RevenueChartProps {
   /** Initial selected time range preset. Defaults to '30D'. */
   initialTimeRange?: '7D' | '30D' | '90D';
-  /** Optional custom data array for single-series compatibility. */
+  /** Supply revenue points for a single series; provide data or series to render chart content. */
   data?: DataPoint[];
-  /** Optional multi-series data with interactive legend support. */
+  /** Supply multi-series data with interactive legend support; provide data or series to render chart content. */
   series?: SeriesData[];
   /** Accessible label for the chart region landmark. Defaults to 'Revenue over time'. */
   ariaLabel?: string;
@@ -30,6 +30,8 @@ export interface SeriesData {
   visible: boolean;
 }
 ```
+
+`data` or `series` must be supplied to display chart content. If neither is supplied (or the supplied content is empty), the chart renders an empty state instead of generating data.
 
 ## Interactive Legend Features
 

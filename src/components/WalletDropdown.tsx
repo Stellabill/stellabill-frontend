@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Copy, ExternalLink, LogOut, Check, CreditCard } from 'lucide-react';
+import { AlertTriangle, Check, Clock, Copy, CreditCard, ExternalLink, LogOut } from 'lucide-react';
+import { copyToClipboard } from '../utils/clipboard';
+import { openExternal } from '../utils/openExternal';
+import {
+  explorerAccountUrl,
+  getExpectedNetwork,
+  isNetworkMismatch,
+  normalizeNetwork,
+  type StellarNetwork,
+} from '../config/network';
 
 interface WalletDropdownProps {
   isOpen: boolean;
@@ -9,6 +18,8 @@ interface WalletDropdownProps {
   onSwitchWallet?: () => void;
   onOpenHistory?: () => void;
   triggerRef?: React.RefObject<HTMLButtonElement | null>;
+  network?: StellarNetwork | 'testnet' | 'mainnet' | 'public' | (string & {});
+  expectedNetwork?: StellarNetwork | 'testnet' | 'mainnet' | 'public' | (string & {});
   id?: string;
 }
 
@@ -17,16 +28,20 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
   address,
   onClose,
   onDisconnect,
+  onSwitchWallet,
   onOpenHistory,
   triggerRef,
+  network,
+  expectedNetwork,
   id = 'wallet-dropdown',
 }) => {
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const menuRef = useRef<HTMLDivElement>(null);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getMenuItems = useCallback((): HTMLElement[] => {
     if (!menuRef.current) return [];
-    return Array.from(menuRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+    return Array.from(menuRef.current.querySelectorAll<HTMLElement>('[data-menu-item]'));
   }, []);
 
   // Focus first item on open
@@ -67,6 +82,12 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
     };
   }, [isOpen, onClose, triggerRef]);
 
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
+  }, []);
+
   if (!isOpen) return null;
 
   const resolvedExpectedNetwork = expectedNetwork
@@ -77,15 +98,33 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
     : resolvedExpectedNetwork;
   const hasMismatch = isNetworkMismatch(resolvedWalletNetwork, resolvedExpectedNetwork);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    const succeeded = await copyToClipboard(address);
+    setCopyStatus(succeeded ? 'copied' : 'error');
+    resetTimerRef.current = setTimeout(() => {
+      setCopyStatus('idle');
+      resetTimerRef.current = null;
+    }, 2000);
   };
 
   const handleDisconnect = () => {
     onDisconnect();
     onClose();
+  };
+
+  const handleSwitchWallet = () => {
+    if (onSwitchWallet) {
+      onSwitchWallet();
+    } else {
+      onDisconnect();
+    }
+    onClose();
+  };
+
+  const handleOpenHistory = () => {
+    onClose();
+    if (onOpenHistory) onOpenHistory();
   };
 
   const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -122,10 +161,10 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
   };
 
   return (
-    <div 
+    <div
       ref={menuRef}
       id={id}
-      role="menu"
+      role="group"
       aria-label="Wallet menu"
       className="absolute right-0 mt-3 w-72 bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200"
       onClick={(e) => e.stopPropagation()}
@@ -154,7 +193,7 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
             </div>
           </div>
         )}
-        
+
         <div className="bg-slate-950/50 rounded-2xl p-4 border border-white/5 mb-6 group relative">
           <div className="text-[10px] font-medium text-slate-500 mb-1">Stellar Address</div>
           <div className="text-xs font-mono text-slate-300 break-all leading-relaxed">
@@ -178,11 +217,11 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
         </div>
 
         <div className="space-y-1">
-          <button 
-            role="menuitem"
+          <button
+            data-menu-item
             tabIndex={-1}
             className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all group"
-            onClick={() => window.open(explorerAccountUrl(resolvedWalletNetwork, address), '_blank')}
+            onClick={() => openExternal(explorerAccountUrl(resolvedWalletNetwork, address))}
           >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-slate-800 rounded-lg group-hover:bg-cyan-500/10 transition-colors">
@@ -193,7 +232,7 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
           </button>
 
           <button
-            role="menuitem"
+            data-menu-item
             tabIndex={-1}
             className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all group"
             onClick={handleSwitchWallet}
@@ -206,14 +245,11 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
             </div>
           </button>
 
-          <button 
-            role="menuitem"
+          <button
+            data-menu-item
             tabIndex={-1}
             className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all group"
-            onClick={() => {
-              onClose();
-              if (onOpenHistory) onOpenHistory();
-            }}
+            onClick={handleOpenHistory}
           >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-slate-800 rounded-lg group-hover:bg-cyan-500/10 transition-colors">
@@ -225,8 +261,8 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
 
           <div className="h-px bg-white/5 my-2" />
 
-          <button 
-            role="menuitem"
+          <button
+            data-menu-item
             tabIndex={-1}
             className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all group"
             onClick={handleDisconnect}
@@ -240,7 +276,7 @@ const WalletDropdown: React.FC<WalletDropdownProps> = ({
           </button>
         </div>
       </div>
-      
+
       {copyStatus !== 'idle' && (
         <div
           className={`absolute bottom-0 left-0 right-0 py-2 text-[10px] font-bold text-center uppercase tracking-widest animate-in slide-in-from-bottom-full duration-300 ${

@@ -1,0 +1,415 @@
+/* BrowsePlans page styles.
+   Colours, spacing, typography and radii come from src/styles/tokens.css. */
+
+.page {
+  min-height: 100vh;
+  padding: var(--space-8);
+  background: var(--color-surface-canvas);
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.pageHeader {
+  margin-bottom: var(--space-8);
+}
+
+.pageTitle {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-primary);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+}
+
+.pageSubtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-base);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.searchWrapper {
+  position: relative;
+  flex: 1 1 300px;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: var(--space-3);
+  width: 18px;
+  height: 18px;
+  color: var(--color-text-subtle);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.searchInput,
+.intervalSelect {
+  background: var(--color-surface-control);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  outline: none;
+  transition:
+    border-color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease;
+}
+
+.searchInput {
+  width: 100%;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-10);
+}
+
+.intervalSelect {
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+}
+
+.searchInput:focus-visible,
+.intervalSelect:focus-visible {
+  border-color: var(--color-brand-primary);
+  box-shadow: 0 0 0 2px var(--focus-ring-halo);
+}
+
+.sortGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sortLabel {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.sortControl {
+  min-width: 210px;
+}
+
+.resultsCount {
+  margin-bottom: var(--space-6);
+}
+
+.resultsCountText {
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}
+
+.statePanel {
+  padding: var(--space-16) var(--space-8);
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.errorPanel {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-16) var(--space-8);
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.stateTitle {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-primary);
+  font-size: var(--text-xl);
+}
+
+.stateMessage {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.stateMessageWithAction {
+  margin: 0 0 var(--space-6);
+  color: var(--color-text-muted);
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--space-6);
+  border: 3px solid var(--color-border-subtle);
+  border-top-color: var(--color-brand-primary);
+  border-radius: var(--radius-full);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
+  gap: var(--space-6) var(--space-8);
+}
+
+.planCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform var(--motion-duration-base) var(--motion-easing-standard),
+    box-shadow var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.planCard:hover,
+.planCard:focus-within {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg), var(--shadow-brand);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.planIcon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--color-text-primary);
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.planMerchant {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+.planName {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-tight);
+}
+
+.pricing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.planPrice {
+  color: var(--color-text-primary);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+}
+
+.planCurrency {
+  color: var(--color-text-muted);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+}
+
+.billingCopy {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.nextCharge {
+  margin: 0;
+  color: var(--color-brand-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+}
+
+.planDescription {
+  display: -webkit-box;
+  flex: 1;
+  overflow: hidden;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.subscribeButton {
+  width: 100%;
+  padding: var(--space-3) var(--space-5);
+  color: var(--color-brand-on);
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  background: var(--color-brand-gradient);
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition:
+    filter var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease;
+}
+
+.subscribeButton:hover {
+  filter: brightness(1.1);
+}
+
+.subscribeButton:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.planCard:hover .subscribeButton,
+.planCard:focus-within .subscribeButton {
+  box-shadow: var(--shadow-brand);
+}
+
+.giftButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-5);
+  color: rgba(192, 132, 252, 1);
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  background: transparent;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-duration-fast) ease,
+    border-color var(--motion-duration-fast) ease,
+    box-shadow var(--motion-duration-fast) ease;
+}
+
+.giftButton:hover {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+}
+
+.giftButton:focus-visible {
+  outline: 2px solid rgba(168, 85, 247, 1);
+  outline-offset: 2px;
+}
+
+.clearFiltersButton {
+  padding: var(--space-3) var(--space-6);
+  color: var(--color-text-inverse);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  background: var(--color-brand-gradient);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: filter var(--motion-duration-fast) ease;
+}
+
+.clearFiltersButton:hover {
+  filter: brightness(1.1);
+}
+
+.clearFiltersButton:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .pageHeader {
+    margin-bottom: var(--space-6);
+  }
+
+  .pageTitle {
+    font-size: var(--text-2xl);
+  }
+
+  .controls {
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .searchWrapper {
+    flex-basis: 100%;
+  }
+
+  .intervalSelect {
+    width: 100%;
+  }
+
+  .sortGroup {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .sortControl {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .planGrid {
+    gap: var(--space-4);
+  }
+
+  .planCard {
+    padding: var(--space-5);
+  }
+
+  .planPrice {
+    font-size: var(--text-2xl);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planCard,
+  .subscribeButton,
+  .giftButton,
+  .clearFiltersButton,
+  .searchInput,
+  .intervalSelect {
+    transition: none;
+  }
+
+  .planCard:hover,
+  .planCard:focus-within {
+    transform: none;
+  }
+
+  .spinner {
+    animation: none;
+  }
+}

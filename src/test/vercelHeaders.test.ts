@@ -44,6 +44,21 @@ describe("vercel.json security headers", () => {
     expect(headers["x-frame-options"].toUpperCase()).toBe("DENY");
   });
 
+  it("sets Strict-Transport-Security for all routes", () => {
+    expect(headers["strict-transport-security"]).toBe("max-age=31536000; includeSubDomains");
+  });
+
+  it("caches hashed assets immutably without applying that policy to index.html", () => {
+    const assetsRule = (config.headers ?? []).find((entry) => entry.source === "/assets/(.*)");
+    expect(assetsRule).toBeTruthy();
+    const assetHeaders = Object.fromEntries(
+      (assetsRule?.headers ?? []).map((header) => [header.key.toLowerCase(), header.value]),
+    );
+    expect(assetHeaders["cache-control"]).toBe("public, max-age=31536000, immutable");
+    expect(assetsRule?.source).not.toBe("/index.html");
+    expect(headers["cache-control"]).toBeUndefined();
+  });
+
   it("sets X-Content-Type-Options: nosniff", () => {
     expect(headers["x-content-type-options"].toLowerCase()).toBe("nosniff");
   });

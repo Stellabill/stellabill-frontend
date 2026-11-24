@@ -1,83 +1,497 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import SwipeableRow, { type SwipeAction } from "../components/SwipeableRow";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
-import { subscriptions } from "../api/client";
+import { Link, useSearchParams } from "react-router-dom";
+import PauseSubscriptionModal from "../components/PauseSubscriptionModal";
+import CancelSubscriptionModal from "../components/CancelSubscriptionModal";
+import TopUpModal from "../components/TopUpModal";
+import PrepaidBalanceCard from "../components/PrepaidBalance";
+import { subscriptions, ApiError } from "../api/client";
+import { Subscription } from "@/types/subscription";
+import UsageThisPeriod from "../components/UsageThisPeriod";
 import ErrorState from "../components/ErrorState";
-import type { TagOption } from "../components/AddTagPopover";
-import { usePageTitle } from "../hooks/usePageTitle";
-import { ToastContainer, type ToastOptions } from "../components/TransactionToast";
+import Tag from "../components/Tag";
+import AddTagPopover, { TagOption } from "../components/AddTagPopover";
+import { usePageTitle } from '../hooks/usePageTitle';
+import { ToastContainer } from "../components/TransactionToast";
+import { useSubscriptionActions, type SubscriptionActionError } from "../hooks/useSubscriptionActions";
 import { useRefresh } from "../hooks/useRefresh";
 import { useFlip } from "../hooks/useFlip";
-import { IconHome, IconPlus, IconWallet } from "./subscriptions/icons";
-import { SkeletonCards, SkeletonTable } from "./subscriptions/SubscriptionsSkeleton";
-import { EmptyState } from "./subscriptions/SubscriptionsEmptyState";
-import { SubscriptionFilterTabs, SubscriptionSortToolbar } from "./subscriptions/SubscriptionsToolbar";
-import { SubscriptionsTable } from "./subscriptions/SubscriptionsTable";
-import { SubscriptionsMobileCards } from "./subscriptions/SubscriptionsMobileCards";
-import { SubscriptionDetailPanel } from "./subscriptions/SubscriptionDetailPanel";
-import { useSubscriptionsData } from "./subscriptions/useSubscriptionsData";
-import {
-	computeSubscriptionStats,
-	filterSubscriptions,
-	getActionError,
-	sortSubscriptions,
-} from "./subscriptions/subscriptionUtils";
-import type { SortField, SortState, SubscriptionActionError } from "./subscriptions/types";
+import { useTags } from "../hooks/useTags";
+import { formatAmount, roundAmount } from "../utils/amount";
+import Amount from "../components/common/Amount";
 import "./Subscriptions.css";
 
-export default function Subscriptions() {
-	usePageTitle("Subscriptions");
+/* ─── Types ─────────────────────────────────────────────────── */
+interface SubscriptionWithIcon extends Omit<Subscription, "icon"> {
+	icon: React.ReactNode;
+	coveragePayments: number;
+	tags?: TagOption[]; // Tags are managed separately via the useTags hook
+}
+
+/* ─── Balance helpers ────────────────────────────────────────── */
+/**
+ * How many full payments the current prepaid balance covers. Arithmetic is
+ * always done on raw numbers; the human-readable coverage text is derived at
+ * render time only.
+ */
+function coveragePaymentsFor(balance: number, price: number): number {
+	return price > 0 ? Math.floor(balance / price) : 0;
+}
+
+function coverageLabel(count: number): string {
+	return `~${count} payment${count === 1 ? "" : "s"}`;
+}
+
+type StatusType = "Active" | "Paused" | "Cancelled";
+
+const STATUS_FILTERS = ["All", "Active", "Paused", "Cancelled"] as const;
+const SORT_FIELDS = ["planName", "price", "status", "nextCharge"] as const;
+
+type SortField = (typeof SORT_FIELDS)[number];
+type SortDirection = "asc" | "desc";
+
+interface SortState {
+	field: SortField;
+	direction: SortDirection;
+}
+
+interface SubscriptionActionError {
+	message: string;
+	technicalDetails?: string;
+}
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+	return target instanceof Element && target.closest("button, a, [role='menu']") !== null;
+}
+
+function getActionError(error: unknown, fallbackMessage: string): SubscriptionActionError {
+	if (!(error instanceof Error)) return { message: fallbackMessage };
+
+	const technicalDetails =
+		"technicalDetails" in error && typeof error.technicalDetails === "string"
+			? error.technicalDetails
+			: undefined;
+	return { message: error.message || fallbackMessage, technicalDetails };
+}
+
+/* ─── Sort helpers ───────────────────────────────────────────── */
+function compareDates(a: string, b: string): number {
+	if (a === "N/A") return 1;
+	if (b === "N/A") return -1;
+	return new Date(a).getTime() - new Date(b).getTime();
+}
+
+function sortSubscriptions(
+	data: SubscriptionWithIcon[],
+	sort: SortState,
+): SubscriptionWithIcon[] {
+	return [...data].sort((a, b) => {
+		let cmp = 0;
+		switch (sort.field) {
+			case "planName":
+				cmp = a.planName.localeCompare(b.planName);
+				break;
+			case "price":
+				cmp = a.price - b.price;
+				break;
+			case "nextCharge":
+				cmp = compareDates(a.nextCharge ?? "N/A", b.nextCharge ?? "N/A");
+				break;
+			case "status": {
+				const order: Record<StatusType, number> = { Active: 0, Paused: 1, Cancelled: 2 };
+				cmp = (order[a.status as StatusType] ?? 3) - (order[b.status as StatusType] ?? 3);
+				break;
+			}
+		}
+		return sort.direction === "asc" ? cmp : -cmp;
+	});
+}
+
+/* ─── Sort button ────────────────────────────────────────────── */
+const SORT_LABELS: Record<SortField, string> = {
+	planName: "Plan name",
+	price: "Price",
+	nextCharge: "Next charge",
+	status: "Status",
+};
+
+function SortButton({
+	field,
+	sort,
+	onSort,
+}: {
+	field: SortField;
+	sort: SortState;
+	onSort: (f: SortField) => void;
+}) {
+	const isActive = sort.field === field;
+	const indicator = isActive ? (sort.direction === "asc" ? " ↑" : " ↓") : "";
+	return (
+		<button
+			type="button"
+			className={`sort-btn${isActive ? " sort-btn--active" : ""}`}
+			onClick={() => onSort(field)}
+			aria-label={`Sort by ${SORT_LABELS[field]}${isActive ? `, currently ${sort.direction === "asc" ? "ascending" : "descending"}` : ""}`}
+			aria-pressed={isActive}>
+			{SORT_LABELS[field]}{indicator}
+		</button>
+	);
+}
+
+/* ─── Icons ─────────────────────────────────────────────────── */
+const IconNews = () => (
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+		<path d="M18 14h-8" /><path d="M15 18h-5" /><path d="M10 6h8v4h-8V6Z" />
+	</svg>
+);
+
+const IconCloud = () => (
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<path d="M17.5 19c.7 0 1.3-.2 1.8-.7.5-.5.7-1.1.7-1.8 0-1.3-1-2.4-2.3-2.5-.2-2.1-1.9-3.5-4-3.5-1.5 0-2.8.7-3.6 1.8-.3-.1-.6-.1-.9-.1-1.4 0-2.5 1.1-2.5 2.5 0 .1 0 .2.1.3C5.5 15.6 4.5 16.7 4.5 18c0 1.4 1.1 2.5 2.5 2.5h10.5Z" />
+	</svg>
+);
+
+const IconPlay = () => (
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<polygon points="5 3 19 12 5 21 5 3" />
+	</svg>
+);
+
+const IconCog = () => (
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<circle cx="12" cy="12" r="3" />
+		<path d="M19.07 4.93A10 10 0 1 0 4.93 19.07 10 10 0 0 0 19.07 4.93Z" />
+	</svg>
+);
+
+const IconCalendar = () => (
+	<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+		<line x1="16" y1="2" x2="16" y2="6" />
+		<line x1="8" y1="2" x2="8" y2="6" />
+		<line x1="3" y1="10" x2="21" y2="10" />
+	</svg>
+);
+
+const IconWallet = () => (
+	<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<line x1="12" y1="1" x2="12" y2="23" />
+		<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+	</svg>
+);
+
+const IconHome = () => (
+	<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+		<polyline points="9 22 9 12 15 12 15 22" />
+	</svg>
+);
+
+const IconPlus = () => (
+	<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+	</svg>
+);
+
+const IconEmptySubscriptions = () => (
+	<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+		<polyline points="14 2 14 8 20 8" />
+		<line x1="12" y1="18" x2="12" y2="12" />
+		<line x1="9" y1="15" x2="15" y2="15" />
+	</svg>
+);
+
+const IconArrowLeft = () => (
+	<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<polyline points="15 18 9 12 15 6" />
+	</svg>
+);
+
+const IconPause = () => (
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<rect x="6" y="4" width="4" height="16" />
+		<rect x="14" y="4" width="4" height="16" />
+	</svg>
+);
+
+const IconX = () => (
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		<line x1="18" y1="6" x2="6" y2="18" />
+		<line x1="6" y1="6" x2="18" y2="18" />
+	</svg>
+);
+
+/* ─── Status Badge ───────────────────────────────────────────── */
+function StatusBadge({ status }: { status: StatusType }) {
+	const cls = `status-badge status-badge--${status.toLowerCase()}`;
+	const label: Record<StatusType, string> = {
+		Active: "Active",
+		Paused: "Paused",
+		Cancelled: "Cancelled",
+	};
+	return (
+		<span className={cls} role="status" aria-label={`Status: ${label[status]}`}>
+			<span className="status-badge__dot" aria-hidden="true" />
+			{label[status]}
+		</span>
+	);
+}
+
+/* ─── Loading Skeleton ───────────────────────────────────────── */
+const SKELETON_ROWS = 4;
+
+function SkeletonTable() {
+	const { t } = useTranslation();
+	return (
+		<div className="subs-loading-wrapper" aria-busy="true" aria-label={t('aria.loadingSubscriptions')} role="status">
+			<table className="subs-table" aria-label={t('aria.loadingSubscriptions')}>
+				<thead>
+				<tr>
+					<th scope="col">{t('subscriptions.table.plan')}</th>
+					<th scope="col">{t('subscriptions.table.status')}</th>
+					<th scope="col">{t('subscriptions.table.price')}</th>
+					<th scope="col">{t('subscriptions.table.nextCharge')}</th>
+					<th scope="col">{t('subscriptions.table.prepaidBalance')}</th>
+					<th scope="col">{t('subscriptions.table.actions')}</th>
+				</tr>
+				</thead>
+				<tbody>
+				{Array.from({ length: SKELETON_ROWS }).map((_, i) => (
+					<tr key={i} className="skeleton-row" aria-hidden="true">
+						<td>
+							<div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+								<div className="skeleton skeleton-icon" />
+								<div>
+									<div className="skeleton skeleton-cell" style={{ width: "120px", marginBottom: "6px" }} />
+									<div className="skeleton skeleton-cell" style={{ width: "80px" }} />
+								</div>
+							</div>
+						</td>
+						<td><div className="skeleton skeleton-badge" /></td>
+						<td><div className="skeleton skeleton-cell" style={{ width: "80px" }} /></td>
+						<td><div className="skeleton skeleton-cell" style={{ width: "100px" }} /></td>
+						<td><div className="skeleton skeleton-cell" style={{ width: "80px" }} /></td>
+						<td><div className="skeleton skeleton-cell" style={{ width: "60px" }} /></td>
+					</tr>
+				))}
+				</tbody>
+			</table>
+		</div>
+	);
+}
+
+function SkeletonCards() {
+	const { t } = useTranslation();
+	return (
+		<div className="subs-loading-cards" aria-busy="true" aria-label={t('aria.loadingSubscriptions')} role="status">
+			{Array.from({ length: SKELETON_ROWS }).map((_, i) => (
+				<div key={i} className="subs-loading-card" aria-hidden="true">
+					<div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+						<div className="skeleton skeleton-icon" />
+						<div style={{ flex: 1 }}>
+							<div className="skeleton skeleton-cell" style={{ width: "140px", marginBottom: "6px" }} />
+							<div className="skeleton skeleton-cell" style={{ width: "90px" }} />
+						</div>
+						<div className="skeleton skeleton-badge" />
+					</div>
+					<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+						<div className="skeleton skeleton-cell" style={{ width: "100%" }} />
+						<div className="skeleton skeleton-cell" style={{ width: "100%" }} />
+					</div>
+				</div>
+			))}
+		</div>
+	);
+}
+
+/* ─── Empty State ────────────────────────────────────────────── */
+function EmptyState({ filter }: { filter: string }) {
 	const { t } = useTranslation();
 
-	const {
-		data,
-		setData,
-		loading,
-		error,
-		fetchSubscriptions,
-		tagsHook,
-		availableTags,
-		applyTopUp,
-	} = useSubscriptionsData();
+/* ─── Seed data ─────────────────────────────────────────────── */
+const FIXTURE_DATA: SubscriptionWithIcon[] = [
+	{
+		id: "SUB-001",
+		planName: "Premium Access",
+		merchantName: "Stellar News",
+		status: "Active",
+		price: 10,
+		currency: "USDC",
+		interval: "month",
+		prepaidBalance: 30,
+		coveragePayments: 3,
+		nextCharge: "Mar 15, 2026",
+		lastPayment: "Feb 15, 2026",
+		subscribedSince: "Dec 15, 2025",
+		icon: <IconNews />,
+	},
+	{
+		id: "SUB-002",
+		planName: "Pro Plan",
+		merchantName: "CloudFlow",
+		status: "Active",
+		price: 25,
+		currency: "USDC",
+		interval: "month",
+		prepaidBalance: 75,
+		coveragePayments: 3,
+		nextCharge: "Mar 20, 2026",
+		lastPayment: "Feb 20, 2026",
+		subscribedSince: "Feb 20, 2026",
+		icon: <IconCloud />,
+	},
+	{
+		id: "SUB-003",
+		planName: "Basic Stream",
+		merchantName: "StreamIt",
+		status: "Paused",
+		price: 5,
+		currency: "USDC",
+		interval: "month",
+		prepaidBalance: 5,
+		coveragePayments: 1,
+		nextCharge: "Apr 01, 2026",
+		lastPayment: "Mar 01, 2026",
+		subscribedSince: "Jan 01, 2026",
+		icon: <IconPlay />,
+	},
+	{
+		id: "SUB-004",
+		planName: "Enterprise AI",
+		merchantName: "Cognitive",
+		status: "Cancelled",
+		price: 50,
+		currency: "USDC",
+		interval: "month",
+		prepaidBalance: 0,
+		coveragePayments: 0,
+		nextCharge: "N/A",
+		lastPayment: "Feb 28, 2026",
+		subscribedSince: "Nov 15, 2025",
+		icon: <IconCog />,
+	},
+];
 
-	const [activeFilter, setActiveFilter] = useState("All");
+/* ─── Main component ─────────────────────────────────────────── */
+export default function Subscriptions() {
+  usePageTitle('Subscriptions');
+	const { t } = useTranslation();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const statusParam = searchParams.get("status");
+	const activeFilter = STATUS_FILTERS.find((status) => status === statusParam) ?? "All";
+	const sortParam = searchParams.get("sort");
+	const sort = useMemo<SortState>(() => {
+		const [fieldParam, direction, extra] = sortParam?.split("-") ?? [];
+		const field = SORT_FIELDS.find((candidate) => candidate === fieldParam);
+		if (!field || (direction !== "asc" && direction !== "desc") || extra !== undefined) {
+			return { field: "planName", direction: "asc" };
+		}
+		return { field, direction };
+	}, [sortParam]);
+
+	const [data, setData] = useState<SubscriptionWithIcon[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<ApiError | null>(null);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
-	const [sort, setSort] = useState<SortState>({ field: "planName", direction: "asc" });
 
 	const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
 	const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 	const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
-	const [isActionLoading, setIsActionLoading] = useState(false);
 	const [pauseError, setPauseError] = useState<SubscriptionActionError | null>(null);
 	const [cancelError, setCancelError] = useState<SubscriptionActionError | null>(null);
-	const [resumeLoadingId, setResumeLoadingId] = useState<string | null>(null);
-	const [toasts, setToasts] = useState<ToastOptions[]>([]);
-	const toastId = useRef(0);
 
-	const addToast = (status: ToastOptions["status"], title: string, message?: string) => {
-		toastId.current += 1;
-		const id = `subscription-${toastId.current}`;
-		setToasts((prev) => [...prev, { id, status, title, message }]);
-		return id;
+	const {
+		pendingAction,
+		pendingId,
+		isPending: isActionLoading,
+		toasts,
+		removeToast,
+		pause,
+		cancel,
+		resume,
+	} = useSubscriptionActions();
+
+	const resumeLoadingId = pendingAction === "resume" ? pendingId : null;
+
+	const updateSearchParam = useCallback((key: "status" | "sort", value: string) => {
+		setSearchParams((current) => {
+			const next = new URLSearchParams(current);
+			next.set(key, value);
+			return next;
+		}, { replace: true });
+	}, [setSearchParams]);
+
+	const handleSortField = (field: SortField) => {
+		const direction = sort.field === field && sort.direction === "asc" ? "desc" : "asc";
+		updateSearchParam("sort", `${field}-${direction}`);
 	};
 
-	const updateToast = (id: string, status: ToastOptions["status"], title: string, message?: string) => {
-		setToasts((prev) =>
-			prev.map((toast) => (toast.id === id ? { ...toast, status, title, message } : toast)),
-		);
-	};
+	const abortRef = useRef<AbortController | null>(null);
 
-	const removeToast = (id: string) => {
-		setToasts((prev) => prev.filter((toast) => toast.id !== id));
-	};
-
-	const handleSortField = useCallback((field: SortField) => {
-		setSort((prev) =>
-			prev.field === field
-				? { field, direction: prev.direction === "asc" ? "desc" : "asc" }
-				: { field, direction: "asc" },
-		);
+	const mapSubscription = useCallback((sub: Subscription): SubscriptionWithIcon => {
+		const balance = typeof sub.prepaidBalance === "number" && Number.isFinite(sub.prepaidBalance)
+			? sub.prepaidBalance
+			: 0;
+		return {
+			...sub,
+			status: normalizeStatus(sub.status),
+			icon: <IconCloud />,
+			prepaidBalance: balance,
+			coveragePayments: coveragePaymentsFor(balance, sub.price),
+		};
 	}, []);
+
+	const fetchSubscriptions = useCallback(() => {
+		abortRef.current?.abort();
+		const controller = new AbortController();
+		abortRef.current = controller;
+
+		setLoading(true);
+		setError(null);
+
+		return (async () => {
+			try {
+				let mapped: SubscriptionWithIcon[];
+				if (import.meta.env.VITE_USE_FIXTURES) {
+					mapped = FIXTURE_DATA;
+				} else {
+					const res = await subscriptions.list();
+					mapped = res.subscriptions.map(mapSubscription);
+				}
+
+				if (controller.signal.aborted) return;
+
+				setData((prev) => {
+					// Merge server data with pending optimistic updates
+					const pending = new Map(prev.map((s) => [s.id, s]));
+					return mapped.map((server) => {
+						const local = pending.get(server.id);
+						if (local && local.status !== server.status) {
+							return { ...server, status: local.status };
+						}
+						return server;
+					});
+				});
+			} catch (err: unknown) {
+				if (controller.signal.aborted) return;
+				setError(err as ApiError);
+			} finally {
+				if (!controller.signal.aborted) {
+					setLoading(false);
+				}
+			}
+		})();
+	}, [mapSubscription]);
+
+	useEffect(() => {
+		fetchSubscriptions();
+		return () => {
+			abortRef.current?.abort();
+		};
+	}, [fetchSubscriptions]);
 
 	const {
 		pullDistance,
@@ -93,19 +507,35 @@ export default function Subscriptions() {
 		async (amount: number) => {
 			await new Promise((resolve) => setTimeout(resolve, 300));
 			if (!selectedId) return;
-			applyTopUp(selectedId, amount);
+
+			setData((prev) =>
+				prev.map((sub) => {
+					if (sub.id !== selectedId) return sub;
+					// Keep balances numeric end-to-end. Round at USDC's on-chain
+					// precision (7 decimals) so repeated top-ups cannot drift.
+					const updatedBalance = roundAmount(sub.prepaidBalance + amount, 7, "half-up");
+					return {
+						...sub,
+						prepaidBalance: updatedBalance,
+						coveragePayments: coveragePaymentsFor(updatedBalance, sub.price),
+					};
+				}),
+			);
 		},
 		[selectedId, applyTopUp],
 	);
 
-	const handleViewFullUsage = () => {
-		/* TODO: Navigate to full usage page */
-	};
+	const handleViewFullUsage = useCallback(() => {
+		if (!selectedId) return;
+		navigate('/subscriptions/' + selectedId + '/usage');
+	}, [navigate, selectedId]);
 
 	const filteredData = useMemo(() => {
 		const filtered = filterSubscriptions(data, activeFilter);
 		return sortSubscriptions(filtered, sort);
 	}, [activeFilter, data, sort]);
+
+	const listAnnouncement = `${filteredData.length} ${filteredData.length === 1 ? "subscription" : "subscriptions"}, sorted by ${SORT_LABELS[sort.field]} ${sort.direction === "asc" ? "ascending" : "descending"}, filter ${activeFilter}.`;
 
 	// FLIP animation — keys must match the render order
 	const flipKeys = useMemo(() => filteredData.map((s) => s.id), [filteredData]);
@@ -150,44 +580,64 @@ export default function Subscriptions() {
 
 	const handlePauseConfirm = async () => {
 		if (!selectedId) return;
-		setIsActionLoading(true);
+		const targetId = selectedId;
+		const prevSub = data.find((s) => s.id === targetId);
+		const prevStatus = prevSub?.status ?? "Active";
 		setPauseError(null);
-		try {
-			await subscriptions.pause(selectedId);
-			setData((prev) =>
-				prev.map((sub) =>
-					sub.id === selectedId ? { ...sub, status: "Paused" as const } : sub,
-				),
-			);
-			addToast("success", "Subscription paused", "Your subscription has been paused.");
-			setIsPauseModalOpen(false);
-		} catch (err) {
-			setPauseError(getActionError(err, "Failed to pause subscription. Please try again."));
-		} finally {
-			setIsActionLoading(false);
-		}
+		await pause(targetId, {
+			onOptimistic: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === targetId ? { ...sub, status: "Paused" as const } : sub,
+					),
+				);
+			},
+			onRollback: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === targetId ? { ...sub, status: prevStatus } : sub,
+					),
+				);
+			},
+			onSuccess: () => {
+				setIsPauseModalOpen(false);
+			},
+			onError: (err) => {
+				setPauseError(err);
+			},
+		});
 	};
 
 	const handleCancelConfirm = async () => {
 		if (!selectedId) return;
-		setIsActionLoading(true);
+		const targetId = selectedId;
+		const prevSub = data.find((s) => s.id === targetId);
+		const prevStatus = prevSub?.status ?? "Active";
 		setCancelError(null);
-		try {
-			await subscriptions.cancel(selectedId);
-			setData((prev) =>
-				prev.map((sub) =>
-					sub.id === selectedId
-						? { ...sub, status: "Cancelled" as const }
-						: sub,
-				),
-			);
-			addToast("success", "Subscription cancelled", "Your subscription has been cancelled.");
-			setIsCancelModalOpen(false);
-		} catch (err) {
-			setCancelError(getActionError(err, "Failed to cancel subscription. Please try again."));
-		} finally {
-			setIsActionLoading(false);
-		}
+		await cancel(targetId, {
+			onOptimistic: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === targetId
+							? { ...sub, status: "Cancelled" as const }
+							: sub,
+					),
+				);
+			},
+			onRollback: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === targetId ? { ...sub, status: prevStatus } : sub,
+					),
+				);
+			},
+			onSuccess: () => {
+				setIsCancelModalOpen(false);
+			},
+			onError: (err) => {
+				setCancelError(err);
+			},
+		});
 	};
 
 	const handleOfferSelected = (offerId: string) => {
@@ -201,23 +651,25 @@ export default function Subscriptions() {
 	};
 
 	const handleResume = async (id: string) => {
-		if (resumeLoadingId !== null) return;
-		setResumeLoadingId(id);
-		const pendingToastId = addToast("pending", "Resuming subscription", "Please wait while we resume your subscription.");
-		try {
-			await subscriptions.resume(id);
-			setData((prev) =>
-				prev.map((sub) =>
-					sub.id === id ? { ...sub, status: "Active" as const } : sub,
-				),
-			);
-			updateToast(pendingToastId, "success", "Subscription resumed", "Your subscription is active again.");
-		} catch (err) {
-			const actionError = getActionError(err, "Failed to resume subscription. Please try again.");
-			updateToast(pendingToastId, "error", actionError.message, actionError.technicalDetails);
-		} finally {
-			setResumeLoadingId(null);
-		}
+		if (isActionLoading) return;
+		const prevSub = data.find((s) => s.id === id);
+		const prevStatus = prevSub?.status ?? "Paused";
+		await resume(id, {
+			onOptimistic: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === id ? { ...sub, status: "Active" as const } : sub,
+					),
+				);
+			},
+			onRollback: () => {
+				setData((prev) =>
+					prev.map((sub) =>
+						sub.id === id ? { ...sub, status: prevStatus } : sub,
+					),
+				);
+			},
+		});
 	};
 
 	/* ── Loading state ─────────────────────────────────────────── */
@@ -257,47 +709,209 @@ export default function Subscriptions() {
 	/* ── Detail view ───────────────────────────────────────────── */
 	if (selectedSub) {
 		return (
-			<SubscriptionDetailPanel
-				subscription={selectedSub}
-				availableTags={availableTags}
-				isTopUpModalOpen={isTopUpModalOpen}
-				isPauseModalOpen={isPauseModalOpen}
-				isCancelModalOpen={isCancelModalOpen}
-				isActionLoading={isActionLoading}
-				pauseError={pauseError}
-				cancelError={cancelError}
-				resumeLoadingId={resumeLoadingId}
-				toasts={toasts}
-				onBack={() => setSelectedId(null)}
-				onAddTag={handleAddTag}
-				onRemoveTag={handleRemoveTag}
-				onCreateTag={handleCreateTag}
-				onOpenTopUp={() => setIsTopUpModalOpen(true)}
-				onCloseTopUp={() => setIsTopUpModalOpen(false)}
-				onConfirmTopUp={handleTopUpConfirm}
-				onOpenPause={() => {
-					setPauseError(null);
-					setIsPauseModalOpen(true);
-				}}
-				onClosePause={() => {
-					setIsPauseModalOpen(false);
-					setPauseError(null);
-				}}
-				onConfirmPause={handlePauseConfirm}
-				onOpenCancel={() => {
-					setCancelError(null);
-					setIsCancelModalOpen(true);
-				}}
-				onCloseCancel={() => {
-					setIsCancelModalOpen(false);
-					setCancelError(null);
-				}}
-				onConfirmCancel={handleCancelConfirm}
-				onOfferSelected={handleOfferSelected}
-				onResume={handleResume}
-				onViewFullUsage={handleViewFullUsage}
-				onRemoveToast={removeToast}
-			/>
+			<div className="subscriptions-container">
+				{/* Breadcrumb */}
+				<nav className="breadcrumb" aria-label="Breadcrumb">
+					<Link to="/dashboard">
+						<IconHome />
+						Home
+					</Link>
+					<span className="breadcrumb-separator" aria-hidden="true">/</span>
+					<button
+						className="breadcrumb-link-btn"
+						onClick={() => setSelectedId(null)}
+						aria-label="Back to My subscriptions">
+						My subscriptions
+					</button>
+					<span className="breadcrumb-separator" aria-hidden="true">/</span>
+					<span className="breadcrumb-current" aria-current="page">
+						{selectedSub.planName}
+					</span>
+				</nav>
+
+				<button onClick={() => setSelectedId(null)} className="back-link" aria-label="Back to subscriptions list">
+					<IconArrowLeft />
+					Back to all subscriptions
+				</button>
+
+				<div className="detail-view-card">
+					<div className="detail-header">
+						<div className="detail-header-left">
+							<div className="detail-icon-box" aria-hidden="true">
+								{selectedSub.icon}
+							</div>
+							<div className="detail-title-section">
+								<h1>{selectedSub.planName}</h1>
+								<div className="detail-merchant">{selectedSub.merchantName}</div>
+								<div className="detail-status-row">
+									<StatusBadge status={selectedSub.status as StatusType} />
+									<span className="sub-id-small">ID: {selectedSub.id}</span>
+								</div>
+								{/* Tags row */}
+								{selectedSub.tags && selectedSub.tags.length > 0 && (
+									<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+										{selectedSub.tags.map((tag) => (
+											<Tag
+												key={tag.id}
+												label={tag.label}
+												color={tag.color}
+												size="small"
+												removable
+												onRemove={() => handleRemoveTag(selectedSub.id, tag.id)}
+											/>
+										))}
+										<AddTagPopover
+											availableTags={availableTags}
+											selectedTags={selectedSub.tags}
+											onAddTag={(tag) => handleAddTag(selectedSub.id, tag)}
+											onCreateTag={handleCreateTag}
+										/>
+									</div>
+								)}
+								{(!selectedSub.tags || selectedSub.tags.length === 0) && (
+									<div style={{ marginTop: '0.75rem' }}>
+										<AddTagPopover
+											availableTags={availableTags}
+											selectedTags={[]}
+											onAddTag={(tag) => handleAddTag(selectedSub.id, tag)}
+											onCreateTag={handleCreateTag}
+										/>
+									</div>
+								)}
+							</div>
+						</div>
+						<div className="detail-price-section">
+							<div className="detail-price-value">
+								{selectedSub.price} {selectedSub.currency}
+							</div>
+							<div className="detail-price-interval">per {selectedSub.interval}</div>
+						</div>
+					</div>
+
+					<div className="card-separator-small" aria-hidden="true" />
+
+					<div className="detail-grid-container">
+						<div className="detail-grid">
+							<div className="detail-item">
+								<span className="detail-label">Last payment</span>
+								<span className="detail-value">{selectedSub.lastPayment}</span>
+							</div>
+							<div className="detail-item">
+								<span className="detail-label">Next charge</span>
+								<span className="detail-value">{selectedSub.nextCharge}</span>
+							</div>
+							<div className="detail-item">
+								<span className="detail-label">Subscribed since</span>
+								<span className="detail-value">{selectedSub.subscribedSince}</span>
+							</div>
+							<div className="detail-item">
+								<span className="detail-label">Prepaid balance</span>
+								<span className="detail-value">
+									<Amount
+										value={selectedSub.prepaidBalance}
+										currency={selectedSub.currency}
+										minPrecision={0}
+										data-testid="detail-prepaid-balance"
+									/>
+								</span>
+							</div>
+						</div>
+
+						<div className="detail-actions-sidebar">
+							<h4>Actions</h4>
+							<div className="action-btn-stack">
+								{selectedSub.status === "Active" && resumeLoadingId !== selectedSub.id && (
+									<button
+										className="detail-action-btn detail-action-btn--pause"
+										disabled={isActionLoading}
+										onClick={() => {
+											setPauseError(null);
+											setIsPauseModalOpen(true);
+										}}
+										aria-label={`Pause ${selectedSub.planName} subscription`}>
+										Pause subscription
+									</button>
+								)}
+								{(selectedSub.status === "Paused" || resumeLoadingId === selectedSub.id) && (
+									<button
+										className="detail-action-btn detail-action-btn--resume"
+										onClick={() => handleResume(selectedSub.id)}
+										disabled={isActionLoading}
+										aria-label={`Resume ${selectedSub.planName} subscription`}>
+										{resumeLoadingId === selectedSub.id ? "Resuming..." : "Resume subscription"}
+									</button>
+								)}
+								{selectedSub.status !== "Cancelled" && (
+									<button
+										className="detail-action-btn"
+										disabled={isActionLoading}
+										onClick={() => {
+											setCancelError(null);
+											setIsCancelModalOpen(true);
+										}}
+										aria-label={`Cancel ${selectedSub.planName} subscription`}>
+										Cancel billing
+									</button>
+								)}
+							</div>
+						</div>
+					</div>
+				</div>
+
+
+				<div style={{ marginTop: "1.5rem" }}>
+					<PrepaidBalanceCard
+						balance={selectedSub.prepaidBalance || 0}
+						maxBalance={Math.max(selectedSub.prepaidBalance || 0, selectedSub.price * 3, 30)}
+						paymentAmount={selectedSub.price}
+						onTopUp={() => setIsTopUpModalOpen(true)}
+					/>
+				</div>
+				<div style={{ marginTop: "1.5rem" }}>
+					<UsageThisPeriod
+						billingPeriod={usageData.billingPeriod}
+						usage={usageData.usage}
+						estimatedCharge={usageData.estimatedCharge}
+						onViewFullUsage={handleViewFullUsage}
+					/>
+				</div>
+
+
+				<TopUpModal
+					isOpen={isTopUpModalOpen}
+					onClose={() => setIsTopUpModalOpen(false)}
+					planName={selectedSub.planName}
+					planPrice={selectedSub.price}
+					currentBalance={selectedSub.prepaidBalance || 0}
+					walletBalance={150}
+					currency={selectedSub.currency}
+					onConfirm={handleTopUpConfirm}
+				/>
+				<PauseSubscriptionModal
+					isOpen={isPauseModalOpen}
+					onClose={() => {
+						setIsPauseModalOpen(false);
+						setPauseError(null);
+					}}
+					onConfirm={handlePauseConfirm}
+					isLoading={isActionLoading}
+					error={pauseError}
+				/>
+				<CancelSubscriptionModal
+					isOpen={isCancelModalOpen}
+					onClose={() => {
+						setIsCancelModalOpen(false);
+						setCancelError(null);
+					}}
+					onConfirm={handleCancelConfirm}
+					onOfferSelected={handleOfferSelected}
+					isLoading={isActionLoading}
+					balance={formatAmount(selectedSub.prepaidBalance, { minPrecision: 0 }).number}
+					endDate={selectedSub.nextCharge || "N/A"}
+					error={cancelError}
+				/>
+				<ToastContainer toasts={toasts} removeToast={removeToast} />
+			</div>
 		);
 	}
 
@@ -327,25 +941,165 @@ export default function Subscriptions() {
 			</div>
 
 			{/* Filter tabs */}
-			<SubscriptionFilterTabs
-				activeFilter={activeFilter}
-				stats={stats}
-				onFilterChange={setActiveFilter}
-			/>
+			<div className="filter-tabs" role="group" aria-label="Filter subscriptions by status">
+				{STATUS_FILTERS.map((tab) => (
+					<button
+						key={tab}
+						id={`filter-tab-${tab.toLowerCase()}`}
+						className={`filter-tab${activeFilter === tab ? " active" : ""}`}
+						onClick={() => updateSearchParam("status", tab)}
+						aria-pressed={activeFilter === tab}
+						aria-label={t('subscriptions.tabAriaLabel', { label: tab, count: stats[tab] })}>
+						{t(`subscriptions.tabs.${tab.toLowerCase()}`)} <span>({stats[tab]})</span>
+					</button>
+				))}
+			</div>
+
+			<span
+				className="visually-hidden"
+				role="status"
+				aria-live="polite"
+				aria-atomic="true"
+				data-testid="subscriptions-list-live-region">
+				{listAnnouncement}
+			</span>
 
 			{/* Empty state */}
 			{filteredData.length === 0 ? (
 				<EmptyState filter={activeFilter} />
 			) : (
 				<>
-					<SubscriptionSortToolbar sort={sort} onSortField={handleSortField} />
+					{/* ── Sort controls ─────────────────────────────────── */}
+					<div
+						className="sort-toolbar"
+						role="toolbar"
+						aria-label="Sort subscriptions"
+						data-testid="sort-toolbar">
+						<span className="sort-toolbar__label" id="sort-toolbar-label">Sort by:</span>
+						<div className="sort-toolbar__buttons" aria-labelledby="sort-toolbar-label">
+							{SORT_FIELDS.map((f) => (
+								<SortButton key={f} field={f} sort={sort} onSort={handleSortField} />
+							))}
+						</div>
+					</div>
 
-					<SubscriptionsTable
-						subscriptions={filteredData}
-						tableBodyRef={tableBodyRef}
-						getItemProps={getItemProps}
-						onSelect={setSelectedId}
-					/>
+					{/* ── Desktop table ─────────────────────────────────── */}
+					<div className="subs-table-wrapper" role="region" aria-label="Subscriptions list">
+						<table
+							className="subs-table"
+							aria-label={t('subscriptions.pageTitle')}
+							data-testid="subscriptions-table">
+							<thead>
+							<tr>
+								<th scope="col">{t('subscriptions.table.plan')}</th>
+								<th scope="col">{t('subscriptions.table.status')}</th>
+								<th scope="col">{t('subscriptions.table.price')}</th>
+								<th scope="col">{t('subscriptions.table.tags')}</th>
+								<th scope="col">{t('subscriptions.table.nextCharge')}</th>
+								<th scope="col">{t('subscriptions.table.prepaidBalance')}</th>
+								<th scope="col">
+									<span className="visually-hidden">{t('subscriptions.table.actions')}</span>
+								</th>
+							</tr>
+							</thead>
+							{/* FLIP container — tableBodyRef tracks child positions */}
+							<tbody ref={tableBodyRef as React.RefObject<HTMLTableSectionElement>}>
+							{filteredData.map((sub) => (
+								<tr
+									key={sub.id}
+									{...getItemProps(sub.id)}
+									aria-label={`${sub.planName} by ${sub.merchantName}, ${sub.status}`}
+									onClick={(e) => {
+										if (!isInteractiveTarget(e.target)) setSelectedId(sub.id);
+									}}>
+									{/* Plan cell */}
+									<td>
+										<button
+											type="button"
+											className="subs-table__plan-cell"
+											onClick={() => setSelectedId(sub.id)}
+											aria-label={`Open ${sub.planName}`}>
+											<span className="subs-table__plan-icon" aria-hidden="true">
+												{sub.icon}
+											</span>
+											<span className="subs-table__plan-copy">
+												<span className="subs-table__plan-name">{sub.planName}</span>
+												<span className="subs-table__merchant">{sub.merchantName}</span>
+											</span>
+										</button>
+									</td>
+
+									{/* Status */}
+									<td>
+										<StatusBadge status={sub.status as StatusType} />
+									</td>
+
+									{/* Price */}
+									<td>
+											<span className="subs-table__price">
+												{sub.price} {sub.currency}
+												<span className="subs-table__price-interval">/ {sub.interval}</span>
+											</span>
+									</td>
+
+									{/* Tags */}
+									<td>
+										<div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+											{sub.tags?.slice(0, 2).map((tag) => (
+												<Tag
+													key={tag.id}
+													label={tag.label}
+													color={tag.color}
+													size="small"
+												/>
+											))}
+											{sub.tags && sub.tags.length > 2 && (
+												<span style={{ fontSize: 'var(--text-xs)', color: '#64748b' }}>
+														+{sub.tags.length - 2}
+													</span>
+											)}
+										</div>
+									</td>
+
+									{/* Next charge */}
+									<td>
+											<span className="subs-table__meta-cell">
+												<IconCalendar />
+												{sub.nextCharge}
+											</span>
+									</td>
+
+									{/* Prepaid balance */}
+									<td>
+											<span className="subs-table__meta-cell">
+												<IconWallet />
+												<Amount
+													value={sub.prepaidBalance}
+													currency={sub.currency}
+													minPrecision={0}
+													data-testid={`prepaid-balance-${sub.id}`}
+												/>
+											</span>
+									</td>
+
+									{/* Actions */}
+									<td>
+										<div className="subs-table__actions">
+											<button
+												type="button"
+												className="subs-table__btn subs-table__btn--primary"
+												id={`manage-btn-${sub.id}`}
+												onClick={() => setSelectedId(sub.id)}
+												aria-label={`Manage ${sub.planName}`}>
+												{t('subscriptions.table.manage')}
+											</button>
+										</div>
+									</td>
+								</tr>
+							))}
+							</tbody>
+						</table>
+					</div>
 
 					<SubscriptionsMobileCards
 						subscriptions={filteredData}
@@ -362,13 +1116,186 @@ export default function Subscriptions() {
 							setPauseError(null);
 							setIsPauseModalOpen(true);
 						}}
-						onResumeRequest={handleResume}
-						onCancelRequest={(id) => {
-							setSelectedId(id);
-							setCancelError(null);
-							setIsCancelModalOpen(true);
-						}}
-					/>
+						className="subs-cards"
+						aria-label="Subscriptions"
+						data-testid="subscriptions-cards"
+						{...refreshHandlers}
+					>
+						{/* Polite live region for accessibility announcements */}
+						<div className="visually-hidden" aria-live="polite">
+							{isRefreshing ? t('subscriptions.refreshing', 'Refreshing subscriptions...') : ''}
+						</div>
+
+						{/* Fallback Refresh Button for keyboard users and screen readers */}
+						<button 
+							className="ptr-fallback-btn"
+							onClick={triggerRefresh}
+							aria-label="Refresh subscriptions"
+						>
+							<IconPlay />
+							<span className="visually-hidden">Refresh</span>
+						</button>
+
+						{/* Pull-to-refresh visual indicator */}
+						<div 
+							className="ptr-indicator"
+							style={{ 
+								height: `${Math.min(pullDistance, 100)}px`,
+								opacity: pullDistance > 10 ? 1 : 0
+							}}
+							aria-hidden="true"
+						>
+							{isRefreshing || pullDistance > 0 ? (
+								<div className={`ptr-spinner ${isRefreshing ? 'spinning' : ''}`} style={{ transform: `rotate(${pullDistance * 3}deg)` }}>
+									<IconCog />
+								</div>
+							) : null}
+						</div>
+
+						<div 
+							className="subs-cards-inner"
+							style={{ transform: `translateY(${pullDistance}px)` }}
+						>
+						{filteredData.map((sub) => {
+							const leadingActions: SwipeAction[] = [];
+							const trailingActions: SwipeAction[] = [];
+
+							if (sub.status === "Active" && resumeLoadingId !== sub.id) {
+								trailingActions.push({
+									id: "pause",
+									label: "Pause",
+									icon: <IconPause />,
+									backgroundColor: "#f59e0b", // amber-500
+									color: "#fff",
+									disabled: isActionLoading,
+									onClick: () => {
+										setSelectedId(sub.id);
+										setPauseError(null);
+										setIsPauseModalOpen(true);
+									}
+								});
+							} else if (sub.status === "Paused" || resumeLoadingId === sub.id) {
+								trailingActions.push({
+									id: "resume",
+									label: resumeLoadingId === sub.id ? "Resuming..." : "Resume",
+									icon: <IconPlay />,
+									backgroundColor: "#10b981", // emerald-500
+									color: "#fff",
+									disabled: isActionLoading,
+									onClick: () => handleResume(sub.id)
+								});
+							}
+
+							if (sub.status !== "Cancelled") {
+								trailingActions.push({
+									id: "cancel",
+									label: "Cancel",
+									icon: <IconX />,
+									backgroundColor: "#ef4444", // red-500
+									color: "#fff",
+									disabled: isActionLoading,
+									onClick: () => {
+										setSelectedId(sub.id);
+										setCancelError(null);
+										setIsCancelModalOpen(true);
+									}
+								});
+							}
+
+							return (
+							<SwipeableRow key={sub.id} leadingActions={leadingActions} trailingActions={trailingActions}>
+								<article
+									className="subs-card"
+									tabIndex={-1}
+									role="button"
+									aria-label={`${sub.planName} – ${sub.status}. Tap to manage.`}
+									onClick={(e) => {
+										if (!isInteractiveTarget(e.target)) setSelectedId(sub.id);
+									onClick={() => setSelectedId(sub.id)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" || e.key === " ") {
+											e.preventDefault();
+											setSelectedId(sub.id);
+										}
+									}}>
+									<div className="subs-card__top">
+										<div className="subs-card__plan-info">
+											<div className="subs-card__icon" aria-hidden="true">
+												{sub.icon}
+											</div>
+											<div>
+												<div className="subs-card__name">{sub.planName}</div>
+												<div className="subs-card__merchant">{sub.merchantName}</div>
+												{/* Tags for mobile */}
+												{sub.tags && sub.tags.length > 0 && (
+													<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+														{sub.tags.slice(0, 2).map((tag) => (
+															<Tag
+																key={tag.id}
+																label={tag.label}
+																color={tag.color}
+																size="small"
+															/>
+														))}
+														{sub.tags.length > 2 && (
+															<span style={{ fontSize: 'var(--text-xs)', color: '#64748b', alignSelf: 'center' }}>
+																+{sub.tags.length - 2}
+															</span>
+														)}
+													</div>
+												)}
+											</div>
+										</div>
+										<StatusBadge status={sub.status as StatusType} />
+									</div>
+
+									<div className="subs-card__meta">
+										<div className="subs-card__meta-item">
+											<span className="subs-card__meta-label">{t('subscriptions.table.prepaid')}</span>
+											<span className="subs-card__meta-value">
+												<Amount
+													value={sub.prepaidBalance}
+													currency={sub.currency}
+													minPrecision={0}
+													data-testid={`prepaid-balance-card-${sub.id}`}
+												/>
+											</span>
+										</div>
+										<div className="subs-card__meta-item">
+											<span className="subs-card__meta-label">{t('subscriptions.table.coverage')}</span>
+											<span className="subs-card__meta-value">{coverageLabel(sub.coveragePayments)}</span>
+										</div>
+										<div className="subs-card__meta-item">
+											<span className="subs-card__meta-label">{t('subscriptions.table.nextCharge')}</span>
+											<span className="subs-card__meta-value">{sub.nextCharge}</span>
+										</div>
+										<div className="subs-card__meta-item">
+											<span className="subs-card__meta-label">{t('subscriptions.table.lastPayment')}</span>
+											<span className="subs-card__meta-value">{sub.lastPayment}</span>
+										</div>
+									</div>
+
+									<div className="subs-card__footer">
+										<span className="subs-card__price">
+											{sub.price} {sub.currency}
+											<span className="subs-card__price-interval">
+												/ {sub.interval}
+											</span>
+										</span>
+										<button
+											type="button"
+											className="subs-table__btn subs-table__btn--primary"
+											id={`manage-card-btn-${sub.id}`}
+											onClick={() => setSelectedId(sub.id)}
+											aria-label={`Open ${sub.planName} from card`}>
+											Manage
+										</button>
+									</div>
+								</article>
+							</SwipeableRow>
+						)})}
+						</div>
+					</div>
 				</>
 			)}
 
