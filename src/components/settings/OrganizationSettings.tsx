@@ -1,91 +1,181 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Save, Building2, Users, Trash2, Edit2 } from 'lucide-react'
+import { organization, type Organization, type OrganizationProfile } from '@/api/client'
 import DangerZone, { DangerZoneItem } from '../common/DangerZone'
 import ConfirmDialog from '../common/ConfirmDialog'
 import Avatar from '../common/Avatar'
 import AvatarUploader from '../common/AvatarUploader'
 import { FieldLabelWithHelp } from '../common/FieldHelpPopover'
 
-interface OrganizationData {
-  name: string
-  domain: string
-  email: string
-  timezone: string
-  currency: string
-  language: string
-}
-
-interface TeamMember {
-  id: string
-  name: string
-  email: string
-  role: 'admin' | 'member' | 'viewer'
-  avatar?: string
-  joinedAt: string
+function profileOf(data: Organization): OrganizationProfile {
+  const { name, domain, email, timezone, currency, language } = data
+  return { name, domain, email, timezone, currency, language }
 }
 
 export default function OrganizationSettings() {
-  const [orgData, setOrgData] = useState<OrganizationData>({
-    name: 'Acme Corporation',
-    domain: 'acme.com',
-    email: 'admin@acme.com',
-    timezone: 'UTC',
-    currency: 'USD',
-    language: 'en-US',
+  const [saved, setSaved] = useState<Organization | null>(null)
+  const [orgData, setOrgData] = useState<OrganizationProfile>({
+    name: '', domain: '', email: '', timezone: 'UTC', currency: 'USD', language: 'en-US',
   })
-
-  const [orgAvatar, setOrgAvatar] = useState<string | null>(null)
-
-  const [teamMembers] = useState<TeamMember[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john@acme.com',
-      role: 'admin',
-      avatar: undefined,
-      joinedAt: '2024-01-15',
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      email: 'jane@acme.com',
-      role: 'member',
-      joinedAt: '2024-02-01',
-    },
-  ])
-
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [errors, setErrors] = useState<{ name?: string; email?: string }>({})
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleted, setDeleted] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [avatarAction, setAvatarAction] = useState<'upload' | 'remove' | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [avatarError, setAvatarError] = useState('')
+  const previewRef = useRef<string | null>(null)
+  const avatarRequest = useRef<AbortController | null>(null)
+  const mutationRequest = useRef<AbortController | null>(null)
+  const isBusy = isSaving || isDeleting || avatarAction !== null
+  const teamMembers = saved?.members ?? []
+  const orgAvatar = saved?.avatarUrl ?? null
 
-  const handleSave = () => {
-    // TODO: Implement save logic
-    console.log('Saving organization data:', { ...orgData, avatar: orgAvatar })
+  useEffect(() => {
+    const controller = new AbortController()
+    setLoading(true)
+    setLoadError(false)
+    organization.get({ signal: controller.signal }).then((data) => {
+      if (controller.signal.aborted) return
+      setSaved(data)
+      setOrgData(profileOf(data))
+    }).catch(() => {
+      if (!controller.signal.aborted) setLoadError(true)
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false)
+    })
+    return () => controller.abort()
+  }, [loadAttempt])
+
+  useEffect(() => () => {
+    avatarRequest.current?.abort()
+    mutationRequest.current?.abort()
+    if (previewRef.current) {
+      URL.revokeObjectURL(previewRef.current)
+      previewRef.current = null
+    }
+  }, [])
+
+  const cancelEditing = () => {
+    if (saved) setOrgData(profileOf(saved))
+    setErrors({})
+    setSaveError('')
     setIsEditing(false)
   }
 
-  const handleDeleteOrganization = () => {
-    // TODO: Implement delete logic with proper confirmation
-    console.log('Deleting organization...')
-    setShowDeleteConfirmation(false)
+  const handleSave = async () => {
+    if (isBusy) return
+    const profile = { ...orgData, name: orgData.name.trim(), email: orgData.email.trim() }
+    const invalid: typeof errors = {}
+    if (!profile.name) invalid.name = 'Organization name is required.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) invalid.email = 'Enter a valid contact email.'
+    setErrors(invalid)
+    setSaveError('')
+    setNotice('')
+    if (Object.keys(invalid).length) return
+    const controller = new AbortController()
+    mutationRequest.current = controller
+    setIsSaving(true)
+    try {
+      const data = await organization.update(profile, { signal: controller.signal })
+      if (controller.signal.aborted) return
+      setSaved(data)
+      setOrgData(profileOf(data))
+      setIsEditing(false)
+      setNotice('Organization saved.')
+    } catch {
+      if (!controller.signal.aborted) setSaveError('Unable to save organization. Please try again.')
+    } finally {
+      if (!controller.signal.aborted) setIsSaving(false)
+      mutationRequest.current = null
+    }
+  }
+
+  const handleDeleteOrganization = async () => {
+    if (isBusy || !showDeleteConfirmation) return
+    const controller = new AbortController()
+    mutationRequest.current = controller
+    setIsDeleting(true)
+    setDeleteError('')
+    try {
+      await organization.delete({ signal: controller.signal })
+      if (!controller.signal.aborted) setDeleted(true)
+    } catch {
+      if (!controller.signal.aborted) setDeleteError('Unable to delete organization. Please try again.')
+    } finally {
+      if (!controller.signal.aborted) setIsDeleting(false)
+      mutationRequest.current = null
+    }
   }
 
   const handleAvatarUpload = async (file: File) => {
-    // TODO: Replace with actual upload to server/cloud storage
-    // For now, create a local preview URL
-    const url = URL.createObjectURL(file)
-    setOrgAvatar(url)
-    console.log('Avatar uploaded:', file.name)
+    if (isBusy || avatarRequest.current) return
+    const controller = new AbortController()
+    avatarRequest.current = controller
+    setAvatarError('')
+    setAvatarAction('upload')
+    setUploadProgress(0)
+    try {
+      const preview = URL.createObjectURL(file)
+      previewRef.current = preview
+      setAvatarPreview(preview)
+      const result = await organization.uploadAvatar(file, {
+        signal: controller.signal,
+        onProgress: (percent) => { if (!controller.signal.aborted) setUploadProgress(percent) },
+      })
+      if (!controller.signal.aborted) setSaved((data) => data ? { ...data, avatarUrl: result.avatarUrl } : data)
+    } catch {
+      if (!controller.signal.aborted) setAvatarError('Avatar upload failed. Please try again.')
+    } finally {
+      if (previewRef.current) {
+        URL.revokeObjectURL(previewRef.current)
+        previewRef.current = null
+      }
+      if (!controller.signal.aborted) {
+        setAvatarPreview(null)
+        setAvatarAction(null)
+      }
+      avatarRequest.current = null
+    }
   }
 
-  const handleAvatarRemove = () => {
-    if (orgAvatar) {
-      URL.revokeObjectURL(orgAvatar)
+  const handleAvatarRemove = async () => {
+    if (isBusy) return
+    const controller = new AbortController()
+    avatarRequest.current = controller
+    setAvatarAction('remove')
+    setAvatarError('')
+    try {
+      await organization.removeAvatar({ signal: controller.signal })
+      if (!controller.signal.aborted) setSaved((data) => data ? { ...data, avatarUrl: null } : data)
+    } catch {
+      if (!controller.signal.aborted) setAvatarError('Unable to remove avatar. Please try again.')
+    } finally {
+      if (!controller.signal.aborted) setAvatarAction(null)
+      avatarRequest.current = null
     }
-    setOrgAvatar(null)
   }
+
+  if (deleted) return <p role="status">Organization deleted.</p>
+  if (loading) return <p role="status">Loading organization...</p>
+  if (loadError || !saved) return (
+    <div role="alert">
+      <p>Unable to load organization.</p>
+      <button onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Retry</button>
+    </div>
+  )
 
   return (
-    <div>
+    <fieldset disabled={isBusy} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
       <div style={{ marginBottom: '2rem' }}>
         <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
           Organization Settings
@@ -94,6 +184,17 @@ export default function OrganizationSettings() {
           Manage your organization profile and team members
         </p>
       </div>
+
+      {notice && <p role="status">{notice}</p>}
+      {saveError && <p role="alert">{saveError}</p>}
+      {avatarError && <p role="alert">{avatarError}</p>}
+      {avatarAction === 'upload' && (
+        <div role="status">
+          Uploading avatar... {uploadProgress}%
+          <progress aria-label="Avatar upload progress" value={uploadProgress} max={100} />
+        </div>
+      )}
+      {avatarAction === 'remove' && <p role="status">Removing avatar...</p>}
 
       {/* Organization Profile */}
       <div style={{ marginBottom: '2rem' }}>
@@ -105,7 +206,7 @@ export default function OrganizationSettings() {
             </h3>
           </div>
           <button
-            onClick={() => setIsEditing(!isEditing)}
+            onClick={() => { setNotice(''); if (isEditing) cancelEditing(); else setIsEditing(true) }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -142,7 +243,8 @@ export default function OrganizationSettings() {
             borderBottom: '1px solid var(--color-border-subtle)',
           }}>
             <AvatarUploader
-              currentSrc={orgAvatar}
+              currentSrc={avatarPreview ?? orgAvatar}
+              disabled={isBusy}
               name={orgData.name}
               size="xl"
               onUpload={handleAvatarUpload}
@@ -173,6 +275,8 @@ export default function OrganizationSettings() {
               </FieldLabelWithHelp>
               <input
                 id="organization-name"
+                aria-invalid={Boolean(errors.name)}
+                aria-describedby={errors.name ? 'organization-name-error' : undefined}
                 type="text"
                 value={orgData.name}
                 onChange={(e) => setOrgData({ ...orgData, name: e.target.value })}
@@ -188,6 +292,7 @@ export default function OrganizationSettings() {
                   opacity: isEditing ? 1 : 0.7,
                 }}
               />
+              {errors.name && <p id="organization-name-error" role="alert">{errors.name}</p>}
             </div>
 
             <div>
@@ -229,6 +334,8 @@ export default function OrganizationSettings() {
               </FieldLabelWithHelp>
               <input
                 id="organization-contact-email"
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? 'organization-contact-email-error' : undefined}
                 type="email"
                 value={orgData.email}
                 onChange={(e) => setOrgData({ ...orgData, email: e.target.value })}
@@ -244,6 +351,7 @@ export default function OrganizationSettings() {
                   opacity: isEditing ? 1 : 0.7,
                 }}
               />
+              {errors.email && <p id="organization-contact-email-error" role="alert">{errors.email}</p>}
             </div>
 
             <div>
@@ -348,7 +456,7 @@ export default function OrganizationSettings() {
           {isEditing && (
             <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button
-                onClick={() => setIsEditing(false)}
+                onClick={cancelEditing}
                 style={{
                   padding: '0.75rem 1.5rem',
                   borderRadius: '6px',
@@ -378,7 +486,7 @@ export default function OrganizationSettings() {
                 }}
               >
                 <Save size={16} />
-                Save Changes
+                {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           )}
@@ -413,6 +521,7 @@ export default function OrganizationSettings() {
         </div>
 
         <div style={{ background: 'var(--color-surface-card)', borderRadius: '6px', border: '1px solid var(--color-border-subtle)', overflow: 'hidden' }}>
+          {teamMembers.length === 0 && <p style={{ padding: '1rem' }}>No team members.</p>}
           {teamMembers.map((member, index) => (
             <div
               key={member.id}
@@ -477,7 +586,7 @@ export default function OrganizationSettings() {
       <DangerZone description="Irreversible and destructive actions. Please review carefully before proceeding.">
         <DangerZoneItem
           title="Delete organization"
-          description={`Permanently delete "${orgData.name}" and all associated data. This action cannot be undone and will immediately cancel all active subscriptions.`}
+          description={`Permanently delete "${saved.name}" and all associated data. This action cannot be undone and will immediately cancel all active subscriptions.`}
           actionLabel="Delete Organization"
           actionIcon={<Trash2 size={14} aria-hidden="true" />}
           onAction={() => setShowDeleteConfirmation(true)}
@@ -490,8 +599,9 @@ export default function OrganizationSettings() {
         description={
           <>
             This action cannot be undone. This will permanently delete your organization
-            <strong> "{orgData.name}" </strong>
+            <strong> "{saved.name}" </strong>
             and all associated data, including:
+            {deleteError && <span role="alert" style={{ display: 'block' }}>{deleteError}</span>}
           </>
         }
         consequences={[
@@ -501,13 +611,14 @@ export default function OrganizationSettings() {
           'API keys and tokens',
           'Team member access',
         ]}
-        confirmPhrase="DELETE"
+        confirmPhrase={saved.name}
+        isLoading={isDeleting}
         confirmLabel="Delete organization"
         loadingLabel="Deleting..."
         cancelLabel="Cancel"
-        onClose={() => setShowDeleteConfirmation(false)}
+        onClose={() => { if (!isDeleting) { setShowDeleteConfirmation(false); setDeleteError('') } }}
         onConfirm={handleDeleteOrganization}
       />
-    </div>
+    </fieldset>
   )
 }
