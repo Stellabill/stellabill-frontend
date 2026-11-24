@@ -1,3 +1,7 @@
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { usePageTitle } from "../hooks/usePageTitle";
+import type { ApiError } from "../api/client";
 import WalletConnectModal from "../components/WalletConnectModal";
 import GiftPurchaseModal from "../components/GiftPurchaseModal";
 import { FreighterConnectionError } from "../wallet/freighter";
@@ -8,6 +12,9 @@ import BrowsePlansGrid from "./browsePlans/BrowsePlansGrid";
 import ErrorState from "../components/ErrorState";
 import SortBySelect from "../components/SortBySelect";
 import GiftPurchaseModal from "../components/GiftPurchaseModal";
+import GiftPurchaseModal, { type Plan as GiftPlan } from "../components/GiftPurchaseModal";
+import { ToastContainer, type ToastOptions } from "../components/TransactionToast";
+import { copyToClipboard } from "../utils/clipboard";
 import { addBillingInterval } from "../utils/billingDate";
 import { catalogPlans as mockPlans, type Plan, type PlanInterval } from "../data/catalogPlans";
 import styles from "./BrowsePlans.module.css";
@@ -174,6 +181,156 @@ function PlanCard({ plan, onSubscribe, onSendGift }: PlanCardProps) {
 export default function BrowsePlans() {
 	usePageTitle("Browse Plans");
 	const state = useBrowsePlansPage();
+	const navigate = useNavigate();
+	const [plans, setPlans] = useState<Plan[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<ApiError | null>(null);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [intervalFilter, setIntervalFilter] = useState<PlanInterval | "All">("All");
+	const [sortField, setSortField] = useState<SortField>("name");
+	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+	const [walletModalOpen, setWalletModalOpen] = useState(false);
+	const [giftModalOpen, setGiftModalOpen] = useState(false);
+	const [selectedPlanForGift, setSelectedPlanForGift] = useState<Plan | null>(null);
+	const [toasts, setToasts] = useState<ToastOptions[]>([]);
+	const toastId = useRef(0);
+
+	const removeToast = useCallback((id: string) => {
+		setToasts((prev) => prev.filter((toast) => toast.id !== id));
+	}, []);
+	const {
+		status,
+		error: walletError,
+		connect,
+		clearError,
+		cancelConnect,
+	} = useWallet();
+
+	// Fetch plans from API
+	const fetchPlans = useCallback(async () => {
+		setLoading(true);
+		setError(null);
+		try {
+			// Simulate API call with potential error
+			await new Promise((resolve, reject) => {
+				setTimeout(() => {
+					if (window.location.search.includes('simulate_error')) {
+						const err: ApiError = new Error('Failed to load plans from catalog');
+						err.status = 500;
+						err.technicalDetails = 'The decentralized plan registry is experiencing high latency. [Error Code: REG-CAT-503]';
+						reject(err);
+					} else {
+						resolve(true);
+					}
+				}, 800);
+			});
+			// No backend is deployed for this demo, so the catalog is sample data.
+			setPlans(mockPlans);
+			setLoading(false);
+		} catch (err: unknown) {
+			setError(err as Error);
+			// Fallback to mock data on error so UI still shows something if desired, 
+			// but here we want to show the error state primarily.
+			setPlans(mockPlans);
+			setLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		fetchPlans();
+	}, [fetchPlans]);
+
+	const filteredPlans = useMemo(() => {
+		const result = plans.filter((plan) => {
+			const matchesSearch =
+				plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				plan.merchant.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				plan.description.toLowerCase().includes(searchQuery.toLowerCase());
+			const matchesInterval =
+				intervalFilter === "All" || plan.interval === intervalFilter;
+
+			return matchesSearch && matchesInterval;
+		});
+
+		result.sort((a, b) => {
+			let comparison = 0;
+
+			if (sortField === "name") {
+				comparison = a.name.localeCompare(b.name);
+			} else if (sortField === "price") {
+				comparison = a.price - b.price;
+			} else if (sortField === "merchant") {
+				comparison = a.merchant.localeCompare(b.merchant);
+			}
+
+			return sortDirection === "asc" ? comparison : -comparison;
+		});
+
+		return result;
+	}, [plans, searchQuery, intervalFilter, sortField, sortDirection]);
+
+	const handleSortChange = (value: string) => {
+		const separatorIndex = value.lastIndexOf("-");
+		setSortField(value.slice(0, separatorIndex) as SortField);
+		setSortDirection(value.slice(separatorIndex + 1) as SortDirection);
+	};
+
+	const handleSubscribe = (plan: Plan) => {
+		if (status !== "connected") {
+			setWalletModalOpen(true);
+			return;
+		}
+
+		navigate(`/checkout/${plan.id}`);
+	};
+
+	const handleSendGift = (plan: Plan) => {
+		setSelectedPlanForGift(plan);
+		setGiftModalOpen(true);
+	};
+
+	const handleGiftPurchaseComplete = (giftCode: string) => {
+		toastId.current += 1;
+		const id = `gift-${toastId.current}`;
+		setToasts((prev) => [
+			...prev,
+			{
+				id,
+				status: "success",
+				title: "Gift created",
+				message: "Your gift subscription is ready to share.",
+				actionText: "Copy Code",
+				onAction: () => {
+					void copyToClipboard(giftCode).then((copied) => {
+						if (copied) {
+							setToasts((current) =>
+								current.map((t) =>
+									t.id === id ? { ...t, actionText: "Copied!" } : t,
+								),
+							);
+						}
+					});
+				},
+			},
+		]);
+	};
+
+	const handleWalletConnect = async () => {
+		try {
+			const result = await connect();
+			if (!result) return;
+			setWalletModalOpen(false);
+		} catch {
+			// The provider exposes the error to the modal.
+		}
+	};
+
+	const clearFilters = () => {
+		setSearchQuery("");
+		setIntervalFilter("All");
+		setSortField("name");
+		setSortDirection("asc");
+	};
 
 	return (
 		<div className={styles.page}>
@@ -356,6 +513,7 @@ export default function BrowsePlans() {
 					plan={state.selectedPlanForGift}
 					onPurchaseComplete={state.handleGiftPurchaseComplete}
 				/>
+				<ToastContainer toasts={toasts} removeToast={removeToast} />
 			</div>
 		</div>
 	);
