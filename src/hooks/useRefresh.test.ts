@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { useRefresh } from './useRefresh';
 
 describe('useRefresh', () => {
-  const onRefresh = vi.fn().mockResolved(undefined);
+  const onRefresh = vi.fn().mockResolvedValue(undefined);
 
   const mockMatchMedia = (matches: boolean) => {
     Object.defineProperty(window, 'matchMedia', {
@@ -44,6 +44,18 @@ describe('useRefresh', () => {
     return event;
   };
 
+  const setupWithContainer = (options: Partial<Parameters<typeof useRefresh>[0]> = {}) => {
+    const container = createContainer();
+    const hook = renderHook(() => useRefresh({ onRefresh, ...options }));
+    container.addEventListener('touchstart', hook.result.current.handlers.onTouchStart as EventListener);
+    container.addEventListener('touchend', hook.result.current.handlers.onTouchEnd as EventListener);
+    act(() => {
+      hook.result.current.containerRef.current = container;
+      hook.rerender();
+    });
+    return { container, ...hook };
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockMatchMedia(false);
@@ -56,12 +68,10 @@ describe('useRefresh', () => {
   });
 
   it('should not update pull distance if scrolled down', () => {
-    const container = createContainer();
+    const { container, result } = setupWithContainer();
     container.scrollTop = 10;
-    const { result } = renderHook(() => useRefresh({ onRefresh }));
 
     act(() => {
-      result.current.containerRef.current = container;
       dispatchTouch(container, 'touchstart', 100);
       dispatchTouch(container, 'touchmove', 200);
     });
@@ -71,11 +81,9 @@ describe('useRefresh', () => {
   });
 
   it('should update pull distance when pulling down', () => {
-    const container = createContainer();
-    const { result } = renderHook(() => useRefresh({ onRefresh }));
+    const { container, result } = setupWithContainer();
 
     act(() => {
-      result.current.containerRef.current = container;
       dispatchTouch(container, 'touchstart', 100);
       dispatchTouch(container, 'touchmove', 200);
     });
@@ -86,11 +94,9 @@ describe('useRefresh', () => {
   });
 
   it('should trigger refresh if pulled past threshold', async () => {
-    const container = createContainer();
-    const { result } = renderHook(() => useRefresh({ onRefresh, threshold: 50 }));
+    const { container, result } = setupWithContainer({ threshold: 50 });
 
     act(() => {
-      result.current.containerRef.current = container;
       dispatchTouch(container, 'touchstart', 100);
       dispatchTouch(container, 'touchmove', 300); // 200 delta * 0.4 = 80 distance
     });
@@ -109,11 +115,9 @@ describe('useRefresh', () => {
   });
 
   it('should not trigger refresh if threshold not reached', async () => {
-    const container = createContainer();
-    const { result } = renderHook(() => useRefresh({ onRefresh, threshold: 50 }));
+    const { container, result } = setupWithContainer({ threshold: 50 });
 
     act(() => {
-      result.current.containerRef.current = container;
       dispatchTouch(container, 'touchstart', 100);
       dispatchTouch(container, 'touchmove', 150); // 50 delta * 0.4 = 20
     });
@@ -132,11 +136,9 @@ describe('useRefresh', () => {
 
   it('should trigger refresh with reduced motion without applying translate', async () => {
     mockMatchMedia(true);
-    const container = createContainer();
-    const { result } = renderHook(() => useRefresh({ onRefresh, threshold: 50 }));
+    const { container, result } = setupWithContainer({ threshold: 50 });
 
     act(() => {
-      result.current.containerRef.current = container;
       dispatchTouch(container, 'touchstart', 100);
       dispatchTouch(container, 'touchmove', 300); // raw delta 200 > threshold
     });
@@ -155,11 +157,9 @@ describe('useRefresh', () => {
   });
 
   it('should use latest distance on fast pull', async () => {
-    const container = createContainer();
-    const { result } = renderHook(() => useRefresh({ onRefresh, threshold: 50 }));
+    const { container } = setupWithContainer({ threshold: 50 });
 
     act(() => {
-      result.current.containerRef.current = container;
       dispatchTouch(container, 'touchstart', 100);
     });
 
@@ -176,29 +176,29 @@ describe('useRefresh', () => {
 
   it('should register touchmove as non-passive', () => {
     const container = createContainer();
-    const addSpy = vih.spyOn(container, 'addEventListener');
-    const { result } = renderHook(() => useRefresh({ onRefresh }));
+    const addSpy = vi.spyOn(container, 'addEventListener');
+    const { result, rerender } = renderHook(() => useRefresh({ onRefresh }));
 
     act(() => {
       result.current.containerRef.current = container;
+      rerender();
     });
 
-    const moveCall = addSpy.calls.find(([type]) => type === 'touchmove');
+    const moveCall = addSpy.mock.calls.find(([type]) => type === 'touchmove');
     expect(moveCall).toBeTruthy();
-    expect(moveCall[2]).toMatchObject({ passive: false });
+    expect(moveCall?.[2]).toMatchObject({ passive: false });
     container.remove();
   });
 
   it('should prevent native scroll during downward pull at scrollTop 0', () => {
-    const container = createContainer();
-    const { result } = renderHook(() => useRefresh({ onRefresh }));
+    const { container } = setupWithContainer();
 
+    let moveEvent!: Event;
     act(() => {
-      result.current.containerRef.current = container;
       dispatchTouch(container, 'touchstart', 100);
+      moveEvent = dispatchTouch(container, 'touchmove', 200);
     });
 
-    const moveEvent = dispatchTouch(container, 'touchmove', 200);
     expect(moveEvent.defaultPrevented).toBe(true);
     container.remove();
   });

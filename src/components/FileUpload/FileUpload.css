@@ -183,6 +183,29 @@
   outline-offset: 2px;
 }
 
+/* Cancel button */
+.fu-uploading-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.fu-cancel-btn {
+  background: none;
+  border: 1px solid #d0d5dd;
+  color: #374151;
+  border-radius: 6px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.fu-cancel-btn:hover { background: #f3f4f6; }
+.fu-cancel-btn:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
 /* Image preview */
 .fu-preview-image-wrap {
   display: flex;

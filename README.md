@@ -41,12 +41,31 @@ npm run dev        # http://localhost:5173
 | `npm run build` | `tsc -b` type check plus build (type errors currently exist in some files) |
 | `npm run preview` | Serve the built app locally |
 | `npm test` | Run Vitest |
+| `npm run test:coverage` | Run Vitest with V8 coverage (enforces global thresholds: 65% lines, 67% functions, 85% branches, 65% statements) |
+| `npm run test:e2e` | Run Playwright end-to-end tests |
 | `npm run lint` | Run ESLint |
 | `npm run storybook` | Component explorer on port 6006 |
 
+## End-to-end testing
+
+Playwright end-to-end specs live in [`e2e/`](e2e/) and verify the lazy-loaded route tree, `OnboardingPayoutGuard` redirects, merchant onboarding happy path (`/onboarding/business` → `/onboarding/payout` → `/onboarding/review` → `/onboarding-success`), and the browse-plans to checkout flow (`/browse-plans` → `/checkout/:planId` → `/subscriptions`) against a local `vite preview` server with no external network requests.
+
+```bash
+npx playwright install chromium   # one-time browser install
+npm run test:e2e
+```
+
 ## Environment variables
 
-None are required to run the demo. The dev server proxies `/api` to `http://localhost:8080` (see `vite.config.ts`) for an optional Stellabill backend. Never commit `.env` files.
+Copy `.env.example` to `.env.local` to customize any variable. All variables are optional; the dev server proxies `/api` to `http://localhost:8080` (see `vite.config.ts`) for an optional Stellabill backend. Never commit `.env` or `.env.local` files.
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `VITE_STELLAR_NETWORK` | `Testnet` | Sets the expected Stellar network (`Testnet` or `Mainnet`; also accepts `mainnet`, `public`, `pubnet`, `livenet`) |
+| `VITE_USE_FIXTURES` | Unset (falsy) | When truthy (e.g. `true`), loads local fixture data on the Subscriptions page instead of fetching `/api/subscriptions` |
+| `VITE_SUPPORT_URL` | `https://github.com/Stellabill/stellabill-frontend/issues` | Overrides the external support URL |
+| `VITE_STELLAR_WALLETS_DOCS_URL` | `https://docs.stellar.org/wallets` | Overrides the Stellar wallets documentation URL |
+| `VITE_DOCS_URL` | `https://github.com/Stellabill/stellabill-frontend/tree/main/docs` | Overrides the project documentation URL |
 
 ## Deployment
 

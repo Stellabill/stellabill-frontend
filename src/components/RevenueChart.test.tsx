@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import RevenueChart, { LineChart, SeriesData } from './RevenueChart';
+import { generateMockSeries } from './RevenueChart.fixtures';
 import { copyToClipboard } from '../utils/clipboard';
 
 vi.mock('../utils/clipboard', async (importOriginal) => {
@@ -56,7 +58,7 @@ const mockSeriesData: SeriesData[] = [
 
 describe('RevenueChart — Basic Rendering with Multi-Series', () => {
   it('renders chart region with title and time range selector', () => {
-    render(<RevenueChart />);
+    render(<RevenueChart series={generateMockSeries(5)} />);
     expect(screen.getByRole('region', { name: /revenue over time/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /revenue over time/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '7D' })).toBeInTheDocument();
@@ -75,8 +77,8 @@ describe('RevenueChart — Basic Rendering with Multi-Series', () => {
     expect(screen.getByRole('button', { name: /one-time payments series, visible/i })).toBeInTheDocument();
   });
 
-  it('defaults to 30D active button and renders mock series', () => {
-    render(<RevenueChart />);
+  it('defaults to 30D active button and renders supplied fixture series', () => {
+    render(<RevenueChart series={generateMockSeries(5)} />);
     const btn30D = screen.getByRole('button', { name: '30D' });
     expect(btn30D).toHaveAttribute('aria-pressed', 'true');
     
@@ -84,6 +86,16 @@ describe('RevenueChart — Basic Rendering with Multi-Series', () => {
     expect(screen.getByRole('button', { name: /total revenue series/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /subscriptions series/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /one-time payments series/i })).toBeInTheDocument();
+  });
+
+  it('renders an empty state when no data or series are supplied', () => {
+    render(<RevenueChart />);
+
+    expect(screen.getByText('No revenue data available.', {
+      selector: 'p.revenue-chart-empty-state'
+    })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /\(Point \d+ of \d+\)/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /total revenue series/i })).not.toBeInTheDocument();
   });
 
   it('accepts custom series data via props', () => {
@@ -100,6 +112,9 @@ describe('RevenueChart — Basic Rendering with Multi-Series', () => {
     const summaryEl = document.getElementById('revenue-chart-summary-desc');
     expect(summaryEl).toBeInTheDocument();
     expect(summaryEl?.textContent).toContain('Total Revenue, Subscriptions, One-time Payments');
+    expect(summaryEl?.textContent).toContain('Highest revenue is $1,200');
+    expect(summaryEl?.textContent).toContain('Lowest revenue is $200');
+    expect(summaryEl?.textContent).toContain('Average revenue is $527');
   });
 });
 
@@ -352,7 +367,7 @@ describe('RevenueChart — Header & Time Range Selector', () => {
   });
 
   it('switches active time range and updates aria-pressed', () => {
-    render(<RevenueChart initialTimeRange="30D" />);
+    render(<RevenueChart initialTimeRange="30D" series={generateMockSeries(30)} />);
 
     const btn7D = screen.getByRole('button', { name: '7D' });
     const btn30D = screen.getByRole('button', { name: '30D' });
@@ -372,7 +387,7 @@ describe('RevenueChart — Header & Time Range Selector', () => {
   });
 
   it('respects initialTimeRange prop', () => {
-    render(<RevenueChart initialTimeRange="90D" />);
+    render(<RevenueChart initialTimeRange="90D" series={generateMockSeries(90)} />);
     expect(screen.getByRole('button', { name: '90D' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
@@ -575,6 +590,88 @@ describe('RevenueChart — Hidden Series Line & Point Rendering', () => {
 });
 
 describe('RevenueChart — Chart Point Keyboard & Tooltip Interactions', () => {
+  it('moves roving point focus with arrow keys and announces the active point', async () => {
+    const user = userEvent.setup();
+    render(<RevenueChart series={mockSeriesData} />);
+    const firstPoint = screen.getByRole('button', { name: /total revenue: jan 1/i });
+
+    firstPoint.focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /total revenue: jan 2/i }));
+    expect(screen.getByTestId('chart-live-region')).toHaveTextContent(/total revenue: jan 2, \$750/i);
+  });
+
+  it('moves between series and endpoints with ArrowUp, ArrowDown, Home, and End', async () => {
+    const user = userEvent.setup();
+    render(<RevenueChart series={mockSeriesData} />);
+    const firstPoint = screen.getByRole('button', { name: /total revenue: jan 1/i });
+
+    firstPoint.focus();
+    await user.keyboard('{ArrowDown}');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /subscriptions: jan 1/i }));
+
+    await user.keyboard('{End}');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /subscriptions: jan 5/i }));
+
+    await user.keyboard('{Home}{ArrowUp}');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /total revenue: jan 1/i }));
+  });
+
+  it('reverses horizontal arrow traversal in RTL contexts', async () => {
+    const user = userEvent.setup();
+    render(
+      <div dir="rtl">
+        <RevenueChart series={mockSeriesData} />
+      </div>,
+    );
+    const secondPoint = screen.getByRole('button', { name: /total revenue: jan 2/i });
+
+    secondPoint.focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /total revenue: jan 1/i }));
+  });
+
+  it('dismisses the focused tooltip with Escape', async () => {
+    const user = userEvent.setup();
+    render(<RevenueChart series={mockSeriesData} />);
+    const firstPoint = screen.getByRole('button', { name: /total revenue: jan 1/i });
+
+    firstPoint.focus();
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(document.activeElement).not.toBe(firstPoint);
+  });
+
+  it.each(['{Space}', '{Enter}'])('toggles a legend chip with %s and announces the new state', async (key) => {
+    const user = userEvent.setup();
+    render(<RevenueChart series={mockSeriesData} />);
+    const revenueChip = screen.getByRole('button', { name: /total revenue series, visible/i });
+
+    revenueChip.focus();
+    await user.keyboard(key);
+
+    expect(screen.getByRole('button', { name: /total revenue series, hidden/i })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('legend-live-region')).toHaveTextContent('Total Revenue series hidden');
+  });
+
+  it('restores a visible point as the roving tab stop when the focused series is hidden', async () => {
+    render(<RevenueChart series={mockSeriesData} />);
+    const focusedPoint = screen.getByRole('button', { name: /subscriptions: jan 1/i });
+
+    focusedPoint.focus();
+    fireEvent.click(screen.getByRole('button', { name: /subscriptions series, visible/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /total revenue: jan 1/i })).toHaveAttribute('tabindex', '0');
+    });
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
   it('navigates between data points with ArrowRight / ArrowLeft in same series', () => {
     render(<RevenueChart series={mockSeriesData} />);
     const points = screen.getAllByRole('button', { name: /\(Point \d+ of \d+\)/ });
@@ -697,9 +794,9 @@ describe('RevenueChart — RTL Reversal & Empty/Single Data Edge Cases', () => {
   });
 });
 
-describe('RevenueChart — Time Range Effects on Mock Data', () => {
-  it('changes mock data length when switching time ranges', () => {
-    render(<RevenueChart initialTimeRange="7D" />);
+describe('RevenueChart — Time Range Selector', () => {
+  it('changes selected time range with supplied fixture data', () => {
+    render(<RevenueChart initialTimeRange="7D" series={generateMockSeries(7)} />);
     const xLabels = document.querySelectorAll('text.axis-label');
     // We'll compare by switching and ensuring no errors + labels still render
     expect(xLabels.length).toBeGreaterThan(0);
