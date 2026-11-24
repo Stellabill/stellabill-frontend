@@ -1,34 +1,28 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useCommandScope } from '../hooks/useCommandScope';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useSubscriptionActions } from '../hooks/useSubscriptionActions';
 import type { CommandItem } from '../components/CommandPalette';
+import { useCommandScope } from '../hooks/useCommandScope';
+import { usePageTitle } from '../hooks/usePageTitle';
 import RecentPayments from '../components/RecentPayments';
 import UsageThisPeriod from '../components/UsageThisPeriod';
 import PaymentFailedBanner from '../components/Dunning/PaymentFailedBanner';
 import PlanStatusTimeline from '../components/PlanStatusTimeline';
-import ScheduleChangePreview, { type BillingInterval } from '../components/ScheduleChangePreview';
-import ReactivationModal, { type ReactivationPlan } from '../components/ReactivationModal';
-import DowngradeConfirmModal, { type PlanFeature } from '../components/DowngradeConfirmModal';
 import TrialCountdownBanner from '../components/TrialCountdownBanner';
-import ProrationPreviewModal from '../components/common/ProrationPreviewModal';
 import ErrorState from '../components/ErrorState';
-import { subscriptions, type ApiError, type Payment } from '../api/client';
-import type { Subscription } from '../types/subscription';
+import { DEFAULT_RETRY_SCHEDULE } from './subscriptionDetailHelpers';
+import { useSubscriptionDetail } from './useSubscriptionDetail';
+import SubscriptionDetailHeader from './SubscriptionDetailHeader';
+import SubscriptionBillingSchedule from './SubscriptionBillingSchedule';
+import SubscriptionDetailModals from './SubscriptionDetailModals';
 import styles from './SubscriptionDetail.module.css';
-
-// ── Mock subscription status type ────────────────────────────────────────────
-type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
-
-/**
- * Maximum days after cancellation during which reactivation is allowed.
- * Surface the CTA only within this window.
- */
-const REACTIVATION_WINDOW_DAYS = 30;
 
 export default function SubscriptionDetail() {
     usePageTitle('Subscription Details');
     const { id } = useParams();
+    const navigate = useNavigate();
 
     // ── Subscription fetch state ──────────────────────────────────────────────
     const [subscriptionData, setSubscriptionData] = useState<Subscription | null>(null);
@@ -57,7 +51,18 @@ export default function SubscriptionDetail() {
 
     // ── Downgrade state ───────────────────────────────────────────────────────
     const [isDowngradeModalOpen, setIsDowngradeModalOpen] = useState(false);
-    const [isDowngrading, setIsDowngrading] = useState(false);
+
+    const {
+        pendingAction,
+        isPending,
+        toasts,
+        removeToast,
+        downgrade,
+        reactivate,
+    } = useSubscriptionActions();
+
+    const isReactivating = pendingAction === 'reactivate';
+    const isDowngrading = pendingAction === 'downgrade';
 
     const downgradeLostFeatures: PlanFeature[] = [
         { id: 'api-calls',   label: 'Unlimited API calls (limited to 10k/mo on Basic)' },
@@ -67,21 +72,37 @@ export default function SubscriptionDetail() {
     ];
 
     const handleDowngradeConfirm = async () => {
-        setIsDowngrading(true);
-        try {
-            console.log('Downgrading subscription', id, 'to Basic plan');
-            await new Promise(resolve => setTimeout(resolve, 1200));
-            setIsDowngradeModalOpen(false);
-        } catch (err) {
-            console.error('Downgrade failed:', err);
-        } finally {
-            setIsDowngrading(false);
-        }
+        if (!id) return;
+        const previousSnapshot = subscriptionData;
+        await downgrade(
+            id,
+            { planName: 'Basic' },
+            {
+                onOptimistic: () => {
+                    setSubscriptionData((prev) =>
+                        prev
+                            ? {
+                                  ...prev,
+                                  planName: 'Basic',
+                                  price: 20,
+                                  amount: 20,
+                              }
+                            : prev,
+                    );
+                },
+                onRollback: () => {
+                    setSubscriptionData(previousSnapshot);
+                },
+                onSuccess: () => {
+                    setIsDowngradeModalOpen(false);
+                },
+            },
+        );
     };
 
-    const handleViewFullUsage = () => {
-        navigate(`/subscriptions/${id}/usage`);
-    };
+    const handleViewFullUsage = useCallback(() => {
+        navigate('/subscriptions/' + String(id) + '/usage');
+    }, [navigate, id]);
 
     // Reactivation goes through the typed subscriptions client. Errors keep
     // the modal open and are surfaced in an alert under the header.
@@ -118,8 +139,6 @@ export default function SubscriptionDetail() {
         { label: 'Quarterly', value: 'quarterly' },
         { label: 'Yearly', value: 'yearly' },
     ];
-
-    const navigate = useNavigate();
 
     // ── Fetch subscription on mount / id change ───────────────────────────────
     useEffect(() => {
@@ -278,8 +297,44 @@ export default function SubscriptionDetail() {
         });
 
         return actions;
-    }, [showReactivateCTA, subscriptionStatus, navigate]);
+    }, [showReactivateCTA, subscriptionStatus, navigate, handleViewFullUsage]);
     
+    const {
+        isLoading,
+        loadError,
+        notFound,
+        payments,
+        paymentsLoading,
+        paymentsError,
+        pendingInterval,
+        setPendingInterval,
+        isReactivationModalOpen,
+        setIsReactivationModalOpen,
+        isReactivating,
+        reactivationError,
+        isProrationModalOpen,
+        setIsProrationModalOpen,
+        isDowngradeModalOpen,
+        setIsDowngradeModalOpen,
+        isDowngrading,
+        handleDowngradeConfirm,
+        handleViewFullUsage,
+        handleReactivateConfirm,
+        handleRetryLoad,
+        scopedActions,
+        subscriptionStatus,
+        trialEndsAt,
+        isTrialSubscription,
+        failedAttempts,
+        showDunningBanner,
+        subscription,
+        isUsageBased,
+        usageData,
+        reactivationPlan,
+        isWithinWindow,
+        showReactivateCTA,
+    } = useSubscriptionDetail(id, navigate);
+
     useCommandScope(`Subscription ${id || 'Detail'}`, scopedActions);
 
     // ── Loading state ─────────────────────────────────────────────────────────
@@ -330,32 +385,7 @@ export default function SubscriptionDetail() {
                 <ErrorState
                     title="Failed to load subscription"
                     message={loadError.message}
-                    onRetry={() => {
-                        if (!id) return;
-                        setIsLoading(true);
-                        setLoadError(null);
-                        subscriptions
-                            .get(id)
-                            .then((data) => setSubscriptionData(data))
-                            .catch((err: unknown) => {
-                                const status =
-                                    typeof err === 'object' && err !== null && 'status' in err
-                                        ? (err as { status?: number }).status
-                                        : undefined;
-                                if (status === 404) {
-                                    setNotFound(true);
-                                } else {
-                                    setLoadError({
-                                        status,
-                                        message:
-                                            err instanceof Error
-                                                ? err.message
-                                                : 'Failed to load subscription.',
-                                    });
-                                }
-                            })
-                            .finally(() => setIsLoading(false));
-                    }}
+                    onRetry={handleRetryLoad}
                 />
             </div>
         );
@@ -363,133 +393,16 @@ export default function SubscriptionDetail() {
 
     return (
         <div className={styles.page}>
-
-            {reactivationError && (
-                <div
-                    role="alert"
-                    style={{
-                        marginBottom: '1.5rem',
-                        padding: '0.875rem 1rem',
-                        borderRadius: '12px',
-                        border: '1px solid rgba(239,68,68,0.45)',
-                        background: 'rgba(239,68,68,0.08)',
-                        color: '#fca5a5',
-                    }}
-                >
-                    <strong>Reactivation failed:</strong> {reactivationError.message}
-                    {reactivationError.technicalDetails && (
-                        <div style={{ marginTop: '0.25rem', fontSize: '0.85rem', color: '#94a3b8' }}>
-                            {reactivationError.technicalDetails}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* ── Page header with optional Reactivate CTA ──────────────────── */}
-            <div className={styles.headerSection}>
-                <Link
-                    to="/subscriptions"
-                    className={styles.backLink}
-                >
-                    &larr; Back to Subscriptions
-                </Link>
-
-                <div className={styles.headerRow}>
-                    <div>
-                        <h1 className={styles.pageTitle}>Subscription {id}</h1>
-                        <p className={styles.pageSubtitle}>
-                            View details and recent payments for this subscription.
-                        </p>
-                    </div>
-
-                    {/* Reactivate CTA — only for cancelled subs within the support window */}
-                    {showReactivateCTA && (
-                        <button
-                            onClick={() => setIsReactivationModalOpen(true)}
-                            className={`${styles.ctaButton} ${styles.reactivateButton}`}
-                            aria-label="Reactivate this subscription"
-                        >
-                            {/* Refresh icon */}
-                            <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                aria-hidden="true"
-                            >
-                                <polyline points="23 4 23 10 17 10" />
-                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                            </svg>
-                            Reactivate
-                        </button>
-                    )}
-
-                    {/* Downgrade CTA — shown for active subscriptions */}
-                    {subscriptionStatus === 'active' && (
-                        <button
-                            onClick={() => setIsDowngradeModalOpen(true)}
-                            className={`${styles.ctaButton} ${styles.downgradeButton}`}
-                            aria-label="Downgrade to a lower plan"
-                        >
-                            <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                aria-hidden="true"
-                            >
-                                <line x1="12" y1="5" x2="12" y2="19" />
-                                <polyline points="19 12 12 19 5 12" />
-                            </svg>
-                            Downgrade plan
-                        </button>
-                    )}
-
-                    {/* ── Proration CTA ──────────────────────────────────────── */}
-                    {subscriptionStatus === 'active' && (
-                        <button
-                            onClick={() => setIsProrationModalOpen(true)}
-                            className={`${styles.ctaButton} ${styles.prorationButton}`}
-                            aria-label="Preview proration for plan change"
-                        >
-                            Preview Proration
-                        </button>
-                    )}
-                </div>
-
-                {/* Reactivation window notice */}
-                {subscriptionStatus === 'cancelled' && !isWithinWindow && (
-                    <div
-                        className={styles.windowNotice}
-                        role="status"
-                    >
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#fbbf24"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                        >
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="12" />
-                            <line x1="12" y1="16" x2="12.01" y2="16" />
-                        </svg>
-                        Reactivation window has expired. Browse plans to start a new subscription.
-                    </div>
-                )}
-            </div>
+            <SubscriptionDetailHeader
+                id={id}
+                subscriptionStatus={subscriptionStatus}
+                showReactivateCTA={showReactivateCTA}
+                isWithinWindow={isWithinWindow}
+                reactivationError={reactivationError}
+                onOpenReactivation={() => setIsReactivationModalOpen(true)}
+                onOpenDowngrade={() => setIsDowngradeModalOpen(true)}
+                onOpenProration={() => setIsProrationModalOpen(true)}
+            />
 
             {/* ── Trial countdown banner ────────────────────────────────────── */}
             {isTrialSubscription && trialEndsAt && (
@@ -505,11 +418,7 @@ export default function SubscriptionDetail() {
                 <PaymentFailedBanner
                     subscriptionId={id}
                     failedAttempts={failedAttempts}
-                    retrySchedule={[
-                        { id: 'r1', when: 'Mar 24 — Attempted', status: 'past' },
-                        { id: 'r2', when: 'Mar 26 — Next retry', status: 'upcoming' },
-                        { id: 'r3', when: 'Mar 30 — Final retry', status: 'upcoming' },
-                    ]}
+                    retrySchedule={DEFAULT_RETRY_SCHEDULE}
                     onFixPayment={() => {
                         navigate('/settings');
                     }}
@@ -529,42 +438,11 @@ export default function SubscriptionDetail() {
             )}
 
             {/* ── Billing schedule / schedule-change preview ────────────────── */}
-            <div className={styles.section}>
-                <h2 className={styles.sectionTitle}>
-                    Billing schedule
-                </h2>
-
-                <div className={styles.scheduleControls}>
-                    <span className={styles.scheduleLabel}>Change to:</span>
-                    <div className={styles.intervalGroup}>
-                        {intervalOptions
-                            .filter(opt => opt.value !== subscription.currentInterval)
-                            .map(opt => (
-                                <button
-                                    key={opt.value}
-                                    onClick={() =>
-                                        setPendingInterval((prev: BillingInterval | null) => prev === opt.value ? null : opt.value)
-                                    }
-                                    aria-pressed={pendingInterval === opt.value}
-                                    className={`${styles.intervalButton} ${pendingInterval === opt.value ? styles.intervalButtonActive : ''}`}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                    </div>
-                </div>
-
-                {pendingInterval && (
-                    <ScheduleChangePreview
-                        currentNextCharge={subscription.nextCharge}
-                        currentInterval={subscription.currentInterval}
-                        newInterval={pendingInterval}
-                        amount={subscription.amount}
-                        currency={subscription.currency}
-                        cycles={3}
-                    />
-                )}
-            </div>
+            <SubscriptionBillingSchedule
+                subscription={subscription}
+                pendingInterval={pendingInterval}
+                onSelectInterval={setPendingInterval}
+            />
 
             <RecentPayments
                 subscriptionId={id}
@@ -574,49 +452,24 @@ export default function SubscriptionDetail() {
             />
             <PlanStatusTimeline subscriptionId={id} />
 
-            {/* ── Reactivation modal ────────────────────────────────────────── */}
-            <ReactivationModal
-                isOpen={isReactivationModalOpen}
-                onClose={() => setIsReactivationModalOpen(false)}
-                onConfirm={handleReactivateConfirm}
-                plan={reactivationPlan}
-                windowExpired={!isWithinWindow}
+            <SubscriptionDetailModals
+                isReactivationModalOpen={isReactivationModalOpen}
+                onCloseReactivation={() => setIsReactivationModalOpen(false)}
+                onConfirmReactivation={handleReactivateConfirm}
+                reactivationPlan={reactivationPlan}
+                isWithinWindow={isWithinWindow}
                 billingDay={subscription.billingDay}
-                isLoading={isReactivating}
+                isReactivating={isReactivating}
+                isProrationModalOpen={isProrationModalOpen}
+                onCloseProration={() => setIsProrationModalOpen(false)}
+                onConfirmProration={() => setIsProrationModalOpen(false)}
+                isDowngradeModalOpen={isDowngradeModalOpen}
+                onCloseDowngrade={() => setIsDowngradeModalOpen(false)}
+                onConfirmDowngrade={handleDowngradeConfirm}
+                isDowngrading={isDowngrading}
             />
 
-            {/* ── Proration preview modal ─────────────────────────────────── */}
-            <ProrationPreviewModal
-                isOpen={isProrationModalOpen}
-                onClose={() => setIsProrationModalOpen(false)}
-                onConfirm={() => {
-                    setIsProrationModalOpen(false);
-                }}
-                currentPlan="Pro"
-                newPlan="Basic"
-                effectiveDate="Aug 1, 2026"
-                lineItems={[
-                    { label: 'Unused Pro (15 days)', amount: 2500, type: 'credit' },
-                    { label: 'Basic plan (remaining 15 days)', amount: 1000, type: 'charge' },
-                ]}
-                nextInvoiceTotal={1000}
-            />
-
-            {/* ── Downgrade confirmation modal ──────────────────────────────── */}
-            <DowngradeConfirmModal
-                isOpen={isDowngradeModalOpen}
-                onClose={() => setIsDowngradeModalOpen(false)}
-                onConfirm={handleDowngradeConfirm}
-                currentPlanName="Pro"
-                currentPlanPrice="50 USDC / mo"
-                newPlanName="Basic"
-                newPlanPrice="20 USDC / mo"
-                lostFeatures={downgradeLostFeatures}
-                isDelayed={true}
-                effectiveDate="Aug 1, 2026"
-                comparePlansHref="/plans"
-                isLoading={isDowngrading}
-            />
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
         </div>
     );
 }

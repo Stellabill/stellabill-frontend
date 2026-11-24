@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
   CheckCircle2,
@@ -96,7 +95,7 @@ export function buildDigestRows(items: BillingNotification[]): NotificationDiges
 
   const singletonRows = singletons
     .sort((a, b) => rank(b) - rank(a))
-    .map((notification) => ({ kind: "single", notification }));
+    .map((notification) => ({ kind: "single" as const, notification }));
 
   const merged: NotificationDigestRow[] = [];
   let groupIndex = 0;
@@ -133,8 +132,6 @@ export default function NotificationList({
   onMute,
   onUnmute,
 }: NotificationListProps) {
-  const { t } = useTranslation();
-
   const renderNotification = (
     notification: BillingNotification,
     nestedInDigest = false,

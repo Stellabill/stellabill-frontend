@@ -1,5 +1,5 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTheme } from '../hooks/useTheme';
 import type { ThemePreference } from '../hooks/useTheme';
 

@@ -15,7 +15,7 @@ export default function WizardHeader({
   title,
   currentStep,
   totalSteps,
-  isDirty,
+  isDirty: _isDirty,
   onCancel,
   onSaveDraft,
   children,

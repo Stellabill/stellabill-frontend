@@ -191,4 +191,50 @@ describe('Breadcrumb', () => {
     expect(within(nav).getByRole('list')).toBeInTheDocument();
     expect(container.querySelectorAll('li.breadcrumb__item')).toHaveLength(2);
   });
+
+  // ── Accessibility additions (#1250) ───────────────────────────────────────
+
+  it('nav is labelled "Breadcrumb" so it is a distinct landmark', () => {
+    renderBreadcrumb([
+      { label: 'Home', to: '/' },
+      { label: 'Settings' },
+    ]);
+
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+  });
+
+  it('aria-current="page" appears on exactly one item — the last one', () => {
+    const { container } = renderBreadcrumb([
+      { label: 'Home', to: '/' },
+      { label: 'Plans', to: '/plans' },
+      { label: 'Pro Plan' },
+    ]);
+
+    const currentItems = container.querySelectorAll('[aria-current="page"]');
+    expect(currentItems).toHaveLength(1);
+    expect(currentItems[0].textContent).toContain('Pro Plan');
+  });
+
+  it('link items do not carry aria-current', () => {
+    const { container } = renderBreadcrumb([
+      { label: 'Home', to: '/' },
+      { label: 'Plans', to: '/plans' },
+      { label: 'Pro Plan' },
+    ]);
+
+    container.querySelectorAll('a.breadcrumb__link').forEach((link) => {
+      expect(link).not.toHaveAttribute('aria-current');
+    });
+  });
+
+  it('breadcrumb link carries the focus-visible CSS class hook', () => {
+    const { container } = renderBreadcrumb([
+      { label: 'Home', to: '/' },
+      { label: 'Current' },
+    ]);
+
+    const link = container.querySelector('a.breadcrumb__link');
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveClass('breadcrumb__link');
+  });
 });
