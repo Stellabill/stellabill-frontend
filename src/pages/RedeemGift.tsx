@@ -3,18 +3,16 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Gift, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import LandingNavbar from "../components/LandingNavbar";
 import RedeemConfirmModal from "../components/RedeemConfirmModal";
-import { normalizeGiftCode, validateGiftCode, type GiftDetails } from "../utils/giftCode";
+import {
+  formatExpiredGiftMessage,
+  GIFT_ALREADY_REDEEMED_MESSAGE,
+  normalizeGiftCode,
+  validateGiftCode,
+  type GiftDetails,
+} from "../utils/giftCode";
 import "./RedeemGift.css";
 
 const MALFORMED_CODE_ERROR = "Please enter a valid gift code (e.g., GIFT-ABC123-XYZ789)";
-
-function formatGiftDate(value: string): string {
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 export default function RedeemGift() {
   const navigate = useNavigate();
@@ -39,9 +37,9 @@ export default function RedeemGift() {
         setGiftDetails(result.giftDetails);
         setShowConfirmModal(true);
       } else if (result.status === "expired") {
-        setError(`This gift code expired on ${formatGiftDate(result.expiredOn)}. Please contact the sender.`);
+        setError(formatExpiredGiftMessage(result.expiredOn));
       } else if (result.status === "redeemed") {
-        setError("This gift has already been redeemed.");
+        setError(GIFT_ALREADY_REDEEMED_MESSAGE);
       } else if (result.reason === "malformed") {
         setError(MALFORMED_CODE_ERROR);
       } else {

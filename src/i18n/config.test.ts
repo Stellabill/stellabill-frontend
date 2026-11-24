@@ -1,21 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// ─── Mock i18next-icu to avoid ICU parser issues in tests ───
-vi.mock('i18next-icu', () => ({
-  default: {
-    type: 'i18nFormat',
-    init: vi.fn(),
-    parse: (_res: unknown, _opts: unknown, _lng: string, _ns: string, _key: string, _info: unknown) => null,
-    addUserDefinedFormats: vi.fn(),
-  },
-}));
-
-// ─── Suppress window.location access during module init ───
 beforeEach(() => {
-  Object.defineProperty(window, 'location', {
-    value: { search: '' },
-    writable: true,
-  });
+  window.history.replaceState(null, '', '/');
+  window.localStorage.clear();
 });
 
 describe('i18n config', () => {
@@ -26,6 +13,23 @@ describe('i18n config', () => {
   it('initializes i18n with the en locale', async () => {
     const { default: i18n } = await import('./config');
     expect(i18n.language).toBe('en');
+  });
+
+  it('restores the saved locale before a route without a switcher renders', async () => {
+    window.localStorage.setItem('sb:locale', 'es-ES');
+    const { default: i18n } = await import('./config');
+    expect(i18n.language).toBe('es');
+    expect(i18n.t('subscriptions.table.tags')).toBe('Etiquetas');
+  });
+
+  it('loads Spanish resources and uses English for an untranslated locale', async () => {
+    const { default: i18n } = await import('./config');
+    await i18n.changeLanguage('es-ES');
+    expect(i18n.t('pricing.title')).toBe('Planes y precios');
+    expect(i18n.t('pricing.seats.selected', { count: 1 })).toBe('1 usuario seleccionado');
+    expect(i18n.t('pricing.seats.selected', { count: 3 })).toBe('3 usuarios seleccionados');
+    await i18n.changeLanguage('fr-FR');
+    expect(i18n.t('pricing.title')).toBe('Plans & pricing');
   });
 
   it('resolves the dashboard title key from en.json', async () => {
