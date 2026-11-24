@@ -53,7 +53,7 @@ export default function TourCompletion({
   };
 
   const cardVariants = shouldReduceMotion
-    ? {}
+    ? undefined
     : {
         hidden: { opacity: 0, scale: 0.9, y: 20 },
         visible: {
@@ -61,7 +61,7 @@ export default function TourCompletion({
           scale: 1,
           y: 0,
           transition: {
-            type: 'spring',
+            type: 'spring' as const,
             damping: 25,
             stiffness: 300,
             delay: 0.1,
@@ -71,14 +71,14 @@ export default function TourCompletion({
       };
 
   const iconVariants = shouldReduceMotion
-    ? {}
+    ? undefined
     : {
         hidden: { scale: 0, rotate: -180 },
         visible: {
           scale: 1,
           rotate: 0,
           transition: {
-            type: 'spring',
+            type: 'spring' as const,
             damping: 15,
             stiffness: 200,
             delay: 0.3,

@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef, useEffect, KeyboardEvent } from 'react';
 import './RevenueChart.css';
-import { seriesVar } from '@/tokens/chartPalette';
 import { copyToClipboard } from '../utils/clipboard';
 
 export type TimeRange = '7D' | '30D' | '90D';
@@ -25,64 +24,6 @@ export interface RevenueChartProps {
   ariaLabel?: string;
 }
 
-// Mock data generator
-function generateMockData(days: number): DataPoint[] {
-  const data: DataPoint[] = [];
-  const now = new Date();
-  
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    
-    // Generate increasing trend with some variance
-    const baseRevenue = 400 + (days - i) * (800 / days);
-    const variance = Math.random() * 200 - 100;
-    const revenue = Math.max(0, baseRevenue + variance);
-    
-    data.push({
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      revenue: Math.round(revenue)
-    });
-  }
-  
-  return data;
-}
-
-// Mock series generator
-function generateMockSeries(days: number): SeriesData[] {
-  const baseData = generateMockData(days);
-  
-  return [
-    {
-      id: 'revenue',
-      name: 'Total Revenue',
-      color: seriesVar(0),
-      visible: true,
-      data: baseData
-    },
-    {
-      id: 'subscriptions',
-      name: 'Subscriptions',
-      color: seriesVar(1), 
-      visible: true,
-      data: baseData.map(d => ({
-        ...d,
-        revenue: Math.round(d.revenue * 0.7 + Math.random() * 100 - 50)
-      }))
-    },
-    {
-      id: 'oneTime',
-      name: 'One-time Payments',
-      color: seriesVar(2),
-      visible: true,
-      data: baseData.map(d => ({
-        ...d,
-        revenue: Math.round(d.revenue * 0.3 + Math.random() * 150 - 75)
-      }))
-    }
-  ];
-}
-
 export default function RevenueChart({
   initialTimeRange = '30D',
   data: customData,
@@ -96,18 +37,23 @@ export default function RevenueChart({
   
   const data = useMemo(() => {
     if (customData) return customData;
-    // When custom series are supplied without explicit data, use the first
-    // series' data points so the table caption and x-axis dates are consistent.
-    if (customSeries && customSeries.length > 0) return customSeries[0].data;
-    const days = timeRange === '7D' ? 7 : timeRange === '30D' ? 30 : 90;
-    return generateMockData(days);
-  }, [timeRange, customData, customSeries]);
+    if (customSeries) return customSeries.find(seriesItem => seriesItem.data.length)?.data ?? [];
+    return [];
+  }, [customData, customSeries]);
 
   const series = useMemo(() => {
     if (customSeries) return customSeries;
-    const days = timeRange === '7D' ? 7 : timeRange === '30D' ? 30 : 90;
-    return generateMockSeries(days);
-  }, [timeRange, customSeries]);
+    if (customData?.length) {
+      return [{
+        id: 'revenue',
+        name: 'Revenue',
+        color: 'var(--chart-series-1)',
+        visible: true,
+        data: customData
+      }];
+    }
+    return [];
+  }, [customData, customSeries]);
 
   // Apply visibility state to series
   const visibleSeries = useMemo(() => {
@@ -135,6 +81,7 @@ export default function RevenueChart({
     const values = activeSeries.flatMap(seriesItem =>
       seriesItem.data.map(point => ({ ...point, seriesName: seriesItem.name })),
     );
+    if (!values.length) return 'No revenue data available.';
     const highest = values.reduce((highestPoint, point) =>
       point.revenue > highestPoint.revenue ? point : highestPoint,
     );
@@ -194,7 +141,11 @@ export default function RevenueChart({
             series={visibleSeries}
             onToggleSeries={toggleSeriesVisibility}
           />
-          <LineChart data={data} series={visibleSeries} />
+          {data.length && visibleSeries.some(seriesItem => seriesItem.data.length) ? (
+            <LineChart data={data} series={visibleSeries} />
+          ) : (
+            <p className="revenue-chart-empty-state" role="status">No revenue data available.</p>
+          )}
         </>
       ) : (
         <RevenueTable data={data} series={series} />
@@ -622,8 +573,8 @@ export function LineChart({ data, series }: LineChartProps) {
     if (!activePoint || !data[activePoint.index]) return null;
     
     const seriesItem = seriesPoints.find(s => s.id === activePoint.seriesId);
-    const point = seriesItem?.points.find(p => p.pointIndex === activePoint.index);
-    if (!point) return null;
+    const point = seriesItem?.points.find(p => p && p.pointIndex === activePoint.index);
+    if (!seriesItem || !point) return null;
     
     const tooltipWidth = 140;
     const tooltipHeight = 70;
@@ -745,9 +696,10 @@ export function LineChart({ data, series }: LineChartProps) {
         
         {/* Lines for each series */}
         {seriesPoints.map(seriesItem => {
-          if (seriesItem.points.length <= 1) return null;
+          const validPoints = seriesItem.points.filter((p): p is NonNullable<typeof p> => p !== null);
+          if (validPoints.length <= 1) return null;
           
-          const pathData = seriesItem.points.map((p, i) => 
+          const pathData = validPoints.map((p, i) => 
             `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
           ).join(' ');
           
@@ -780,6 +732,7 @@ export function LineChart({ data, series }: LineChartProps) {
         {/* Data points for each series (hidden series are non-interactive with pattern fill) */}
         {seriesPoints.map(seriesItem =>
           seriesItem.points.map((point, i) => {
+            if (!point) return null;
             const isVisible = seriesItem.visible;
             const isActivePoint = isVisible && activePoint?.seriesId === seriesItem.id && activePoint?.index === point.pointIndex;
             const isFocusedPoint = isVisible && focusedPoint?.seriesId === seriesItem.id && focusedPoint?.index === point.pointIndex;

@@ -13,7 +13,7 @@ interface PricingCardProps {
   price?: string
   priceLabel?: string
   priceSubtext?: string
-  features: Feature[]
+  features: readonly Feature[]
   buttonText: string
   buttonArrow?: boolean
   onButtonClick?: () => void
@@ -49,8 +49,6 @@ export default function PricingCard({
   pricingMode = 'flat',
   seats = 1,
 }: PricingCardProps) {
-  const { t } = useTranslation()
-
   const { t, i18n } = useTranslation()
   // ── Derive displayed price strings ──────────────────────────────────────
   const isPerSeat = pricingMode === 'per-seat' && basePricePerSeat != null

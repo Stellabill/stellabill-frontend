@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RevenueChart, { LineChart, SeriesData } from './RevenueChart';
+import { generateMockSeries } from './RevenueChart.fixtures';
 import { copyToClipboard } from '../utils/clipboard';
 
 vi.mock('../utils/clipboard', async (importOriginal) => {
@@ -57,7 +58,7 @@ const mockSeriesData: SeriesData[] = [
 
 describe('RevenueChart — Basic Rendering with Multi-Series', () => {
   it('renders chart region with title and time range selector', () => {
-    render(<RevenueChart />);
+    render(<RevenueChart series={generateMockSeries(5)} />);
     expect(screen.getByRole('region', { name: /revenue over time/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /revenue over time/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '7D' })).toBeInTheDocument();
@@ -76,8 +77,8 @@ describe('RevenueChart — Basic Rendering with Multi-Series', () => {
     expect(screen.getByRole('button', { name: /one-time payments series, visible/i })).toBeInTheDocument();
   });
 
-  it('defaults to 30D active button and renders mock series', () => {
-    render(<RevenueChart />);
+  it('defaults to 30D active button and renders supplied fixture series', () => {
+    render(<RevenueChart series={generateMockSeries(5)} />);
     const btn30D = screen.getByRole('button', { name: '30D' });
     expect(btn30D).toHaveAttribute('aria-pressed', 'true');
     
@@ -85,6 +86,16 @@ describe('RevenueChart — Basic Rendering with Multi-Series', () => {
     expect(screen.getByRole('button', { name: /total revenue series/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /subscriptions series/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /one-time payments series/i })).toBeInTheDocument();
+  });
+
+  it('renders an empty state when no data or series are supplied', () => {
+    render(<RevenueChart />);
+
+    expect(screen.getByText('No revenue data available.', {
+      selector: 'p.revenue-chart-empty-state'
+    })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /\(Point \d+ of \d+\)/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /total revenue series/i })).not.toBeInTheDocument();
   });
 
   it('accepts custom series data via props', () => {
@@ -356,7 +367,7 @@ describe('RevenueChart — Header & Time Range Selector', () => {
   });
 
   it('switches active time range and updates aria-pressed', () => {
-    render(<RevenueChart initialTimeRange="30D" />);
+    render(<RevenueChart initialTimeRange="30D" series={generateMockSeries(30)} />);
 
     const btn7D = screen.getByRole('button', { name: '7D' });
     const btn30D = screen.getByRole('button', { name: '30D' });
@@ -376,7 +387,7 @@ describe('RevenueChart — Header & Time Range Selector', () => {
   });
 
   it('respects initialTimeRange prop', () => {
-    render(<RevenueChart initialTimeRange="90D" />);
+    render(<RevenueChart initialTimeRange="90D" series={generateMockSeries(90)} />);
     expect(screen.getByRole('button', { name: '90D' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
@@ -783,9 +794,9 @@ describe('RevenueChart — RTL Reversal & Empty/Single Data Edge Cases', () => {
   });
 });
 
-describe('RevenueChart — Time Range Effects on Mock Data', () => {
-  it('changes mock data length when switching time ranges', () => {
-    render(<RevenueChart initialTimeRange="7D" />);
+describe('RevenueChart — Time Range Selector', () => {
+  it('changes selected time range with supplied fixture data', () => {
+    render(<RevenueChart initialTimeRange="7D" series={generateMockSeries(7)} />);
     const xLabels = document.querySelectorAll('text.axis-label');
     // We'll compare by switching and ensuring no errors + labels still render
     expect(xLabels.length).toBeGreaterThan(0);

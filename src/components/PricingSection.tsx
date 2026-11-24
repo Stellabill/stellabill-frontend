@@ -63,8 +63,7 @@ export default function PricingSection({ value, onChange, priceError, intervalEr
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value
+  const handlePriceChange = (v: string) => {
     if (v === '' || /^\d*\.?\d*$/.test(v)) {
       onChange({ ...value, price: v })
     }

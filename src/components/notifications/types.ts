@@ -28,3 +28,12 @@ export type SnoozeDuration =
 export interface NotificationSilenceState {
   expiresAt: number | null;
 }
+
+export interface FetchNotificationsResult {
+  items: BillingNotification[];
+  next: string | null;
+}
+
+export type FetchNotificationsFn = (
+  cursor?: string | null,
+) => Promise<FetchNotificationsResult>;

@@ -5,7 +5,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom';
 import { subscriptions } from '../api/client';
 import type { Subscription } from '../types/subscription';
+import { MemoryRouter } from 'react-router-dom';
+import { subscriptions } from '../api/client';
+import type { Subscription } from '@/types/subscription';
 import Subscriptions from './Subscriptions';
+
+const mockNavigate = vi.fn();
 
 /* ─── Module mocks ──────────────────────────────────────────── */
 
@@ -13,6 +18,7 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
     ...actual,
+    useNavigate: () => mockNavigate,
     Link: ({ children, to, className, id }: Record<string, unknown>) => (
       <a href={to as string} className={className as string} id={id as string}>{children as React.ReactNode}</a>
     ),
@@ -31,6 +37,8 @@ vi.mock('../api/client', () => ({
     pause: vi.fn().mockResolvedValue({ success: true }),
     cancel: vi.fn().mockResolvedValue({ success: true }),
     resume: vi.fn().mockResolvedValue({ success: true }),
+    reactivate: vi.fn().mockResolvedValue({ success: true }),
+    downgrade: vi.fn().mockResolvedValue({ success: true }),
     list: vi.fn().mockResolvedValue({ subscriptions: [] }),
   },
   ApiError: class ApiError extends Error {
@@ -41,7 +49,7 @@ vi.mock('../api/client', () => ({
 }));
 
 vi.mock('../utils/amount', () => ({
-  formatAmount: (value: number) => `${value} USDC`,
+  formatAmount: (value: number) => ({ number: String(value), currency: 'USDC' }),
 }));
 
 vi.mock('../components/PauseSubscriptionModal', () => ({
@@ -91,7 +99,14 @@ vi.mock('../components/CancelSubscriptionModal', () => ({
 }));
 
 vi.mock('../components/UsageThisPeriod', () => ({
-  default: () => <div data-testid="usage-this-period">Usage This Period</div>,
+  default: ({ onViewFullUsage }: { onViewFullUsage?: () => void }) => (
+    <div data-testid="usage-this-period">
+      Usage This Period
+      {onViewFullUsage && (
+        <button onClick={onViewFullUsage}>View full usage</button>
+      )}
+    </div>
+  ),
 }));
 
 vi.mock('../components/ErrorState', () => ({
@@ -323,27 +338,48 @@ describe('Subscriptions page', () => {
     });
 
     it('ignores a late response from a superseded refresh (race)', async () => {
-      let resolveFirst: (value: { subscriptions: Subscription[] }) => void = () => {};
-      const firstPromise = new Promise<{ subscriptions: Subscription[] }>(res => {
-        resolveFirst = res;
+      let resolveSecond: (value: { subscriptions: Subscription[] }) => void = () => {};
+      const secondPromise = new Promise<{ subscriptions: Subscription[] }>(res => {
+        resolveSecond = res;
       });
       vi.mocked(subscriptions.list)
-        .mockReturnValueOnce(firstPromise)
+        .mockResolvedValueOnce({ subscriptions: FIXTURE_SUBSCRIPTIONS })
+        .mockReturnValueOnce(secondPromise)
         .mockResolvedValueOnce({ subscriptions: FIXTURE_SUBSCRIPTIONS });
 
-      renderSubscriptions();
-      await advanceTimersAndFlush();
+      await renderAndLoad();
 
-      // Trigger a refresh which supersedes the first in-flight request.
+      // First refresh starts in-flight secondPromise while data.length > 0
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+        fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
         await Promise.resolve();
       });
+
+      // Second refresh supersedes secondPromise
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
+        await Promise.resolve();
+      });
+      await renderAndLoad();
+
+      let resolveStale: (value: { subscriptions: Subscription[] }) => void = () => {};
+      const stalePromise = new Promise<{ subscriptions: Subscription[] }>(res => {
+        resolveStale = res;
+      });
+      vi.mocked(subscriptions.list)
+        .mockReturnValueOnce(stalePromise)
+        .mockResolvedValueOnce({ subscriptions: FIXTURE_SUBSCRIPTIONS });
+
+      // First refresh starts an in-flight request...
+      fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
+      // ...which a second refresh supersedes.
+      fireEvent.click(screen.getByRole('button', { name: /refresh subscriptions/i }));
       await advanceTimersAndFlush();
 
-      // Now resolve the stale first request with different data.
+      // Now resolve the stale second request with different data.
       await act(async () => {
-        resolveFirst({
+        resolveSecond({
+        resolveStale({
           subscriptions: [
             {
               ...FIXTURE_SUBSCRIPTIONS[0],
@@ -360,6 +396,7 @@ describe('Subscriptions page', () => {
         { timeout: 3000 },
       );
       expect(screen.queryByText('Stale Plan')).not.toBeInTheDocument();
+      expect(screen.getAllByText('Premium Access').length).toBeGreaterThan(0);
     });
   });
 
@@ -644,7 +681,7 @@ describe('Subscriptions page', () => {
 
   /* ── Detail view ──────────────────────────────────────────── */
   describe('Detail view', () => {
-    async function openDetail(planName: string, subId: string) {
+    async function openDetail(planName: string) {
       await renderAndLoad();
       const btn = screen.getByRole('button', { name: new RegExp(`manage ${planName}`, 'i') });
       fireEvent.click(btn);
@@ -654,19 +691,21 @@ describe('Subscriptions page', () => {
     }
 
     it('shows the plan name as an h1', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       expect(
         screen.getByRole('heading', { name: /premium access/i, level: 1 }),
       ).toBeInTheDocument();
     });
 
-    it('shows the UsageThisPeriod component', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+    it('shows the UsageThisPeriod component and navigates to full usage page when requested', async () => {
+      await openDetail('Premium Access');
       expect(screen.getByTestId('usage-this-period')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /view full usage/i }));
+      expect(mockNavigate).toHaveBeenCalledWith('/subscriptions/SUB-001/usage');
     });
 
     it('"Back to all subscriptions" returns to list', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       fireEvent.click(screen.getByText('Back to all subscriptions'));
       await waitFor(() =>
         expect(screen.getByTestId('subscriptions-table')).toBeInTheDocument(),
@@ -674,7 +713,7 @@ describe('Subscriptions page', () => {
     });
 
     it('breadcrumb "My subscriptions" button returns to list', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       fireEvent.click(screen.getByRole('button', { name: /back to my subscriptions/i }));
       await waitFor(() =>
         expect(screen.getByTestId('subscriptions-table')).toBeInTheDocument(),
@@ -682,7 +721,7 @@ describe('Subscriptions page', () => {
     });
 
     it('Active sub shows Pause and Cancel billing buttons', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       expect(
         screen.getByRole('button', { name: /pause premium access subscription/i }),
       ).toBeInTheDocument();
@@ -724,7 +763,7 @@ describe('Subscriptions page', () => {
     });
 
     it('detail shows price and billing interval', async () => {
-      await openDetail('Premium Access', 'SUB-001');
+      await openDetail('Premium Access');
       expect(screen.getByText(/10/)).toBeInTheDocument();
       expect(screen.getByText(/per month/i)).toBeInTheDocument();
     });
@@ -783,11 +822,36 @@ describe('Subscriptions page', () => {
       await openPauseModal();
       fireEvent.click(screen.getByRole('button', { name: /confirm pause/i }));
 
-      expect(await screen.findByText('Action Failed')).toBeInTheDocument();
+      expect(await screen.findAllByText('Action Failed')).not.toHaveLength(0);
       expect(screen.getByText('Technical details')).toBeInTheDocument();
-      expect(screen.getByText('Pause could not be completed.')).toBeInTheDocument();
+      expect(screen.getAllByText('Pause could not be completed.').length).toBeGreaterThan(0);
       expect(screen.getByRole('dialog', { name: /pause subscription/i })).toBeInTheDocument();
       expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument();
+    });
+
+    it('optimistically sets status to Paused and rolls back to Active on failure', async () => {
+      const { subscriptions: apiSubs } = await import('../api/client');
+      let rejectPause!: (err: Error) => void;
+      vi.mocked(apiSubs.pause).mockImplementationOnce(
+        () => new Promise((_, reject) => {
+          rejectPause = reject;
+        }),
+      );
+      await openPauseModal();
+      fireEvent.click(screen.getByRole('button', { name: /confirm pause/i }));
+
+      // Optimistically updated while pending
+      expect(screen.getByRole('status', { name: /status: paused/i })).toBeInTheDocument();
+
+      await act(async () => {
+        rejectPause(new Error('Pause network failure'));
+      });
+
+      // Rolled back to Active and error toast displayed
+      await waitFor(() =>
+        expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument(),
+      );
+      expect(screen.getAllByText('Pause network failure').length).toBeGreaterThan(0);
     });
   });
 
@@ -843,11 +907,36 @@ describe('Subscriptions page', () => {
       await openCancelModal();
       fireEvent.click(screen.getByRole('button', { name: /confirm cancel/i }));
 
-      expect(await screen.findByText('Action Failed')).toBeInTheDocument();
+      expect(await screen.findAllByText('Action Failed')).not.toHaveLength(0);
       expect(screen.getByText('Technical details')).toBeInTheDocument();
-      expect(screen.getByText('Cancellation could not be completed.')).toBeInTheDocument();
+      expect(screen.getAllByText('Cancellation could not be completed.').length).toBeGreaterThan(0);
       expect(screen.getByRole('dialog', { name: /cancel subscription/i })).toBeInTheDocument();
       expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument();
+    });
+
+    it('optimistically sets status to Cancelled and rolls back to Active on failure', async () => {
+      const { subscriptions: apiSubs } = await import('../api/client');
+      let rejectCancel!: (err: Error) => void;
+      vi.mocked(apiSubs.cancel).mockImplementationOnce(
+        () => new Promise((_, reject) => {
+          rejectCancel = reject;
+        }),
+      );
+      await openCancelModal();
+      fireEvent.click(screen.getByRole('button', { name: /confirm cancel/i }));
+
+      // Optimistically updated while pending
+      expect(screen.getByRole('status', { name: /status: cancelled/i })).toBeInTheDocument();
+
+      await act(async () => {
+        rejectCancel(new Error('Cancel network failure'));
+      });
+
+      // Rolled back to Active and error toast displayed
+      await waitFor(() =>
+        expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument(),
+      );
+      expect(screen.getAllByText('Cancel network failure').length).toBeGreaterThan(0);
     });
   });
 
@@ -871,7 +960,8 @@ describe('Subscriptions page', () => {
         screen.getByRole('button', { name: /resume basic stream subscription/i }),
       );
       expect(screen.getByText('Resuming...')).toBeInTheDocument();
-      expect(screen.getByRole('status', { name: /status: paused/i })).toBeInTheDocument();
+      // Optimistically set to Active while pending
+      expect(screen.getByRole('status', { name: /status: active/i })).toBeInTheDocument();
 
       await act(async () => {
         resolveResume({ success: true });
@@ -915,7 +1005,8 @@ describe('Subscriptions page', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
 
       expect(screen.getByText('Resuming subscription')).toBeInTheDocument();
-      expect(screen.getAllByRole('status', { name: /status: paused/i }).length).toBeGreaterThan(0);
+      // SUB-003 is optimistically Active while pending
+      expect(screen.queryAllByRole('status', { name: /status: paused/i })).toHaveLength(0);
       await act(async () => {
         resolveResume({ success: true });
       });
@@ -931,6 +1022,102 @@ describe('Subscriptions page', () => {
       expect(await screen.findByText('Swipe resume failed')).toBeInTheDocument();
       expect(screen.getAllByRole('status', { name: /status: paused/i }).length).toBeGreaterThan(0);
       expect(apiSubs.resume).toHaveBeenCalledWith('SUB-003');
+    });
+  });
+
+  /* ── Prepaid balance formatting ───────────────────────────── */
+  describe('Prepaid balance formatting', () => {
+    it('renders the table balance with Amount formatting and currency', async () => {
+      await renderAndLoad();
+
+      const balance = screen.getByTestId('prepaid-balance-SUB-001');
+      expect(balance).toHaveTextContent('30 USDC');
+      expect(balance).toHaveAttribute('aria-label', '30 USDC');
+      expect(screen.getByTestId('prepaid-balance-SUB-002')).toHaveTextContent('50 USDC');
+      expect(screen.getByTestId('prepaid-balance-SUB-003')).toHaveTextContent('15 USDC');
+    });
+
+    it('marks a zero balance without rendering a raw number', async () => {
+      await renderAndLoad();
+      const balance = screen.getByTestId('prepaid-balance-SUB-004');
+      expect(balance).toHaveTextContent('0 USDC');
+      expect(balance).toHaveAttribute('data-amount-zero', 'true');
+    });
+
+    it('formats the mobile card balance with currency', async () => {
+      await renderAndLoad();
+      expect(screen.getByTestId('prepaid-balance-card-SUB-001')).toHaveTextContent('30 USDC');
+      expect(screen.getByTestId('prepaid-balance-card-SUB-002')).toHaveTextContent('50 USDC');
+    });
+
+    it('formats the detail-view balance with currency', async () => {
+      await renderAndLoad();
+      fireEvent.click(screen.getByRole('button', { name: /manage premium access/i }));
+      await waitFor(() =>
+        expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
+      );
+
+      expect(screen.getByTestId('detail-prepaid-balance')).toHaveTextContent('30 USDC');
+      expect(screen.getByTestId('detail-prepaid-balance')).toHaveAttribute('aria-label', '30 USDC');
+    });
+
+    it('uses the subscription currency instead of hard-coding USDC', async () => {
+      vi.mocked(subscriptions.list).mockResolvedValue({
+        subscriptions: [
+          { ...FIXTURE_SUBSCRIPTIONS[0], currency: 'EUR', prepaidBalance: 12.5 },
+        ],
+      });
+      await renderAndLoad();
+
+      const balance = screen.getByTestId('prepaid-balance-SUB-001');
+      expect(balance).toHaveTextContent('12.5 EUR');
+      expect(balance).toHaveAttribute('aria-label', '12.5 EUR');
+    });
+
+    it('rounds balances through Amount rather than concatenating strings', async () => {
+      vi.mocked(subscriptions.list).mockResolvedValue({
+        subscriptions: [
+          { ...FIXTURE_SUBSCRIPTIONS[0], prepaidBalance: 12.505 },
+        ],
+      });
+      await renderAndLoad();
+
+      // Default precision is 2 with half-up rounding; no string arithmetic involved.
+      expect(screen.getByTestId('prepaid-balance-SUB-001')).toHaveTextContent('12.51 USDC');
+    });
+  });
+
+  /* ── Top-up flow ──────────────────────────────────────────── */
+  describe('Top-up flow', () => {
+    async function topUp(amount: string) {
+      await renderAndLoad();
+      fireEvent.click(screen.getByRole('button', { name: /manage premium access/i }));
+      await waitFor(() =>
+        expect(screen.getByText('Back to all subscriptions')).toBeInTheDocument(),
+      );
+      fireEvent.click(screen.getByRole('button', { name: /top up balance/i }));
+      fireEvent.change(screen.getByLabelText(/top up amount/i), {
+        target: { value: amount },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /review top up/i }));
+      fireEvent.click(screen.getByRole('button', { name: /confirm top up/i }));
+      await advanceTimersAndFlush();
+    }
+
+    it('adds the top-up to the numeric balance and re-formats it', async () => {
+      await topUp('10');
+
+      const balance = screen.getByTestId('detail-prepaid-balance');
+      expect(balance).toHaveTextContent('40 USDC');
+      expect(balance).toHaveAttribute('aria-label', '40 USDC');
+      expect(screen.getByText(/your balance has been updated to 40/i)).toBeInTheDocument();
+    });
+
+    it('derives the coverage count again from the new numeric balance', async () => {
+      await topUp('10');
+
+      // Premium Access costs 10 USDC/month, so 40 USDC covers ~4 payments.
+      expect(screen.getByText(/covers approximately/i)).toHaveTextContent('4');
     });
   });
 
@@ -978,7 +1165,12 @@ describe('Subscriptions page', () => {
 
     it('visually-hidden "Actions" text is present for screen readers', async () => {
       await renderAndLoad();
-      const hidden = document.querySelector('.visually-hidden');
+      const hidden = Array.from(document.querySelectorAll('.visually-hidden')).find(
+        (el) => el.textContent === 'Actions',
+      );
+      expect(hidden).toBeDefined();
+      const table = screen.getByRole('table', { name: /my subscriptions/i });
+      const hidden = table.querySelector('.visually-hidden');
       expect(hidden).toBeInTheDocument();
       expect(hidden?.textContent).toBe('Actions');
     });

@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
@@ -18,7 +20,7 @@
     "@stellar/freighter-api": "^6.0.1",
     "framer-motion": "^11.0.0",
     "i18next": "^26.3.2",
-    "i18next-icu": "^2.4.3",
+    "i18next-icu": "^2.7.1",
     "lucide-react": "^0.575.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

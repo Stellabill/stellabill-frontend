@@ -1,4 +1,9 @@
-import type { BillingNotification } from "./types";
+import type { BillingNotification, FetchNotificationsFn } from "./types";
+
+export const defaultFetchNotifications: FetchNotificationsFn = async () => ({
+  items: [],
+  next: null,
+});
 
 export const defaultNotifications: BillingNotification[] = [
   {

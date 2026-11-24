@@ -29,7 +29,7 @@ export const Colors = () => (
         <Card variant="glass">
           <div className="flex flex-col gap-3">
             <div className="h-16 w-full rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center">
-              <Badge variant="error">Error</Badge>
+              <Badge variant="default">Error</Badge>
             </div>
             <div className="text-sm">
               <p className="font-medium text-white">Danger / Error</p>
@@ -175,7 +175,7 @@ export const BorderRadius = () => (
           { name: 'radius-lg', value: '12px', radius: 12 },
           { name: 'radius-xl', value: '16px', radius: 16 },
           { name: 'radius-full', value: '9999px', radius: 9999 },
-        ].map(({ name, value, radius }) => (
+        ].map(({ name, radius }) => (
           <div key={name} className="flex flex-col gap-3 items-center">
             <div 
               className="h-16 w-16 bg-white/10 border border-white/20 flex items-center justify-center"

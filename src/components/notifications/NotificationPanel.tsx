@@ -50,6 +50,11 @@ interface NotificationPanelProps {
   onSnooze: (id: string, duration: SnoozeDuration) => void;
   onMute: (id: string) => void;
   onUnmute: (id: string) => void;
+  hasMore: boolean;
+  isLoadingMore: boolean;
+  fetchError: boolean;
+  onLoadMore: () => void;
+  onRefreshNotifications: () => Promise<void>;
 }
 
 export default function NotificationPanel({
@@ -69,6 +74,11 @@ export default function NotificationPanel({
   onSnooze,
   onMute,
   onUnmute,
+  hasMore,
+  isLoadingMore,
+  fetchError,
+  onLoadMore,
+  onRefreshNotifications,
 }: NotificationPanelProps) {
   const { t } = useTranslation();
   const [category, setCategory] =
@@ -109,10 +119,7 @@ export default function NotificationPanel({
     containerRef: refreshContainerRef,
     handlers: refreshHandlers,
   } = useRefresh({
-    onRefresh: () =>
-      new Promise<void>((resolve) => {
-        setTimeout(() => resolve(), 800);
-      }),
+    onRefresh: onRefreshNotifications,
   });
 
   const notificationListProps = {
@@ -234,6 +241,35 @@ export default function NotificationPanel({
           >
             <NotificationList rows={activeDigestRows} {...notificationListProps} />
           </ul>
+        </div>
+      )}
+
+      {fetchError && (
+        <div className="notifications-fetch-error" role="alert">
+          <span>{t("notifications.fetchError")}</span>
+          <button
+            type="button"
+            className="notifications-retry-button"
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+          >
+            {t("notifications.retry")}
+          </button>
+        </div>
+      )}
+
+      {!fetchError && hasMore && (
+        <div className="notifications-load-more">
+          <button
+            type="button"
+            className="notifications-load-more-button"
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore
+              ? t("notifications.loadingMore")
+              : t("notifications.loadMore")}
+          </button>
         </div>
       )}
 
