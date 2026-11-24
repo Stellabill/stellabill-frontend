@@ -1,6 +1,6 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BrowsePlans from './BrowsePlans';
 
@@ -70,16 +70,36 @@ vi.mock('../components/GiftPurchaseModal', () => ({
     ) : null,
 }));
 
+function RouterQuery() {
+  const { search } = useLocation();
+  return <span hidden data-testid="location-query">{search}</span>;
+}
+
+function Checkout() {
+  const navigate = useNavigate();
+  return (
+    <>
+      <h1>Checkout</h1>
+      <button type="button" onClick={() => navigate(-1)}>Return to plans</button>
+    </>
+  );
+}
+
 function renderPage(search = '') {
   window.history.replaceState({}, '', '/browse-plans' + search);
   return render(
-    <MemoryRouter initialEntries={['/browse-plans']}>
+    <MemoryRouter initialEntries={[{ pathname: '/browse-plans', search }]}>
       <Routes>
         <Route path="/browse-plans" element={<BrowsePlans />} />
-        <Route path="/checkout/:planId" element={<h1>Checkout</h1>} />
+        <Route path="/checkout/:planId" element={<Checkout />} />
       </Routes>
+      <RouterQuery />
     </MemoryRouter>,
   );
+}
+
+function readQuery() {
+  return new URLSearchParams(screen.getByTestId('location-query').textContent ?? '');
 }
 
 async function loadPlans() {
@@ -239,6 +259,58 @@ describe('BrowsePlans', () => {
 
     expect(search).toHaveValue('');
     expect(getPlanNames()).toHaveLength(6);
+  });
+
+  it('applies the search and billing interval from a deep link', async () => {
+    renderPage('?interval=Yearly&q=news');
+    await loadPlans();
+
+    expect(screen.getByRole('searchbox')).toHaveValue('news');
+    expect(screen.getByLabelText('Filter plans by billing interval')).toHaveValue('Yearly');
+    expect(getPlanNames()).toEqual(['Annual Premium']);
+  });
+
+  it('uses all intervals for an unknown value while still applying the search', async () => {
+    renderPage('?interval=weekly&q=news');
+    await loadPlans();
+
+    expect(screen.getByLabelText('Filter plans by billing interval')).toHaveValue('All');
+    expect(getPlanNames()).toEqual(['Annual Premium', 'Premium Access']);
+  });
+
+  it('deletes an empty search and clears both filters on Escape', async () => {
+    renderPage('?interval=Yearly&q=news&source=email');
+    await loadPlans();
+    const search = screen.getByRole('searchbox');
+
+    fireEvent.change(search, { target: { value: '' } });
+    expect(readQuery().has('q')).toBe(false);
+    expect(readQuery().get('interval')).toBe('Yearly');
+
+    fireEvent.change(search, { target: { value: 'news' } });
+    expect(readQuery().get('q')).toBe('news');
+    fireEvent.keyDown(search, { key: 'Escape' });
+
+    expect(search).toHaveValue('');
+    expect(screen.getByLabelText('Filter plans by billing interval')).toHaveValue('All');
+    expect(Object.fromEntries(readQuery())).toEqual({ source: 'email' });
+  });
+
+  it('restores the chosen filters when returning from Checkout', async () => {
+    walletState.status = 'connected';
+    renderPage();
+    await loadPlans();
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'news' } });
+    fireEvent.change(screen.getByLabelText('Filter plans by billing interval'), {
+      target: { value: 'Yearly' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /subscribe to annual premium/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Return to plans' }));
+    await loadPlans();
+
+    expect(screen.getByRole('searchbox')).toHaveValue('news');
+    expect(screen.getByLabelText('Filter plans by billing interval')).toHaveValue('Yearly');
+    expect(getPlanNames()).toEqual(['Annual Premium']);
   });
 });
 import { describe, it, expect, beforeEach } from 'vitest';
