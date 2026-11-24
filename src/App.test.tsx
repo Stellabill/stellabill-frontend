@@ -6,10 +6,14 @@
  *  - Root "/" renders the public landing page
  *  - "/onboarding" redirects to "/onboarding/business"
  *  - Catch-all unknown paths render the not-found page
+ *  - Root "/" renders Landing and "/landing" redirects to "/"
+ *  - "/onboarding" redirects to "/onboarding/business"
+ *  - "/onboarding/payout" redirects to "/onboarding/business" without stored business data
+ *  - Catch-all unknown paths render the 404 NotFound page
  *  - Every public route renders its page stub (no Layout wrapper)
  *  - Every Layout-wrapped authenticated route renders inside the Layout
  *  - Both "/plans/create" and "/plans/new" resolve to the CreatePlan page
- *  - Parameterised routes ("/subscriptions/:id" and "/subscriptions/:id/usage")
+ *  - Parameterised routes ("/checkout/:planId", "/subscriptions/:id" and "/subscriptions/:id/usage")
  *    accept arbitrary id values
  */
 
@@ -87,6 +91,7 @@ vi.mock('./pages/Dashboard', () => ({ default: () => <div data-testid="page-dash
 vi.mock('./pages/BrowsePlans', () => ({ default: () => <div data-testid="page-browse-plans" /> }));
 vi.mock('./pages/Checkout', () => ({ default: () => <div data-testid="page-checkout" /> }));
 vi.mock('./pages/MerchantPlans', () => ({ default: () => <div data-testid="page-plans" /> }));
+vi.mock('./pages/Plans', () => ({ default: () => <div data-testid="page-plans" /> }));
 vi.mock('./pages/CreatePlan', () => ({ default: () => <div data-testid="page-create-plan" /> }));
 vi.mock('./pages/Subscriptions', () => ({ default: () => <div data-testid="page-subscriptions" /> }));
 vi.mock('./pages/SubscriptionDetail', () => ({ default: () => <div data-testid="page-subscription-detail" /> }));
@@ -135,19 +140,33 @@ beforeEach(() => {
   window.scrollTo = vi.fn();
 });
 
+// ---------------------------------------------------------------------------
+// Exported contract
+// ---------------------------------------------------------------------------
 describe('App – module contract', () => {
   it('has a default export that is a function (React component)', async () => {
     const mod = await import('./App');
     expect(typeof mod.default).toBe('function');
   });
+
+  it('renders without throwing', async () => {
+    renderAt('/dashboard');
+    expect(await screen.findByTestId('page-dashboard')).toBeInTheDocument();
+  });
 });
 
 // ---------------------------------------------------------------------------
-// Redirect behaviour
+// Redirect & catch-all behaviour
 // ---------------------------------------------------------------------------
 describe('App – redirects', () => {
   it('renders the landing page at "/"', async () => {
     renderAt('/');
+  it('renders Landing at "/" and redirects "/landing" to "/"', async () => {
+    const { unmount } = renderAt('/');
+    expect(await screen.findByTestId('page-landing')).toBeInTheDocument();
+    unmount();
+
+    renderAt('/landing');
     expect(await screen.findByTestId('page-landing')).toBeInTheDocument();
   });
 
@@ -170,11 +189,42 @@ describe('App – redirects', () => {
 describe('App – public routes (unauthenticated)', () => {
   const publicRoutes: Array<{ path: string; testId: string }> = [
     { path: '/', testId: 'page-landing' },
+  it('redirects "/onboarding/payout" to "/onboarding/business" when business data is missing', async () => {
+    renderAt('/onboarding/payout');
+    expect(await screen.findByTestId('page-onboarding-business')).toBeInTheDocument();
+  });
+
+  it('renders NotFound for an unknown path', async () => {
+    renderAt('/this-route-does-not-exist');
+    expect(await screen.findByRole('heading', { name: /page not found/i })).toBeInTheDocument();
+  });
+
+  it('renders NotFound for deeply nested unknown paths', async () => {
+    renderAt('/a/b/c/d/e');
+    expect(await screen.findByRole('heading', { name: /page not found/i })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Public routes (no Layout wrapper expected)
+// ---------------------------------------------------------------------------
+describe('App – public routes', () => {
+  const publicRoutes: Array<{ path: string; testId: string; setup?: () => void }> = [
     { path: '/landing', testId: 'page-landing' },
     { path: '/pricing', testId: 'page-pricing' },
     { path: '/about-prepaid-balances', testId: 'page-about-prepaid-balances' },
     { path: '/onboarding', testId: 'page-onboarding-business' },
     { path: '/onboarding/business', testId: 'page-onboarding-business' },
+    {
+      path: '/onboarding/payout',
+      testId: 'page-onboarding-payout',
+      setup: () => {
+        sessionStorage.setItem(
+          'onboardingBusiness',
+          JSON.stringify({ businessName: 'Acme Inc.', website: 'https://acme.example', country: 'US' }),
+        );
+      },
+    },
     { path: '/onboarding/review', testId: 'page-onboarding-review' },
     { path: '/onboarding-success', testId: 'page-onboarding-success' },
     { path: '/redeem-gift', testId: 'page-redeem-gift' },
@@ -191,6 +241,9 @@ describe('App – public routes (unauthenticated)', () => {
       if (path === '/onboarding/payout') {
         sessionStorage.setItem('onboardingBusiness', '{}');
       }
+  publicRoutes.forEach(({ path, testId, setup }) => {
+    it(`renders "${path}" and does NOT wrap it in the authenticated Layout`, async () => {
+      setup?.();
       renderAt(path);
       expect(await screen.findByTestId(testId)).toBeInTheDocument();
       // Public routes must not render inside the authenticated Layout
@@ -211,6 +264,7 @@ describe('App – authenticated (Layout-wrapped) routes when connected', () => {
     { path: '/dashboard', testId: 'page-dashboard' },
     { path: '/browse-plans', testId: 'page-browse-plans' },
     { path: '/checkout/test-plan', testId: 'page-checkout' },
+    { path: '/checkout/1', testId: 'page-checkout' },
     { path: '/plans', testId: 'page-plans' },
     { path: '/plans/create', testId: 'page-create-plan' },
     { path: '/plans/new', testId: 'page-create-plan', label: '/plans/new (alias for create)' },
@@ -274,6 +328,8 @@ describe('App – route aliases', () => {
 describe('App – boundary and invalid-input behaviour', () => {
   it('handles an empty string path by rendering the landing page', async () => {
     // MemoryRouter treats '' as '/' which renders the landing page.
+  it('handles an empty string path by resolving to the root Landing route', async () => {
+    // MemoryRouter treats '' as '/'
     renderAt('');
     expect(await screen.findByTestId('page-landing')).toBeInTheDocument();
   });
@@ -281,6 +337,9 @@ describe('App – boundary and invalid-input behaviour', () => {
   it('handles an unknown path with a trailing slash using the not-found page', async () => {
     renderAt('/unknown/');
     expect(await screen.findByTestId('page-not-found')).toBeInTheDocument();
+  it('handles an unknown path with a trailing slash by rendering NotFound', async () => {
+    renderAt('/unknown/');
+    expect(await screen.findByRole('heading', { name: /page not found/i })).toBeInTheDocument();
   });
 
   it('does not leak Layout into public pages even when rendered multiple times', async () => {

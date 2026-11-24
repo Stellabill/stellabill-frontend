@@ -40,6 +40,7 @@ export default defineConfig({
     }
   },
   test: {
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -51,6 +52,7 @@ export default defineConfig({
         branches: 85,
         statements: 65
       }
+      exclude: ['**/*.test.tsx', '**/*.spec.tsx', '**/*.md', '**/setup.ts', 'src/vite-env.d.ts', 'e2e/**']
     },
     projects: [{
       extends: true,
@@ -60,7 +62,7 @@ export default defineConfig({
         globals: true,
         setupFiles: ['./src/test/setup.ts'],
         include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-        exclude: ['**/*.api.md']
+        exclude: ['**/*.api.md', 'e2e/**']
       }
     }, ...storybookProjects]
   }
