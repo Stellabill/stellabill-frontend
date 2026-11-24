@@ -34,6 +34,7 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   kpi_upcoming_renewals: 'Upcoming Renewals',
   chart_revenue: 'Revenue Growth chart',
   activity_feed: 'Recent Activity',
+  revenue_split: 'Revenue by Plan',
 };
 
 export interface MockActivity {

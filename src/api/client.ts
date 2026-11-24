@@ -1,5 +1,13 @@
 import type { Subscription, SubscriptionStatus } from '@/types/subscription'
 import { reportError } from '@/utils/errorReporter'
+import {
+  MOCK_ACTIVITIES,
+  MOCK_ACTIVE_SUBS_SERIES,
+  MOCK_MRR_SERIES,
+  MOCK_PLAN_REVENUE,
+  filterActivities,
+  filterPlanRevenue,
+} from '../pages/dashboard/dashboardData'
 
 const API_BASE = '/api'
 
@@ -440,6 +448,175 @@ export const subscriptions = {
     options?: ApiRequestOptions,
   ) => mutate('reactivate', id, request, options),
 }
+
+/* ─── Dashboard client ───────────────────────────────────────────────────────
+ *
+ *   GET /merchant/metrics?status=…&planId=…&range=…  -> DashboardMetricsResponse
+ *   GET /merchant/activity?…                         -> DashboardActivityResponse
+ *   GET /merchant/revenue-by-plan?…                  -> DashboardRevenueByPlanResponse
+ *
+ * Every read accepts `ApiRequestOptions`, so callers can supply an
+ * `AbortSignal` to cancel in-flight requests. When `VITE_USE_FIXTURES` is set
+ * the same data is resolved locally, without a network request.
+ */
+
+export interface DashboardFilters {
+  status?: 'active';
+  planId?: string;
+  range?: 'last30Days';
+}
+
+export type DashboardMetricTrend = 'up' | 'down' | 'neutral';
+
+export interface DashboardMetric {
+  /** Numeric value, or a pre-formatted value such as "$42,500". */
+  value: number | string;
+  change?: number;
+  trend?: DashboardMetricTrend;
+  target?: number;
+  targetLabel?: string;
+  targetProgress?: number;
+  /** 30-day history used by the KPI sparklines. */
+  series?: number[];
+}
+
+export interface DashboardRevenuePoint {
+  date: string;
+  revenue: number;
+}
+
+export interface DashboardMetricsResponse {
+  activeSubscriptions: DashboardMetric;
+  mrr: DashboardMetric;
+  failedCharges: DashboardMetric;
+  upcomingRenewals: DashboardMetric;
+  revenue: DashboardRevenuePoint[];
+}
+
+export type DashboardActivityType =
+  | 'subscription.created'
+  | 'payment.succeeded'
+  | 'payment.failed'
+  | 'subscription.cancelled'
+  | 'renewal.upcoming';
+
+export interface DashboardActivity {
+  id: string;
+  type: DashboardActivityType;
+  description: string;
+  timestamp: string;
+  amount?: string;
+  status?: string;
+}
+
+export interface DashboardActivityResponse {
+  activities: DashboardActivity[];
+}
+
+export interface DashboardRevenuePlan {
+  planId: string;
+  planName: string;
+  revenue: number;
+  previousRevenue: number;
+}
+
+export interface DashboardRevenueByPlanResponse {
+  currency?: string;
+  periodLabel?: string;
+  previousPeriodLabel?: string;
+  plans: DashboardRevenuePlan[];
+}
+
+function dashboardQuery(filters: DashboardFilters): string {
+  const params = new URLSearchParams();
+  if (filters.status) params.set('status', filters.status);
+  if (filters.planId) params.set('planId', filters.planId);
+  if (filters.range) params.set('range', filters.range);
+  const query = params.toString();
+  return query ? `?${query}` : '';
+}
+
+function fixtureResult<T>(signal: AbortSignal | null | undefined, value: T): Promise<T> {
+  if (signal?.aborted) {
+    return Promise.reject(createAbortError(signal.reason));
+  }
+  return Promise.resolve(value);
+}
+
+const DASHBOARD_FIXTURE_PLAN_FACTORS: Record<string, number> = {
+  basic: 0.2,
+  pro: 0.45,
+  business: 0.25,
+  enterprise: 0.1,
+};
+
+function fixtureMetrics(filters: DashboardFilters): DashboardMetricsResponse {
+  const factor = filters.planId ? (DASHBOARD_FIXTURE_PLAN_FACTORS[filters.planId] ?? 1) : 1;
+  const scaled = (value: number) => Math.round(value * factor);
+
+  return {
+    activeSubscriptions: {
+      value: scaled(1284).toLocaleString('en-US'),
+      change: 12.5,
+      trend: 'up',
+      target: 1500,
+      targetProgress: 86,
+      series: MOCK_ACTIVE_SUBS_SERIES,
+    },
+    mrr: {
+      value: `$${scaled(42500).toLocaleString('en-US')}`,
+      change: 8.2,
+      trend: 'up',
+      target: 50000,
+      targetProgress: 85,
+      series: MOCK_MRR_SERIES,
+    },
+    failedCharges: {
+      value: String(scaled(12)),
+      change: -4.1,
+      trend: 'down',
+    },
+    upcomingRenewals: {
+      value: String(scaled(48)),
+      trend: 'neutral',
+    },
+    revenue: MOCK_MRR_SERIES.map((revenue, index) => ({
+      date: 'Day ' + String(index + 1),
+      revenue,
+    })),
+  };
+}
+
+export const dashboard = {
+  metrics: (filters: DashboardFilters = {}, options?: ApiRequestOptions) => {
+    const query = dashboardQuery(filters);
+    if (isFixtureMode()) {
+      return fixtureResult(options?.signal, fixtureMetrics(filters));
+    }
+    return api<DashboardMetricsResponse>('/merchant/metrics' + query, options);
+  },
+  activity: (filters: DashboardFilters = {}, options?: ApiRequestOptions) => {
+    const query = dashboardQuery(filters);
+    if (isFixtureMode()) {
+      return fixtureResult(options?.signal, {
+        activities: filterActivities(MOCK_ACTIVITIES, filters),
+      });
+    }
+    return api<DashboardActivityResponse>('/merchant/activity' + query, options);
+  },
+  revenueByPlan: (filters: DashboardFilters = {}, options?: ApiRequestOptions) => {
+    const query = dashboardQuery(filters);
+    if (isFixtureMode()) {
+      return fixtureResult(options?.signal, {
+        currency: 'USDC',
+        periodLabel: 'this month',
+        previousPeriodLabel: 'vs last month',
+        plans: filterPlanRevenue(MOCK_PLAN_REVENUE, filters),
+      });
+    }
+    return api<DashboardRevenueByPlanResponse>('/merchant/revenue-by-plan' + query, options);
+  },
+};
 
 export interface CreatePlanPayload {
   usage_enabled: boolean;

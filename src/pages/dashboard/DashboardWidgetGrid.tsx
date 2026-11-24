@@ -29,6 +29,7 @@ interface DashboardWidgetGridProps {
   widgets: UseDashboardWidgetsReturn['widgets'];
   retryWidget: UseDashboardWidgetsReturn['retryWidget'];
   filters: DashboardFilters;
+  data?: UseDashboardWidgetsReturn['data'];
 }
 
 /** KPI cards, chart, activity feed and revenue split. */
@@ -36,21 +37,33 @@ export default function DashboardWidgetGrid({
   widgets,
   retryWidget,
   filters,
+  data,
 }: DashboardWidgetGridProps) {
   const { t } = useTranslation();
 
   const w = widgets;
+  const stateFor = (id: WidgetId) =>
+    w[id] ?? ({ status: 'success', error: null } as const);
 
   const kpiError = (id: WidgetId) =>
-    w[id].status === 'error' ? w[id].error?.message ?? 'Failed to load data' : null;
+    stateFor(id).status === 'error'
+      ? stateFor(id).error?.message ?? 'Failed to load data'
+      : null;
 
   const kpiOffline = (id: WidgetId) =>
-    w[id].status === 'error' && !!w[id].error?.isOffline;
+    stateFor(id).status === 'error' && !!stateFor(id).error?.isOffline;
 
-  const kpiRetrying = (id: WidgetId) => w[id].status === 'loading';
+  const kpiRetrying = (id: WidgetId) => stateFor(id).status === 'loading';
+
+  const metricValue = (
+    key: 'activeSubscriptions' | 'mrr' | 'failedCharges' | 'upcomingRenewals',
+    fallback: string,
+  ) => data?.[key]?.value ?? fallback;
 
   const filteredActivities = filterActivities(MOCK_ACTIVITIES, filters);
   const filteredPlanRevenue = filterPlanRevenue(MOCK_PLAN_REVENUE, filters);
+  const activities = data?.activities ?? filteredActivities;
+  const planRevenue = data?.revenueByPlan?.plans ?? filteredPlanRevenue;
 
   return (
     <>
@@ -61,16 +74,16 @@ export default function DashboardWidgetGrid({
       >
         <DashboardCard
           title={t('dashboard.kpis.activeSubscriptions')}
-          value="1,284"
-          change={12.5}
-          trend="up"
+          value={metricValue('activeSubscriptions', '1,284')}
+          change={data?.activeSubscriptions?.change ?? 12.5}
+          trend={data?.activeSubscriptions?.trend ?? 'up'}
           icon={<Users size={20} />}
           helpText={t('dashboard.kpis.activeSubscriptionsHelp')}
-          sparklineData={MOCK_ACTIVE_SUBS_SERIES}
-          target={1500}
+          sparklineData={data?.activeSubscriptions?.series ?? MOCK_ACTIVE_SUBS_SERIES}
+          target={data?.activeSubscriptions?.target ?? 1500}
           targetLabel={t('dashboard.kpis.targetLabel')}
-          targetProgress={86}
-          loading={w.kpi_active_subscriptions.status === 'loading'}
+          targetProgress={data?.activeSubscriptions?.targetProgress ?? 86}
+          loading={stateFor('kpi_active_subscriptions').status === 'loading'}
           error={kpiError('kpi_active_subscriptions')}
           isOfflineError={kpiOffline('kpi_active_subscriptions')}
           onRetry={() => retryWidget('kpi_active_subscriptions')}
@@ -78,16 +91,16 @@ export default function DashboardWidgetGrid({
         />
         <DashboardCard
           title={t('dashboard.kpis.mrr')}
-          value="$42,500"
-          change={8.2}
-          trend="up"
+          value={metricValue('mrr', '$42,500')}
+          change={data?.mrr?.change ?? 8.2}
+          trend={data?.mrr?.trend ?? 'up'}
           icon={<TrendingUp size={20} />}
           helpText={t('dashboard.kpis.mrrHelp')}
-          sparklineData={MOCK_MRR_SERIES}
-          target={50000}
+          sparklineData={data?.mrr?.series ?? MOCK_MRR_SERIES}
+          target={data?.mrr?.target ?? 50000}
           targetLabel={t('dashboard.kpis.targetLabel')}
-          targetProgress={85}
-          loading={w.kpi_mrr.status === 'loading'}
+          targetProgress={data?.mrr?.targetProgress ?? 85}
+          loading={stateFor('kpi_mrr').status === 'loading'}
           error={kpiError('kpi_mrr')}
           isOfflineError={kpiOffline('kpi_mrr')}
           onRetry={() => retryWidget('kpi_mrr')}
@@ -95,12 +108,13 @@ export default function DashboardWidgetGrid({
         />
         <DashboardCard
           title={t('dashboard.kpis.failedCharges')}
-          value="12"
-          change={-4.1}
-          trend="down"
+          value={metricValue('failedCharges', '12')}
+          change={data?.failedCharges?.change ?? -4.1}
+          trend={data?.failedCharges?.trend ?? 'down'}
           icon={<AlertCircle size={20} />}
           helpText={t('dashboard.kpis.failedChargesHelp')}
           loading={w.kpi_failed_charges.status === 'loading'}
+          loading={stateFor('kpi_failed_charges').status === 'loading'}
           error={kpiError('kpi_failed_charges')}
           isOfflineError={kpiOffline('kpi_failed_charges')}
           onRetry={() => retryWidget('kpi_failed_charges')}
@@ -108,11 +122,11 @@ export default function DashboardWidgetGrid({
         />
         <DashboardCard
           title={t('dashboard.kpis.upcomingRenewals')}
-          value="48"
-          trend="neutral"
+          value={metricValue('upcomingRenewals', '48')}
+          trend={data?.upcomingRenewals?.trend ?? 'neutral'}
           icon={<Calendar size={20} />}
           helpText={t('dashboard.kpis.upcomingRenewalsHelp')}
-          loading={w.kpi_upcoming_renewals.status === 'loading'}
+          loading={stateFor('kpi_upcoming_renewals').status === 'loading'}
           error={kpiError('kpi_upcoming_renewals')}
           isOfflineError={kpiOffline('kpi_upcoming_renewals')}
           onRetry={() => retryWidget('kpi_upcoming_renewals')}
@@ -136,10 +150,10 @@ export default function DashboardWidgetGrid({
             </h2>
           </div>
 
-          {w.chart_revenue.status === 'error' ? (
+          {stateFor('chart_revenue').status === 'error' ? (
             <CardErrorSlot
               widgetLabel="Revenue Growth chart"
-              message={w.chart_revenue.error?.message ?? undefined}
+              message={stateFor('chart_revenue').error?.message ?? undefined}
               isOffline={kpiOffline('chart_revenue')}
               onRetry={() => retryWidget('chart_revenue')}
               retrying={kpiRetrying('chart_revenue')}
@@ -147,7 +161,7 @@ export default function DashboardWidgetGrid({
             />
           ) : (
             <div className="dashboard-chart-wrapper">
-              <RevenueChart />
+              <RevenueChart data={data?.revenueSeries} />
             </div>
           )}
         </div>
@@ -161,10 +175,10 @@ export default function DashboardWidgetGrid({
             </button>
           </div>
 
-          {w.activity_feed.status === 'error' ? (
+          {stateFor('activity_feed').status === 'error' ? (
             <CardErrorSlot
               widgetLabel="Recent Activity"
-              message={w.activity_feed.error?.message ?? undefined}
+              message={stateFor('activity_feed').error?.message ?? undefined}
               isOffline={kpiOffline('activity_feed')}
               onRetry={() => retryWidget('activity_feed')}
               retrying={kpiRetrying('activity_feed')}
@@ -172,8 +186,8 @@ export default function DashboardWidgetGrid({
           ) : (
             <>
               <ActivityList
-                activities={filteredActivities}
-                loading={w.activity_feed.status === 'loading'}
+                activities={activities}
+                loading={stateFor('activity_feed').status === 'loading'}
               />
               <button className="dashboard-load-more">See all activity</button>
             </>
@@ -183,7 +197,25 @@ export default function DashboardWidgetGrid({
 
       {/* ── Revenue Split By Plan ───────────────────────────────────── */}
       <div className="dashboard-revenue-split">
-        <RevenueSplitByPlanPanel plans={filteredPlanRevenue} />
+        {stateFor('revenue_split').status === 'error' ? (
+          <CardErrorSlot
+            widgetLabel="Revenue by plan"
+            message={stateFor('revenue_split').error?.message ?? undefined}
+            isOffline={kpiOffline('revenue_split')}
+            onRetry={() => retryWidget('revenue_split')}
+            retrying={kpiRetrying('revenue_split')}
+          />
+        ) : stateFor('revenue_split').status === 'loading' ? (
+          <div role="status" aria-busy="true" aria-label="Loading revenue by plan">
+            Loading revenue by plan…
+          </div>
+        ) : (
+          <RevenueSplitByPlanPanel
+            plans={planRevenue}
+            periodLabel={data?.revenueByPlan?.periodLabel}
+            previousPeriodLabel={data?.revenueByPlan?.previousPeriodLabel}
+          />
+        )}
       </div>
     </>
   );
