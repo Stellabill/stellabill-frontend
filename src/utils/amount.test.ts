@@ -1,5 +1,23 @@
 import { describe, it, expect } from 'vitest'
-import { formatAmount, roundAmount, coerceAmount } from './amount'
+import {
+  coerceAmount,
+  decimalToMinorUnits,
+  formatAmount,
+  formatMinorUnits,
+  roundAmount,
+} from './amount'
+
+describe('decimal minor-unit helpers', () => {
+  it('parses decimal values in exponent notation without floating-point scaling', () => {
+    expect(decimalToMinorUnits(1e-7, 7)).toBe(1n)
+    expect(decimalToMinorUnits('1.23e2', 7)).toBe(1_230_000_000n)
+  })
+
+  it('formats integer units with a minimum fraction width', () => {
+    expect(formatMinorUnits(1_200_000n, 7, 2)).toBe('0.12')
+    expect(formatMinorUnits(1n, 7, 2)).toBe('0.0000001')
+  })
+})
 
 describe('coerceAmount', () => {
   it('returns null for null / undefined / empty', () => {
