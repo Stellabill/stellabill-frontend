@@ -1,7 +1,12 @@
 import { useState, useMemo, useRef, useEffect, KeyboardEvent } from 'react';
 import './RevenueChart.css';
 import { copyToClipboard } from '../utils/clipboard';
-
+import {
+  DEFAULT_CHART_DIMENSIONS,
+  getChartScale,
+  getSeriesPoints as calculateSeriesPoints,
+  getXLabelIndices
+} from './RevenueChart.utils';
 export type TimeRange = '7D' | '30D' | '90D';
 
 export interface DataPoint {
@@ -419,51 +424,23 @@ export function LineChart({ data, series }: LineChartProps) {
     });
     pointRefs.current = newMap;
   }, [data.length, allSeries]);
+  
+  // Chart dimensions and scales
+const { width, height, padding } = DEFAULT_CHART_DIMENSIONS;
+const chartWidth = width - padding.left - padding.right;
+const chartHeight = height - padding.top - padding.bottom;
 
-  // Chart dimensions
-  const width = 800;
-  const height = 300;
-  const padding = { top: 30, right: 30, bottom: 40, left: 60 };
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
-  
-  // Calculate scales across ALL series (including hidden) for stable y-axis
-  const maxRevenue = useMemo(() => {
-    if (!allSeries.length || !data.length) return 100;
-    const allValues = allSeries.flatMap(s => s.data.map(d => d.revenue));
-    return Math.max(...allValues);
-  }, [allSeries, data]);
-  
-  const yMax = Math.max(400, Math.ceil(maxRevenue / 400) * 400);
-  const yTicks = 5;
-  const yStep = yMax / (yTicks - 1);
-  
-  // Calculate points for each series (ALL series including hidden)
-  const seriesPoints = useMemo(() => {
-    if (data.length === 0) return [];
-    
-    return allSeries.map(seriesItem => {
-      const points = data.map((_, i) => {
-        const seriesDataPoint = seriesItem.data[i];
-        if (!seriesDataPoint) return null;
-        
-        let x: number;
-        if (data.length === 1) {
-          x = padding.left + chartWidth / 2;
-        } else {
-          x = padding.left + (i / (data.length - 1)) * chartWidth;
-        }
-        const y = padding.top + chartHeight - (seriesDataPoint.revenue / yMax) * chartHeight;
-        
-        return { x, y, ...seriesDataPoint, seriesId: seriesItem.id, pointIndex: i };
-      }).filter(Boolean);
-      
-      return {
-        ...seriesItem,
-        points
-      };
-    });
-  }, [data, allSeries, yMax, chartWidth, chartHeight, padding.left, padding.top]);
+// Calculate scales across ALL series, including hidden ones
+const { yMax, yTicks, yStep } = useMemo(
+  () => getChartScale(allSeries),
+  [allSeries]
+);
+
+// Calculate points for each series
+const seriesPoints = useMemo(
+  () => calculateSeriesPoints(data, allSeries, DEFAULT_CHART_DIMENSIONS, yMax),
+  [data, allSeries, yMax]
+);
 
   // Active point (keyboard focus takes precedence, fallback to hover)
   const activePoint = focusedPoint || hoveredPoint;
@@ -495,15 +472,12 @@ export function LineChart({ data, series }: LineChartProps) {
     }
   }, [focusedPoint, data, visibleSeries]);
   
-  // X-axis labels
-  const xLabelIndices = useMemo(() => {
-    if (data.length <= 7) return data.map((_, i) => i);
-    if (data.length <= 30) {
-      return data.map((_, i) => i).filter(i => i % 3 === 0 || i === data.length - 1);
-    }
-    return data.map((_, i) => i).filter(i => i % 10 === 0 || i === data.length - 1);
-  }, [data]);
 
+  // X-axis labels
+const xLabelIndices = useMemo(
+  () => getXLabelIndices(data.length),
+  [data.length]
+);
   // Keyboard navigation
   const handleKeyDown = (e: KeyboardEvent<SVGCircleElement>, seriesId: string, pointIndex: number) => {
     if (data.length === 0) return;
@@ -573,7 +547,7 @@ export function LineChart({ data, series }: LineChartProps) {
     if (!activePoint || !data[activePoint.index]) return null;
     
     const seriesItem = seriesPoints.find(s => s.id === activePoint.seriesId);
-    const point = seriesItem?.points.find(p => p && p.pointIndex === activePoint.index);
+    const point = seriesItem?.points.find(p => p.pointIndex === activePoint.index);
     if (!seriesItem || !point) return null;
     
     const tooltipWidth = 140;
@@ -696,7 +670,7 @@ export function LineChart({ data, series }: LineChartProps) {
         
         {/* Lines for each series */}
         {seriesPoints.map(seriesItem => {
-          const validPoints = seriesItem.points.filter((p): p is NonNullable<typeof p> => p !== null);
+          const validPoints = seriesItem.points;
           if (validPoints.length <= 1) return null;
           
           const pathData = validPoints.map((p, i) => 
@@ -732,7 +706,7 @@ export function LineChart({ data, series }: LineChartProps) {
         {/* Data points for each series (hidden series are non-interactive with pattern fill) */}
         {seriesPoints.map(seriesItem =>
           seriesItem.points.map((point, i) => {
-            if (!point) return null;
+         
             const isVisible = seriesItem.visible;
             const isActivePoint = isVisible && activePoint?.seriesId === seriesItem.id && activePoint?.index === point.pointIndex;
             const isFocusedPoint = isVisible && focusedPoint?.seriesId === seriesItem.id && focusedPoint?.index === point.pointIndex;
