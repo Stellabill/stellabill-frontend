@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import RequireWallet, { WalletReturnRedirect } from "./components/RequireWallet";
 import TransitionLayout from "./components/TransitionLayout";
 import RouteErrorBoundary from "./components/RouteErrorBoundary";
+import { ProductTourProvider } from "./components/Dashboard/ProductTourProvider";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const SubscriptionDetail = lazy(() => import("./pages/SubscriptionDetail"));
@@ -79,7 +80,7 @@ function ScrollToHash() {
 function App() {
   const location = useLocation();
   return (
-    <>
+    <ProductTourProvider>
     <ScrollToHash />
     <WalletReturnRedirect />
     <Suspense fallback={<div style={{ minHeight: '100vh' }} role="status" aria-label="Loading" />}>
@@ -148,7 +149,7 @@ function App() {
       />
     </Routes>
     </Suspense>
-    </>
+    </ProductTourProvider>
   );
 }
 

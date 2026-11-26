@@ -6,6 +6,7 @@
  * goes through the UnsavedChangesGuard before navigating.
  */
 import type { CommandItem } from '../CommandPalette';
+import { resetTourStorage } from '../Dashboard/ProductTourProvider';
 
 type GuardedNavigate = (to: string) => void;
 
@@ -109,8 +110,7 @@ export const COMMAND_DEFS: CommandDef[] = [
     hint: 'Take a guided tour of the dashboard',
     keywords: 'help guide tutorial onboarding walkthrough',
     buildPerform: () => () => {
-      localStorage.removeItem('sb:tour-completed');
-      localStorage.removeItem('sb:tour-dismissed');
+      resetTourStorage();
       window.location.reload();
     },
   },
