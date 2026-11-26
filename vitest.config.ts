@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
@@ -11,6 +10,7 @@ let storybookProjects: any[] = [];
 try {
   const playwrightPkg = '@vitest/browser-playwright';
   const { playwright } = await import(/* @vite-ignore */ playwrightPkg);
+  const { storybookTest } = await import(/* @vite-ignore */ '@storybook/addon-vitest/vitest-plugin');
   storybookProjects = [{
     extends: true,
     plugins: [
@@ -30,7 +30,7 @@ try {
     }
   }];
 } catch {
-  // @vitest/browser-playwright not installed — skip storybook test project
+  // storybook or playwright not fully installed — skip storybook test project
 }
 
 export default defineConfig({
@@ -76,7 +76,6 @@ export default defineConfig({
         branches: 85,
         statements: 65
       }
-      exclude: ['**/*.test.tsx', '**/*.spec.tsx', '**/*.md', '**/setup.ts', 'src/vite-env.d.ts', 'e2e/**']
     },
     projects: [{
       extends: true,
