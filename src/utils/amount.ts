@@ -52,6 +52,72 @@ export interface FormattedAmount {
   display: string
 }
 
+/**
+ * Convert a decimal value to integer units without passing through binary
+ * arithmetic. Digits beyond the requested precision are truncated.
+ */
+export function decimalToMinorUnits(value: number | string, precision: number): bigint {
+  if (precision < 0 || !Number.isInteger(precision)) {
+    throw new RangeError('precision must be a non-negative integer')
+  }
+
+  const decimal = String(value).trim()
+  const match = decimal.match(/^([+-]?)(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i)
+  if (!match || (!match[2] && !match[3])) {
+    throw new TypeError('Invalid decimal amount')
+  }
+
+  const exponent = Number(match[4] ?? 0)
+  if (!Number.isSafeInteger(exponent) || Math.abs(exponent) > 1000) {
+    throw new RangeError('Decimal exponent is out of range')
+  }
+
+  const integerDigits = match[2] || '0'
+  const fractionalDigits = match[3] || ''
+  const digits = integerDigits + fractionalDigits
+  const decimalIndex = integerDigits.length + exponent
+  const wholePart =
+    decimalIndex <= 0 ? '0' : digits.slice(0, decimalIndex).padEnd(decimalIndex, '0')
+  const fractionPart =
+    decimalIndex < 0
+      ? '0'.repeat(-decimalIndex) + digits
+      : digits.slice(decimalIndex)
+  const units =
+    BigInt(wholePart || '0') * 10n ** BigInt(precision) +
+    BigInt(fractionPart.slice(0, precision).padEnd(precision, '0') || '0')
+
+  return match[1] === '-' ? -units : units
+}
+
+/** Format integer units as an ungrouped decimal with a minimum fraction width. */
+export function formatMinorUnits(
+  value: bigint,
+  precision: number,
+  minPrecision = 0
+): string {
+  if (
+    precision < 0 ||
+    !Number.isInteger(precision) ||
+    minPrecision < 0 ||
+    !Number.isInteger(minPrecision) ||
+    minPrecision > precision
+  ) {
+    throw new RangeError('precision and minPrecision must be valid non-negative integers')
+  }
+
+  const negative = value < 0n
+  const magnitude = negative ? -value : value
+  const scale = 10n ** BigInt(precision)
+  const whole = (magnitude / scale).toString()
+  const fraction = (magnitude % scale)
+    .toString()
+    .padStart(precision, '0')
+    .replace(/0+$/u, '')
+    .padEnd(minPrecision, '0')
+
+  return `${negative ? '-' : ''}${whole}${fraction ? `.${fraction}` : ''}`
+}
+
 const DEFAULTS = {
   precision: 2,
   rounding: 'half-up' as RoundingMode,

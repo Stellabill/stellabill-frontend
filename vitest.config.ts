@@ -11,6 +11,7 @@ try {
   const { storybookTest } = await import(/* @vite-ignore */ '@storybook/addon-vitest/vitest-plugin');
   const playwrightPkg = '@vitest/browser-playwright';
   const { playwright } = await import(/* @vite-ignore */ playwrightPkg);
+  const { storybookTest } = await import(/* @vite-ignore */ '@storybook/addon-vitest/vitest-plugin');
   storybookProjects = [{
     extends: true,
     plugins: [
@@ -30,6 +31,7 @@ try {
     }
   }];
 } catch {
+  // storybook or playwright not fully installed — skip storybook test project
   // storybook addon or @vitest/browser-playwright not installed — skip storybook test project
 }
 
@@ -79,6 +81,7 @@ export default defineConfig({
         functions: 67,
         branches: 85,
         statements: 65
+      }
       },
     },
     projects: [{

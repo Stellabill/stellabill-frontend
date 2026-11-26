@@ -310,29 +310,6 @@ function SkeletonCards() {
 /* ─── Empty State ────────────────────────────────────────────── */
 function EmptyState({ filter }: { filter: string }) {
 	const { t } = useTranslation();
-	const isFiltered = filter !== "All";
-	return (
-		<div className="subs-empty" role="status" aria-live="polite">
-			<div className="subs-empty__illustration" aria-hidden="true">
-				<IconEmptySubscriptions />
-			</div>
-			<h2 className="subs-empty__title" id="empty-state-heading">
-				{isFiltered ? t('subscriptions.empty.noFiltered', { filter: filter }) : t('subscriptions.empty.noSubscriptions')}
-			</h2>
-			<p className="subs-empty__body" aria-labelledby="empty-state-heading">
-				{isFiltered
-					? t('subscriptions.empty.noFilteredDesc', { filter: filter.toLowerCase() })
-					: t('subscriptions.empty.noSubscriptionsDesc')}
-			</p>
-			{!isFiltered && (
-				<Link to="/plans" className="subs-empty__cta" id="empty-browse-plans-btn">
-					<IconPlus />
-					{t('subscriptions.browsePlans')}
-				</Link>
-			)}
-		</div>
-	);
-}
 
 /* ─── Seed data ─────────────────────────────────────────────── */
 const FIXTURE_DATA: SubscriptionWithIcon[] = [
@@ -521,11 +498,10 @@ export default function Subscriptions() {
 		isRefreshing,
 		triggerRefresh,
 		containerRef: refreshContainerRef,
-		handlers: refreshHandlers
+		handlers: refreshHandlers,
 	} = useRefresh({
-		onRefresh: fetchSubscriptions
+		onRefresh: fetchSubscriptions,
 	});
-
 
 	const handleTopUpConfirm = useCallback(
 		async (amount: number) => {
@@ -546,7 +522,7 @@ export default function Subscriptions() {
 				}),
 			);
 		},
-		[selectedId],
+		[selectedId, applyTopUp],
 	);
 
 	const handleViewFullUsage = useCallback(() => {
@@ -555,7 +531,7 @@ export default function Subscriptions() {
 	}, [navigate, selectedId]);
 
 	const filteredData = useMemo(() => {
-		const filtered = activeFilter === "All" ? data : data.filter((sub) => sub.status === activeFilter);
+		const filtered = filterSubscriptions(data, activeFilter);
 		return sortSubscriptions(filtered, sort);
 	}, [activeFilter, data, sort]);
 
@@ -573,20 +549,6 @@ export default function Subscriptions() {
 		enabled: !loading && filteredData.length > 0,
 	});
 
-	// Use the shared tags hook for persistence and synchronization
-	const tagsHook = useTags();
-	const availableTags = tagsHook.getAllTags();
-
-	// Rebuild data with tags from the hook
-	useEffect(() => {
-		setData((prev) =>
-			prev.map((sub) => ({
-				...sub,
-				tags: tagsHook.getSubscriptionTags(sub.id),
-			}))
-		);
-	}, [tagsHook.subscriptionTags, tagsHook.tags]);
-
 	const handleAddTag = (subId: string, tag: TagOption) => {
 		tagsHook.addTagToSubscription(subId, tag.id);
 	};
@@ -596,15 +558,12 @@ export default function Subscriptions() {
 	};
 
 	const handleCreateTag = (label: string, color: TagOption["color"]) => {
-		// Check if tag already exists using the hook's normalized matching
 		const existingTag = tagsHook.findTagByNormalizedLabel(label);
 		if (existingTag) {
-			// Tag already exists, just add it to the subscription
 			if (selectedId) {
 				tagsHook.addTagToSubscription(selectedId, existingTag.id);
 			}
 		} else {
-			// Create new tag and add to subscription
 			const newTag = tagsHook.createTag(label, color);
 			if (selectedId) {
 				tagsHook.addTagToSubscription(selectedId, newTag.id);
@@ -617,12 +576,7 @@ export default function Subscriptions() {
 		[selectedId, data],
 	);
 
-	const stats = {
-		All: data.length,
-		Active: data.filter((s) => s.status === "Active").length,
-		Paused: data.filter((s) => s.status === "Paused").length,
-		Cancelled: data.filter((s) => s.status === "Cancelled").length,
-	};
+	const stats = useMemo(() => computeSubscriptionStats(data), [data]);
 
 	const handlePauseConfirm = async () => {
 		if (!selectedId) return;
@@ -692,8 +646,6 @@ export default function Subscriptions() {
 			setIsCancelModalOpen(false);
 			setIsPauseModalOpen(true);
 		} else {
-			// Handle other offers (downgrade, discount)
-			// For now, we just close the modal as per minimal implementation requirements
 			setIsCancelModalOpen(false);
 		}
 	};
@@ -756,12 +708,6 @@ export default function Subscriptions() {
 
 	/* ── Detail view ───────────────────────────────────────────── */
 	if (selectedSub) {
-		const usageData = {
-			billingPeriod: "Mar 1 — Mar 31",
-			usage: "32450 API calls",
-			estimatedCharge: "10 USDC",
-		};
-
 		return (
 			<div className="subscriptions-container">
 				{/* Breadcrumb */}
@@ -979,18 +925,18 @@ export default function Subscriptions() {
 					Home
 				</Link>
 				<span className="breadcrumb-separator" aria-hidden="true">/</span>
-				<span className="breadcrumb-current" aria-current="page">{t('subscriptions.pageTitle')}</span>
+				<span className="breadcrumb-current" aria-current="page">{t("subscriptions.pageTitle")}</span>
 			</nav>
 
 			{/* Header */}
 			<div className="header-row">
 				<div className="page-title-section">
-					<h1>{t('subscriptions.pageTitle')}</h1>
-					<p className="page-description">{t('subscriptions.pageDescription')}</p>
+					<h1>{t("subscriptions.pageTitle")}</h1>
+					<p className="page-description">{t("subscriptions.pageDescription")}</p>
 				</div>
 				<button className="browse-plans-btn" id="browse-plans-btn">
 					<IconPlus />
-					{t('subscriptions.browsePlans')}
+					{t("subscriptions.browsePlans")}
 				</button>
 			</div>
 
@@ -1155,12 +1101,20 @@ export default function Subscriptions() {
 						</table>
 					</div>
 
-					{/* ── Mobile cards ──────────────────────────────────── */}
-					{/* FLIP container for mobile card stack */}
-					<div
-						ref={(el: HTMLDivElement | null) => {
-							(cardsContainerRef as React.MutableRefObject<HTMLElement | null>).current = el;
-							refreshContainerRef.current = el;
+					<SubscriptionsMobileCards
+						subscriptions={filteredData}
+						cardsContainerRef={cardsContainerRef}
+						refreshContainerRef={refreshContainerRef}
+						refreshHandlers={refreshHandlers}
+						pullDistance={pullDistance}
+						isRefreshing={isRefreshing}
+						triggerRefresh={triggerRefresh}
+						resumeLoadingId={resumeLoadingId}
+						onSelect={setSelectedId}
+						onPauseRequest={(id) => {
+							setSelectedId(id);
+							setPauseError(null);
+							setIsPauseModalOpen(true);
 						}}
 						className="subs-cards"
 						aria-label="Subscriptions"
