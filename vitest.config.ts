@@ -3,12 +3,12 @@ import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 let storybookProjects: any[] = [];
 try {
+  const { storybookTest } = await import(/* @vite-ignore */ '@storybook/addon-vitest/vitest-plugin');
   const playwrightPkg = '@vitest/browser-playwright';
   const { playwright } = await import(/* @vite-ignore */ playwrightPkg);
   storybookProjects = [{
@@ -30,15 +30,19 @@ try {
     }
   }];
 } catch {
-  // @vitest/browser-playwright not installed — skip storybook test project
+  // storybook addon or @vitest/browser-playwright not installed — skip storybook test project
 }
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src')
+      '@': resolve(__dirname, './src'),
+      'react-icons/fa6': resolve(__dirname, './node_modules/react-icons/fa6/index.js')
     }
+  },
+  optimizeDeps: {
+    include: ['react-icons/fa6']
   },
   test: {
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
@@ -75,8 +79,7 @@ export default defineConfig({
         functions: 67,
         branches: 85,
         statements: 65
-      }
-      exclude: ['**/*.test.tsx', '**/*.spec.tsx', '**/*.md', '**/setup.ts', 'src/vite-env.d.ts', 'e2e/**']
+      },
     },
     projects: [{
       extends: true,
