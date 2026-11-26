@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TopUpModal from '../../components/TopUpModal';
+import { formatDisplayAmount, toMinorUnits } from '../../components/topUpAmount';
 
 describe('TopUpModal Accessibility', () => {
   const onClose = vi.fn();
@@ -72,5 +73,26 @@ describe('TopUpModal Accessibility', () => {
     
     expect(screen.getByText(/top up balance/i)).toHaveAttribute('id', 'topup-modal-title');
     expect(screen.getByText(/add usdc to your prepaid balance/i)).toHaveAttribute('id', 'topup-modal-description');
+  });
+});
+
+describe('TopUpModal amount precision', () => {
+  it.each([
+    { amount: 0.1, expected: 1_000_000n },
+    { amount: 0.3, expected: 3_000_000n },
+    { amount: 1e-7, expected: 1n },
+    { amount: 123456.7890123, expected: 1_234_567_890_123n },
+    { amount: 0.123456789, expected: 1_234_567n },
+  ])('converts $amount to stroops using its decimal representation', ({ amount, expected }) => {
+    expect(toMinorUnits(amount)).toBe(expected);
+  });
+
+  it('truncates decimal inputs beyond seven places consistently', () => {
+    expect(toMinorUnits('0.123456789')).toBe(1_234_567n);
+    expect(formatDisplayAmount(0.123456789)).toBe('0.1234567');
+  });
+
+  it('formats a small amount represented in exponent notation', () => {
+    expect(formatDisplayAmount(1e-7)).toBe('0.0000001');
   });
 });
