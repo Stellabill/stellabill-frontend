@@ -1,4 +1,4 @@
-import { runAudit, printAuditReport } from '../utils/spacingTypographyAudit';
+import { runAudit, printAuditReport } from '../../utils/spacingTypographyAudit';
 
 // ── Helpers
 
