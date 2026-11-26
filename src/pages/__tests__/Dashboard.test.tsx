@@ -14,20 +14,7 @@ vi.mock('../../components/Dashboard/RevenueSplitByPlanPanel', () => ({ default: 
 vi.mock('../../components/Dashboard/CardErrorSlot', () => ({ default: () => <div data-testid="card-error" /> }));
 vi.mock('../../components/Dashboard/OnboardingChecklistWidget', () => ({ default: () => <div data-testid="onboarding" /> }));
 vi.mock('../../components/help/HelpHint', () => ({ default: () => <div data-testid="help-hint" /> }));
-vi.mock('../../components/ProductTour/ProductTour', () => ({ default: () => null }));
-vi.mock('../../components/ProductTour/TourCompletion', () => ({ default: () => null }));
-vi.mock('../../components/ProductTour/tourSteps', () => ({ dashboardTourSteps: [] }));
-
-vi.mock('../../hooks/useProductTour', () => ({
-  useProductTour: () => ({
-    isOpen: false,
-    showCompletion: false,
-    closeTour: () => {},
-    completeTour: () => {},
-    dismissTour: () => {},
-    closeCompletion: () => {},
-  }),
-}));
+vi.mock('../../components/Dashboard/TourResumeCheckpoint', () => ({ default: () => null }));
 
 vi.mock('../../hooks/useDashboardWidgets', () => ({
   useDashboardWidgets: () => ({
