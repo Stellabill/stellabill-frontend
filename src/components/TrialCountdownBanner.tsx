@@ -228,12 +228,24 @@ export default function TrialCountdownBanner({
     return () => document.removeEventListener('pointerdown', handler);
   }, [showSnoozeMenu]);
 
-  // Re-check snooze expiry every minute
+  // Re-check snooze expiry every minute, skipping hidden tabs.
   useEffect(() => {
+    const updateSnooze = () => setSnoozed(isSnoozed(tier));
+
     const id = window.setInterval(() => {
-      setSnoozed(isSnoozed(tier));
+      if (document.hidden) return;
+      updateSnooze();
     }, 60_000);
-    return () => clearInterval(id);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) updateSnooze();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [tier]);
 
   const handleDismiss = () => {

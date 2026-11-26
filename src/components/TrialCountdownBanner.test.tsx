@@ -7,6 +7,14 @@ import TrialCountdownBanner, {
 
 const SNOOZE_STORAGE_KEY = 'stellabill-trial-banner-snooze';
 const HOUR_MS = 3_600_000;
+let documentHiddenDescriptor: PropertyDescriptor | undefined;
+
+function setDocumentHidden(hidden: boolean) {
+  Object.defineProperty(document, 'hidden', {
+    configurable: true,
+    get: () => hidden,
+  });
+}
 
 /**
  * Frozen clock. Mid-June keeps the calendar arithmetic below clear of every
@@ -41,6 +49,8 @@ function storedSnooze(): { expiry: number; tier: TrialUrgencyTier } | null {
 }
 
 beforeEach(() => {
+  documentHiddenDescriptor = Object.getOwnPropertyDescriptor(document, 'hidden');
+  setDocumentHidden(false);
   sessionStorage.clear();
   vi.useFakeTimers();
   vi.setSystemTime(FROZEN_NOW);
@@ -50,6 +60,11 @@ afterEach(() => {
   vi.clearAllTimers();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  if (documentHiddenDescriptor) {
+    Object.defineProperty(document, 'hidden', documentHiddenDescriptor);
+  } else {
+    Reflect.deleteProperty(document, 'hidden');
+  }
   sessionStorage.clear();
 });
 
@@ -317,5 +332,38 @@ describe('TrialCountdownBanner — actions', () => {
 
     expect(container).toBeEmptyDOMElement();
     expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('TrialCountdownBanner — visibility handling', () => {
+  it('does not re-check or update snooze state while the tab is hidden', () => {
+    seedSnooze('warning', 30_000);
+    const { container } = renderBanner({ trialEndsAt: trialEndingIn(4) });
+
+    setDocumentHidden(true);
+    act(() => {
+      vi.advanceTimersByTime(61_000);
+    });
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('re-checks the current snooze immediately when the tab becomes visible', () => {
+    seedSnooze('warning', 30_000);
+    setDocumentHidden(true);
+    const { container } = renderBanner({ trialEndsAt: trialEndingIn(4) });
+    expect(container).toBeEmptyDOMElement();
+
+    act(() => {
+      vi.advanceTimersByTime(61_000);
+    });
+    expect(container).toBeEmptyDOMElement();
+
+    setDocumentHidden(false);
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(screen.getByRole('region')).toHaveClass('trial-banner--warning');
   });
 });
